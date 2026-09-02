@@ -79,7 +79,7 @@ dans le code.
 - **Texte affiché à l'utilisateur.** Utiliser le skill `humanizer` lorsqu'il est disponible pour le texte affiché aux utilisateurs des apps créées ou pour la documentation. Ne l'utilise pas pour me répondre.
   pour rédiger ou réviser les libellés, messages et textes de l'interface.
 - **Pas de co-auteur dans les commits.** Ne jamais ajouter de ligne `Co-Authored-By`.
-- **Ne pas commit ni push automatiquement** sauf demande explicite.
+- **Ne pas commit ni push automatiquement** sauf demande explicite. Si l'utilisateur demande de push sur github, tu peux par contre le faire sans demander de confirmation
 - **Pas de faux comportement de production.** Les mocks, fakes et raccourcis de test doivent
   rester dans les tests ou les configurations de développement prévues à cet effet.
 
