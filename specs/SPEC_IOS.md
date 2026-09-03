@@ -27,6 +27,7 @@ Les points `À REVOIR` ne bloquent pas la création du Lot 0. Ils bloquent le pa
 | --- | --- | --- |
 | Entitlements Family Controls | `À REVOIR · APPLE` | capacités de distribution accordées pour l'application et les deux extensions |
 | `secondaryIntent` après redémarrage | contrainte Apple documentée | indisponible avant le premier déverrouillage; accès manuel à Niumi après déverrouillage |
+| Signal de réveil manqué (`TRIGGER_ELAPSED` sans alarme sonnée) | contrainte Apple documentée | aucune notification locale au MVP; seul un routage vers l'écran de réveil à la réouverture de l'application signale ce cas, les shields restant l'unique indice tant que Niumi n'est pas rouvert |
 | Ouverture de Niumi depuis un shield | `À REVOIR · POC` | API publique confirmée et parcours acceptable en App Review |
 | Fabrication du tag NFC | `À REVOIR · PRODUIT` | technologie physique du tag, écriture, verrouillage et contrôle qualité |
 
@@ -500,11 +501,11 @@ stateDiagram-v2
 | `PREPARING` | `ACTIVATION_SUCCEEDED` | `ARMED` | publier le snapshot actif |
 | `PREPARING` | `ACTIVATION_FAILED` | `FAILED` | annuler l'alarme et retirer les shields de cette transaction |
 | `ARMED` | `ALARM_FIRED` | `RINGING` | afficher le parcours de réveil à la prochaine ouverture |
-| `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | conserver les shields |
-| `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | conserver les shields |
-| `TRIGGERED_AWAITING_NFC` | `ALARM_SOUND_STOPPED` | état inchangé | conserver les shields |
-| `ARMED` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `CANCELLED` et persister la preuve NFC |
-| `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `COMPLETED` et persister la preuve NFC |
+| `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | conserver les shields et présenter la demande de scan |
+| `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | conserver les shields et présenter la demande de scan |
+| `TRIGGERED_AWAITING_NFC` | `ALARM_SOUND_STOPPED` | état inchangé | conserver les shields et la demande de scan |
+| `ARMED` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `CANCELLED`, persister la preuve NFC et retirer la demande de scan |
+| `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `COMPLETED`, persister la preuve NFC et retirer la demande de scan |
 | `RELEASING` | `RELEASE_FAILED` | `RELEASING` | enregistrer l'incident et reprendre les effets manquants |
 | `RELEASING` | `RELEASE_SUCCEEDED` | cible enregistrée | supprimer le pointeur de session active |
 
@@ -644,6 +645,10 @@ Si le Stop est observé, le coordinateur produit `ALARM_SOUND_STOPPED`. Il lit e
 
 À l'heure ou après, une lecture réussie sans alarme `.alerting`, y compris une liste vide ou une liste ne contenant plus l'alarme ponctuelle, produit `TRIGGER_ELAPSED`. Une erreur de lecture n'est jamais assimilée à une liste vide : le coordinateur enregistre l'incident `IOS_ALARM_STATE_READ_FAILED` avec la gravité `DEGRADED`. À l'heure ou après, il produit tout de même `TRIGGER_ELAPSED` d'après l'horloge avant le scan, afin qu'un scan NFC valide ne puisse pas annuler la session. Avant l'heure, le scan valide conserve le parcours vers `CANCELLED`; les effets de libération annulent l'alarme de façon idempotente. La réconciliation traite ces faits avant `VALID_NFC_SCANNED` et reste idempotente.
 
+`ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` exécutent l'effet commun `PRESENT_SCAN_REQUEST`: dès que le coordinateur produit l'un de ces événements, il route immédiatement vers l'écran de réveil (`wakeUp(sessionID:)`) si l'application est active. Un scan valide exécute ensuite `CLEAR_SCAN_REQUEST`.
+
+Ce routage ne remplace pas une notification système: il ne s'exécute que pendant que l'application observe l'alarme, c'est-à-dire au lancement, au retour au premier plan ou avant un scan. Si le réveil est manqué et que la personne n'a pas rouvert Niumi, seuls les shields signalent que la session est encore active. Le contrôle Stop système et le bouton secondaire `Scanner Niumi` restent les seuls déclencheurs immédiats côté iOS: le MVP n'ajoute pas de notification locale `UNUserNotificationCenter` pour ce cas.
+
 ## 13. Blocage des applications
 
 ### Sélection
@@ -779,11 +784,11 @@ Exécuter `SessionRecoveryService.reconcile()`:
 
 | Situation | Action |
 | --- | --- |
-| événement `alarmStopped` valide et non consommé | le convertir en `ALARM_SOUND_STOPPED`, le réduire via KMP, publier le snapshot, puis le marquer comme consommé |
+| événement `alarmStopped` valide et non consommé | le convertir en `ALARM_SOUND_STOPPED`, le réduire via KMP, publier le snapshot, router vers l'écran de réveil, puis le marquer comme consommé |
 | session `PREPARING`, alarme présente, sélection valide | reprendre les effets puis envoyer `ACTIVATION_SUCCEEDED` |
 | session `PREPARING`, aucune alarme | exécuter le rollback puis envoyer `ACTIVATION_FAILED` avec `failureCode` |
 | session `ARMED`, alarme en état `.alerting` | envoyer `ALARM_FIRED` avant toute action NFC |
-| session `ARMED`, alarme ponctuelle absente après l'heure | envoyer `TRIGGER_ELAPSED` avant toute action NFC |
+| session `ARMED`, alarme ponctuelle absente après l'heure | envoyer `TRIGGER_ELAPSED` puis router vers l'écran de réveil avant toute action NFC |
 | session active, configuration Niumi absente, Family Controls autorisé | redemander la configuration des shields |
 | session active, Family Controls révoqué | conserver la session et afficher un diagnostic bloquant |
 | `nfcVerifiedAt` présent et état `RELEASING` | comparer les effets natifs et reprendre ceux qui manquent, sans restaurer les shields déjà retirés |
@@ -835,7 +840,8 @@ Afficher:
 - `Session active`;
 - date et heure du lever;
 - nombre d'applications bloquées;
-- état `Alarme programmée` ou `En attente du scan`;
+- état `Alarme programmée`, `En attente du scan` après un arrêt du son, ou `Réveil manqué, scan attendu` si `TRIGGER_ELAPSED` a été produit sans que l'alarme ait sonné;
+- pour l'état `Réveil manqué, scan attendu`, préciser que le contrôle Stop système et le bouton `Scanner Niumi` de l'alarme n'ont pas pu servir de signal puisqu'aucune alerte n'a été présentée, et que seule une ouverture de l'application affiche cet état;
 - bouton `Scanner le boîtier` lorsque le parcours de réveil est actif;
 - bouton `Modifier ou annuler` dans `ARMED`; ce bouton ouvre le scanner et ne change aucun état avant un scan valide;
 - progression non interruptible pendant `RELEASING`;
@@ -955,7 +961,8 @@ Niumi ne prétend pas résister à une personne qui désinstalle l'application, 
 - événements dupliqués, anciens ou hors session, et identifiant réutilisé avec un payload différent;
 - validation de `failureCode` et de l'effet des gravités `WARNING`, `DEGRADED` et `CRITICAL`;
 - refus d'une régression de `revision`;
-- sélections de 0, 1, 50 et 51 applications.
+- sélections de 0, 1, 50 et 51 applications;
+- `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables sans effet en double.
 
 `NiumiTests` couvre:
 
@@ -964,6 +971,7 @@ Niumi ne prétend pas résister à une personne qui désinstalle l'application, 
 - reprise depuis `RELEASING`;
 - mapping aller-retour entre SwiftData et les DTO KMP, puis mapping de projection pour le snapshot App Group;
 - conversion de `alarmStopped` vers `ALARM_SOUND_STOPPED`;
+- routage vers l'écran de réveil déclenché par `PRESENT_SCAN_REQUEST` au lancement et au retour au premier plan;
 - réconciliation sérialisée d'une alarme `.scheduled`, `.alerting`, absente après lecture réussie ou illisible, avant, exactement à et après l'heure, avant un scan;
 - incident `IOS_ALARM_STATE_READ_FAILED`, sa gravité `DEGRADED` et le déclenchement d'après l'horloge malgré l'erreur après l'heure;
 - présentation `AlarmPresentation.Alert` avec `secondaryButtonBehavior: .custom` et libellé `Scanner Niumi`;
@@ -1027,6 +1035,7 @@ Matrice minimale:
 | lecture AlarmKit en erreur avant l'heure | incident `IOS_ALARM_STATE_READ_FAILED`, parcours d'annulation conservé et annulation idempotente de l'alarme |
 | lecture AlarmKit en erreur exactement à l'heure | incident `IOS_ALARM_STATE_READ_FAILED`, `TRIGGER_ELAPSED` d'après l'horloge, puis scan valide vers `COMPLETED` |
 | lecture AlarmKit en erreur après l'heure | incident `IOS_ALARM_STATE_READ_FAILED`, `TRIGGER_ELAPSED` d'après l'horloge, puis scan valide vers `COMPLETED` |
+| réouverture de Niumi après un réveil manqué, application restée fermée | `TRIGGER_ELAPSED` produit à l'ouverture, routage immédiat vers l'écran de réveil affichant `Réveil manqué, scan attendu`, shields toujours actifs |
 | interruption pendant `RELEASING` | effets manquants repris sans déblocage incohérent |
 | autorisation Family Controls révoquée | diagnostic visible, aucune fausse promesse de blocage |
 | autorisation AlarmKit révoquée avant activation | activation refusée |
@@ -1060,7 +1069,8 @@ La version iPhone est acceptée si tous les critères suivants sont remplis:
 18. un scan depuis `ARMED` avant l'heure termine en `CANCELLED`;
 19. un scan depuis `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` termine en `COMPLETED`;
 20. un changement de fuseau conserve l'instant et recalcule seulement l'affichage local;
-21. les tests `commonTest`, les mappings Swift et la construction de `NiumiCore` passent dans la CI.
+21. les tests `commonTest`, les mappings Swift et la construction de `NiumiCore` passent dans la CI;
+22. `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` routent immédiatement vers l'écran de réveil lorsque l'application est active, et la recette sur appareil confirme qu'une réouverture après un réveil manqué affiche `Réveil manqué, scan attendu` sans que le son ait jamais sonné.
 
 ## 24. Ordre d'implémentation pour Codex
 

@@ -70,6 +70,7 @@ Codex doit appliquer les décisions suivantes sans ajouter de variante cachée:
 - L'instant du réveil est figé après activation. Un changement de fuseau modifie l'affichage local, pas `triggerAtEpochMillis`.
 - Les applications système nécessaires à la sécurité et aux réglages ne sont jamais proposées dans le sélecteur.
 - Le MVP ne fournit aucun mécanisme logiciel de secours pendant une session active. Si le boîtier est perdu, cassé ou illisible, ou si le NFC tombe en panne, l'utilisateur conserve les mécanismes Android tels que l'arrêt forcé ou l'extinction du téléphone. Cette limite est intentionnelle et doit être expliquée avant la première activation.
+- `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` affichent toujours une notification demandant le scan, y compris lorsque l'alarme n'a jamais sonné. Aucune session bloquante ne reste silencieuse.
 
 ## 4. Limites de la promesse Android
 
@@ -464,7 +465,7 @@ Créer un `SystemEventsReceiver` pour:
 - `TIMEZONE_CHANGED`;
 - `USER_UNLOCKED`.
 
-Le receiver est `directBootAware`. Il lit le snapshot et rappelle le programmateur avec le même `triggerAtEpochMillis`. Il ne recalcule pas l'instant depuis l'heure locale. Si la session est `ARMED` et l'instant est dépassé, il applique la politique de retard dans le coordinateur Direct Boot sous mutex: jusqu'à 15 minutes, il reprogramme une alarme immédiate dont `AlarmReceiver` produira `ALARM_FIRED`; au-delà, il applique `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW` dans le snapshot, le registre et l'outbox, sans démarrer le service de sonnerie. À `USER_UNLOCKED`, le réconciliateur fusionne de façon idempotente le registre et l'outbox Direct Boot dans Room.
+Le receiver est `directBootAware`. Il lit le snapshot et rappelle le programmateur avec le même `triggerAtEpochMillis`. Il ne recalcule pas l'instant depuis l'heure locale. Si la session est `ARMED` et l'instant est dépassé, il applique la politique de retard dans le coordinateur Direct Boot sous mutex: jusqu'à 15 minutes, il reprogramme une alarme immédiate dont `AlarmReceiver` produira `ALARM_FIRED`; au-delà, il applique `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW` dans le snapshot, le registre et l'outbox, exécute `PRESENT_SCAN_REQUEST` et publie la notification décrite en 10.5 depuis le contexte protégé par appareil, sans démarrer le service de sonnerie. À `USER_UNLOCKED`, le réconciliateur fusionne de façon idempotente le registre et l'outbox Direct Boot dans Room.
 
 ## 10. Déclenchement et service de sonnerie
 
@@ -548,16 +549,45 @@ L'activité doit:
 - afficher l'heure, l'état du NFC et l'instruction de scan;
 - activer le Reader Mode dans `onResume()`;
 - le désactiver dans `onPause()`;
-- rouvrir l'écran de réveil si l'état commun est `RINGING`; afficher la progression de nettoyage si l'état est `RELEASING`;
+- rouvrir l'écran de réveil si l'état commun est `RINGING`; afficher la progression de nettoyage si l'état est `RELEASING`; afficher le mode scan sans audio si l'état est `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`;
 - ne contenir aucun bouton d'arrêt.
 
-Texte principal:
+Texte principal si l'état est `RINGING`:
 
 > Scanne ton boîtier Niumi pour arrêter l'alarme.
+
+Texte principal si l'état est `TRIGGERED_AWAITING_NFC`, sans alarme sonnée:
+
+> Ton réveil est passé. Scanne ton boîtier Niumi pour débloquer tes applications.
+
+Texte principal si l'état est `AWAITING_NFC`, après un arrêt du son:
+
+> Le son est arrêté, mais tes applications restent bloquées. Scanne ton boîtier Niumi pour terminer la session.
 
 Si le téléphone doit être déverrouillé:
 
 > Déverrouille ton téléphone, puis approche-le du boîtier.
+
+### 10.5 Notification d'attente de scan
+
+`TRIGGER_ELAPSED` et `ALARM_SOUND_STOPPED` exécutent l'effet commun `PRESENT_SCAN_REQUEST`. Il se traduit par une notification persistante distincte de celle de la sonnerie, publiée que l'écran soit ouvert ou non.
+
+Créer un canal `niumi_session_awaiting_scan`:
+
+- importance haute;
+- catégorie `CATEGORY_ALARM`;
+- visibilité publique;
+- aucun son, aucune vibration;
+- aucun `setFullScreenIntent()`: cette notification ne doit jamais rallumer l'écran ni simuler une alarme active, en cohérence avec la fenêtre de 15 minutes qui empêche justement une sonnerie tardive;
+- titre: "Ton réveil Niumi est passé";
+- texte: "Scanne ton boîtier pour débloquer tes applications.";
+- `setOngoing(true)`;
+- aucune action d'arrêt;
+- au tap, ouvrir `AlarmActivity` en mode scan.
+
+La notification est publiée par l'exécution de `PRESENT_SCAN_REQUEST` et retirée par `CLEAR_SCAN_REQUEST`, tous deux idempotents. Lorsque `TRIGGER_ELAPSED` est produit par le coordinateur Direct Boot avant le premier déverrouillage, la notification est publiée depuis le `DeviceProtectedStorageContext`, au même titre que le snapshot Direct Boot.
+
+Le comportement de `CATEGORY_ALARM` sans son sous Ne pas déranger varie selon la version Android et les surcouches OEM; ce point fait partie de la matrice de tests physiques.
 
 ## 11. NFC
 
@@ -823,6 +853,7 @@ Règles UI:
 - afficher la date, l'heure et le fuseau de la session active;
 - afficher la prochaine heure système calculée;
 - ne jamais mettre une action d'arrêt dans l'écran de réveil;
+- toujours afficher une notification de demande de scan tant que la session attend un scan sans sonnerie active, y compris si l'alarme n'a jamais sonné;
 - expliquer les autorisations juste avant leur demande;
 - conserver un contraste lisible la nuit;
 - prendre en charge TalkBack même si l'application utilise elle-même un service d'accessibilité;
@@ -860,6 +891,8 @@ AUDIO_START_FAILED
 FULL_SCREEN_DENIED
 EXACT_ALARM_LOST
 MISSED_TRIGGER_WINDOW
+SCAN_REQUEST_NOTIFIED
+SCAN_REQUEST_CLEARED
 NFC_DISABLED
 NFC_SCAN_INVALID
 NFC_SCAN_VALID
@@ -920,6 +953,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - changement de fuseau sans modification de `triggerAtEpochMillis`;
 - retard inférieur, égal et supérieur à 15 minutes;
 - retard supérieur à 15 minutes vers `TRIGGERED_AWAITING_NFC`, avec santé `DEGRADED` et incident `MISSED_TRIGGER_WINDOW`;
+- `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables sans effet en double;
 - sélections de 0, 1, 50 et 51 applications;
 - révisions métier croissantes, refus d'un événement destiné à une autre session et validation de `failureCode`.
 
@@ -936,6 +970,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - mapping aller-retour entre Room et les DTO KMP, puis mapping de projection pour Direct Boot;
 - reconstruction d'un `SessionSnapshot` valide depuis Direct Boot avant déverrouillage;
 - politique de retard appliquée par le receiver Direct Boot, à 15 minutes et au-delà;
+- publication et retrait idempotents de la notification d'attente de scan, y compris depuis le coordinateur Direct Boot avant déverrouillage;
 - mapping des erreurs Android vers les erreurs métier;
 - registre et outbox atomiques, exécution idempotente des effets KMP et reprise partielle de `RELEASING`.
 
@@ -953,7 +988,8 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - migrations Room;
 - écriture et lecture du snapshot Direct Boot;
 - réception des intents explicites;
-- affichage de la notification et de son canal;
+- affichage de la notification de sonnerie et de son canal;
+- affichage de la notification d'attente de scan et de son canal, sans son, vibration ni full-screen intent;
 - démarrage du service depuis un receiver de test;
 - Reader Mode avec abstraction ou tag de test;
 - overlay d'accessibilité sur application factice;
@@ -1006,7 +1042,8 @@ Scénarios à exécuter:
 | redémarrage puis aucun déverrouillage | alarme reprogrammée depuis Direct Boot |
 | redémarrage 2 minutes avant le réveil | alarme reprogrammée et déclenchée à l'heure |
 | redémarrage après l'heure, retard inférieur ou égal à 15 minutes | sonnerie immédiate |
-| redémarrage après l'heure, retard supérieur à 15 minutes | session `TRIGGERED_AWAITING_NFC`, santé `DEGRADED`, incident `MISSED_TRIGGER_WINDOW`, blocage maintenu |
+| redémarrage après l'heure, retard supérieur à 15 minutes | session `TRIGGERED_AWAITING_NFC`, santé `DEGRADED`, incident `MISSED_TRIGGER_WINDOW`, blocage maintenu, notification d'attente de scan visible avant tout déverrouillage, sans son ni vibration |
+| scan valide depuis `TRIGGERED_AWAITING_NFC` | notification d'attente de scan retirée, passage par `RELEASING` puis `COMPLETED` |
 | changement manuel d'heure | même `triggerAtEpochMillis` réenregistré, politique de retard appliquée |
 | changement de fuseau | instant inchangé et affichage local recalculé |
 | notifications refusées | activation refusée |
@@ -1053,6 +1090,7 @@ Le MVP est accepté si tous les critères suivants sont vrais:
 - le blocage renvoie chaque application sélectionnée à l'accueil sans bloquer les applications autorisées;
 - une sélection de plus de 50 applications est refusée;
 - un redémarrage restaure l'alarme avant le premier déverrouillage;
+- `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` affichent toujours une notification demandant le scan, sans son ni vibration ni full-screen intent, y compris avant le premier déverrouillage; elle est retirée par un scan valide;
 - un changement d'heure ou de fuseau réenregistre le même instant et recalcule seulement l'affichage local;
 - l'application ne lit aucun contenu de fenêtre via l'accessibilité;
 - le parcours critique ne réalise aucun appel réseau;

@@ -1,7 +1,7 @@
 # Niumi Core KMP: spécification métier commune
 
 Statut: contrat proposé pour le MVP Android et iOS
-Version du contrat: 1.1
+Version du contrat: 1.2
 Date de référence: 2 septembre 2026
 Plateformes: Android natif et iOS natif
 Module partagé: Kotlin Multiplatform
@@ -44,6 +44,7 @@ Les décisions suivantes s'appliquent aux deux applications:
 10. Le même tag NFC physique doit être reconnu par Android et iOS.
 11. L'utilisateur sélectionne entre 1 et 50 applications.
 12. Le MVP ne propose aucun secours logiciel immédiat si le boîtier ou le NFC est indisponible.
+13. Un état qui attend le scan sans présentation d'alarme active demande explicitement ce scan à l'utilisateur.
 
 L'absence de secours logiciel est une contrainte produit assumée. L'activation vérifie que le NFC est disponible et que le boîtier associé a été validé; l'application ne présente ni délai, ni code, ni bouton de déblocage comme solution de récupération.
 
@@ -93,6 +94,7 @@ Le moteur commun doit refuser toute transition qui enfreint un invariant.
 - Le blocage reste demandé dans `ARMED`, `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`.
 - `RELEASING` autorise un nettoyage partiel. L'état seul ne permet pas de déduire si le blocage natif est encore appliqué.
 - L'arrêt sonore iOS n'est jamais traité comme une preuve NFC.
+- `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` demandent explicitement le scan du boîtier. Aucune session bloquante ne reste sans signal natif tant qu'elle attend ce scan.
 - Aucun événement réseau n'est nécessaire pour autoriser une transition.
 - Un événement ancien ou destiné à une autre session ne peut pas faire régresser l'état. Le coordinateur natif déduplique les événements avant d'appeler le moteur.
 
@@ -256,6 +258,8 @@ enum class SessionEffectKind {
     REMOVE_BLOCKING,
     START_RINGING,
     STOP_RINGING,
+    PRESENT_SCAN_REQUEST,
+    CLEAR_SCAN_REQUEST,
     CLEAR_ACTIVE_SESSION,
     RECORD_INCIDENT
 }
@@ -283,8 +287,8 @@ data class IncidentEffectPayload(
 | `ACTIVATION_SUCCEEDED` | publier |
 | `ACTIVATION_FAILED` | annuler l'alarme, retirer le blocage de la transaction, publier, effacer le pointeur actif |
 | `ALARM_FIRED` | publier, démarrer la sonnerie native |
-| `ALARM_SOUND_STOPPED` ou `TRIGGER_ELAPSED` | publier, puis enregistrer l'incident s'il existe |
-| `VALID_NFC_SCANNED` | publier `RELEASING`, annuler l'alarme, arrêter la sonnerie, retirer le blocage |
+| `ALARM_SOUND_STOPPED` ou `TRIGGER_ELAPSED` | publier, présenter la demande de scan, puis enregistrer l'incident s'il existe |
+| `VALID_NFC_SCANNED` | publier `RELEASING`, annuler l'alarme, arrêter la sonnerie, retirer la demande de scan, retirer le blocage |
 | `RELEASE_FAILED` | enregistrer l'incident, publier |
 | `RELEASE_SUCCEEDED` | publier l'état final, effacer le pointeur actif |
 
@@ -443,7 +447,7 @@ Une activation est refusée si `count` est inférieur à 1 ou supérieur à 50. 
 - L'interface peut recalculer l'heure d'affichage dans le fuseau courant, sans modifier le contrat.
 - Android déclenche immédiatement l'alarme si l'instant est dépassé de 15 minutes ou moins lors d'une réconciliation sans scan NFC en cours. Si un scan valide est déjà en cours et qu'aucune alarme n'est observée, le coordinateur produit d'abord `TRIGGER_ELAPSED` afin de choisir `COMPLETED` sans démarrer une sonnerie transitoire.
 - Sur iOS, le coordinateur lit `try AlarmManager.shared.alarms`, dont l'accès peut échouer. Seul l'état `.alerting` produit `ALARM_FIRED`. Une alarme `.scheduled` observée avant `triggerAtEpochMillis` conserve `ARMED`. À l'heure ou après, une lecture réussie sans alarme `.alerting`, y compris une liste ne contenant plus l'alarme ponctuelle, produit `TRIGGER_ELAPSED`. Une erreur de lecture produit l'incident `IOS_ALARM_STATE_READ_FAILED` de gravité `DEGRADED`; elle n'est jamais assimilée à une liste vide. À l'heure ou après, le coordinateur produit tout de même `TRIGGER_ELAPSED` d'après l'horloge avant le scan. Avant l'heure, le scan valide conserve le parcours d'annulation vers `CANCELLED`; les effets de libération annulent l'alarme de façon idempotente.
-- Au-delà de 15 minutes sur Android, l'application produit `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW`, passe à `TRIGGERED_AWAITING_NFC`, dégrade sa santé, conserve le blocage et attend le scan du boîtier.
+- Au-delà de 15 minutes sur Android, l'application produit `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW`, passe à `TRIGGERED_AWAITING_NFC`, dégrade sa santé, conserve le blocage, présente la demande de scan et attend le scan du boîtier.
 
 La fonction de calcul reçoit explicitement `nowEpochMillis` et le fuseau. Aucun test ne dépend de l'horloge réelle.
 
@@ -541,9 +545,13 @@ Le blocage n'est considéré comme engagé qu'après `ACTIVATION_SUCCEEDED`.
 
 `AlarmReceiver` produit `ALARM_FIRED`. Le coordinateur applique la décision du coeur, démarre le service de sonnerie et conserve le blocage. Avant un scan depuis `ARMED`, il sérialise la réconciliation de l'heure et de l'état natif: si l'heure est passée sans alarme observée, il produit d'abord `TRIGGER_ELAPSED`.
 
+`PRESENT_SCAN_REQUEST` se traduit sur Android par une notification persistante distincte de celle de la sonnerie: aucun son, aucune vibration, aucun full-screen intent. Elle informe que le scan est attendu sans simuler une alarme active. Ce comportement s'applique aussi lorsque `TRIGGER_ELAPSED` est produit avant le premier déverrouillage, depuis le coordinateur Direct Boot.
+
 ### 11.2 iOS
 
 Le coordinateur lit `try AlarmManager.shared.alarms` avant un scan depuis `ARMED`. Seul l'état `.alerting` produit `ALARM_FIRED`; une alarme `.scheduled` avant l'heure conserve `ARMED`. À l'heure ou après, une lecture réussie sans alarme `.alerting` produit `TRIGGER_ELAPSED`. Si la lecture échoue, il enregistre `IOS_ALARM_STATE_READ_FAILED` avec la gravité `DEGRADED`; à l'heure ou après, il produit néanmoins `TRIGGER_ELAPSED` d'après l'horloge avant le scan. Avant l'heure, il conserve le parcours d'annulation. `NiumiStopIntent` publie un fait natif immuable, ensuite converti en `ALARM_SOUND_STOPPED` par l'application principale. Cet événement ne retire aucun shield.
+
+`PRESENT_SCAN_REQUEST` se traduit sur iOS par un routage immédiat vers l'écran de réveil dès que le coordinateur observe le fait, sans notification locale: iOS n'observe ce fait qu'application active (lancement, retour au premier plan ou avant un scan). Tant que l'application n'a pas été rouverte, seuls les shields signalent que la session reste active.
 
 Le scan Core NFC produit `VALID_NFC_SCANNED` seulement après passage par le parseur et le vérificateur communs, avec la `NfcVerificationProof` opaque retournée par ce dernier.
 
@@ -792,7 +800,8 @@ Les tests `commonTest` couvrent au minimum:
 - validation de `failureCode` et des charges spécifiques à chaque événement;
 - santé inchangée pour `WARNING`, dégradée pour `DEGRADED` et `CRITICAL`;
 - impossibilité de passer une session active à `FAILED`;
-- révisions métier croissantes et refus des révisions obsolètes.
+- révisions métier croissantes et refus des révisions obsolètes;
+- `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables de façon idempotente en reprise.
 
 ### Date et heure
 
@@ -869,6 +878,7 @@ Une fonctionnalité commune n'est terminée que si:
 | 9.2 Activation en deux phases | Modifier | Faire passer chaque transition par KMP. Garder la transaction native et ses compensations selon la section 10 du présent contrat. |
 | 9.3 Reprogrammation | Modifier | Sur changement d'heure ou de fuseau, réenregistrer l'instant figé. Mettre à jour seulement l'affichage local. |
 | 10.2 AlarmRingingService | Modifier | Le service produit `ALARM_FIRED`, exécute `START_RINGING` et ne choisit jamais directement `RINGING`. |
+| 10.3 Notification et plein écran | Compléter | Ajouter une section décrivant une notification distincte, sans son ni vibration ni full-screen intent, qui exécute `PRESENT_SCAN_REQUEST` et `CLEAR_SCAN_REQUEST`. |
 | 11.1 Association | Remplacer | Utiliser exactement le protocole NFC commun, y compris la longueur maximale de 96 octets et le token de 16 octets. |
 | 11.2 Lecture | Modifier | Supprimer la validation dupliquée. Reader Mode transmet l'URI au parseur et au vérificateur KMP. |
 | 11.3 Fin ou annulation | Remplacer | `VALID_NFC_SCANNED` mène à `RELEASING`. Le nettoyage réussi produit ensuite `RELEASE_SUCCEEDED`. Un échec conserve `RELEASING`. |
@@ -877,8 +887,8 @@ Une fonctionnalité commune n'est terminée que si:
 | 13. Diagnostic | Modifier | Mapper les contrôles Android vers `ReadinessSeverity` et les DTO communs. Les actions vers les réglages restent natives. |
 | 18. Gestion des erreurs | Modifier | Ajouter la reprise de `RELEASING` et `RELEASE_PARTIAL_FAILURE`. Interdire une finalisation optimiste. |
 | 19.1 Tests unitaires | Répartir | Déplacer machine à états, heure, NFC, limite de sélection et invariants vers `commonTest`. Garder les adaptateurs et mappings Android dans les tests Android. |
-| 20. Tests physiques | Modifier | Pour le changement de fuseau, attendre un instant inchangé et un affichage local recalculé, au lieu d'une heure locale conservée. |
-| 21. Critères d'acceptation | Modifier | Exiger `RELEASING`, la limite de 50, le parseur KMP et l'instant figé. Supprimer toute attente de transition directe au scan. |
+| 20. Tests physiques | Modifier | Pour le changement de fuseau, attendre un instant inchangé et un affichage local recalculé, au lieu d'une heure locale conservée. Ajouter un scénario de retard supérieur à 15 minutes exigeant une notification de demande de scan visible et silencieuse. |
+| 21. Critères d'acceptation | Modifier | Exiger `RELEASING`, la limite de 50, le parseur KMP et l'instant figé. Supprimer toute attente de transition directe au scan. Exiger qu'`AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` présentent toujours une notification de demande de scan. |
 | 22. Ordre d'implémentation | Compléter | Ajouter un Lot 0.5 après le POC: création du contrat, du module KMP, des fixtures et des mappings. Le Lot 1 consomme ensuite KMP. |
 
 ## 23. Modifications précises de la spécification iOS
@@ -903,10 +913,11 @@ Une fonctionnalité commune n'est terminée que si:
 | 11. Calcul de la date | Fixer | Appliquer la première occurrence lors d'une heure répétée et le premier instant valide après une heure inexistante. Conserver l'instant après activation. |
 | 11. Transaction d'activation | Modifier | Faire passer `ACTIVATION_REQUESTED`, `ACTIVATION_SUCCEEDED` et `ACTIVATION_FAILED` par KMP. |
 | 12. NiumiStopIntent | Conserver avec adaptation | Ne pas importer le moteur dans l'intent. Conserver l'événement immuable, puis le réduire dans l'application principale. |
+| 12. Observation de l'alarme | Compléter | Router immédiatement vers l'écran de réveil dès qu'`ALARM_SOUND_STOPPED` ou `TRIGGER_ELAPSED` est produit. Documenter que ce signal n'existe qu'application active. |
 | 14. Association et lecture NFC | Remplacer en partie | Les sessions Core NFC lisent l'URI. Le parseur et la comparaison métier sont exécutés par KMP. |
 | 14. Validation du payload | Remplacer | Utiliser exactement la section 9 du présent contrat. La query `token` devient obligatoire. |
 | 15. Fin de session | Modifier | Remplacer le passage natif à `releasePending` par `VALID_NFC_SCANNED`, puis exécuter les effets de `RELEASING` et envoyer `RELEASE_SUCCEEDED`. |
-| 16. Restauration | Modifier | Réduire les événements via KMP et reprendre les effets manquants de `RELEASING`. |
+| 16. Restauration | Modifier | Réduire les événements via KMP, router vers l'écran de réveil sur `PRESENT_SCAN_REQUEST` et reprendre les effets manquants de `RELEASING`. |
 | 17. Session active | Compléter | Ajouter une action de modification ou d'annulation qui ouvre le scan. Aucun changement n'est appliqué avant l'état `CANCELLED`. |
 | 22. Tests unitaires | Répartir | Déplacer les règles communes vers `commonTest`. Garder AlarmKit, ManagedSettings, App Group, Core NFC et mappings dans les tests Swift. |
 | 23. Critères d'acceptation | Modifier | Ajouter l'annulation NFC, `CANCELLED`, le protocole commun, la règle horaire et l'interdiction de finaliser avant nettoyage. |
