@@ -76,11 +76,25 @@ dans le code.
 - **Conformité graphique.** Si une charte ou un document de design Niumi existe, le
   consulter avant toute modification visuelle. Si une demande le contredit, le signaler
   avant de modifier la référence.
-- **Texte affiché à l'utilisateur.** Utiliser le skill `humanizer` lorsqu'il est disponible pour le texte affiché aux utilisateurs des apps créées ou pour la documentation. Ne l'utilise pas pour me répondre.
 - **Pas de co-auteur dans les commits.** Ne jamais ajouter de ligne `Co-Authored-By`.
 - **Ne pas commit ni push automatiquement** sauf demande explicite. Si l'utilisateur demande de push sur github, tu peux par contre le faire sans demander de confirmation
 - **Pas de faux comportement de production.** Les mocks, fakes et raccourcis de test doivent
   rester dans les tests ou les configurations de développement prévues à cet effet.
+
+## Recherches externes
+
+Dans la conversation principale, toute recherche nécessitant WebSearch,
+WebFetch ou Context7 doit être déléguée au sous-agent `researcher`.
+
+Le modèle principal doit :
+1. formuler une mission de recherche précise ;
+2. laisser `researcher` consulter les sources ;
+3. prendre ses décisions à partir de sa synthèse.
+
+Il ne doit appeler directement les outils de recherche que si le sous-agent
+échoue ou si la recherche est triviale.
+
+Cette règle ne s’applique pas lorsque l’agent actif est `researcher`.
 
 ## Documentation du dépôt
 

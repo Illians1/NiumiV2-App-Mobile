@@ -211,13 +211,15 @@ Transitions autorisées:
 | `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | aucune |
 | `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | aucune |
 | `TRIGGERED_AWAITING_NFC` | `ALARM_SOUND_STOPPED` | état inchangé | aucune |
-| `ARMED` | `VALID_NFC_SCANNED` | `RELEASING` | `CANCELLED` |
+| `ARMED`, avant `triggerAtEpochMillis` | `VALID_NFC_SCANNED` | `RELEASING` | `CANCELLED` |
 | `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | `COMPLETED` |
 | `RELEASING` | `RELEASE_FAILED` | `RELEASING` | inchangée |
 | `RELEASING` | `RELEASE_SUCCEEDED` | cible enregistrée | inchangée |
 | état actif | `INVALID_NFC_SCANNED` ou `INCIDENT_REPORTED` | état inchangé | inchangée |
 
 Android ne produit pas `ALARM_SOUND_STOPPED` dans le parcours normal. Cet événement appartient au contrat commun afin de représenter le contrôle Stop imposé par iOS.
+
+`VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé par le moteur avec la violation `TRIGGER_ALREADY_ELAPSED`. `HandleValidNfcUseCase` (section 11.3) réconcilie systématiquement l'heure avant un scan depuis `ARMED` et envoie d'abord `TRIGGER_ELAPSED` dans ce cas, si bien que ce refus reste un filet de sécurité et ne doit jamais se produire en parcours normal.
 
 `NiumiCoreFacade` est l'unique composant autorisé à appliquer ces transitions. Chaque événement possède un identifiant stable et une révision attendue, sauf `ACTIVATION_REQUESTED`. `SessionCoordinator` déduplique l'événement dans son registre avant d'appeler le moteur. Un doublon strict ne produit aucune nouvelle décision ni aucun nouvel effet; la réutilisation d'un identifiant avec un payload différent produit `EVENT_ID_CONFLICT`.
 
@@ -245,21 +247,23 @@ data class SessionIncident(
 
 Exemples de codes d'incident:
 
-```text
-ANDROID_AUDIO_START_FAILED
-ANDROID_ACCESSIBILITY_DISABLED
-ANDROID_FULL_SCREEN_REVOKED
-NFC_DISABLED
-TIME_CHANGED
-ANDROID_EXACT_ALARM_LOST
-PROCESS_RECREATED
-MISSED_TRIGGER_WINDOW
-ANDROID_OEM_RESTRICTION_SUSPECTED
-RELEASE_PARTIAL_FAILURE
-SNAPSHOT_CORRUPTED
-```
+| Code | Gravité par défaut |
+| --- | --- |
+| `ALARM_PERMISSION_REVOKED` | `CRITICAL` |
+| `BLOCKING_PERMISSION_REVOKED` | `CRITICAL` |
+| `ANDROID_AUDIO_START_FAILED` | `CRITICAL` |
+| `ANDROID_FULL_SCREEN_REVOKED` | `CRITICAL` |
+| `NFC_DISABLED` | `CRITICAL` |
+| `TIME_CHANGED` | `WARNING` |
+| `PROCESS_RECREATED` | `WARNING` |
+| `MISSED_TRIGGER_WINDOW` | `DEGRADED` |
+| `ANDROID_OEM_RESTRICTION_SUSPECTED` | `WARNING` |
+| `RELEASE_PARTIAL_FAILURE` | `DEGRADED` |
+| `SNAPSHOT_CORRUPTED` | `CRITICAL` |
 
-`SessionHealth`, `IncidentSeverity`, `Platform` et `SessionIncident` proviennent de `:shared:core`. Les codes exclusivement Android utilisent le préfixe `ANDROID_` lorsqu'ils sont exposés au contrat partagé. Une gravité `WARNING` ne change pas la santé; `DEGRADED` ou `CRITICAL` la passe à `DEGRADED`.
+`ALARM_PERMISSION_REVOKED` couvre la perte de `canScheduleExactAlarms()` après activation. `BLOCKING_PERMISSION_REVOKED` couvre la désactivation du service d'accessibilité après activation. Ce sont les codes communs du contrat KMP; Android ne les réexprime pas sous un préfixe `ANDROID_` propre, afin qu'un incident de perte de permission reste comparable entre les deux plateformes.
+
+`SessionHealth`, `IncidentSeverity`, `Platform` et `SessionIncident` proviennent de `:shared:core`. Les codes exclusivement Android utilisent le préfixe `ANDROID_` lorsqu'ils sont exposés au contrat partagé. Une gravité `WARNING` ne change pas la santé; `DEGRADED` ou `CRITICAL` la passe à `DEGRADED`. `CRITICAL` doit en plus être présenté explicitement dans le diagnostic d'incident visible par l'utilisateur.
 
 L'état métier doit rester distinct de l'état des sous-systèmes Android:
 
@@ -294,6 +298,7 @@ state: SessionState
 releaseTarget: ReleaseTarget?
 health: SessionHealth
 boxId: String
+boxTokenSha256Hex: String
 ringtoneKey: String
 vibrationEnabled: Boolean
 createdAtEpochMillis: Long
@@ -309,6 +314,8 @@ failureCode: String?
 ```
 
 `failureCode` n'est renseigné que lorsqu'une session termine son activation dans l'état `FAILED`. Les incidents postérieurs à l'armement sont stockés séparément.
+
+`boxId` et `boxTokenSha256Hex` sont copiés depuis `PairedBoxEntity` à l'étape `ACTIVATION_REQUESTED` et figés pour la durée de la session. `HandleValidNfcUseCase` vérifie toujours le scan contre ces deux valeurs de la session active, jamais contre `PairedBoxEntity` directement, afin qu'une ré-association ne puisse pas changer le boîtier attendu d'une session en cours.
 
 `BlockedAppEntity`:
 
@@ -440,13 +447,15 @@ Ne pas utiliser WorkManager, `Handler`, `setInexactRepeating()` ou une notificat
 1. exécuter le diagnostic complet;
 2. refuser l'activation si une exigence bloquante échoue;
 3. envoyer `ACTIVATION_REQUESTED` au moteur commun;
-4. écrire atomiquement la session `PREPARING`, ses applications, le reçu de l'événement, l'outbox et le snapshot Direct Boot;
+4. écrire atomiquement dans Room, en une seule transaction SQLite, la session `PREPARING`, ses applications, le reçu de l'événement et l'outbox; copier ensuite le même contenu dans le snapshot Direct Boot;
 5. créer les `PendingIntent` et appeler `setAlarmClock()`;
 6. activer le blocage de la transaction;
 7. vérifier les résultats observables;
 8. envoyer `ACTIVATION_SUCCEEDED` au moteur commun;
 9. persister et publier `ARMED`;
 10. confirmer l'activation à l'écran.
+
+Room et le snapshot Direct Boot sont deux stockages distincts: seule l'écriture Room de l'étape 4 est une transaction unique. La copie Direct Boot qui la suit n'est pas garantie atomique avec elle. Si le processus est interrompu entre les deux, Room fait foi au prochain démarrage et `SessionReconciler` réécrit le snapshot Direct Boot à partir de Room, ce que la section 13 du contrat autorise tant que `domainRevision` n'est pas régressée. Un Direct Boot en retard d'une écriture ne doit jamais faire perdre l'alarme programmée: `SystemEventsReceiver` retombe sur Room dès que `UserManager.isUserUnlocked == true`.
 
 En cas d'exception, annuler le `PendingIntent`, retirer uniquement le blocage créé par la transaction, envoyer `ACTIVATION_FAILED` avec `failureCode`, persister `FAILED` et supprimer le pointeur de session active.
 
@@ -556,9 +565,13 @@ Texte principal si l'état est `RINGING`:
 
 > Scanne ton boîtier Niumi pour arrêter l'alarme.
 
-Texte principal si l'état est `TRIGGERED_AWAITING_NFC`, sans alarme sonnée:
+Texte principal si l'état est `TRIGGERED_AWAITING_NFC`:
 
-> Ton réveil est passé. Scanne ton boîtier Niumi pour débloquer tes applications.
+> L'heure de ton réveil est passée. Scanne ton boîtier Niumi pour débloquer tes applications.
+
+`TRIGGERED_AWAITING_NFC` couvre aussi bien une alarme jamais déclenchée qu'une alarme déclenchée puis manquée avant observation par le coordinateur; le texte ne doit pas affirmer que le son n'a jamais sonné.
+
+`AWAITING_NFC` n'est atteint sur Android que si le coordinateur reçoit `ALARM_SOUND_STOPPED`, ce qui n'arrive pas dans le parcours normal puisque Android ne fournit aucun bouton d'arrêt (section 7.1). L'écran suivant reste défensif, au cas où cet événement serait produit par une réconciliation ou un test.
 
 Texte principal si l'état est `AWAITING_NFC`, après un arrêt du son:
 
@@ -593,7 +606,7 @@ Le comportement de `CATEGORY_ALARM` sans son sous Ne pas déranger varie selon l
 
 ### 11.1 Association
 
-L'association se fait dans une activité au premier plan avec `NfcAdapter.enableReaderMode()`.
+L'association se fait dans une activité au premier plan avec `NfcAdapter.enableReaderMode()`. Le parcours d'association est accessible uniquement en dehors d'une session active; l'écran d'association n'est pas atteignable pendant `PREPARING`, `ARMED`, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` ou `RELEASING`, afin que le boîtier figé dans la session en cours ne puisse jamais être remplacé avant sa fin.
 
 Format NDEF MVP:
 
@@ -654,7 +667,7 @@ Ordre logique:
 
 1. vérifier que l'état est `ARMED`, `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`;
 2. si l'état est `ARMED`, réconcilier l'heure et AlarmManager avant le scan;
-3. créer l'identifiant d'événement et l'horodatage, puis valider le boîtier avec le parseur et le vérificateur communs, qui retournent une `NfcVerificationProof` opaque liée à la session et à la révision attendue;
+3. créer l'identifiant d'événement et l'horodatage, puis valider le boîtier scanné contre `boxId` et `boxTokenSha256Hex` de la session active (jamais contre `PairedBoxEntity`), avec le parseur et le vérificateur communs, qui retournent une `NfcVerificationProof` opaque liée à la session et à la révision attendue;
 4. envoyer `VALID_NFC_SCANNED` avec cette preuve;
 5. persister atomiquement `nfcVerifiedAtEpochMillis`, `releaseTarget`, `RELEASING`, le reçu et l'outbox;
 6. publier la même `domainRevision` dans le snapshot Direct Boot et Room quand Room est accessible;
@@ -667,7 +680,9 @@ Ordre logique:
 13. persister `CANCELLED` ou `COMPLETED` et son horodatage;
 14. effacer le pointeur et le snapshot actifs après réconciliation.
 
-Si un effet échoue, envoyer `RELEASE_FAILED`, enregistrer `RELEASE_PARTIAL_FAILURE` et conserver `RELEASING`. `SessionReconciler` compare l'état natif au snapshot et reprend uniquement les effets manquants, sans réappliquer un blocage déjà retiré. L'application ne présente pas la session comme terminée avant `RELEASE_SUCCEEDED`.
+Les effets requis pour `RELEASE_SUCCEEDED` sont l'annulation de l'alarme (étape 7) et le retrait de la liste de blocage (étape 10); l'arrêt du son et de la vibration, la suppression de la notification et l'arrêt du service sont best-effort et consignés en cas d'échec sans bloquer la phase. Si le service d'accessibilité a déjà été désactivé par l'utilisateur avant le scan, le retrait du blocage est considéré satisfait dès que `NiumiBlockingAccessibilityService` n'est plus actif, avec un incident `BLOCKING_PERMISSION_REVOKED` consigné, plutôt que de bloquer indéfiniment `RELEASING`.
+
+Si un effet requis échoue alors que sa précondition tient toujours, envoyer `RELEASE_FAILED`, enregistrer `RELEASE_PARTIAL_FAILURE` et conserver `RELEASING`. `SessionReconciler` compare l'état natif au snapshot et reprend uniquement les effets manquants, sans réappliquer un blocage déjà retiré. L'application ne présente pas la session comme terminée avant `RELEASE_SUCCEEDED`.
 
 Si le même événement est traité de nouveau, le registre retourne le reçu sans rappeler le moteur ni répéter les effets déjà satisfaits. Si Room n'est pas accessible avant déverrouillage, le snapshot, son registre et son outbox font foi. La mise à jour Room est différée jusqu'à `USER_UNLOCKED` ou au prochain démarrage.
 
@@ -680,6 +695,8 @@ Construire la liste avec `PackageManager.queryIntentActivities()` pour un intent
 Dédupliquer par nom de package. Afficher l'icône, le libellé et le nom de package en petit texte si plusieurs applications ont le même libellé.
 
 La sélection doit contenir entre 1 et 50 applications. La règle appartient à `:shared:core`; l'écran Android bloque la confirmation pour 0 ou 51 applications.
+
+Le sélecteur n'est pas accessible pendant une session active. La sélection associée à une session en cours ne peut être modifiée qu'après un scan valide, en cohérence avec l'association du boîtier en 11.1.
 
 Exclure:
 
@@ -712,7 +729,7 @@ Algorithme:
 ```text
 à chaque changement de fenêtre
   lire le package au premier plan
-  si aucune session ARMED, RINGING, AWAITING_NFC ou TRIGGERED_AWAITING_NFC: ne rien faire
+  si aucune session ARMED, RINGING, AWAITING_NFC, TRIGGERED_AWAITING_NFC ou RELEASING: ne rien faire
   si la session est RELEASING: lire la liste de blocage effective et les effets de libération en attente
   si aucune liste de blocage effective: retirer l'overlay éventuel
   si le package n'est pas bloqué: retirer l'overlay éventuel
@@ -915,7 +932,7 @@ Principes:
 
 - une erreur de configuration empêche l'activation;
 - `FAILED` est réservé à une activation qui n'a jamais abouti;
-- une erreur après activation conserve l'état `ARMED`, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` ou `RELEASING`, passe la santé à `DEGRADED` seulement si sa gravité est `DEGRADED` ou `CRITICAL` et crée un `SessionIncident`;
+- une erreur après activation conserve l'état `ARMED`, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` ou `RELEASING`, passe la santé à `DEGRADED` seulement si sa gravité est `DEGRADED` ou `CRITICAL` et crée un `SessionIncident`; une gravité `CRITICAL` est en plus présentée explicitement dans le diagnostic d'incident;
 - une erreur après activation conserve le blocage hors de `RELEASING`; pendant `RELEASING`, elle conserve les effets incomplets sans restaurer un blocage déjà retiré;
 - une erreur audio garde l'activité visible, la vibration active et affiche une alerte forte;
 - une erreur NFC n'arrête jamais la sonnerie;
@@ -940,6 +957,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - passage de `ARMED` à `RELEASING` avec cible `CANCELLED` après scan valide;
 - passage de `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` à `RELEASING` avec cible `COMPLETED`;
 - réconciliation du scan depuis `ARMED` après l'heure vers `TRIGGERED_AWAITING_NFC`;
+- refus de `VALID_NFC_SCANNED` depuis `ARMED` à ou après `triggerAtEpochMillis` avec `TRIGGER_ALREADY_ELAPSED`;
 - passage à l'état final uniquement après `RELEASE_SUCCEEDED`;
 - maintien de `RELEASING` après `RELEASE_FAILED`;
 - impossibilité de passer une session active à `FAILED`;
@@ -972,11 +990,14 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - politique de retard appliquée par le receiver Direct Boot, à 15 minutes et au-delà;
 - publication et retrait idempotents de la notification d'attente de scan, y compris depuis le coordinateur Direct Boot avant déverrouillage;
 - mapping des erreurs Android vers les erreurs métier;
-- registre et outbox atomiques, exécution idempotente des effets KMP et reprise partielle de `RELEASING`.
+- registre et outbox atomiques, exécution idempotente des effets KMP et reprise partielle de `RELEASING`;
+- reconstruction du snapshot Direct Boot depuis Room après une interruption entre les deux écritures de l'étape 4 de l'activation.
 
 `feature`:
 
 - impossibilité de confirmer si un contrôle bloquant échoue;
+- écran d'association et sélecteur d'applications inaccessibles pendant une session active;
+- scan vérifié contre `boxId` et `boxTokenSha256Hex` de la session active, refusé si le dépôt de boîtiers a changé depuis l'activation;
 - absence d'action d'arrêt sur l'écran de sonnerie;
 - retour des réglages et nouveau diagnostic;
 - messages d'erreur NFC;

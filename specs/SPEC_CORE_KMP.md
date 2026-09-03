@@ -14,6 +14,7 @@ Le module KMP ne remplace pas les deux applications natives. Il fournit leur mot
 
 Les documents de référence sont:
 
+- `docs/OBJECTIF_ET_INTERET_PRODUIT.md` pour l'intention produit;
 - les décisions produit fixées dans les spécifications Android et iOS;
 - `SPEC_ANDROID.md` pour l'implémentation Android;
 - `SPEC_IOS.md` pour l'implémentation iOS;
@@ -21,7 +22,7 @@ Les documents de référence sont:
 
 En cas de contradiction, l'ordre de priorité est le suivant:
 
-1. intention produit;
+1. intention produit, portée par `docs/OBJECTIF_ET_INTERET_PRODUIT.md` et par les décisions produit des spécifications Android et iOS;
 2. présent contrat KMP;
 3. spécification de la plateforme concernée;
 4. code de l'application.
@@ -42,9 +43,10 @@ Les décisions suivantes s'appliquent aux deux applications:
 8. Le passage à un état final se fait seulement après une phase `RELEASING` réussie.
 9. Le réveil conserve l'instant calculé lors de l'activation. Un changement de fuseau ne déplace pas cet instant.
 10. Le même tag NFC physique doit être reconnu par Android et iOS.
-11. L'utilisateur sélectionne entre 1 et 50 applications.
-12. Le MVP ne propose aucun secours logiciel immédiat si le boîtier ou le NFC est indisponible.
-13. Un état qui attend le scan sans présentation d'alarme active demande explicitement ce scan à l'utilisateur.
+11. Le boîtier vérifié pour terminer une session est celui associé au moment de l'activation. Une ré-association du boîtier ou un changement de la sélection d'applications est interdit tant qu'une session est active.
+12. L'utilisateur sélectionne entre 1 et 50 applications.
+13. Le MVP ne propose aucun secours logiciel immédiat si le boîtier ou le NFC est indisponible.
+14. Un état qui attend le scan sans présentation d'alarme active demande explicitement ce scan à l'utilisateur, sous réserve de l'exception iOS documentée en section 11.2.
 
 L'absence de secours logiciel est une contrainte produit assumée. L'activation vérifie que le NFC est disponible et que le boîtier associé a été validé; l'application ne présente ni délai, ni code, ni bouton de déblocage comme solution de récupération.
 
@@ -89,12 +91,14 @@ Le moteur commun doit refuser toute transition qui enfreint un invariant.
 - `FAILED` est réservé à une activation qui n'a jamais abouti.
 - Une session déjà armée ne passe pas à `FAILED` à cause d'un incident technique.
 - Un NFC invalide ne modifie ni l'état, ni le blocage, ni le son.
+- Le boîtier vérifié pour une session est celui figé au moment de l'activation. Le coordinateur natif ne substitue jamais le boîtier courant du dépôt à celui capturé pour la session; une ré-association pendant une session active est refusée en amont, avant tout appel au moteur.
+- `VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé avec la violation `TRIGGER_ALREADY_ELAPSED`. Le coordinateur doit produire `TRIGGER_ELAPSED` avant tout scan dans ce cas, conformément à la section 5.1.
 - `nfcVerifiedAt` doit exister avant l'entrée dans `RELEASING`.
 - `COMPLETED` et `CANCELLED` ne sont atteints qu'après réussite du nettoyage.
 - Le blocage reste demandé dans `ARMED`, `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`.
 - `RELEASING` autorise un nettoyage partiel. L'état seul ne permet pas de déduire si le blocage natif est encore appliqué.
 - L'arrêt sonore iOS n'est jamais traité comme une preuve NFC.
-- `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` demandent explicitement le scan du boîtier. Aucune session bloquante ne reste sans signal natif tant qu'elle attend ce scan.
+- `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` demandent explicitement le scan du boîtier par un signal natif visible. Sur Android, ce signal est une notification persistante quel que soit l'état de l'application. Sur iOS, ce signal se limite au shield actif tant que l'application n'a pas été rouverte après un réveil manqué: c'est une exception assumée à la contrainte Apple sur les notifications locales pour ce cas précis, documentée en section 11.2, et le texte du shield doit alors indiquer explicitement qu'un scan termine la session.
 - Aucun événement réseau n'est nécessaire pour autoriser une transition.
 - Un événement ancien ou destiné à une autre session ne peut pas faire régresser l'état. Le coordinateur natif déduplique les événements avant d'appeler le moteur.
 
@@ -147,7 +151,7 @@ stateDiagram-v2
 | `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | aucune |
 | `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | aucune |
 | `TRIGGERED_AWAITING_NFC` | `ALARM_SOUND_STOPPED` | état inchangé | aucune |
-| `ARMED` | `VALID_NFC_SCANNED` | `RELEASING` | `CANCELLED` |
+| `ARMED`, avant `triggerAtEpochMillis` | `VALID_NFC_SCANNED` | `RELEASING` | `CANCELLED` |
 | `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | `COMPLETED` |
 | `RELEASING` | `RELEASE_FAILED` | `RELEASING` | inchangée |
 | `RELEASING` | `RELEASE_SUCCEEDED` | cible enregistrée | inchangée |
@@ -164,6 +168,7 @@ Les cas suivants produisent une `DomainViolation` sans effet natif:
 
 - `RELEASE_SUCCEEDED` hors de `RELEASING`;
 - `VALID_NFC_SCANNED` dans `PREPARING`, `COMPLETED`, `CANCELLED` ou `FAILED`;
+- `VALID_NFC_SCANNED` depuis `ARMED` à ou après `triggerAtEpochMillis`, avec la violation `TRIGGER_ALREADY_ELAPSED`;
 - `ALARM_FIRED` dans un état final;
 - `TRIGGER_ELAPSED` avant `triggerAtEpochMillis`;
 - événement dont le `sessionId` ne correspond pas à la session active;
@@ -294,6 +299,8 @@ data class IncidentEffectPayload(
 
 Tous les effets sont idempotents. La réconciliation peut les rejouer après avoir comparé l'état métier et l'état natif observé. `ACTIVATION_SUCCEEDED` et `RELEASE_SUCCEEDED` ne sont produits qu'après la réussite de tous les effets requis de leur phase.
 
+Un effet est *requis* pour une phase s'il conditionne l'envoi de l'événement `_SUCCEEDED` correspondant: `SCHEDULE_ALARM` et `APPLY_BLOCKING` pour `ACTIVATION_SUCCEEDED`; `CANCEL_ALARM`, `STOP_RINGING` et `REMOVE_BLOCKING` pour `RELEASE_SUCCEEDED`. `PUBLISH_PLATFORM_SNAPSHOT`, `PRESENT_SCAN_REQUEST`, `CLEAR_SCAN_REQUEST` et `RECORD_INCIDENT` sont toujours best-effort: leur échec est consigné mais ne bloque jamais la phase. Un effet requis dont la précondition a disparu, par exemple `REMOVE_BLOCKING` alors que l'autorisation système a déjà été révoquée par l'utilisateur, est considéré satisfait dès que le coordinateur constate que l'état natif cible est déjà atteint; il enregistre alors un incident `CRITICAL` au lieu de bloquer indéfiniment la phase.
+
 ### 6.1 Registre d'événements et outbox native
 
 Le coordinateur natif est responsable de l'idempotence. Pour chaque événement, il stocke dans la même transaction que la décision:
@@ -393,25 +400,26 @@ MISSING_INCIDENT
 MISSING_NFC_PROOF
 UNEXPECTED_EVENT_PAYLOAD
 TRIGGER_NOT_REACHED
+TRIGGER_ALREADY_ELAPSED
 ```
 
-Les codes communs initiaux sont:
+Les codes communs initiaux sont, avec leur gravité par défaut:
 
-```text
-ALARM_PERMISSION_REVOKED
-BLOCKING_PERMISSION_REVOKED
-NFC_DISABLED
-TIME_CHANGED
-TIMEZONE_CHANGED
-MISSED_TRIGGER_WINDOW
-PROCESS_RECREATED
-RELEASE_PARTIAL_FAILURE
-SNAPSHOT_CORRUPTED
-```
+| Code | Gravité par défaut |
+| --- | --- |
+| `ALARM_PERMISSION_REVOKED` | `CRITICAL` |
+| `BLOCKING_PERMISSION_REVOKED` | `CRITICAL` |
+| `NFC_DISABLED` | `CRITICAL` |
+| `TIME_CHANGED` | `WARNING` |
+| `TIMEZONE_CHANGED` | `WARNING` |
+| `MISSED_TRIGGER_WINDOW` | `DEGRADED` |
+| `PROCESS_RECREATED` | `WARNING` |
+| `RELEASE_PARTIAL_FAILURE` | `DEGRADED` |
+| `SNAPSHOT_CORRUPTED` | `CRITICAL` |
 
-Chaque plateforme peut ajouter des codes préfixés par `ANDROID_` ou `IOS_`. Le module commun ne contient pas les textes affichés à l'utilisateur.
+Chaque plateforme peut ajouter des codes préfixés par `ANDROID_` ou `IOS_`, avec leur propre gravité par défaut documentée dans leur spécification. Le module commun ne contient pas les textes affichés à l'utilisateur.
 
-Un incident de gravité `WARNING` ne modifie pas `health`. Un incident `DEGRADED` ou `CRITICAL` fait passer `health` à `DEGRADED`; une session active ne revient pas automatiquement à `HEALTHY`.
+Un incident de gravité `WARNING` ne modifie pas `health`. Un incident `DEGRADED` ou `CRITICAL` fait passer `health` à `DEGRADED`; une session active ne revient pas automatiquement à `HEALTHY`. `CRITICAL` se distingue de `DEGRADED` par son traitement natif: il doit en plus être présenté explicitement dans un diagnostic visible par l'utilisateur, alors qu'un `DEGRADED` peut rester consigné sans interrompre le parcours.
 
 ### 7.4 Sélection d'applications
 
@@ -440,7 +448,7 @@ Une activation est refusée si `count` est inférieur à 1 ou supérieur à 50. 
 
 ### 8.2 Après activation
 
-`triggerAtEpochMillis` devient immuable après `ACTIVATION_SUCCEEDED`.
+`triggerAtEpochMillis` devient immuable après `ACTIVATION_SUCCEEDED`. La fenêtre de grâce de 15 minutes ci-dessous est une politique de reprogrammation Android, calculée et testée dans le module commun mais sans équivalent iOS: iOS produit `TRIGGER_ELAPSED` dès l'heure atteinte, sans délai de grâce, faute d'API de reprogrammation sonore équivalente à `setAlarmClock()`.
 
 - Un changement de fuseau ne recalcule pas le réveil depuis l'heure locale d'origine.
 - Un changement manuel de l'heure ou du fuseau demande aux adaptateurs natifs de préserver le même instant et de réparer leur programmation seulement si leur API l'exige.
@@ -539,6 +547,8 @@ Si une étape échoue:
 
 Le blocage n'est considéré comme engagé qu'après `ACTIVATION_SUCCEEDED`.
 
+À l'étape 1, le coordinateur natif capture aussi le `PairedBoxCredential` courant du dépôt et le fige dans la session. Toute vérification NFC ultérieure pour cette session utilise exclusivement ce credential figé, jamais le boîtier courant du dépôt. Le parcours d'association et le sélecteur d'applications sont désactivés tant qu'une session est active, afin que ce credential et la sélection ne puissent pas changer sous la session.
+
 ## 11. Déclenchement, arrêt sonore et scan
 
 ### 11.1 Android
@@ -551,7 +561,7 @@ Le blocage n'est considéré comme engagé qu'après `ACTIVATION_SUCCEEDED`.
 
 Le coordinateur lit `try AlarmManager.shared.alarms` avant un scan depuis `ARMED`. Seul l'état `.alerting` produit `ALARM_FIRED`; une alarme `.scheduled` avant l'heure conserve `ARMED`. À l'heure ou après, une lecture réussie sans alarme `.alerting` produit `TRIGGER_ELAPSED`. Si la lecture échoue, il enregistre `IOS_ALARM_STATE_READ_FAILED` avec la gravité `DEGRADED`; à l'heure ou après, il produit néanmoins `TRIGGER_ELAPSED` d'après l'horloge avant le scan. Avant l'heure, il conserve le parcours d'annulation. `NiumiStopIntent` publie un fait natif immuable, ensuite converti en `ALARM_SOUND_STOPPED` par l'application principale. Cet événement ne retire aucun shield.
 
-`PRESENT_SCAN_REQUEST` se traduit sur iOS par un routage immédiat vers l'écran de réveil dès que le coordinateur observe le fait, sans notification locale: iOS n'observe ce fait qu'application active (lancement, retour au premier plan ou avant un scan). Tant que l'application n'a pas été rouverte, seuls les shields signalent que la session reste active.
+`PRESENT_SCAN_REQUEST` se traduit sur iOS par un routage immédiat vers l'écran de réveil dès que le coordinateur observe le fait, sans notification locale: iOS n'observe ce fait qu'application active (lancement, retour au premier plan ou avant un scan). Tant que l'application n'a pas été rouverte, seuls les shields signalent que la session reste active. C'est l'exception native documentée en section 4: le shield doit alors afficher un texte actionnable qui indique explicitement qu'un scan du boîtier termine la session, afin de rester une porte de sortie utilisable plutôt qu'un simple constat.
 
 Le scan Core NFC produit `VALID_NFC_SCANNED` seulement après passage par le parseur et le vérificateur communs, avec la `NfcVerificationProof` opaque retournée par ce dernier.
 
@@ -578,6 +588,8 @@ Le coordinateur natif exécute ensuite:
 
 Une interruption conserve `RELEASING`. La réconciliation reprend uniquement les effets manquants et ne réapplique pas un blocage déjà retiré. Une erreur de nettoyage produit `RELEASE_PARTIAL_FAILURE`, conserve les effets incomplets dans l'outbox et ne transforme pas la session en état final.
 
+Si un effet requis ne peut plus jamais réussir parce que sa précondition a disparu, par exemple un blocage déjà retiré par le système après révocation d'une autorisation, le coordinateur applique la règle d'échappement de la section 6 plutôt que de bloquer indéfiniment `RELEASING`.
+
 ## 13. Snapshots et persistance
 
 Le coeur définit les champs communs et leur sens. Les formats physiques restent natifs.
@@ -594,6 +606,7 @@ SwiftData reste la source persistante canonique de l'application et doit permett
 
 - écriture atomique;
 - une décision acceptée augmente l'unique `revision` métier;
+- `revision` et `domainRevision` utilisent le même type sur les deux plateformes: un entier signé 64 bits, non négatif et strictement croissant (`Long` en Kotlin, `Int64` en Swift); aucune projection native ne les représente en `UInt64`;
 - les projections utilisent `projectionSchemaVersion`, `domainSchemaVersion` et `domainRevision`;
 - une projection peut être réécrite à `domainRevision` égale, mais jamais avec une révision inférieure;
 - migration testée avant toute montée de version;
@@ -669,11 +682,13 @@ niumi-mobile/
 
   androidApp/
     app/
-    core-database/
-    core-system/
-    feature-setup/
-    feature-session/
-    feature-ringing/
+    core/
+      database/
+      system/
+    feature/
+      setup/
+      session/
+      ringing/
 
   iosApp/
     NiumiApp/
@@ -685,6 +700,9 @@ niumi-mobile/
     SPEC_CORE_KMP.md
     SPEC_ANDROID.md
     SPEC_IOS.md
+
+  docs/
+    OBJECTIF_ET_INTERET_PRODUIT.md
 ```
 
 Le dépôt ne publie pas le framework commun comme dépendance distante pendant le MVP. Android et iOS consomment le même commit du monorepo.
@@ -738,26 +756,6 @@ kotlin {
 
 Le module utilise le plugin Android officiellement prévu pour les bibliothèques KMP. L'application Android reste un module `com.android.application` distinct.
 
-## 17. Intégration Android
-
-Le module Android qui contient les coordinateurs dépend de KMP:
-
-```kotlin
-dependencies {
-    implementation(project(":shared:core"))
-}
-```
-
-Modifications d'architecture:
-
-- supprimer les doublons métier de `:core:model`;
-- conserver dans un module Android les interfaces et modèles propres au système;
-- convertir Room et le snapshot Direct Boot vers les DTO KMP;
-- transmettre les événements système à `NiumiCoreFacade`;
-- exécuter les effets retournés avec les adaptateurs Android;
-- ne jamais modifier `SessionState` directement depuis un receiver, un service, une activité ou un `ViewModel`.
-
-## 18. Intégration iOS
 
 L'application principale importe:
 
@@ -782,7 +780,7 @@ Adapter uniquement le chemin `cd` à l'emplacement réel du projet Xcode. Désac
 
 Les extensions iOS ne sont pas obligées d'importer KMP. Elles peuvent lire un DTO Swift versionné qui reflète les champs communs. Un test de contrat doit vérifier ce mapping.
 
-## 19. Tests communs obligatoires
+## 17. Tests communs obligatoires
 
 Les tests `commonTest` couvrent au minimum:
 
@@ -790,7 +788,8 @@ Les tests `commonTest` couvrent au minimum:
 
 - toutes les transitions autorisées;
 - toutes les transitions interdites;
-- scan valide depuis `ARMED`, avec cible `CANCELLED`;
+- scan valide depuis `ARMED` avant `triggerAtEpochMillis`, avec cible `CANCELLED`;
+- scan refusé depuis `ARMED` à ou après `triggerAtEpochMillis`, avec la violation `TRIGGER_ALREADY_ELAPSED`;
 - scan valide depuis `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`, avec cible `COMPLETED`;
 - `TRIGGER_ELAPSED` à l'heure prévue, après l'heure et avant l'heure prévue;
 - arrêt sonore sans fin de session;
@@ -810,7 +809,7 @@ Les tests `commonTest` couvrent au minimum:
 - heure inexistante au printemps;
 - heure répétée à l'automne;
 - changement de fuseau après activation sans changement de l'instant;
-- retards de 0, 15 et plus de 15 minutes, avec `TRIGGER_ELAPSED` et `MISSED_TRIGGER_WINDOW` au-delà de 15 minutes.
+- retards de 0, 15 et plus de 15 minutes, avec `TRIGGER_ELAPSED` et `MISSED_TRIGGER_WINDOW` au-delà de 15 minutes; cette fenêtre de grâce est la politique Android, testée ici pour le calcul mais sans équivalent iOS.
 
 ### NFC
 
@@ -831,11 +830,12 @@ Les tests `commonTest` couvrent au minimum:
 - nettoyage partiel autorisé dans `RELEASING`, sans finalisation avant la réussite des effets requis;
 - reprise de `RECORD_INCIDENT` après interruption avec son code, sa gravité, son horodatage et sa plateforme;
 - aucune fin sans `nfcVerifiedAt`;
-- aucun besoin de réseau pour une décision critique.
+- aucun besoin de réseau pour une décision critique;
+- vérification effectuée avec le boîtier figé à l'activation, refusée si le credential fourni par le coordinateur ne correspond pas à celui de la session.
 
 Des fixtures communes décrivent les entrées et résultats attendus. Les tests natifs utilisent aussi ces fixtures pour valider leurs conversions.
 
-## 20. Tests natifs conservés
+## 18. Tests natifs conservés
 
 Android conserve les tests de `AlarmManager`, PendingIntent, Direct Boot, Foreground Service, audio, AccessibilityService, notifications, Reader Mode, Room et mapping KMP.
 
@@ -843,7 +843,7 @@ iOS conserve les tests AlarmKit, App Intents, ManagedSettings, Family Controls, 
 
 Un test commun vert ne remplace jamais une recette sur appareil réel.
 
-## 21. Intégration continue et parité
+## 19. Intégration continue et parité
 
 Chaque Pull Request qui touche une règle métier exécute sur un runner macOS:
 
@@ -862,36 +862,6 @@ Une fonctionnalité commune n'est terminée que si:
 - les adaptateurs natifs sont testés;
 - la matrice de parité est verte ou contient une exception OS documentée.
 
-## 22. Modifications précises de la spécification Android
-
-| Section Android | Action | Modification attendue |
-| --- | --- | --- |
-| 3. Décisions produit | Compléter | Ajouter l'instant figé après activation, la limite de 50 applications et `RELEASING` avant tout état final. |
-| 5. Cibles techniques | Compléter | Ajouter Kotlin Multiplatform, `kotlinx-datetime` et `kotlinx-serialization` pour le module commun. Les versions restent dans le catalogue. |
-| 6. Architecture du projet | Remplacer en partie | Remplacer `:core:model` par `:shared:core`. Garder les interfaces purement Android dans `:core:system` ou un petit module `:core:android-model`. |
-| 6. Règles de dépendance | Remplacer | Interdire toute mutation directe d'état hors de `NiumiCoreFacade`. Les composants Android convertissent les événements et exécutent les effets. |
-| 7.1 État d'une session | Remplacer | Utiliser les neuf états communs. Ajouter `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC`, `RELEASING` et `ReleaseTarget`. Remplacer les transitions directes vers `COMPLETED` et `CANCELLED`. |
-| 7.1 Santé et incidents | Déplacer en partie | Utiliser `SessionHealth`, les sévérités et les codes communs depuis KMP. Garder les codes OEM et audio spécifiques sous préfixe `ANDROID_`. |
-| 7.2 Entités Room | Modifier | Ajouter `revision`, `releaseTarget`, `nfcVerifiedAtEpochMillis`, `releasingAtEpochMillis` et les champs de l'intention horaire commune. Mapper l'état KMP vers une valeur persistée stable. |
-| 7.3 Snapshot Direct Boot | Modifier | Utiliser `projectionSchemaVersion`, `domainSchemaVersion` et `domainRevision`; ajouter `releaseTarget`, `nfcVerifiedAt` et le registre/outbox Direct Boot. Conserver les packages, la sonnerie et les données Direct Boot dans l'enveloppe Android. |
-| 8. Calcul de l'heure | Remplacer | Ne plus recalculer l'instant depuis l'heure locale après `TIME_CHANGED` ou `TIMEZONE_CHANGED`. Réenregistrer le même `triggerAtEpochMillis`. Conserver la règle des 15 minutes. |
-| 9.2 Activation en deux phases | Modifier | Faire passer chaque transition par KMP. Garder la transaction native et ses compensations selon la section 10 du présent contrat. |
-| 9.3 Reprogrammation | Modifier | Sur changement d'heure ou de fuseau, réenregistrer l'instant figé. Mettre à jour seulement l'affichage local. |
-| 10.2 AlarmRingingService | Modifier | Le service produit `ALARM_FIRED`, exécute `START_RINGING` et ne choisit jamais directement `RINGING`. |
-| 10.3 Notification et plein écran | Compléter | Ajouter une section décrivant une notification distincte, sans son ni vibration ni full-screen intent, qui exécute `PRESENT_SCAN_REQUEST` et `CLEAR_SCAN_REQUEST`. |
-| 11.1 Association | Remplacer | Utiliser exactement le protocole NFC commun, y compris la longueur maximale de 96 octets et le token de 16 octets. |
-| 11.2 Lecture | Modifier | Supprimer la validation dupliquée. Reader Mode transmet l'URI au parseur et au vérificateur KMP. |
-| 11.3 Fin ou annulation | Remplacer | `VALID_NFC_SCANNED` mène à `RELEASING`. Le nettoyage réussi produit ensuite `RELEASE_SUCCEEDED`. Un échec conserve `RELEASING`. |
-| 12.1 Sélection | Compléter | Refuser plus de 50 applications et couvrir 0, 1, 50 et 51 dans les tests. |
-| 12.2 AccessibilityService | Modifier | Considérer `ARMED`, `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` comme bloquants. Pendant `RELEASING`, lire l'état effectif de la projection native et de l'outbox. |
-| 13. Diagnostic | Modifier | Mapper les contrôles Android vers `ReadinessSeverity` et les DTO communs. Les actions vers les réglages restent natives. |
-| 18. Gestion des erreurs | Modifier | Ajouter la reprise de `RELEASING` et `RELEASE_PARTIAL_FAILURE`. Interdire une finalisation optimiste. |
-| 19.1 Tests unitaires | Répartir | Déplacer machine à états, heure, NFC, limite de sélection et invariants vers `commonTest`. Garder les adaptateurs et mappings Android dans les tests Android. |
-| 20. Tests physiques | Modifier | Pour le changement de fuseau, attendre un instant inchangé et un affichage local recalculé, au lieu d'une heure locale conservée. Ajouter un scénario de retard supérieur à 15 minutes exigeant une notification de demande de scan visible et silencieuse. |
-| 21. Critères d'acceptation | Modifier | Exiger `RELEASING`, la limite de 50, le parseur KMP et l'instant figé. Supprimer toute attente de transition directe au scan. Exiger qu'`AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` présentent toujours une notification de demande de scan. |
-| 22. Ordre d'implémentation | Compléter | Ajouter un Lot 0.5 après le POC: création du contrat, du module KMP, des fixtures et des mappings. Le Lot 1 consomme ensuite KMP. |
-
-## 23. Modifications précises de la spécification iOS
 
 | Section iOS | Action | Modification attendue |
 | --- | --- | --- |
@@ -924,33 +894,7 @@ Une fonctionnalité commune n'est terminée que si:
 | 24. Ordre d'implémentation | Compléter | Ajouter le Lot 0.5 KMP après validation du POC natif. Le Lot 1 remplace ensuite le domaine Swift dupliqué. |
 | 26. Définition de terminé | Compléter | Exiger les tests communs, les mappings et la construction du framework KMP dans Xcode. |
 
-## 24. Ordre de migration recommandé
-
-### Lot 0
-
-Terminer les deux POC natifs. Ils doivent prouver AlarmManager, Accessibility, NFC, AlarmKit, Family Controls, ManagedSettings et Core NFC sur appareils réels.
-
-### Lot 0.5
-
-1. placer les trois specs dans le monorepo;
-2. créer `:shared:core`;
-3. implémenter le protocole NFC et ses fixtures;
-4. implémenter la politique horaire;
-5. implémenter la machine à états et l'idempotence;
-6. exposer `NiumiCoreFacade`;
-7. intégrer le framework dans une cible iOS vide;
-8. faire consommer le module par un module Android vide;
-9. activer la CI commune.
-
-### Lot 1
-
-Créer les mappings Room, Direct Boot, SwiftData et App Group. Remplacer les réducteurs natifs par le moteur commun.
-
-### Lots suivants
-
-Brancher progressivement les coordinateurs natifs. Une plateforme ne doit pas conserver une seconde machine à états après la migration.
-
-## 25. Points qui restent dépendants des POC
+## 20. Points qui restent dépendants des POC
 
 Le présent contrat ne prétend pas résoudre les contraintes système suivantes:
 
@@ -964,7 +908,7 @@ Le présent contrat ne prétend pas résoudre les contraintes système suivantes
 
 Un échec sur l'un de ces points peut modifier une intégration native. Il ne doit pas affaiblir silencieusement les invariants communs.
 
-## 26. Références d'intégration
+## 21. Références d'intégration
 
 - [Plugin Android Gradle pour une bibliothèque KMP](https://developer.android.com/kotlin/multiplatform/plugin)
 - [Intégration directe du framework KMP dans Xcode](https://kotlinlang.org/docs/multiplatform/multiplatform-direct-integration.html)

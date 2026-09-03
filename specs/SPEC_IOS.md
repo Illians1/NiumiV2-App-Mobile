@@ -27,7 +27,7 @@ Les points `À REVOIR` ne bloquent pas la création du Lot 0. Ils bloquent le pa
 | --- | --- | --- |
 | Entitlements Family Controls | `À REVOIR · APPLE` | capacités de distribution accordées pour l'application et les deux extensions |
 | `secondaryIntent` après redémarrage | contrainte Apple documentée | indisponible avant le premier déverrouillage; accès manuel à Niumi après déverrouillage |
-| Signal de réveil manqué (`TRIGGER_ELAPSED` sans alarme sonnée) | contrainte Apple documentée | aucune notification locale au MVP; seul un routage vers l'écran de réveil à la réouverture de l'application signale ce cas, les shields restant l'unique indice tant que Niumi n'est pas rouvert |
+| Signal de réveil manqué (`TRIGGER_ELAPSED` produit sans que l'application ait observé l'alarme) | exception Apple assumée et documentée en section 12 | aucune notification locale au MVP; le routage vers l'écran de réveil à la réouverture de l'application signale ce cas, et le shield reste un indice actionnable tant que Niumi n'est pas rouvert, avec un texte qui indique explicitement qu'un scan termine la session |
 | Ouverture de Niumi depuis un shield | `À REVOIR · POC` | API publique confirmée et parcours acceptable en App Review |
 | Fabrication du tag NFC | `À REVOIR · PRODUIT` | technologie physique du tag, écriture, verrouillage et contrôle qualité |
 
@@ -37,6 +37,7 @@ Les décisions produit auparavant ouvertes sont fixées ainsi:
 - une heure inexistante est avancée au premier instant valide;
 - la première occurrence est choisie lorsqu'une heure locale se répète;
 - l'instant du réveil est figé après activation;
+- le boîtier vérifié pour terminer une session est celui associé au moment de l'activation, figé dans `NiumiSessionRecord`;
 - le payload NFC suit exactement le protocole défini dans `SPEC_CORE_KMP.md`.
 
 Niumi permet à une personne de choisir une heure de lever, de bloquer immédiatement certaines applications, puis de terminer la session le lendemain en scannant un boîtier NFC placé hors de la chambre.
@@ -207,9 +208,9 @@ Ajouter au minimum:
 
 ```xml
 <key>NSAlarmKitUsageDescription</key>
-<string>Niumi utilise les alarmes pour vous réveiller à l'heure choisie.</string>
+<string>Niumi utilise les alarmes pour te réveiller à l'heure choisie.</string>
 <key>NFCReaderUsageDescription</key>
-<string>Niumi lit votre boîtier NFC pour terminer la session et débloquer vos applications.</string>
+<string>Niumi lit ton boîtier NFC pour terminer la session et débloquer tes applications.</string>
 ```
 
 Les textes doivent être localisés. Ne pas demander d'autorisation au premier lancement sans avoir expliqué son utilité dans l'interface.
@@ -345,6 +346,8 @@ final class NiumiSessionRecord {
     var localTimeISO: String
     var zoneIDAtActivation: String
     var scheduledFireDate: Date
+    var boxID: UUID
+    var boxTokenSha256Hex: String
     var stateCode: String
     var releaseTargetCode: String?
     var healthCode: String
@@ -362,6 +365,8 @@ final class NiumiSessionRecord {
 ```
 
 `revision` reste positive et augmente à chaque décision métier acceptée. `stateCode`, `releaseTargetCode` et `healthCode` utilisent les codes canoniques du contrat KMP. Un code inconnu produit une erreur de migration ou de corruption; il n'est pas remplacé par une valeur par défaut. SwiftData permet un aller-retour complet avec `SessionSnapshotDto`.
+
+`boxID` et `boxTokenSha256Hex` sont copiés depuis le Keychain à l'étape `ACTIVATION_REQUESTED` et figés pour la durée de la session. `SessionCoordinator.handleValidNFC()` vérifie toujours le scan contre ces deux valeurs de la session active, jamais contre le Keychain courant, afin qu'une ré-association ne puisse pas changer le boîtier attendu d'une session en cours. Le parcours d'association reste de toute façon inaccessible pendant une session active (section 14).
 
 ### État métier
 
@@ -393,7 +398,7 @@ Les extensions ont besoin d'un état petit et stable. Utiliser un snapshot `Coda
 struct SharedSessionSnapshot: Codable, Sendable {
     let projectionSchemaVersion: Int
     let domainSchemaVersion: Int
-    let domainRevision: UInt64
+    let domainRevision: Int64
     let sessionID: UUID
     let alarmID: UUID
     let localDateISO: String
@@ -504,12 +509,14 @@ stateDiagram-v2
 | `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | conserver les shields et présenter la demande de scan |
 | `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | conserver les shields et présenter la demande de scan |
 | `TRIGGERED_AWAITING_NFC` | `ALARM_SOUND_STOPPED` | état inchangé | conserver les shields et la demande de scan |
-| `ARMED` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `CANCELLED`, persister la preuve NFC et retirer la demande de scan |
-| `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `COMPLETED`, persister la preuve NFC et retirer la demande de scan |
+| `ARMED`, avant `triggerAtEpochMillis` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `CANCELLED`, persister `nfcVerifiedAt` et retirer la demande de scan |
+| `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `COMPLETED`, persister `nfcVerifiedAt` et retirer la demande de scan |
 | `RELEASING` | `RELEASE_FAILED` | `RELEASING` | enregistrer l'incident et reprendre les effets manquants |
 | `RELEASING` | `RELEASE_SUCCEEDED` | cible enregistrée | supprimer le pointeur de session active |
 
 Aucune action d'interface ne doit atteindre `COMPLETED` ou `CANCELLED` sans `nfcVerifiedAt` et `RELEASE_SUCCEEDED`. Pendant `RELEASING`, certains shields peuvent déjà être retirés: l'état seul ne permet pas de déduire la configuration effective de ManagedSettings. Un événement dupliqué, ancien ou destiné à une autre session ne fait jamais régresser la révision.
+
+`VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé par le moteur avec `TRIGGER_ALREADY_ELAPSED`. `SessionCoordinator.handleValidNFC()` (section 15) réconcilie systématiquement l'état AlarmKit avant un scan depuis `ARMED` et envoie d'abord `ALARM_FIRED` ou `TRIGGER_ELAPSED` selon le fait observé, si bien que ce refus reste un filet de sécurité et ne doit jamais se produire en parcours normal.
 
 ## 10. Autorisations et contrôle de santé
 
@@ -649,6 +656,8 @@ Si le Stop est observé, le coordinateur produit `ALARM_SOUND_STOPPED`. Il lit e
 
 Ce routage ne remplace pas une notification système: il ne s'exécute que pendant que l'application observe l'alarme, c'est-à-dire au lancement, au retour au premier plan ou avant un scan. Si le réveil est manqué et que la personne n'a pas rouvert Niumi, seuls les shields signalent que la session est encore active. Le contrôle Stop système et le bouton secondaire `Scanner Niumi` restent les seuls déclencheurs immédiats côté iOS: le MVP n'ajoute pas de notification locale `UNUserNotificationCenter` pour ce cas.
 
+C'est une exception assumée à l'invariant commun qui demande un signal natif visible pour toute session bloquante en attente de scan (`SPEC_CORE_KMP.md`, section 4). Elle est compensée en gardant le shield actionnable: son sous-titre (section 13) indique explicitement qu'un scan du boîtier termine la session, afin que la personne qui rouvre une application bloquée sache quoi faire même sans être passée par l'écran de réveil.
+
 ## 13. Blocage des applications
 
 ### Sélection
@@ -685,11 +694,11 @@ Ne jamais utiliser une opération globale qui pourrait retirer les réglages d'u
 L'écran système doit rester sobre:
 
 - titre: `Cette app est bloquée`;
-- sous-titre: `Ta session Niumi est encore active.`;
+- sous-titre: `Scanne ton boîtier Niumi pour la débloquer.`;
 - bouton principal: `Retour`;
 - bouton secondaire facultatif: `Ouvrir Niumi` uniquement si le Lot 0 confirme une API publique et un comportement acceptable en App Review. `À REVOIR · POC`
 
-Ne pas afficher l'heure de réveil si l'extension ne peut pas lire un snapshot valide. Ne pas afficher le nom de l'application bloquée obtenu par une méthode non publique.
+Le sous-titre doit rester actionnable même sans snapshot lisible: il est le seul signal restant pour une session dont le réveil est passé sans que l'application ait été rouverte, comme documenté en section 12. Ne pas afficher l'heure de réveil si l'extension ne peut pas lire un snapshot valide. Ne pas afficher le nom de l'application bloquée obtenu par une méthode non publique.
 
 ### Shield Action Extension
 
@@ -752,7 +761,7 @@ Le lecteur Core NFC transmet l'URI brute au parseur de `NiumiCore`. Swift ne dup
 
 1. consommer les événements App Group et interroger AlarmKit sous le même acteur que la réconciliation;
 2. si l'état est `ARMED`, produire d'abord `ALARM_SOUND_STOPPED`, `ALARM_FIRED` ou `TRIGGER_ELAPSED` selon le fait observé;
-3. vérifier de nouveau le boîtier avec `NiumiCore`;
+3. vérifier de nouveau le boîtier scanné contre `boxID` et `boxTokenSha256Hex` de `NiumiSessionRecord` (jamais contre le Keychain courant) avec le parseur et le vérificateur `NiumiCore`;
 4. créer l'identifiant d'événement et l'horodatage, puis envoyer `VALID_NFC_SCANNED` au moteur commun avec la `NfcVerificationProof` opaque retournée par `verifyBox()` pour cette session et cette révision;
 5. persister atomiquement `nfcVerifiedAt`, `releaseTarget`, `RELEASING`, le reçu et l'outbox dans SwiftData;
 6. publier le snapshot avec la même `domainRevision`;
@@ -770,6 +779,8 @@ Un scan depuis `ARMED` avant l'heure fixe `releaseTarget = CANCELLED`. Un scan d
 Si l'application s'interrompt après l'étape 3, la restauration reprend la publication du snapshot puis les effets manquants. La présence de `nfcVerifiedAt` dans SwiftData autorise cette reprise. Sans cette valeur, le mécanisme de récupération ne retire pas les shields.
 
 Les erreurs d'arrêt AlarmKit après un arrêt déjà effectué sont tolérées et journalisées. Une erreur ManagedSettings ou une autre erreur partielle produit `RELEASE_FAILED`, conserve `RELEASING`, enregistre `RELEASE_PARTIAL_FAILURE` et reprend uniquement les effets incomplets. L'application ne réapplique pas un shield déjà retiré et n'affiche pas la confirmation finale avant `RELEASE_SUCCEEDED`. La relecture logicielle ne remplace pas la recette sur appareil.
+
+Les effets requis pour `RELEASE_SUCCEEDED` sont l'arrêt ou l'annulation de l'alarme (étape 7) et le retrait des réglages ManagedSettings Niumi (étape 8); la relecture de la configuration à l'étape 9 est best-effort et consignée sans bloquer la phase en cas d'échec. Si l'autorisation Family Controls a déjà été révoquée par l'utilisateur avant le scan, le retrait des réglages est considéré satisfait dès que `AuthorizationCenter.shared` ne rapporte plus l'autorisation individuelle, avec un incident `BLOCKING_PERMISSION_REVOKED` consigné, plutôt que de bloquer indéfiniment `RELEASING`.
 
 ## 16. Restauration et cohérence
 
@@ -840,8 +851,8 @@ Afficher:
 - `Session active`;
 - date et heure du lever;
 - nombre d'applications bloquées;
-- état `Alarme programmée`, `En attente du scan` après un arrêt du son, ou `Réveil manqué, scan attendu` si `TRIGGER_ELAPSED` a été produit sans que l'alarme ait sonné;
-- pour l'état `Réveil manqué, scan attendu`, préciser que le contrôle Stop système et le bouton `Scanner Niumi` de l'alarme n'ont pas pu servir de signal puisqu'aucune alerte n'a été présentée, et que seule une ouverture de l'application affiche cet état;
+- état `Alarme programmée`, `En attente du scan` après un arrêt du son, ou `Réveil manqué, scan attendu` si `TRIGGER_ELAPSED` a été produit à l'ouverture de l'application sans qu'elle ait observé une alarme `.alerting`;
+- pour l'état `Réveil manqué, scan attendu`, préciser que l'heure de réveil est passée et qu'un scan reste nécessaire, sans affirmer que l'alarme n'a jamais sonné: le contrôle Stop système et le bouton `Scanner Niumi` n'ont de toute façon pas pu servir de signal tant que l'application n'a pas été rouverte;
 - bouton `Scanner le boîtier` lorsque le parcours de réveil est actif;
 - bouton `Modifier ou annuler` dans `ARMED`; ce bouton ouvre le scanner et ne change aucun état avant un scan valide;
 - progression non interruptible pendant `RELEASING`;
@@ -949,7 +960,8 @@ Niumi ne prétend pas résister à une personne qui désinstalle l'application, 
 - passage à l'heure d'été et à l'heure d'hiver;
 - conservation de l'instant après changement de fuseau;
 - transitions autorisées et refusées de la machine à états;
-- passage de `ARMED` à `RELEASING` avec cible `CANCELLED`;
+- passage de `ARMED` à `RELEASING` avec cible `CANCELLED` avant `triggerAtEpochMillis`;
+- refus de `VALID_NFC_SCANNED` depuis `ARMED` à ou après `triggerAtEpochMillis`, avec `TRIGGER_ALREADY_ELAPSED`;
 - passage de `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` à `RELEASING` avec cible `COMPLETED`;
 - `TRIGGER_ELAPSED` avant, à et après l'heure prévue;
 - maintien de `RELEASING` après `RELEASE_FAILED`;
@@ -970,6 +982,7 @@ Niumi ne prétend pas résister à une personne qui désinstalle l'application, 
 - idempotence de la fin de session;
 - reprise depuis `RELEASING`;
 - mapping aller-retour entre SwiftData et les DTO KMP, puis mapping de projection pour le snapshot App Group;
+- vérification effectuée contre `boxID` et `boxTokenSha256Hex` de `NiumiSessionRecord`, refusée si le Keychain a changé depuis l'activation;
 - conversion de `alarmStopped` vers `ALARM_SOUND_STOPPED`;
 - routage vers l'écran de réveil déclenché par `PRESENT_SCAN_REQUEST` au lancement et au retour au premier plan;
 - réconciliation sérialisée d'une alarme `.scheduled`, `.alerting`, absente après lecture réussie ou illisible, avant, exactement à et après l'heure, avant un scan;
