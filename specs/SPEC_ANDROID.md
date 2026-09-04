@@ -1136,7 +1136,9 @@ Créer une application minimale qui valide sur appareils réels:
 - notification plein écran;
 - activité au-dessus du verrouillage;
 - Reader Mode NFC;
-- arrêt du service après scan associé;
+- arrêt du service après scan associé, validé par le parseur et le vérificateur de
+  `:shared:core` (livrés avant le POC, voir Lot 0.5) — SPEC_CORE_KMP §9.3 interdit à un lecteur
+  NFC natif de décider seul qu'un payload est valide;
 - détection d'une application factice avec `AccessibilityService`;
 - retour à l'accueil et overlay.
 
@@ -1152,6 +1154,13 @@ Ne pas commencer l'interface complète avant validation du POC sur Pixel, Samsun
 Ne pas investir dans l'interface complète ou le backend avant validation du parcours système critique et de la stratégie de publication liée à l'accessibilité.
 
 ### Lot 0.5: contrat commun KMP
+
+Le protocole NFC (parseur, credential, vérificateur, preuve) de ce lot est livré **avant** le
+Lot 0, en amont du reste du moteur commun : SPEC_CORE_KMP §9.3 interdit à un lecteur NFC natif
+de décider seul de la validité d'un payload, et le POC du Lot 0 arrête la sonnerie sur un scan
+associé — il doit donc consommer un parseur et un vérificateur déjà livrés plutôt que
+d'implémenter sa propre logique de validation. Le reste du Lot 0.5 (machine à états, politique
+horaire) suit le Lot 0, après la porte de validation manuelle.
 
 - ajouter `:shared:core` avec le plugin de bibliothèque Android KMP;
 - implémenter la machine à états, la politique horaire et le protocole NFC de `SPEC_CORE_KMP.md`;

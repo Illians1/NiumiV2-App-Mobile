@@ -8,3 +8,8 @@ style:
   MaxLineLength:
     active: true
     maxLineLength: 120
+  UnusedPrivateFunction:
+    active: true
+    # Convention Compose : une fonction @Preview n'est appelée que par l'outillage Android
+    # Studio, jamais par du code du module — un faux positif classique de cette règle.
+    ignoreAnnotated: ['Preview']

@@ -243,17 +243,17 @@ class NiumiCoreFacade {
 }
 ```
 
-- [ ] **Écrire `Sha256Test`** avec les vecteurs officiels : `""` → `e3b0c442…b855`, `"abc"` → `ba7816bf…f20015ad`, et un message de 1 000 000 de `a` → `cdc76e5c…c7112cd0`. Vérifier l'échec, implémenter SHA-256 en Kotlin pur (aucune API JVM : la même implémentation sert iOS), vérifier le succès.
-- [ ] **Écrire `ConstantTimeTest`** : égalité, inégalité, longueurs différentes → `false` sans court-circuit (implémentation par OU cumulatif des XOR sur la longueur maximale). Implémenter.
-- [ ] **Écrire `BoxPayloadParserTest`** avec un cas par contrainte de SPEC_CORE_KMP §9.1 et §17 : payload canonique → `VALID` avec `boxId` et 16 octets ; `NIUMI://` ou `Niumi://` → `UNSUPPORTED_SCHEME` ; hôte `Box` → `UNSUPPORTED_HOST` ; `/v2/` → `UNSUPPORTED_VERSION` ; UUID en majuscules, sans tirets, de 35 caractères → `INVALID_BOX_ID` ; query vide → `MISSING_TOKEN` ; token dupliqué (`token=a&token=b`) → `UNEXPECTED_COMPONENT` ; token de 21 ou 23 caractères, avec `=`, avec `+` ou `/`, avec dernier caractère à bits de bourrage non nuls → `INVALID_TOKEN` ; `#frag`, `user@`, `:443`, segment `/x`, paramètre `&a=b` → `UNEXPECTED_COMPONENT` ; `%2F` → `UNEXPECTED_COMPONENT` ; 97 octets UTF-8 → `PAYLOAD_TOO_LONG` (test avant toute autre validation) ; chaîne vide, un octet nul `U+0000`, caractère de contrôle, `://` seul → `MALFORMED_URI`.
-- [ ] **Implémenter `BoxPayloadParser`** sans `java.net.URI` ni regex permissive : découpage manuel sur `://`, `/`, `?`, `&`, `=` ; décodage Base64 URL strict avec `kotlin.io.encoding.Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)` puis contrôle explicite que le dernier caractère appartient à `AEIMQUYcgkosw048` (bits de bourrage nuls).
-- [ ] **Écrire `BoxVerifierTest`** : même `boxId` et même hash → `MATCH` ; `boxId` différent → `BOX_MISMATCH` ; hash différent → `TOKEN_MISMATCH` ; `protocolVersion` 2 → `UNSUPPORTED_VERSION` ; avec `context` non nul, `MATCH` porte une preuve dont les cinq champs reprennent le contexte ; avec `context` nul, `proof == null` ; un mismatch ne porte jamais de preuve. Implémenter avec `ConstantTime.equals` sur les octets du hash.
-- [ ] **Écrire `NfcVerificationProofTest`** : le constructeur n'est pas accessible depuis un autre module (test de compilation par `internal` documenté dans le test), `toString()` ne contient ni `boxId` complet ni hash (masquer aux 8 premiers caractères).
-- [ ] **Écrire `BoxPayloadFuzzTest`** : 200 chaînes générées avec un `Random(seed = 42)` mêlant caractères de contrôle, surrogates isolés, longueurs 0 à 200 ; aucun cas ne lance d'exception, aucun ne retourne `VALID`.
-- [ ] **Écrire `nfc_payloads.json`** (liste `{ "uri": ..., "expected": "STATUS" }`, 20 cas couvrant chaque statut) et `NfcFixturesTest` dans `jvmTest`.
-- [ ] **Écrire la façade partielle et ses DTO** ; un test `NiumiCoreFacadeNfcTest` vérifie que `verifyBox` avec contexte retourne un `BoxVerificationResultDto` dont `proof` est l'objet opaque et que sans contexte `proof` est nul.
-- [ ] **Mettre à jour `specs/SPEC_ANDROID.md` §22** comme indiqué dans « Fichiers ».
-- [ ] **Vérifier :**
+- [x] **Écrire `Sha256Test`** avec les vecteurs officiels : `""` → `e3b0c442…b855`, `"abc"` → `ba7816bf…f20015ad`, et un message de 1 000 000 de `a` → `cdc76e5c…c7112cd0`. Vérifier l'échec, implémenter SHA-256 en Kotlin pur (aucune API JVM : la même implémentation sert iOS), vérifier le succès.
+- [x] **Écrire `ConstantTimeTest`** : égalité, inégalité, longueurs différentes → `false` sans court-circuit (implémentation par OU cumulatif des XOR sur la longueur maximale). Implémenter.
+- [x] **Écrire `BoxPayloadParserTest`** avec un cas par contrainte de SPEC_CORE_KMP §9.1 et §17 : payload canonique → `VALID` avec `boxId` et 16 octets ; `NIUMI://` ou `Niumi://` → `UNSUPPORTED_SCHEME` ; hôte `Box` → `UNSUPPORTED_HOST` ; `/v2/` → `UNSUPPORTED_VERSION` ; UUID en majuscules, sans tirets, de 35 caractères → `INVALID_BOX_ID` ; query vide → `MISSING_TOKEN` ; token dupliqué (`token=a&token=b`) → `UNEXPECTED_COMPONENT` ; token de 21 ou 23 caractères, avec `=`, avec `+` ou `/`, avec dernier caractère à bits de bourrage non nuls → `INVALID_TOKEN` ; `#frag`, `user@`, `:443`, segment `/x`, paramètre `&a=b` → `UNEXPECTED_COMPONENT` ; `%2F` → `UNEXPECTED_COMPONENT` ; 97 octets UTF-8 → `PAYLOAD_TOO_LONG` (test avant toute autre validation) ; chaîne vide, un octet nul `U+0000`, caractère de contrôle, `://` seul → `MALFORMED_URI`.
+- [x] **Implémenter `BoxPayloadParser`** sans `java.net.URI` ni regex permissive : découpage manuel sur `://`, `/`, `?`, `&`, `=` ; décodage Base64 URL strict avec `kotlin.io.encoding.Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)` puis contrôle explicite que le dernier caractère appartient à `AQgw` (bits de bourrage nuls). *(Correction : un token de 22 caractères porte 4 bits de bourrage sur le dernier caractère, pas 2 — seules les valeurs 0/16/32/48 de l'alphabet Base64 URL, soit `A`/`Q`/`g`/`w`, ont ces 4 bits nuls ; le jeu `AEIMQUYcgkosw048` initialement listé ici correspondait à 2 bits de bourrage et aurait accepté plusieurs encodages distincts pour un même token de 16 octets. Voir `ETAPE-02.md`.)*
+- [x] **Écrire `BoxVerifierTest`** : même `boxId` et même hash → `MATCH` ; `boxId` différent → `BOX_MISMATCH` ; hash différent → `TOKEN_MISMATCH` ; `protocolVersion` 2 → `UNSUPPORTED_VERSION` ; avec `context` non nul, `MATCH` porte une preuve dont les cinq champs reprennent le contexte ; avec `context` nul, `proof == null` ; un mismatch ne porte jamais de preuve. Implémenter avec `ConstantTime.equals` sur les octets du hash.
+- [x] **Écrire `NfcVerificationProofTest`** : le constructeur n'est pas accessible depuis un autre module (test de compilation par `internal` documenté dans le test), `toString()` ne contient ni `boxId` complet ni hash (masquer aux 8 premiers caractères).
+- [x] **Écrire `BoxPayloadFuzzTest`** : 200 chaînes générées avec un `Random(seed = 42)` mêlant caractères de contrôle, surrogates isolés, longueurs 0 à 200 ; aucun cas ne lance d'exception, aucun ne retourne `VALID`.
+- [x] **Écrire `nfc_payloads.json`** (liste `{ "uri": ..., "expected": "STATUS" }`, 20 cas couvrant chaque statut) et `NfcFixturesTest` dans `jvmTest`.
+- [x] **Écrire la façade partielle et ses DTO** ; un test `NiumiCoreFacadeNfcTest` vérifie que `verifyBox` avec contexte retourne un `BoxVerificationResultDto` dont `proof` est l'objet opaque et que sans contexte `proof` est nul.
+- [x] **Mettre à jour `specs/SPEC_ANDROID.md` §22** comme indiqué dans « Fichiers ».
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :shared:core:jvmTest
@@ -261,7 +261,7 @@ class NiumiCoreFacade {
 ./gradlew ktlintCheck detekt
 ```
 
-**Terminé quand :** tous les tests passent, aucun log ne contient de token, la spec §22 est ajustée, rapport `ETAPE-02.md` rédigé.
+**Terminé quand :** tous les tests passent, aucun log ne contient de token, la spec §22 est ajustée, rapport `ETAPE-02.md` rédigé. *(Fait le 2026-09-04 — 53 tests verts, ktlint et detekt verts sur tout le dépôt (y compris `:shared:core`, voir la correction de câblage detekt dans `ETAPE-02.md`) ; détails dans `docs/android/implementation-reports/ETAPE-02.md`.)*
 
 ## Phase B — Lot 0 : POC système dans les modules définitifs
 

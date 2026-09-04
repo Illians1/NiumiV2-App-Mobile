@@ -49,4 +49,14 @@ subprojects {
     tasks.withType<DetektCreateBaselineTask>().configureEach {
         jvmTarget.set("17")
     }
+
+    // Sur un module Kotlin Multiplatform, `dev.detekt` crée une tâche par source set
+    // (`detektCommonMainSourceSet`, `detektJvmTestSourceSet`…) mais la tâche agrégée `detekt`
+    // reste vide (NO-SOURCE) : elle n'analyse ni `commonMain` ni aucun autre source set KMP,
+    // silencieusement. Sur un module Android classique, `detekt` est la seule tâche `Detekt` et
+    // ce câblage est un no-op. Sans ce correctif, `./gradlew detekt` — la commande de
+    // vérification imposée par le plan MVP — ne couvrirait jamais `:shared:core`.
+    tasks.matching { it.name == "detekt" }.configureEach {
+        dependsOn(tasks.withType<Detekt>().matching { detektTask -> detektTask.name != "detekt" })
+    }
 }
