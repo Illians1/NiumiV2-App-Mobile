@@ -1,0 +1,10 @@
+naming:
+  FunctionNaming:
+    active: true
+    # Convention Compose : les fonctions @Composable sont nommées en PascalCase, comme des types.
+    ignoreAnnotated: ['Composable']
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 120

@@ -41,17 +41,18 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 | Composant | Version | Note |
 | --- | --- | --- |
 | Kotlin / KMP | 2.4.10 | Compatibilité officielle : Gradle 7.6.3–9.5.0, AGP 8.5.2–9.1.0, Xcode 26.4 |
-| AGP | 9.1.1 | Exigé par Compose BOM 2026.08 pour compileSdk 37 ; Gradle ≥ 9.3.1 ; JDK 17 ; Kotlin intégré (ne pas appliquer `org.jetbrains.kotlin.android`) |
-| Gradle | 9.3.1 | Dans les deux plages ci-dessus |
+| AGP | 9.1.1 | Exigé par Compose BOM 2026.08 pour compileSdk 37 ; JDK 17 ; Kotlin intégré (ne pas appliquer `org.jetbrains.kotlin.android`). Un patch au-dessus du maximum testé par KGP 2.4.10 (9.1.0) — inévitable pour compileSdk 37, reconfirmé à l'étape 1 |
+| Gradle | 9.5.0 | Maximum testé par KGP 2.4.10 (reconfirmé à l'étape 1 ; 9.3.1 n'était que le minimum d'AGP 9.1.1) |
 | Compose BOM | 2026.08.00 | Compose 1.12 |
 | Navigation Compose | 2.10.0 | |
 | Room | 2.8.4 | KSP2 |
 | DataStore | 1.2.1 | `createInDeviceProtectedStorage()` disponible |
-| Hilt / androidx.hilt | 2.60.1 / 1.4.0 | À reconfirmer |
-| KSP | 2.3.11 | À reconfirmer pour Kotlin 2.4.10 |
+| Hilt / androidx.hilt | 2.60.1 / 1.4.0 | Reconfirmé à l'étape 1 |
+| KSP | 2.3.11 | Reconfirmé à l'étape 1 ; versionnage découplé de Kotlin depuis KSP 2.3.0 |
 | kotlinx-datetime | 0.8.0 | `Instant` et `Clock` viennent de `kotlin.time` |
 | kotlinx-serialization | 1.11.0 | |
-| ktlint / detekt | dernières stables | Plugins Gradle `org.jlleitschuh.gradle.ktlint` et `io.gitlab.arturbosch.detekt` |
+| ktlint | plugin `org.jlleitschuh.gradle.ktlint` 14.2.0, CLI 1.8.0 épinglé | Le plugin embarque 1.5.0 par défaut ; épinglé pour éviter la dérive entre patchs |
+| detekt | `dev.detekt` 2.0.0-alpha.6, épinglé, bloquant | Seule variante construite contre Kotlin 2.4.10 ; la dernière stable (1.23.8) embarque Kotlin 2.0.21 et échoue sur Kotlin 2.4+. Voir SPEC_ANDROID §5 et `ETAPE-01.md` |
 
 AGP 9.1.1 dépasse d'un patch la borne testée par KMP 2.4.10 (9.1.0). Si le build KMP échoue pour cette raison, arrêter et proposer une mise à jour explicite des specs ; ne jamais réduire `compileSdk`.
 
@@ -183,26 +184,27 @@ enum class ReconcileReason { PROCESS_START, USER_UNLOCKED, LOCKED_BOOT, BOOT, PA
 
 **Produit :** un build vert de tous les modules, la catalogue de versions, les plugins qualité, une application qui affiche un accueil vide.
 
-- [ ] **Reconfirmer les versions** de la table « Versions de référence » via Context7 ou les pages officielles ; corriger la table dans ce plan si une version a changé.
-- [ ] **Écrire `settings.gradle.kts`** : `pluginManagement` (google, mavenCentral, gradlePluginPortal), `dependencyResolutionManagement` avec `FAIL_ON_PROJECT_REPOS`, `rootProject.name = "niumi-mobile"`, `include(":app", ":shared:core", ":core:database", ":core:system", ":feature:setup", ":feature:session", ":feature:ringing")` et `project(":app").projectDir = file("androidApp/app")` pour chaque module Android (`shared/core` conserve son chemin naturel).
-- [ ] **Écrire `gradle.properties`** : `org.gradle.jvmargs=-Xmx4g`, `org.gradle.caching=true`, `org.gradle.configuration-cache=true`, `android.useAndroidX=true`, `kotlin.code.style=official`. Ne pas ajouter `android.builtInKotlin` (déjà `true` par défaut en AGP 9).
-- [ ] **Écrire `gradle/libs.versions.toml`** : sections `[versions]`, `[libraries]`, `[plugins]` avec `android-application`, `android-kotlin-multiplatform-library`, `kotlin-multiplatform`, `kotlin-serialization`, `kotlin-compose` (`org.jetbrains.kotlin.plugin.compose`), `ksp`, `hilt`, `room`, `ktlint`, `detekt`, et les bibliothèques : Compose BOM, material3, activity-compose, navigation-compose, lifecycle-viewmodel-compose, hilt-android, hilt-compiler, hilt-navigation-compose, room-runtime, room-ktx, room-compiler, datastore-preferences, kotlinx-datetime, kotlinx-serialization-json, kotlinx-coroutines-android/test, junit4, truth, turbine, androidx-test (core, runner, rules, junit, espresso-core), compose-ui-test-junit4.
-- [ ] **Écrire `shared/core/build.gradle.kts`** en reprenant SPEC_CORE_KMP §16 mot pour mot (`android { namespace = "com.niumi.core"; compileSdk = 37; minSdk = 29 }`, `jvm()`, `iosArm64()`, `iosSimulatorArm64()`, framework statique `NiumiCore`, dépendances `kotlinx-datetime`, `kotlinx-serialization-json`, `kotlin("test")`).
-- [ ] **Écrire les modules Android** : `:app` avec `com.android.application` + `kotlin-compose` + `hilt` + `ksp`, `applicationId "com.niumi.app"`, `minSdk 29`, `targetSdk 36`, `compileSdk 37`, `buildFeatures.compose = true`, `release { isMinifyEnabled = true; isShrinkResources = true }` ; les autres modules avec `com.android.library` (+ `kotlin-compose` pour les `feature`, + `ksp`/`room` pour `core:database`, + `hilt` partout sauf `shared:core`). Ne pas appliquer `org.jetbrains.kotlin.android`.
-- [ ] **Déclarer les dépendances entre modules** conformément à « Contraintes globales ». Ajouter dans `:app` un test unitaire qui parcourt `settings.gradle.kts` et échoue si un module hors liste apparaît (`ModuleListTest`).
-- [ ] **Configurer ktlint, detekt et Lint** : appliquer les plugins à la racine, `detekt.yml` basé sur la config par défaut avec `MaxLineLength 120`, Lint `abortOnError = true`, `warningsAsErrors = true` sur `:app`.
-- [ ] **Écrire les deux `SmokeTest`** (`assertTrue(true)` n'est pas accepté : tester `NiumiCoreVersion.SCHEMA_VERSION == 1` dans `commonTest` après avoir créé `object NiumiCoreVersion { const val SCHEMA_VERSION = 1 }` dans `com.niumi.core.domain` ; côté `:app`, tester que `NiumiApplication` est annotée `@HiltAndroidApp` par réflexion).
-- [ ] **Vérifier :**
+- [x] **Reconfirmer les versions** de la table « Versions de référence » via Context7 ou les pages officielles ; corriger la table dans ce plan si une version a changé. *(Fait le 2026-09-04 contre les métadonnées Maven/Gradle Plugin Portal réelles ; table corrigée — voir `ETAPE-01.md`.)*
+- [x] **Écrire `settings.gradle.kts`** : `pluginManagement` (google, mavenCentral, gradlePluginPortal), `dependencyResolutionManagement` avec `FAIL_ON_PROJECT_REPOS`, `rootProject.name = "niumi-mobile"`, `include(":app", ":shared:core", ":core:database", ":core:system", ":feature:setup", ":feature:session", ":feature:ringing")` et `project(":app").projectDir = file("androidApp/app")` pour chaque module Android (`shared/core` conserve son chemin naturel). *(Les modules intermédiaires `:core` et `:feature` ont aussi dû être remappés — voir `ETAPE-01.md`.)*
+- [x] **Écrire `gradle.properties`** : `org.gradle.jvmargs=-Xmx4g`, `org.gradle.caching=true`, `org.gradle.configuration-cache=true`, `android.useAndroidX=true`, `kotlin.code.style=official`. Ne pas ajouter `android.builtInKotlin` (déjà `true` par défaut en AGP 9).
+- [x] **Écrire `gradle/libs.versions.toml`** : sections `[versions]`, `[libraries]`, `[plugins]` avec `android-application`, `android-kotlin-multiplatform-library`, `kotlin-multiplatform`, `kotlin-serialization`, `kotlin-compose` (`org.jetbrains.kotlin.plugin.compose`), `ksp`, `hilt`, `room`, `ktlint`, `detekt`, et les bibliothèques : Compose BOM, material3, activity-compose, navigation-compose, lifecycle-viewmodel-compose, hilt-android, hilt-compiler, hilt-navigation-compose, room-runtime, room-ktx, room-compiler, datastore-preferences, kotlinx-datetime, kotlinx-serialization-json, kotlinx-coroutines-android/test, junit4, truth, turbine, androidx-test (core, runner, rules, junit, espresso-core), compose-ui-test-junit4.
+- [x] **Écrire `shared/core/build.gradle.kts`** en reprenant SPEC_CORE_KMP §16 mot pour mot (`android { namespace = "com.niumi.core"; compileSdk = 37; minSdk = 29 }`, `jvm()`, `iosArm64()`, `iosSimulatorArm64()`, framework statique `NiumiCore`, dépendances `kotlinx-datetime`, `kotlinx-serialization-json`, `kotlin("test")`).
+- [x] **Écrire les modules Android** : `:app` avec `com.android.application` + `kotlin-compose` + `hilt` + `ksp`, `applicationId "com.niumi.app"`, `minSdk 29`, `targetSdk 36`, `compileSdk 37`, `buildFeatures.compose = true`, `release { isMinifyEnabled = true; isShrinkResources = true }` ; les autres modules avec `com.android.library` (+ `kotlin-compose` pour les `feature`, + `ksp`/`room` pour `core:database`, + `hilt` partout sauf `shared:core`). Ne pas appliquer `org.jetbrains.kotlin.android`.
+- [x] **Déclarer les dépendances entre modules** conformément à « Contraintes globales ». Ajouter dans `:app` un test unitaire qui parcourt `settings.gradle.kts` et échoue si un module hors liste apparaît (`ModuleListTest`).
+- [x] **Configurer ktlint, detekt et Lint** : appliquer les plugins à la racine, `detekt.yml` basé sur la config par défaut avec `MaxLineLength 120`, Lint `abortOnError = true`, `warningsAsErrors = true` sur `:app`. *(detekt en `dev.detekt` 2.0.0-alpha.6, seule variante compatible Kotlin 2.4.10 — voir « Versions de référence » et SPEC_ANDROID §5.)*
+- [x] **Écrire les deux `SmokeTest`** (`assertTrue(true)` n'est pas accepté : tester `NiumiCoreVersion.SCHEMA_VERSION == 1` dans `commonTest` après avoir créé `object NiumiCoreVersion { const val SCHEMA_VERSION = 1 }` dans `com.niumi.core.domain` ; côté `:app`, tester que `NiumiApplication` est annotée `@HiltAndroidApp` par réflexion). *(Correction appliquée : le signal fiable est la classe générée `Hilt_NiumiApplication`, pas la seule présence de l'annotation — voir `ETAPE-01.md`.)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew projects
 ./gradlew :shared:core:jvmTest
 ./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest
 ./gradlew ktlintCheck detekt :app:lintDebug
 ./gradlew :shared:core:linkDebugFrameworkIosSimulatorArm64   # exige Xcode 26.4 ; sinon consigner l'échec
 ```
 
-**Terminé quand :** les cinq commandes passent (ou la dernière est consignée comme non exécutable faute de Xcode), aucun avertissement de dépréciation Gradle nouveau, rapport `ETAPE-01.md` rédigé.
+**Terminé quand :** les cinq commandes passent (ou la dernière est consignée comme non exécutable faute de Xcode), aucun avertissement de dépréciation Gradle nouveau, rapport `ETAPE-01.md` rédigé. *(Fait le 2026-09-04 — toutes les commandes passent, Xcode 26.6 disponible ; détails et difficultés résolues dans `docs/android/implementation-reports/ETAPE-01.md`.)*
 
 ### Étape 2 : KMP — protocole NFC (parseur, credential, vérificateur, preuve) et façade partielle
 

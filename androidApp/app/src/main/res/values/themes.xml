@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Thème plateforme minimal : l'interface est entièrement rendue par Jetpack Compose
+        (NiumiTheme). Ce thème ne sert qu'à fixer la fenêtre avant que Compose ne prenne
+        la main (pas de barre d'action, bord à bord, suit le mode sombre système).
+    -->
+    <style name="Theme.Niumi" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

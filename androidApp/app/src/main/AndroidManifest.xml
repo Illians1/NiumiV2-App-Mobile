@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        SPEC_ANDROID §14 impose required="true" : Niumi n'a aucune valeur sans boîtier NFC,
+        l'app ne doit pas être visible sur le Play Store des appareils sans NFC.
+    -->
+    <uses-feature
+        android:name="android.hardware.nfc"
+        android:required="true"
+        tools:ignore="UnnecessaryRequiredFeature" />
+
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!--
+        allowBackup=false : la base locale contient le hash du token du boîtier associé, et le
+        parcours est entièrement hors ligne (SPEC_ANDROID §16) ; aucune sauvegarde cloud n'est
+        pertinente, donc pas de dataExtractionRules à fournir (DataExtractionRules).
+        enableOnBackInvokedCallback=true : retour prédictif (SPEC_ANDROID §15) ; l'attribut est
+        sans effet avant l'API 33 mais inoffensif, et déclaré par avance (UnusedAttribute).
+    -->
+    <application
+        android:name=".NiumiApplication"
+        android:allowBackup="false"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.Niumi"
+        tools:ignore="DataExtractionRules,UnusedAttribute">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Niumi">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -140,6 +140,8 @@ L'utilisateur peut toujours recourir aux mécanismes du système, notamment l'ar
 
 Le projet doit compiler avec une version stable du plugin Android Gradle compatible avec `compileSdk 37`. Les versions de bibliothèques doivent être centralisées dans `gradle/libs.versions.toml`. Ne pas utiliser de version dynamique avec `+`.
 
+**Statut detekt (constaté à l'étape 1, 2026-09-04) :** la dernière version stable de detekt (1.23.8) embarque un analyseur Kotlin 2.0.21 et échoue sur du Kotlin 2.4 (bugs officiels confirmés : NPE sur les context parameters, erreurs de parsing, metadata incompatible). Le projet utilise donc `dev.detekt` 2.0.0-alpha.6 (`id("dev.detekt")`), seule variante construite contre Kotlin 2.4.10, en porte bloquante et version épinglée. À remplacer par la première version stable de detekt 2 compatible Kotlin 2.4+ dès sa publication.
+
 ## 6. Architecture du projet
 
 Utiliser les modules Gradle suivants:
