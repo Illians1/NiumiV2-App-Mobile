@@ -4,6 +4,12 @@
         Thème plateforme minimal : l'interface est entièrement rendue par Jetpack Compose
         (NiumiTheme). Ce thème ne sert qu'à fixer la fenêtre avant que Compose ne prenne
         la main (pas de barre d'action, bord à bord, suit le mode sombre système).
+
+        Vit dans :core:designsystem plutôt que :app : AlarmActivity (:feature:ringing) le
+        référence aussi dans son manifeste, et un module feature ne peut pas dépendre de :app
+        (SPEC_ANDROID §6). Sans ce déplacement, l'APK de test propre à :feature:ringing
+        (androidTest) échoue à la liaison des ressources : @style/Theme.Niumi n'existe que
+        dans le graphe de :app, jamais fusionné dans l'APK de test d'un module library.
     -->
     <style name="Theme.Niumi" parent="android:Theme.DeviceDefault.DayNight">
         <item name="android:windowActionBar">false</item>

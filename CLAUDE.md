@@ -105,6 +105,22 @@ fonctionnalités dépendantes du système ou du matériel.
 - le résultat attendu ;
 - les points de vigilance ou limites encore non validés.
 
+### Validation sur appareil réel
+
+Les tests instrumentés (`connectedDebugAndroidTest`) et les tests manuels (alarme, NFC,
+blocage, écran verrouillé, Doze) exigent un appareil Android branché. Marche à suivre
+systématique :
+
+1. exécuter d'abord tout ce qui ne demande pas de matériel et en rapporter le résultat ;
+2. s'arrêter et demander explicitement de brancher un appareil Android avec le débogage USB
+   activé, en listant ce qui sera exécuté et la durée approximative ;
+3. vérifier la présence de l'appareil (`adb devices`) avant de lancer quoi que ce soit ;
+4. lancer les tests instrumentés, puis dérouler le protocole manuel essai par essai, en
+   annonçant pour chacun l'action à effectuer et le résultat attendu ;
+5. consigner les résultats observés, le modèle et la version Android dans le rapport d'étape ;
+6. ne jamais déclarer terminée une étape dont les validations matérielles n'ont pas été
+   faites : les lister comme restantes.
+
 ## Définition de terminé
 
 Un changement est terminé seulement si :

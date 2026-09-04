@@ -65,6 +65,7 @@ dependencies {
     implementation(project(":shared:core"))
     implementation(project(":core:database"))
     implementation(project(":core:system"))
+    implementation(project(":core:designsystem"))
     implementation(project(":feature:setup"))
     implementation(project(":feature:session"))
     implementation(project(":feature:ringing"))

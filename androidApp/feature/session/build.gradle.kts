@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":shared:core"))
     implementation(project(":core:database"))
     implementation(project(":core:system"))
+    implementation(project(":core:designsystem"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)

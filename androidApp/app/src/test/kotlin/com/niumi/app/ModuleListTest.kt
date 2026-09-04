@@ -5,9 +5,13 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Garde-fou de "Contraintes globales" du plan MVP : exactement sept modules Gradle, jamais un
- * de plus. `niumi.rootDir` est injecté par `tasks.withType<Test>` dans `build.gradle.kts` pour
- * ne pas dépendre du répertoire de travail dans lequel Gradle exécute les tests.
+ * Garde-fou de "Contraintes globales" du plan MVP : exactement huit modules Gradle, jamais un
+ * de plus. `:core:designsystem` a été ajouté à l'étape 3 : les modules `feature` ne peuvent
+ * pas dépendre de `:app` (règle de dépendance SPEC_ANDROID §6), mais ont besoin du thème
+ * Niumi pour leurs propres écrans (ex. `AlarmActivity` dans `:feature:ringing`) ; un module de
+ * design system dédié résout ce besoin sans dépendance inverse. `niumi.rootDir` est injecté
+ * par `tasks.withType<Test>` dans `build.gradle.kts` pour ne pas dépendre du répertoire de
+ * travail dans lequel Gradle exécute les tests.
  */
 class ModuleListTest {
     private val expectedModules =
@@ -16,13 +20,14 @@ class ModuleListTest {
             ":shared:core",
             ":core:database",
             ":core:system",
+            ":core:designsystem",
             ":feature:setup",
             ":feature:session",
             ":feature:ringing",
         )
 
     @Test
-    fun settingsDeclaresExactlyTheSevenExpectedModules() {
+    fun settingsDeclaresExactlyTheEightExpectedModules() {
         val rootDir =
             File(
                 requireNotNull(System.getProperty("niumi.rootDir")) {

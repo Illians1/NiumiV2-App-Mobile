@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Manifeste de l'APK de test instrumenté uniquement : il n'est jamais fusionné dans
+    l'application. SPEC_ANDROID §14 fixe la liste exacte des permissions dans le manifeste de
+    `:app` ; l'APK de test d'un module `library` est une application distincte, qui n'hérite
+    d'aucune d'elles. On redéclare donc ici le sous-ensemble strictement nécessaire au
+    démarrage de `AlarmRingingService` sous test, sans rien changer au manifeste de production
+    ni à l'audit de §14, qui reste à un seul endroit.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application>
+        <!--
+            Activité hôte de `createComposeRule()` : un test Compose lance une activité vide et
+            y monte le composable sous test. C'est exactement ce que déclare l'artefact
+            `androidx.compose.ui:ui-test-manifest` de Google ; on le déclare ici plutôt que
+            d'ajouter une dépendance externe pour trois lignes de manifeste de test.
+        -->
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Niumi" />
+    </application>
+
+</manifest>

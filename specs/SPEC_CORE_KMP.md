@@ -685,6 +685,7 @@ niumi-mobile/
     core/
       database/
       system/
+      designsystem/
     feature/
       setup/
       session/

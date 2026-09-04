@@ -151,6 +151,7 @@ Utiliser les modules Gradle suivants:
 :shared:core
 :core:database
 :core:system
+:core:designsystem
 :feature:setup
 :feature:session
 :feature:ringing
@@ -164,6 +165,7 @@ Responsabilités:
 | `:shared:core` | États, événements, réducteur, heure, NFC, diagnostics communs, DTO Swift et tests métier |
 | `:core:database` | Room, DAO, DataStore et stockage Direct Boot |
 | `:core:system` | Adaptateurs et modèles Android pour AlarmManager, notifications, audio, NFC, packages et diagnostics |
+| `:core:designsystem` | Thème Material 3, palette et composants visuels partagés |
 | `:feature:setup` | Onboarding, permissions, association NFC et sélection des applications |
 | `:feature:session` | Configuration, activation, session active et blocage |
 | `:feature:ringing` | Service de sonnerie, activité plein écran et fin par NFC |
@@ -173,6 +175,9 @@ Règles de dépendance:
 - les modules `feature`, `core:database` et `core:system` peuvent dépendre de `:shared:core`;
 - `:shared:core` ne dépend d'aucune API Android ou Apple;
 - `core:database` et `core:system` convertissent leurs modèles vers les DTO KMP;
+- les modules `feature` et `:app` peuvent dépendre de `:core:designsystem`, qui ne dépend
+  d'aucun autre module du dépôt (accès au thème depuis un module `feature` sans dépendance
+  inverse vers `:app`, ex. `AlarmActivity` dans `:feature:ringing`);
 - aucun composable ne parle directement à Room, `AlarmManager`, `NfcAdapter` ou `AccessibilityService`;
 - les `ViewModel` appellent des cas d'usage;
 - les composants système transmettent des événements à `NiumiCoreFacade` et exécutent les effets retournés;

@@ -11,7 +11,9 @@ android {
 
     defaultConfig {
         minSdk = 29
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // HiltTestRunner : AlarmReceiver et AlarmRingingService sont @AndroidEntryPoint, les
+        // tests instrumentés ont besoin d'une Application Hilt (HiltTestApplication).
+        testInstrumentationRunner = "com.niumi.feature.ringing.HiltTestRunner"
     }
 
     buildFeatures {
@@ -27,12 +29,14 @@ dependencies {
     implementation(project(":shared:core"))
     implementation(project(":core:database"))
     implementation(project(":core:system"))
+    implementation(project(":core:designsystem"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
+    implementation(libs.activity.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.hilt.navigation.compose)
 
@@ -53,4 +57,14 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.hilt.android.testing)
+    androidTestImplementation(libs.truth)
+    kspAndroidTest(libs.hilt.compiler)
+}
+
+tasks.withType<Test>().configureEach {
+    // Consommé par NiumiAlarmWavTest : le fichier généré est vérifié comme un fichier statique
+    // (en-tête WAV), sans passer par le système de ressources Android — donc en JVM, sans
+    // appareil. Même mécanisme que ModuleListTest dans :app.
+    systemProperty("niumi.rootDir", rootProject.rootDir.absolutePath)
 }

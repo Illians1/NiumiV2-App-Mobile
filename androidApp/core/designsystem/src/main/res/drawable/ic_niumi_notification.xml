@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Petite icône de notification Niumi. Obligatoire : sans `setSmallIcon`, le système rejette
+    la notification de `startForeground()` avec
+    `RemoteServiceException$CannotPostForegroundServiceNotificationException` — l'alarme ne
+    démarrerait jamais (constaté sur appareil réel, voir ETAPE-03.md).
+
+    Format imposé par Android : silhouette blanche opaque sur fond transparent, 24dp, sans
+    couleur ni dégradé (le système la teinte lui-même). Même anneau que `ic_launcher_monochrome`,
+    redessiné à l'échelle 24dp.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,4a8,8 0,1 0,0.1 0z M12,7a5,5 0,1 1,-0.1 0z" />
+</vector>
