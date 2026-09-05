@@ -6,7 +6,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 
-/** Vibration répétée pendant la sonnerie (SPEC_ANDROID §10.2), `minSdk 29`. */
+/**
+ * Vibration répétée pendant la sonnerie (SPEC_ANDROID §10.2), `minSdk 29`. Traducteur mince
+ * vers `VibrationEffect` (stub non testable en JVM) : la décision du motif à jouer, y compris
+ * la reprise après une vibration d'erreur, vit dans [VibrationPatternPolicy], testable.
+ */
 class AndroidVibrationController(
     private val context: Context,
 ) : VibrationController {
@@ -20,19 +24,24 @@ class AndroidVibrationController(
                 context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             }
 
+    @Volatile
+    private var repeating = false
+
     override fun startRepeating() {
-        val pattern = longArrayOf(0, PULSE_DURATION_MS, PAUSE_DURATION_MS)
-        val effect = VibrationEffect.createWaveform(pattern, REPEAT_FROM_INDEX)
-        vibrator.vibrate(effect)
+        repeating = true
+        play(VibrationPatternPolicy.repeating())
+    }
+
+    override fun vibrateError() {
+        play(VibrationPatternPolicy.error(wasRepeating = repeating))
     }
 
     override fun stop() {
+        repeating = false
         vibrator.cancel()
     }
 
-    private companion object {
-        const val PULSE_DURATION_MS = 500L
-        const val PAUSE_DURATION_MS = 500L
-        const val REPEAT_FROM_INDEX = 0
+    private fun play(pattern: VibrationPattern) {
+        vibrator.vibrate(VibrationEffect.createWaveform(pattern.timings, pattern.repeatFromIndex))
     }
 }

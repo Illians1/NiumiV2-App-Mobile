@@ -88,4 +88,53 @@ class BoxVerifierTest {
         assertEquals(BoxVerificationStatus.UNSUPPORTED_VERSION, result.status)
         assertNull(result.proof)
     }
+
+    // SPEC_CORE_KMP §14 : aucune exception ne doit traverser la frontière. Un
+    // `tokenSha256Hex` corrompu (lu depuis un stockage persistant altéré) ne doit jamais
+    // faire lancer `verify`, seulement produire un mismatch typé.
+    @Test
+    fun emptyStoredHashYieldsTokenMismatchWithoutThrowing() {
+        val payload = BoxPayload(protocolVersion = 1, boxId = boxId, tokenBytes = tokenBytes)
+        val credential = PairedBoxCredential(protocolVersion = 1, boxId = boxId, tokenSha256Hex = "")
+
+        val result = BoxVerifier.verify(payload, credential, context)
+
+        assertEquals(BoxVerificationStatus.TOKEN_MISMATCH, result.status)
+        assertNull(result.proof)
+    }
+
+    @Test
+    fun tooShortStoredHashYieldsTokenMismatchWithoutThrowing() {
+        val payload = BoxPayload(protocolVersion = 1, boxId = boxId, tokenBytes = tokenBytes)
+        val credential = PairedBoxCredential(protocolVersion = 1, boxId = boxId, tokenSha256Hex = "abcd")
+
+        val result = BoxVerifier.verify(payload, credential, context)
+
+        assertEquals(BoxVerificationStatus.TOKEN_MISMATCH, result.status)
+        assertNull(result.proof)
+    }
+
+    @Test
+    fun nonHexCharacterInStoredHashYieldsTokenMismatchWithoutThrowing() {
+        val payload = BoxPayload(protocolVersion = 1, boxId = boxId, tokenBytes = tokenBytes)
+        val corruptHash = "z".repeat(64)
+        val credential = PairedBoxCredential(protocolVersion = 1, boxId = boxId, tokenSha256Hex = corruptHash)
+
+        val result = BoxVerifier.verify(payload, credential, context)
+
+        assertEquals(BoxVerificationStatus.TOKEN_MISMATCH, result.status)
+        assertNull(result.proof)
+    }
+
+    @Test
+    fun uppercaseStoredHashYieldsTokenMismatchWithoutThrowing() {
+        val payload = BoxPayload(protocolVersion = 1, boxId = boxId, tokenBytes = tokenBytes)
+        val validHash = Sha256.hexOf(Sha256.hash(tokenBytes))
+        val credential = PairedBoxCredential(protocolVersion = 1, boxId = boxId, tokenSha256Hex = validHash.uppercase())
+
+        val result = BoxVerifier.verify(payload, credential, context)
+
+        assertEquals(BoxVerificationStatus.TOKEN_MISMATCH, result.status)
+        assertNull(result.proof)
+    }
 }

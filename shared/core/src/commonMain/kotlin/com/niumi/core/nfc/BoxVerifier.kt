@@ -8,6 +8,7 @@ public object BoxVerifier {
     private const val SUPPORTED_PROTOCOL_VERSION = 1
     private const val HEX_RADIX = 16
     private const val NIBBLE_BITS = 4
+    private const val SHA256_HEX_LENGTH = 64
 
     public fun verify(
         payload: BoxPayload,
@@ -41,14 +42,22 @@ public object BoxVerifier {
             else -> BoxVerificationStatus.MATCH
         }
 
+    // Un `tokenSha256Hex` corrompu peut provenir d'un stockage persistant altéré (DataStore,
+    // Room). SPEC_CORE_KMP §14 interdit à toute exception de traverser la frontière : une forme
+    // non canonique (longueur incorrecte ou caractère hors `0-9a-f` minuscule) est donc un
+    // mismatch typé, jamais un crash.
     private fun tokenMatches(
         payload: BoxPayload,
         credential: PairedBoxCredential,
     ): Boolean {
+        if (!isCanonicalSha256Hex(credential.tokenSha256Hex)) return false
         val scannedHash = Sha256.hash(payload.tokenBytes)
         val expectedHash = hexToBytes(credential.tokenSha256Hex)
         return ConstantTime.equals(scannedHash, expectedHash)
     }
+
+    private fun isCanonicalSha256Hex(hex: String): Boolean =
+        hex.length == SHA256_HEX_LENGTH && hex.all { it in '0'..'9' || it in 'a'..'f' }
 
     private fun hexToBytes(hex: String): ByteArray {
         val bytes = ByteArray(hex.length / 2)

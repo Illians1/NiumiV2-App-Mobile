@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Route POC uniquement (SPEC_ANDROID §22 Lot 0, CLAUDE.md : pas de faux comportement de
+        production). Ce fichier entier est absent de la variante release et supprimé avec le
+        reste de la route POC à l'étape 21.
+    -->
+    <application>
+        <activity
+            android:name=".poc.PocPairingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Niumi" />
+    </application>
+
+</manifest>

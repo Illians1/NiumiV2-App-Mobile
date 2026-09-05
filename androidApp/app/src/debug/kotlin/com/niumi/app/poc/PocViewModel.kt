@@ -4,22 +4,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.common.Clock
+import com.niumi.system.pairing.PairedBoxStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Session fictive de la route POC (debug uniquement, SPEC_ANDROID §22 Lot 0). L'identifiant est
- * un UUID canonique fixe : `ServiceCommand.from` (`:feature:ringing`) refuse toute autre forme
- * quand `AlarmReceiver` reçoit le broadcast programmé par `AlarmScheduler`.
- */
-private const val POC_SESSION_ID = "00000000-0000-4000-8000-000000000000"
-private const val POC_REVISION = 1L
+// SPEC_ANDROID §16 : jamais le token ni son hash complet, seulement un préfixe de boxId.
+private const val BOX_ID_PREFIX_LENGTH = 8
 
 data class PocUiState(
     val secondsInput: String = "90",
     val isScheduled: Boolean = false,
+    val pairedBoxIdPrefix: String? = null,
 )
 
 @HiltViewModel
@@ -28,28 +27,42 @@ class PocViewModel
     constructor(
         private val alarmScheduler: AlarmScheduler,
         private val clock: Clock,
+        private val pairedBoxStore: PairedBoxStore,
     ) : ViewModel() {
-        var state by mutableStateOf(PocUiState(isScheduled = alarmScheduler.isScheduled(POC_SESSION_ID)))
+        var state by mutableStateOf(PocUiState(isScheduled = alarmScheduler.isScheduled(PocSession.ID)))
             private set
+
+        init {
+            viewModelScope.launch {
+                state = state.copy(pairedBoxIdPrefix = pairedBoxStore.current()?.boxId?.take(BOX_ID_PREFIX_LENGTH))
+            }
+        }
 
         fun onSecondsInputChanged(value: String) {
             state = state.copy(secondsInput = value.filter { it.isDigit() })
         }
 
+        /** Recharge le boîtier associé (appelé au retour de `PocPairingActivity`). */
+        fun refreshPairedBox() {
+            viewModelScope.launch {
+                state = state.copy(pairedBoxIdPrefix = pairedBoxStore.current()?.boxId?.take(BOX_ID_PREFIX_LENGTH))
+            }
+        }
+
         fun schedule() {
             val seconds = state.secondsInput.toLongOrNull() ?: return
             val triggerAtEpochMillis = clock.nowEpochMillis() + seconds * MILLIS_PER_SECOND
-            alarmScheduler.schedule(POC_SESSION_ID, POC_REVISION, triggerAtEpochMillis)
+            alarmScheduler.schedule(PocSession.ID, PocSession.REVISION, triggerAtEpochMillis)
             refresh()
         }
 
         fun cancel() {
-            alarmScheduler.cancel(POC_SESSION_ID)
+            alarmScheduler.cancel(PocSession.ID)
             refresh()
         }
 
         private fun refresh() {
-            state = state.copy(isScheduled = alarmScheduler.isScheduled(POC_SESSION_ID))
+            state = state.copy(isScheduled = alarmScheduler.isScheduled(PocSession.ID))
         }
 
         private companion object {

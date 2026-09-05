@@ -1,6 +1,8 @@
 package com.niumi.feature.ringing.ui
 
 import com.google.common.truth.Truth.assertThat
+import com.niumi.system.nfc.NfcAvailability
+import com.niumi.system.nfc.ScanOutcome
 import org.junit.Test
 
 /**
@@ -44,5 +46,72 @@ class AlarmScreenStateTest {
         val state = AlarmScreenState.from(phase = AlarmRingingPhase.RINGING, deviceLocked = true)
 
         assertThat(state.instructionText).isEqualTo("Déverrouille ton téléphone, puis approche-le du boîtier.")
+    }
+
+    // SPEC_ANDROID §11.2, §4.4 : ordre de priorité rang 1 à 6, du plus au moins bloquant.
+
+    @Test
+    fun absentNfcTakesPriorityOverEverythingElse() {
+        val state =
+            AlarmScreenState.from(
+                phase = AlarmRingingPhase.RINGING,
+                deviceLocked = true,
+                nfcAvailability = NfcAvailability.ABSENT,
+                lastScanOutcome = ScanOutcome.Unreadable,
+            )
+
+        assertThat(state.instructionText).isEqualTo("Cet appareil ne prend pas en charge le NFC.")
+        assertThat(state.showsNfcSettingsShortcut).isFalse()
+    }
+
+    @Test
+    fun disabledNfcTakesPriorityOverLockedDeviceAndShowsSettingsShortcut() {
+        val state =
+            AlarmScreenState.from(
+                phase = AlarmRingingPhase.RINGING,
+                deviceLocked = true,
+                nfcAvailability = NfcAvailability.DISABLED,
+            )
+
+        assertThat(state.instructionText)
+            .isEqualTo("Le NFC est désactivé. Active-le pour scanner ton boîtier.")
+        assertThat(state.showsNfcSettingsShortcut).isTrue()
+    }
+
+    @Test
+    fun lockedDeviceTakesPriorityOverScanOutcome() {
+        val state =
+            AlarmScreenState.from(
+                phase = AlarmRingingPhase.RINGING,
+                deviceLocked = true,
+                nfcAvailability = NfcAvailability.ENABLED,
+                lastScanOutcome = ScanOutcome.Unreadable,
+            )
+
+        assertThat(state.instructionText).isEqualTo("Déverrouille ton téléphone, puis approche-le du boîtier.")
+    }
+
+    @Test
+    fun unreadableScanOutcomeShowsTheExactSpecText() {
+        val state =
+            AlarmScreenState.from(
+                phase = AlarmRingingPhase.RINGING,
+                deviceLocked = false,
+                lastScanOutcome = ScanOutcome.Unreadable,
+            )
+
+        assertThat(state.instructionText).isEqualTo("Boîtier non reconnu. Réessaie.")
+    }
+
+    @Test
+    fun unknownBoxScanOutcomeTakesPriorityOverPhaseText() {
+        val state =
+            AlarmScreenState.from(
+                phase = AlarmRingingPhase.RINGING,
+                deviceLocked = false,
+                lastScanOutcome = ScanOutcome.UnknownBox,
+            )
+
+        assertThat(state.instructionText).isEqualTo("Ce boîtier n'est pas celui de ta session.")
     }
 }

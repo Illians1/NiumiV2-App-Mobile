@@ -4,5 +4,12 @@ package com.niumi.system.audio
 interface VibrationController {
     fun startRepeating()
 
+    /**
+     * Vibration courte d'erreur (SPEC_ANDROID §11.2, tag non associé). Si la vibration
+     * d'alarme était active, elle reprend après le pulse d'erreur — voir
+     * [VibrationPatternPolicy].
+     */
+    fun vibrateError()
+
     fun stop()
 }

@@ -116,7 +116,10 @@ interface ForegroundAppSource { val foregroundPackage: Flow<String> }
 
 // :core:system — com.niumi.system.nfc
 interface NfcReader {                                   // Reader Mode, livre l'URI brute du 1er enregistrement NDEF URI
-    fun start(activity: Activity, onUri: (String) -> Unit): OperationResult
+    // onUnreadable ajouté à l'étape 4 : SPEC_ANDROID §11.2 impose un texte dédié pour un tag
+    // physiquement illisible (pas de NDEF, IOException, FormatException), un cas qu'aucune
+    // URI ne peut représenter. Voir ETAPE-04.md.
+    fun start(activity: Activity, onUri: (String) -> Unit, onUnreadable: () -> Unit): OperationResult
     fun stop(activity: Activity)
     val availability: NfcAvailability                   // ABSENT, DISABLED, ENABLED
 }
@@ -320,12 +323,12 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 **Produit :** `NfcReader`, `NfcScanHandler`, `PairedBoxStore` (interface), `AlarmActivity` complète pour le POC. `PairedBoxStore` reçoit son implémentation Room à l'étape 13 ; `PocNfcScanHandler` est remplacé par `HandleValidNfcUseCase` à l'étape 18 et supprimé à l'étape 21.
 
-- [ ] **Écrire `NfcUriExtractorTest`**, implémenter l'extracteur pur (`NdefRecord.toUri()` puis `toString()`, sans normalisation).
-- [ ] **Implémenter `ReaderModeNfcReader`** : `availability` depuis `PackageManager.FEATURE_NFC` et `NfcAdapter.isEnabled`, `enableReaderMode(activity, callback, FLAG_READER_NFC_A, extras delay 250 ms)`, lecture `Ndef` bornée à 96 octets avant toute allocation (SPEC_ANDROID §16), `disableReaderMode` dans `stop()`.
-- [ ] **Écrire `PocNfcScanHandlerTest`**, implémenter `DebugPairedBoxStore` et `PocNfcScanHandler` en debug.
-- [ ] **Compléter `AlarmActivity`** avec le Reader Mode et les textes ; `AlarmScreenStateTest` en vert.
-- [ ] **Ajouter à `PocScreen`** un bouton « Associer ce tag » qui active le Reader Mode dans une `PocPairingActivity` debug et stocke `PairedBoxCredential.fromPayload` ; afficher le `boxId` tronqué, jamais le token.
-- [ ] **Vérifier :**
+- [x] **Écrire `NfcUriExtractorTest`**, implémenter l'extracteur pur. *(Décision validée avant l'implémentation : décodage RTD-URI maison sur un descripteur pur `NdefRecordData`, plutôt que `NdefRecord.toUri()`. Ce dernier est un stub Android non testable en JVM et normalise le schéma en minuscules, ce qui aurait fait accepter `NIUMI://` que SPEC_CORE_KMP §9.1 interdit d'accepter. Voir `ETAPE-04.md`.)*
+- [x] **Implémenter `ReaderModeNfcReader`** : `availability` depuis `PackageManager.FEATURE_NFC` et `NfcAdapter.isEnabled`, `enableReaderMode(activity, callback, FLAG_READER_NFC_A, extras delay 250 ms)`, lecture `Ndef` bornée à 96 octets avant toute allocation (SPEC_ANDROID §16), `disableReaderMode` dans `stop()`.
+- [x] **Écrire `PocNfcScanHandlerTest`**, implémenter `DebugPairedBoxStore` et `PocNfcScanHandler` en debug.
+- [x] **Compléter `AlarmActivity`** avec le Reader Mode et les textes ; `AlarmScreenStateTest` en vert. *(Logique de scan extraite dans `AlarmNfcScanCoordinator`, TooManyFunctions detekt oblige — même motif que `SystemModule`/`AudioModule` à l'étape 3.)*
+- [x] **Ajouter à `PocScreen`** un bouton « Associer ce tag » qui active le Reader Mode dans une `PocPairingActivity` debug et stocke `PairedBoxCredential.fromPayload` ; afficher le `boxId` tronqué, jamais le token.
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :core:system:testDebugUnitTest :feature:ringing:testDebugUnitTest :app:testDebugUnitTest
@@ -333,9 +336,9 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** associer un tag écrit avec un payload canonique ; alarme dans 60 s ; scan du bon tag → arrêt en moins d'une seconde ; scan d'un autre tag → vibration courte, sonnerie maintenue ; NFC désactivé → instruction, sonnerie maintenue ; téléphone verrouillé → noter si le scan fonctionne avant déverrouillage (matrice §20).
+**Tests manuels :** associer un tag écrit avec un payload canonique ; alarme dans 60 s ; scan du bon tag → arrêt en moins d'une seconde ; scan d'un autre tag → vibration courte, sonnerie maintenue ; NFC désactivé → instruction, sonnerie maintenue ; téléphone verrouillé → noter si le scan fonctionne avant déverrouillage (matrice §20). *(Faits le 2026-09-05 sur Redmi 25080RABDG, Android 16 — tous concluants sauf le scan d'un second tag Niumi associé à un autre boîtier, faute de second tag disponible. Un bug trouvé et corrigé pendant la validation : `AlarmActivity` ne se fermait pas après un scan accepté. Restriction NFC-verrouillé spécifique à HyperOS confirmée, conforme à l'incertitude §4.4 ; détails dans `ETAPE-04.md`.)*
 
-**Terminé quand :** tests verts, comportement manuel consigné avec le modèle d'appareil, aucune décision de validité prise hors de `:shared:core`.
+**Terminé quand :** tests verts, comportement manuel consigné avec le modèle d'appareil, aucune décision de validité prise hors de `:shared:core`. *(Atteint le 2026-09-05, à l'exception du scan d'un second boîtier — voir `ETAPE-04.md`. Pixel et Samsung restent à couvrir à la porte de validation 0, étape 6.)*
 
 ### Étape 5 : blocage par AccessibilityService, overlay et page de consentement
 

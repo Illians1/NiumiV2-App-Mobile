@@ -58,6 +58,11 @@ class DefaultAlarmAudioEngineTest {
                 started = true
             }
 
+            override fun vibrateError() {
+                // Non exercé par DefaultAlarmAudioEngine : AlarmActivity appelle
+                // VibrationController.vibrateError() directement (voir VibrationPatternPolicyTest).
+            }
+
             override fun stop() {
                 stopped = true
             }
