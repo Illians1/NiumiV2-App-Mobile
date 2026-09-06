@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Manifeste de l'APK de test instrumenté uniquement (jamais fusionné dans l'application),
+    même motif que :feature:ringing : `createComposeRule()` a besoin d'une activité hôte.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Niumi" />
+    </application>
+
+</manifest>

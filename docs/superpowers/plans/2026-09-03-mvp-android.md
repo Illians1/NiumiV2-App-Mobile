@@ -106,13 +106,19 @@ interface RingingController {                          // démarre/arrête Alarm
 }
 
 // :core:system — com.niumi.system.blocking
+// Écart validé à l'étape 5 : apply() prend Set<BlockedPackage> et non Set<String>. §12.2 impose
+// le texte « {Nom de l'application} reste bloquée jusqu'au scan du boîtier. » ; aucun libellé ne
+// circulait dans la signature d'origine. BlockedPackage (:core:database, réutilisé tel quel par
+// AndroidSessionExtras à l'étape 9) fige le displayNameSnapshot à l'activation plutôt que de le
+// résoudre via PackageManager au moment de l'affichage. Voir ETAPE-05.md.
 interface BlockingController {
-    fun apply(sessionId: String, packageNames: Set<String>): OperationResult
+    fun apply(sessionId: String, packages: Set<BlockedPackage>): OperationResult
     fun remove(sessionId: String): OperationResult
     fun effectivePackages(): Set<String>
     fun isServiceEnabled(): Boolean
 }
-interface ForegroundAppSource { val foregroundPackage: Flow<String> }
+// ForegroundAppSource reporté à l'étape 5 : aucun consommateur de production n'existe avant le
+// coordinateur (l'algorithme §12.2 décide entièrement dans onAccessibilityEvent). Voir ETAPE-05.md.
 
 // :core:system — com.niumi.system.nfc
 interface NfcReader {                                   // Reader Mode, livre l'URI brute du 1er enregistrement NDEF URI
@@ -354,12 +360,12 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 **Produit :** `BlockingController`, `BlockedPackagesProjection`, `BlockingDecision`, le service et l'écran de consentement définitifs.
 
-- [ ] **Écrire `BlockingDecisionTest`** : `Inactive` → `None` ; `Active` et package non listé → `None` ; `Active` et package listé → `GoHome` ; `Releasing` avec liste effective vide → `None` ; package Niumi lui-même → `None`. Implémenter.
-- [ ] **Écrire `AccessibilityServiceStatusTest`** : chaîne contenant `com.niumi.app/com.niumi.feature.session.blocking.NiumiBlockingAccessibilityService` → actif ; chaîne vide ou autre service → inactif. Implémenter.
-- [ ] **Implémenter le service** : `onAccessibilityEvent` lit uniquement `event.packageName`, appelle `BlockingDecision`, exécute `performGlobalAction(GLOBAL_ACTION_HOME)`, affiche l'overlay, journalise `BLOCK_APPLIED` avec le package seul ; `onServiceConnected` recharge la projection ; jamais de `getRootInActiveWindow()`, jamais de lecture de texte.
-- [ ] **Implémenter `AccessibilityConsentScreen`** et son test Compose.
-- [ ] **Compléter `PocScreen`** avec l'application factice et l'état du service.
-- [ ] **Vérifier :**
+- [x] **Écrire `BlockingDecisionTest`** : `Inactive` → `None` ; `Active` et package non listé → `None` ; `Active` et package listé → `GoHome` ; `Releasing` avec liste effective vide → `None` ; package Niumi lui-même → `None`. Implémenter. *(Écart validé : `apply()`/`decide()` portent `BlockedPackage` et non un simple nom de package, pour transporter le libellé exigé par le texte de l'overlay — voir « Interfaces transverses » et `ETAPE-05.md`.)*
+- [x] **Écrire `AccessibilityServiceStatusTest`** : chaîne contenant `com.niumi.app/com.niumi.feature.session.blocking.NiumiBlockingAccessibilityService` → actif ; chaîne vide ou autre service → inactif. Implémenter. *(Renommé `EnabledAccessibilityServicesParserTest` : la logique de parsing pur est séparée de `AccessibilityServiceStatus`, l'interface de diagnostic — même motif « descripteurs purs » que les étapes 3-4.)*
+- [x] **Implémenter le service** : `onAccessibilityEvent` lit uniquement `event.packageName`, appelle `BlockingDecision`, exécute `performGlobalAction(GLOBAL_ACTION_HOME)`, affiche l'overlay, journalise `BLOCK_APPLIED` avec le package seul ; jamais de `getRootInActiveWindow()`, jamais de lecture de texte. *(Pas d'override de `onServiceConnected` : la projection est relue à chaque événement via l'interface `BlockedPackagesProjection`, rien à « recharger » explicitement tant qu'elle reste en mémoire — limite documentée dans `ETAPE-05.md`, pas un contournement.)*
+- [x] **Implémenter `AccessibilityConsentScreen`** et son test Compose.
+- [x] **Compléter `PocScreen`** avec l'application factice et l'état du service.
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :core:system:testDebugUnitTest :feature:session:testDebugUnitTest :feature:setup:testDebugUnitTest
@@ -367,9 +373,11 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** activer le service via la page de consentement ; ouvrir l'application factice depuis le launcher, les récents et une notification → retour à l'accueil et overlay à chaque fois ; ouvrir une application autorisée → aucun effet ; désactiver le service → le POC affiche l'état inactif.
+*(Fait le 2026-09-06 sur Redmi 25080RABDG, Android 16 / API 36 — tout vert, 5 tests instrumentés compris. `connectedDebugAndroidTest` lancé par module (`:feature:session`, `:feature:setup`), même restriction d'installation HyperOS qu'à l'étape 3.)*
 
-**Terminé quand :** tests verts, `canRetrieveWindowContent=false` vérifié dans le XML, aucun accès au contenu de fenêtre dans le code (grep `rootInActiveWindow`, `getText`, `contentDescription` sur le service vide).
+**Tests manuels :** activer le service via la page de consentement ; ouvrir l'application factice depuis le launcher, les récents et une notification → retour à l'accueil et overlay à chaque fois ; ouvrir une application autorisée → aucun effet ; désactiver le service → le POC affiche l'état inactif. *(Partiellement faits le 2026-09-06. **Deux bugs de production trouvés et corrigés** : crash `BadTokenException` à chaque blocage — l'overlay était construit avec l'`@ApplicationContext` au lieu du contexte du service, ce qui plantait Niumi et faisait désactiver le service par Android ; et overlay retiré en quelques millisecondes par l'événement du launcher consécutif au `GLOBAL_ACTION_HOME`. **Un troisième défaut, le plus grave, s'est révélé venir de l'appareil et non du code** : l'optimisation de batterie MIUI gelait le process de Niumi en arrière-plan, ce qui suspendait la remise des événements d'accessibilité — le système déclarant toujours le service « lié », process vivant, même PID. Le blocage devenait silencieusement inopérant après environ une minute. A/B contrôlé : avec restrictions, non bloqué à T+90 s ; sans restrictions, bloqué en < 1 s. Le passage de Niumi en « Aucune restriction » suffit, aucun code modifié. **Conséquence pour les specs : §13 classe « batterie optimisée » en `WARNING` « sans blocage par défaut » — la mesure montre que ce contrôle doit devenir `BLOCKING_FOR_NIUMI_EXPERIENCE` sur ces surcouches.** Le protocole manuel a ensuite été rejoué et passe (launcher, récents, intent direct, overlay, application non listée). Détails et mesures dans `ETAPE-05.md`.)*
+
+**Terminé quand :** tests verts, `canRetrieveWindowContent=false` vérifié dans le XML, aucun accès au contenu de fenêtre dans le code (grep `rootInActiveWindow`, `getText`, `contentDescription` sur le service vide). *(**Presque atteint** au 2026-09-06. Acquis : tests JVM et instrumentés verts, garde-fou source automatisé (`NiumiBlockingAccessibilityServiceSourceTest`) plutôt qu'un grep manuel, et `capabilities=0` vérifié au runtime via `dumpsys accessibility` — preuve que `canRetrieveWindowContent=false` s'applique. SPEC_ANDROID §12.2, §13 et §19.2 ont été mises à jour dans le même changement, et le protocole manuel a été intégralement déroulé puis rejoué par `tools/validate_blocking.sh` (7 contrôles sur 7, dont la désactivation du service pendant un blocage actif). Trois conséquences restent à traiter dans les étapes suivantes, listées dans `ETAPE-05.md` : réévaluation de l'exemption d'énergie à chaque activation (§13, `DeviceReadinessChecker`), mention dans l'aide qu'une mise à jour peut réinitialiser ce réglage (étape 6), et lecture de la projection depuis Room (étape 15). Le test de bout en bout a été tenté puis abandonné : toute instrumentation de `com.niumi.app` fait passer `accessibility_enabled` à 0 et débranche le service, qui ne se relie pas — les deux vérifications de §19.2 sont donc irréalisables par instrumentation, et §19.2 a été réécrite en conséquence. Elles sont couvertes par `tools/validate_blocking.sh`, qui contrôle chaque essai par `dumpsys` et échoue explicitement si ses préconditions manquent. Pixel et Samsung sont reportés à la campagne de bêta-test, aucun appareil de ces marques n'étant disponible.)*
 
 ### Étape 6 : dossier Google Play et porte de validation 0
 
@@ -381,7 +389,7 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 - [ ] **Rédiger les six documents Play** en français, sans promesse d'incontournabilité du blocage (§23).
 - [ ] **Construire un APK debug** signé avec la clé debug et le déposer manuellement sur les appareils de test : `./gradlew :app:assembleDebug`.
-- [ ] **Exécuter la matrice POC** sur au minimum un Pixel, un Samsung et un Xiaomi : écran éteint 30 min, Doze forcé (`adb shell dumpsys deviceidle force-idle`), verrouillage, NFC réel, scan avant déverrouillage, application bloquée depuis launcher/récents/notification, Android 17 avec `set-enable-hardening throw`.
+- [ ] **Exécuter la matrice POC** sur au minimum un Pixel, un Samsung et un Xiaomi : écran éteint 30 min, Doze forcé (`adb shell dumpsys deviceidle force-idle`), verrouillage, NFC réel, scan avant déverrouillage, application bloquée depuis launcher/récents/notification, Android 17 avec `set-enable-hardening throw`. *(Décision du 2026-09-06 : seul le Xiaomi est disponible ; Pixel et Samsung sont reportés à la campagne de bêta-test. Ajouter au protocole remis aux bêta-testeurs la vérification du réglage d'énergie constructeur, dont l'étape 5 a montré qu'il conditionne le fonctionnement du blocage sur HyperOS — voir `ETAPE-05.md` et SPEC_ANDROID §13.)*
 - [ ] **Enregistrer la vidéo de revue** selon le script.
 - [ ] **Soumettre sur piste interne ou fermée** dès que le compte Play le permet (action humaine) ; consigner la date et la réponse de Google dans `LOT-0.md`.
 

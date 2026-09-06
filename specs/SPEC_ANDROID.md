@@ -726,10 +726,15 @@ Configuration minimale:
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="50"
     android:canRetrieveWindowContent="false"
-    android:isAccessibilityTool="false" />
+    android:isAccessibilityTool="false"
+    android:description="@string/niumi_accessibility_service_description" />
 ```
 
+`android:description` est obligatoire en pratique: les réglages d'accessibilité du système et la fiche Play l'affichent à l'utilisateur au moment où il accorde l'autorisation. Son texte doit rester cohérent avec l'écran de consentement de 12.3.
+
 Le service doit uniquement lire `event.packageName`. Il ne doit pas parcourir l'arbre d'accessibilité, lire le texte affiché, inspecter les saisies ou transmettre des événements à un serveur.
+
+Aucune exception ne doit sortir de `onAccessibilityEvent`. Une exception non rattrapée y provoque l'arrêt forcé de l'application, et Android retire alors le service de la liste des services activés: le blocage disparaît entièrement, sans que l'utilisateur en soit informé autrement que par une notification système d'arrêt. Toute opération susceptible d'échouer, en particulier l'ajout de la fenêtre d'overlay, doit renvoyer un résultat typé et être journalisée, jamais propagée.
 
 Algorithme:
 
@@ -738,15 +743,20 @@ Algorithme:
   lire le package au premier plan
   si aucune session ARMED, RINGING, AWAITING_NFC, TRIGGERED_AWAITING_NFC ou RELEASING: ne rien faire
   si la session est RELEASING: lire la liste de blocage effective et les effets de libération en attente
-  si aucune liste de blocage effective: retirer l'overlay éventuel
-  si le package n'est pas bloqué: retirer l'overlay éventuel
+  si aucune liste de blocage effective: ne rien faire
+  si le package n'est pas bloqué: ne rien faire
   si le package est bloqué:
+    si le même package a déjà été bloqué il y a moins d'une seconde: ne rien faire
     exécuter GLOBAL_ACTION_HOME
     afficher brièvement un TYPE_ACCESSIBILITY_OVERLAY explicatif
     journaliser BLOCK_APPLIED avec le package uniquement
 ```
 
-Utiliser `TYPE_ACCESSIBILITY_OVERLAY`. Ne pas démarrer une `Activity` depuis l'arrière-plan pour bloquer une application. L'overlay disparaît dès que le package bloqué n'est plus au premier plan ou après une durée maximale de 3 secondes. Il ne doit pas rendre tout le téléphone inutilisable.
+L'anti-rebond d'une seconde est nécessaire: une application au premier plan émet des rafales d'événements, et sans lui chaque événement déclencherait un `GLOBAL_ACTION_HOME` et une entrée `BLOCK_APPLIED`, saturant en quelques secondes le journal borné à 200 entrées de 17.
+
+Utiliser `TYPE_ACCESSIBILITY_OVERLAY`. La fenêtre doit être ajoutée avec le contexte du service d'accessibilité lui-même: lui seul porte le token autorisant ce type de fenêtre, et le contexte d'application produit une `BadTokenException`. Ne pas démarrer une `Activity` depuis l'arrière-plan pour bloquer une application. Il ne doit pas rendre tout le téléphone inutilisable.
+
+L'overlay disparaît après une durée maximale de 3 secondes. Il ne doit pas être retiré au motif que le package bloqué n'est plus au premier plan: Niumi vient précisément de renvoyer l'utilisateur à l'accueil, ce qui produit immédiatement un événement pour le lanceur et effacerait l'overlay avant qu'il ne soit lisible. Seule l'expiration du délai, une interruption du service ou son débranchement retirent l'overlay.
 
 Texte de l'overlay:
 
@@ -802,11 +812,19 @@ La politique produit du MVP refuse l'activation pour les deux niveaux bloquants.
 | mode Ne pas déranger préoccupant | `WARNING` | état d'interruption disponible | réglages Ne pas déranger et explication |
 | service d'accessibilité actif | `BLOCKING_FOR_NIUMI_EXPERIENCE` | services activés | réglages d'accessibilité |
 | date future valide | `BLOCKING_FOR_ALARM` | calcul métier | corriger l'heure |
-| batterie optimisée | `WARNING` | `PowerManager` | aide OEM, sans blocage par défaut |
+| batterie optimisée | `BLOCKING_FOR_NIUMI_EXPERIENCE` | `PowerManager.isIgnoringBatteryOptimizations()`, détection partielle | aide OEM et parcours vers l'exemption |
 
 Niumi déclare `USE_EXACT_ALARM`, car le réveil est une fonction centrale du produit. La spec ne doit pas ajouter `SCHEDULE_EXACT_ALARM` ni présenter l'accès aux alarmes exactes comme une permission utilisateur ordinaire. `canScheduleExactAlarms()` reste vérifié par sécurité. S'il renvoie `false`, l'application signale un état anormal, une incompatibilité ou un problème d'éligibilité. Elle ne redirige pas automatiquement vers les réglages "Alarmes et rappels" comme elle le ferait avec `SCHEDULE_EXACT_ALARM`.
 
 La détection du mode Ne pas déranger varie selon la version Android et les surcouches. Le diagnostic doit signaler les états observables qui risquent de rendre l'alarme inaudible, sans promettre une analyse parfaite de toutes les configurations OEM. Les tests physiques restent la source de validation.
+
+L'optimisation de batterie était classée `WARNING` "sans blocage par défaut" jusqu'à la validation de l'étape 5. La mesure sur appareil réel a montré que cette hypothèse est fausse pour le blocage d'applications: sur HyperOS, tant que Niumi reste soumis aux restrictions de batterie, le système gèle son processus environ une minute après son passage en arrière-plan et cesse de lui remettre les événements d'accessibilité. Le service continue d'apparaître comme actif dans les réglages, le processus reste vivant, aucune erreur n'est produite, mais le blocage devient silencieusement inopérant. Le cas correspond exactement à l'usage réel: l'utilisateur engage sa session, pose son téléphone, puis tente d'ouvrir une application bloquée. Le contrôle est donc bloquant et l'onboarding doit conduire l'utilisateur jusqu'au réglage d'exemption avant la première session. Voir `docs/android/implementation-reports/ETAPE-05.md` pour les mesures.
+
+L'exemption ne survit pas à une réinstallation ni, selon toute vraisemblance, à une mise à jour depuis le store: la politique d'énergie de l'application est repassée d'elle-même en mode restrictif après plusieurs réinstallations pendant la validation de l'étape 5, et le blocage a cessé de fonctionner en conséquence. Le diagnostic ne peut donc pas se contenter d'un contrôle à l'onboarding: il doit être réévalué à chaque activation de session, et l'aide doit prévenir l'utilisateur qu'une mise à jour de Niumi peut réinitialiser ce réglage. C'est un point de fragilité produit à part entière, à couvrir explicitement pendant la campagne de bêta-test.
+
+La détection de ce contrôle est structurellement partielle et la spec ne doit pas prétendre le contraire. `PowerManager.isIgnoringBatteryOptimizations()` n'observe que la liste blanche AOSP. Sur HyperOS, le réglage qui commande réellement le gel est propre à la surcouche ("Économiseur de batterie" de l'application, à passer sur "Aucune restriction"): une fois ce réglage modifié et le blocage rétabli, `isIgnoringBatteryOptimizations()` continue de renvoyer `false` et `dumpsys deviceidle whitelist` ne contient toujours pas l'application. Le diagnostic ne peut donc pas conclure que tout va bien; il doit demander l'exemption dans tous les cas, guider vers le réglage OEM lorsqu'il est identifiable, et considérer ce contrôle comme non satisfait tant que l'utilisateur n'a pas confirmé l'avoir fait.
+
+Ce comportement est établi sur HyperOS. Les autres surcouches appliquent des politiques d'énergie différentes, à documenter au fur et à mesure de leur couverture; l'exemption est demandée dans tous les cas, la gravité du contrôle restant la même.
 
 L'écran n'affiche qu'une action principale à la fois, en commençant par le premier blocage. Il doit recalculer l'état après chaque retour des réglages.
 
@@ -1019,11 +1037,13 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - affichage de la notification de sonnerie et de son canal;
 - affichage de la notification d'attente de scan et de son canal, sans son, vibration ni full-screen intent;
 - démarrage du service depuis un receiver de test;
-- Reader Mode avec abstraction ou tag de test;
-- overlay d'accessibilité sur application factice;
-- retour à l'accueil après détection d'un package bloqué.
+- Reader Mode avec abstraction ou tag de test.
 
 Les tests ne doivent pas attendre une vraie heure de réveil. Injecter `Clock`, `AlarmScheduler`, `AlarmAudioEngine`, `NfcVerifier` et `ForegroundAppSource`.
+
+Le blocage d'applications ne figure pas dans cette liste, et ce n'est pas un oubli. Les deux vérifications attendues — overlay d'accessibilité sur une application factice, et retour à l'accueil après détection d'un package bloqué — ne sont pas réalisables par instrumentation: toute instrumentation de l'application fait passer `accessibility_enabled` à 0 et débranche le service d'accessibilité, qui ne se relie pas de lui-même. Un test instrumenté ne peut donc jamais observer le service en fonctionnement. Un test hébergé dans un module `library` n'y parvient pas davantage: son APK est une application distincte, dans un autre processus, sans accès à l'état de blocage de Niumi.
+
+Ces deux vérifications sont couvertes par `tools/validate_blocking.sh`, qui déroule le protocole sur un appareil réel et contrôle chaque essai par `dumpsys`: retour à l'accueil depuis le lanceur sur tâche neuve puis sur tâche existante, ouverture par intent explicite, présence puis retrait de la fenêtre d'overlay, absence d'effet sur une application non bloquée, et persistance du blocage après un délai en arrière-plan. Le script échoue explicitement lorsque ses préconditions ne sont pas réunies, plutôt que de s'ignorer. Le texte exact de l'overlay imposé par 12.2 n'est pas vérifiable par ce moyen et reste un contrôle visuel.
 
 ## 20. Matrice de tests physiques
 

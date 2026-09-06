@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Manifeste de l'APK de test instrumenté uniquement (jamais fusionné dans l'application),
+    même motif que :feature:ringing. `<queries>` permet à `startActivity` de résoudre
+    `ACTION_SETTINGS` sur les appareils dont le manifeste cible restreint la visibilité des
+    packages (Android 11+).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <queries>
+        <intent>
+            <action android:name="android.settings.SETTINGS" />
+        </intent>
+    </queries>
+
+</manifest>

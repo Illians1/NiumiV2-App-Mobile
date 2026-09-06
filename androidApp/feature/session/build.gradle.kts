@@ -11,7 +11,10 @@ android {
 
     defaultConfig {
         minSdk = 29
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // HiltTestRunner : NiumiBlockingAccessibilityService est @AndroidEntryPoint, les tests
+        // instrumentés ont besoin d'une Application Hilt (HiltTestApplication). Même motif que
+        // :feature:ringing.
+        testInstrumentationRunner = "com.niumi.feature.session.HiltTestRunner"
     }
 
     buildFeatures {
@@ -54,4 +57,14 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.hilt.android.testing)
+    androidTestImplementation(libs.truth)
+    kspAndroidTest(libs.hilt.compiler)
+}
+
+tasks.withType<Test>().configureEach {
+    // Consommé par NiumiBlockingAccessibilityServiceSourceTest : garde-fou de SPEC_ANDROID
+    // §12.2 lu directement dans le source du service, en JVM. Même mécanisme que
+    // ModuleListTest (:app) et NiumiAlarmWavTest (:feature:ringing).
+    systemProperty("niumi.rootDir", rootProject.rootDir.absolutePath)
 }

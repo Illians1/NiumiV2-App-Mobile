@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Configuration exacte de SPEC_ANDROID §12.2. `android:description` n'est pas listé par §12.2
+    mais requis pour l'affichage dans les réglages système et dans la fiche Play (étape 6) ;
+    son texte doit rester identique à `AccessibilityConsentTexts.settingsDescription`
+    (:feature:setup) — aucune dépendance feature-à-feature n'existe pour partager une seule
+    source, donc les deux littéraux sont maintenus en synchronisation manuelle, documentée aux
+    deux endroits.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="50"
+    android:canRetrieveWindowContent="false"
+    android:isAccessibilityTool="false"
+    android:description="@string/niumi_accessibility_service_description" />

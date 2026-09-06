@@ -5,7 +5,21 @@
         Route POC uniquement (SPEC_ANDROID §22 Lot 0, CLAUDE.md : pas de faux comportement de
         production). Ce fichier entier est absent de la variante release et supprimé avec le
         reste de la route POC à l'étape 21.
+
+        <queries> (SPEC_ANDROID §12.1) : le champ « Package à bloquer » du POC accepte un nom de
+        package saisi librement ; sans cette déclaration, `PackageManager.getApplicationInfo()`
+        ne verrait pas les applications tierces sur Android 11+ (visibilité des packages) et
+        `PocViewModel.resolveLabel` retomberait systématiquement sur le nom de package. Passera
+        en `main` au Lot 2 avec le vrai sélecteur d'applications (§12.1), qui a besoin de la
+        même déclaration pour `queryIntentActivities()`.
     -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application>
         <activity
             android:name=".poc.PocPairingActivity"

@@ -1,2 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!--
+            exported=true et BIND_ACCESSIBILITY_SERVICE : imposés par le système pour tout
+            AccessibilityService (SPEC_ANDROID §14). Pas de directBootAware : le blocage
+            n'a pas de rôle avant déverrouillage (§14, le service ne figure pas dans les
+            composants Direct Boot).
+        -->
+        <service
+            android:name=".blocking.NiumiBlockingAccessibilityService"
+            android:exported="true"
+            android:label="@string/niumi_accessibility_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/niumi_accessibility_service" />
+        </service>
+    </application>
+
+</manifest>

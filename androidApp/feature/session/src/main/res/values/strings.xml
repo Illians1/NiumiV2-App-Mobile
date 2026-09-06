@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="niumi_accessibility_service_label">Niumi</string>
+
+    <!--
+        Doit rester identique à AccessibilityConsentTexts.settingsDescription (:feature:setup,
+        écran de consentement SPEC_ANDROID §12.3) : voir le commentaire de
+        niumi_accessibility_service.xml.
+    -->
+    <string name="niumi_accessibility_service_description">Observe le nom de l\'application affichée pour ramener les applications bloquées à l\'accueil pendant une session Niumi. Ne lit ni le contenu des écrans ni les saisies.</string>
+
+    <!-- SPEC_ANDROID §12.2, mot pour mot : « {Nom de l'application} reste bloquée jusqu'au scan du boîtier. » -->
+    <string name="niumi_block_overlay_text">%1$s reste bloquée jusqu\'au scan du boîtier.</string>
+</resources>
