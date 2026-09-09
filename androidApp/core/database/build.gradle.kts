@@ -13,6 +13,11 @@ android {
         minSdk = 29
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    // MigrationTestHelper (androidTest) lit le schéma exporté depuis les assets du module de test.
+    sourceSets.getByName("androidTest") {
+        assets.srcDir("$projectDir/schemas")
+    }
 }
 
 kotlin {
@@ -36,6 +41,8 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.kotlinx.coroutines.android)
+    // Non transitif : :shared:core le déclare en implementation de commonMain.
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)
@@ -46,4 +53,12 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.room.testing)
+}
+
+tasks.withType<Test>().configureEach {
+    // Consommé par ExportedSchemaTest : évite de dépendre du répertoire de travail des tests.
+    systemProperty("niumi.rootDir", rootProject.rootDir.absolutePath)
 }

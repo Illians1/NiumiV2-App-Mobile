@@ -4,26 +4,30 @@ package com.niumi.database.logging
 data class TechnicalEventEntry(
     val type: TechnicalEventType,
     val sessionId: String?,
-    val packageName: String?,
+    val detailsJson: String?,
     val occurredAtEpochMillis: Long,
 )
 
 /**
- * Journal technique local, borné à 200 événements (SPEC_ANDROID §17). `packageName` n'est
- * conservé que pour [TechnicalEventType.BLOCK_APPLIED] : ignoré silencieusement pour tout
- * autre type plutôt que de faire échouer l'appelant, un journal ne devant jamais faire
- * planter le parcours qu'il observe.
+ * Journal technique local, borné à 200 événements (SPEC_ANDROID §17). `detailsJson` est filtré à
+ * l'écriture par [TechnicalEventDetails] : `packageName` n'est conservé que pour
+ * [TechnicalEventType.BLOCK_APPLIED], un `errorCode` contrôlé pour tout autre type — toute autre
+ * clé (texte d'accessibilité, hash de token, identifiant matériel) est supprimée avant d'atteindre
+ * la base. Écart à la signature initiale de l'étape 3 (`packageName` direct) : le paramètre
+ * `packageName` ne pouvait pas porter le « code d'erreur contrôlé » que §17 autorise aussi pour
+ * les autres types (voir `ETAPE-09.md`).
  *
- * Cette interface est portée par `:core:database` dès l'étape 3 (le receiver d'alarme en a
- * besoin) ; `InMemoryTechnicalEventLog` est une implémentation provisoire, remplacée par une
- * implémentation Room à l'étape 9 sans changer ce contrat.
+ * `log()` reste synchrone et non bloquant : appelé depuis `onReceive`, `onStartCommand` et
+ * `onAccessibilityEvent`, tous sur le thread principal, où Room interdit toute requête —
+ * l'implémentation poste l'écriture sur un scope injecté. `recent()` est `suspend` : aucun
+ * appelant de production, seul l'écran de diagnostic (étape 16) l'utilisera depuis un ViewModel.
  */
 interface TechnicalEventLog {
     fun log(
         type: TechnicalEventType,
         sessionId: String? = null,
-        packageName: String? = null,
+        detailsJson: String? = null,
     )
 
-    fun recent(): List<TechnicalEventEntry>
+    suspend fun recent(): List<TechnicalEventEntry>
 }

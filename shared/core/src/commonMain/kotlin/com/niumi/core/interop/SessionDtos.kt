@@ -8,6 +8,7 @@ import com.niumi.core.domain.SessionEventKind
 import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
 import com.niumi.core.nfc.NfcVerificationProof
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -105,7 +106,13 @@ public data class SessionEventDto(
 @Serializable
 public sealed interface SessionEffectPayloadDto
 
+/**
+ * `@SerialName` fige un discriminant court et stable dans le JSON persisté par `:core:database`
+ * (étape 9) : sans lui, kotlinx-serialization écrirait le nom de classe qualifié par défaut, que
+ * tout renommage de package rendrait illisible pour les effets déjà écrits en base.
+ */
 @Serializable
+@SerialName("incident")
 public data class IncidentEffectPayloadDto(
     val incident: SessionIncidentDto,
 ) : SessionEffectPayloadDto

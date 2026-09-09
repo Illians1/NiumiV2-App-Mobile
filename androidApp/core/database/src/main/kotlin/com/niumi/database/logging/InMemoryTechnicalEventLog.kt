@@ -6,10 +6,12 @@ import kotlin.concurrent.withLock
 private const val MAX_ENTRIES = 200
 
 /**
- * Implémentation provisoire de [TechnicalEventLog], en mémoire, remplacée par Room à
- * l'étape 9 sans changer l'interface. `nowEpochMillis` est injectable pour ne jamais dépendre
- * d'une vraie horloge en test. Construite via `LoggingModule` (pas de constructeur `@Inject` :
- * Dagger ne respecte pas les valeurs par défaut Kotlin des paramètres de constructeur).
+ * Implémentation en mémoire de [TechnicalEventLog], conservée après l'introduction de
+ * `RoomTechnicalEventLog` (étape 9) comme repli avant déverrouillage (`UserManager
+ * .isUserUnlocked == false`, SPEC_ANDROID §7.3 : Room y est inaccessible) et comme double de
+ * test. `nowEpochMillis` est injectable pour ne jamais dépendre d'une vraie horloge en test.
+ * Construite via `LoggingModule` (pas de constructeur `@Inject` : Dagger ne respecte pas les
+ * valeurs par défaut Kotlin des paramètres de constructeur).
  */
 class InMemoryTechnicalEventLog(
     private val nowEpochMillis: () -> Long = { System.currentTimeMillis() },
@@ -20,14 +22,13 @@ class InMemoryTechnicalEventLog(
     override fun log(
         type: TechnicalEventType,
         sessionId: String?,
-        packageName: String?,
+        detailsJson: String?,
     ) {
-        val effectivePackageName = if (type == TechnicalEventType.BLOCK_APPLIED) packageName else null
         val entry =
             TechnicalEventEntry(
                 type = type,
                 sessionId = sessionId,
-                packageName = effectivePackageName,
+                detailsJson = TechnicalEventDetails.sanitize(type, detailsJson),
                 occurredAtEpochMillis = nowEpochMillis(),
             )
         lock.withLock {
@@ -36,5 +37,5 @@ class InMemoryTechnicalEventLog(
         }
     }
 
-    override fun recent(): List<TechnicalEventEntry> = lock.withLock { entries.toList() }
+    override suspend fun recent(): List<TechnicalEventEntry> = lock.withLock { entries.toList() }
 }

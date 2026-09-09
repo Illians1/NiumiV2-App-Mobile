@@ -36,12 +36,12 @@ class AlarmNfcScanCoordinatorTest {
         override fun log(
             type: TechnicalEventType,
             sessionId: String?,
-            packageName: String?,
+            detailsJson: String?,
         ) {
             loggedTypes += type
         }
 
-        override fun recent() = emptyList<Nothing>()
+        override suspend fun recent() = emptyList<Nothing>()
     }
 
     private val vibrationController = FakeVibrationController()

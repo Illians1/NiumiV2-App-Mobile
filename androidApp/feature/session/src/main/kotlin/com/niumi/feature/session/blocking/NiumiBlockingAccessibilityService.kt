@@ -2,6 +2,7 @@ package com.niumi.feature.session.blocking
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
+import com.niumi.database.logging.TechnicalEventDetails
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.blocking.BlockAction
@@ -69,7 +70,10 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
                 if (shouldBlockNow(action.packageName)) {
                     performGlobalAction(GLOBAL_ACTION_HOME)
                     showOverlay(action.displayName)
-                    technicalEventLog.log(TechnicalEventType.BLOCK_APPLIED, packageName = action.packageName)
+                    technicalEventLog.log(
+                        TechnicalEventType.BLOCK_APPLIED,
+                        detailsJson = TechnicalEventDetails.packageName(action.packageName),
+                    )
                 }
             }
         }
