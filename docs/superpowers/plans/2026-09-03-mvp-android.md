@@ -16,7 +16,7 @@
 - Ne pas anticiper une étape suivante. Si une étape révèle une contradiction ou une impossibilité, l'écrire dans le rapport et s'arrêter plutôt que de contourner.
 - Chaque étape suit le cycle : écrire le test qui échoue, vérifier l'échec, implémenter le minimum, vérifier le succès, lancer les vérifications de l'étape.
 - À la fin de chaque étape, rédiger `docs/android/implementation-reports/ETAPE-NN.md` : fichiers modifiés, commandes exécutées avec leur résultat, tests non exécutés, incertitudes, validations sur appareil restantes.
-- Les portes de validation (après l'étape 6 et après l'étape 21) sont manuelles, sur appareils réels. Ne pas franchir une porte sans validation humaine explicite.
+- Les portes de validation (0a après l'étape 6, 0b et finale après l'étape 21 — porte 0 scindée en deux le 2026-09-07, voir étape 6 et `LOT-0.md`) sont manuelles, sur appareils réels ou sur décision Play. Ne pas franchir une porte sans validation humaine explicite.
 - Les versions de bibliothèques ci-dessous ont été vérifiées le 3 septembre 2026. Les reconfirmer à l'étape 1 avec Context7 ou les sources officielles avant de les figer.
 
 ## Contraintes globales
@@ -379,21 +379,23 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 **Terminé quand :** tests verts, `canRetrieveWindowContent=false` vérifié dans le XML, aucun accès au contenu de fenêtre dans le code (grep `rootInActiveWindow`, `getText`, `contentDescription` sur le service vide). *(**Presque atteint** au 2026-09-06. Acquis : tests JVM et instrumentés verts, garde-fou source automatisé (`NiumiBlockingAccessibilityServiceSourceTest`) plutôt qu'un grep manuel, et `capabilities=0` vérifié au runtime via `dumpsys accessibility` — preuve que `canRetrieveWindowContent=false` s'applique. SPEC_ANDROID §12.2, §13 et §19.2 ont été mises à jour dans le même changement, et le protocole manuel a été intégralement déroulé puis rejoué par `tools/validate_blocking.sh` (7 contrôles sur 7, dont la désactivation du service pendant un blocage actif). Trois conséquences restent à traiter dans les étapes suivantes, listées dans `ETAPE-05.md` : réévaluation de l'exemption d'énergie à chaque activation (§13, `DeviceReadinessChecker`), mention dans l'aide qu'une mise à jour peut réinitialiser ce réglage (étape 6), et lecture de la projection depuis Room (étape 15). Le test de bout en bout a été tenté puis abandonné : toute instrumentation de `com.niumi.app` fait passer `accessibility_enabled` à 0 et débranche le service, qui ne se relie pas — les deux vérifications de §19.2 sont donc irréalisables par instrumentation, et §19.2 a été réécrite en conséquence. Elles sont couvertes par `tools/validate_blocking.sh`, qui contrôle chaque essai par `dumpsys` et échoue explicitement si ses préconditions manquent. Pixel et Samsung sont reportés à la campagne de bêta-test, aucun appareil de ces marques n'étant disponible.)*
 
-### Étape 6 : dossier Google Play et porte de validation 0
+### Étape 6 : dossier Google Play et porte de validation 0a
 
 **Specs à lire :** SPEC_ANDROID §2, §4, §12.3, §20, §22 (Lot 0), §23.
 
+**Décision validée avec l'utilisateur le 2026-09-07 (déviation de §22/§23, documentée dans les deux specs et dans `LOT-0.md`) :** le tournage de la vidéo de revue et la soumission sur piste Play sont reportés au Lot 5 (étape 21), une fois le POC supprimé et le parcours utilisateur réel livré — la politique Play sur l'AccessibilityService exige une vidéo en usage normal, que le POC de debug ne peut pas représenter, et seule la première publication d'une piste passe une revue de politique. La porte de validation 0 est donc scindée : **porte 0a** ci-dessous (dossier rédigé, matrice physique du POC verte) débloque l'étape 7 ; **porte 0b** (verdict Play sur l'AccessibilityService) est rattachée à l'étape 21. Risque assumé : investir dans l'interface complète avant le verdict de Google.
+
 **Fichiers :**
-- Créer `docs/android/play-console/ACCESSIBILITY_DECLARATION.md` (usage déclaré, données observées, finalité, texte de divulgation identique à l'écran de consentement), `docs/android/play-console/USE_EXACT_ALARM.md` (justification « réveil fonction centrale »), `docs/android/play-console/FULL_SCREEN_INTENT.md`, `docs/android/play-console/FGS_MEDIA_PLAYBACK.md`, `docs/android/play-console/PRIVACY_POLICY.md` (données consultées et conservées, aucune transmission), `docs/android/play-console/REVIEW_VIDEO_SCRIPT.md` (plan de la vidéo : divulgation, consentement, alarme, scan, blocage).
-- Créer `docs/android/implementation-reports/LOT-0.md` : matrice d'essais vide à remplir (fabricant, modèle, Android, firmware, permissions, scénario, résultat, retard mesuré).
+- Créer `docs/android/play-console/ACCESSIBILITY_DECLARATION.md` (usage déclaré, données observées, finalité, texte de divulgation identique à l'écran de consentement), `docs/android/play-console/USE_EXACT_ALARM.md` (justification « réveil fonction centrale »), `docs/android/play-console/FULL_SCREEN_INTENT.md`, `docs/android/play-console/FGS_MEDIA_PLAYBACK.md`, `docs/android/play-console/PRIVACY_POLICY.md` (données consultées et conservées, aucune transmission), `docs/android/play-console/REVIEW_VIDEO_SCRIPT.md` (plan de la vidéo : divulgation, consentement, alarme, scan, blocage — tournage reporté à l'étape 21).
+- Créer `docs/android/implementation-reports/LOT-0.md` : matrice d'essais à remplir (fabricant, modèle, Android, firmware, permissions, scénario, résultat, retard mesuré), décision de calendrier et préconditions de soumission encore ouvertes (identité éditeur, contact, URL politique, keystore, AAB release).
 
-- [ ] **Rédiger les six documents Play** en français, sans promesse d'incontournabilité du blocage (§23).
-- [ ] **Construire un APK debug** signé avec la clé debug et le déposer manuellement sur les appareils de test : `./gradlew :app:assembleDebug`.
-- [ ] **Exécuter la matrice POC** sur au minimum un Pixel, un Samsung et un Xiaomi : écran éteint 30 min, Doze forcé (`adb shell dumpsys deviceidle force-idle`), verrouillage, NFC réel, scan avant déverrouillage, application bloquée depuis launcher/récents/notification, Android 17 avec `set-enable-hardening throw`. *(Décision du 2026-09-06 : seul le Xiaomi est disponible ; Pixel et Samsung sont reportés à la campagne de bêta-test. Ajouter au protocole remis aux bêta-testeurs la vérification du réglage d'énergie constructeur, dont l'étape 5 a montré qu'il conditionne le fonctionnement du blocage sur HyperOS — voir `ETAPE-05.md` et SPEC_ANDROID §13.)*
-- [ ] **Enregistrer la vidéo de revue** selon le script.
-- [ ] **Soumettre sur piste interne ou fermée** dès que le compte Play le permet (action humaine) ; consigner la date et la réponse de Google dans `LOT-0.md`.
+- [x] **Rédiger les six documents Play** en français, sans promesse d'incontournabilité du blocage (§23). *(Fait le 2026-09-07.)*
+- [x] **Construire un APK debug** signé avec la clé debug et le déposer manuellement sur les appareils de test : `./gradlew :app:assembleDebug`. *(Fait le 2026-09-07.)*
+- [x] **Exécuter la matrice POC** sur le Xiaomi disponible : volumes et Ne pas déranger, cycle de vie (récents, arrêt FGS, arrêt forcé), Doze, écran éteint 30 min. Pixel, Samsung et Android 17 restent hors périmètre, reportés à la campagne de bêta-test. *(Fait les 2026-09-07 et 08 — 13 essais, dont le Doze profond réel appareil débranché : retard nul. Quatre constats bloquants trouvés et arbitrés, specs mises à jour. Détails dans `LOT-0.md` et `ETAPE-06.md`.)*
+- [ ] ~~Enregistrer la vidéo de revue~~ — reporté à l'étape 21 (porte 0b).
+- [ ] ~~Soumettre sur piste interne ou fermée~~ — reporté à l'étape 21 (porte 0b).
 
-**Porte de validation 0 :** ne pas commencer l'étape 7 sans validation humaine écrite dans `LOT-0.md`. Un refus Play, une incompatibilité OEM ou un échec du scan verrouillé qui remet en cause le produit exige une révision explicite des specs avant de continuer.
+**Porte de validation 0a : franchie le 2026-09-08** (validation écrite dans `LOT-0.md`, avec les quatre risques assumés — Pixel et Samsung non couverts, verdict Play reporté à l'étape 21, arrêt du seul FGS non testable, scan NFC verrouillé bloqué par HyperOS). L'étape 7 est ouverte. Règle d'origine : ne pas commencer l'étape 7 sans validation humaine écrite dans `LOT-0.md` couvrant la campagne d'essais ci-dessus. Une incompatibilité OEM ou un échec du scan verrouillé qui remet en cause le produit exige une révision explicite des specs avant de continuer. La porte 0b (verdict Play) reste ouverte et est vérifiée à l'étape 21.
 
 ## Phase C — Lot 0.5 : moteur KMP complet
 
@@ -545,15 +547,16 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 **Specs à lire :** SPEC_ANDROID §3 (dernier point), §4.5, §10.3 (Android 14), §12.3, §13, §15 (écrans 1, 2, 12) ; SPEC_CORE_KMP §7.3 (`ReadinessSeverity`).
 
 **Fichiers :**
-- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/readiness/` : `ReadinessCheckId.kt` (les 13 contrôles de §13 dans l'ordre du tableau), `ReadinessAction.kt` (`OpenNfcSettings`, `StartPairing`, `OpenAppPicker`, `ShowExactAlarmDiagnostic`, `OpenFullScreenIntentSettings`, `RequestNotificationPermission`, `OpenChannelSettings(channelId)`, `OpenSoundSettings`, `OpenDndSettings`, `OpenAccessibilitySettings`, `FixTime`, `OpenBatterySettings`, `Unsupported`), `ReadinessCheck.kt`, `DeviceReadinessChecker.kt`, `AndroidDeviceReadinessChecker.kt` (sources injectées : `NfcAvailability`, `PairedBoxStore`, sélection courante, `AlarmManager.canScheduleExactAlarms()`, `NotificationManager.canUseFullScreenIntent()` si ≥ 34, `POST_NOTIFICATIONS` si ≥ 33, état du canal `niumi_alarm_ringing`, `AudioManager.getStreamVolume(STREAM_ALARM)`, `NotificationManager.currentInterruptionFilter`, `AccessibilityServiceStatus`, `PowerManager.isIgnoringBatteryOptimizations`), `ReadinessDtoMapper.kt` (→ `ActivationPolicyInputDto`).
+- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/readiness/` : `ReadinessCheckId.kt` (les 14 contrôles de §13 dans l'ordre du tableau — le mode Ne pas déranger en compte deux depuis la mesure de l'étape 6 : silence total `BLOCKING_FOR_ALARM`, autres modes `WARNING`), `ReadinessAction.kt` (`OpenNfcSettings`, `StartPairing`, `OpenAppPicker`, `ShowExactAlarmDiagnostic`, `OpenFullScreenIntentSettings`, `RequestNotificationPermission`, `OpenChannelSettings(channelId)`, `OpenSoundSettings`, `OpenDndSettings`, `OpenAccessibilitySettings`, `FixTime`, `OpenBatterySettings`, `Unsupported`), `ReadinessCheck.kt`, `DeviceReadinessChecker.kt`, `AndroidDeviceReadinessChecker.kt` (sources injectées : `NfcAvailability`, `PairedBoxStore`, sélection courante, `AlarmManager.canScheduleExactAlarms()`, `NotificationManager.canUseFullScreenIntent()` si ≥ 34, `POST_NOTIFICATIONS` si ≥ 33, état du canal `niumi_alarm_ringing`, `AudioManager.getStreamVolume(STREAM_ALARM)`, `NotificationManager.currentInterruptionFilter`, `AccessibilityServiceStatus`, `PowerManager.isIgnoringBatteryOptimizations`), `ReadinessDtoMapper.kt` (→ `ActivationPolicyInputDto`).
 - Créer dans `androidApp/feature/setup/src/main/kotlin/com/niumi/feature/setup/` : `onboarding/OnboardingScreen.kt` (pages : promesse, limites §4.2 et §4.5 incluant arrêt forcé, NFC verrouillé, désactivation de l'accessibilité, absence de secours logiciel ; case « J'ai compris » obligatoire, stockée dans DataStore `onboarding_acknowledged`), `readiness/ReadinessScreen.kt` (une seule action principale, le premier blocage d'abord, messages de §13 mot pour mot, recalcul dans `ON_RESUME`), `readiness/ReadinessViewModel.kt`, `SetupNavigation.kt`.
-- Créer dans `androidApp/app/src/main/kotlin/com/niumi/app/navigation/` : `NiumiNavHost.kt` (routes typées `Home`, `Onboarding`, `Readiness`, `AccessibilityConsent`, `Pairing`, `AppPicker`, `WakeTime`, `Summary`, `ActiveSession`, `ScanToModify`, `Completed`, `Cancelled`, `IncidentDiagnostic`), `HomeScreen.kt` (sans session : bouton « Préparer mon réveil » ; avec session : redirection vers `ActiveSession`).
+- Créer dans `androidApp/app/src/main/kotlin/com/niumi/app/navigation/` : `NiumiNavHost.kt` (routes typées `Home`, `Onboarding`, `Readiness`, `AccessibilityConsent`, `Pairing`, `AppPicker`, `WakeTime`, `Summary`, `ActiveSession`, `ScanToModify`, `Completed`, `Cancelled`, `IncidentDiagnostic`), `HomeScreen.kt` (sans session : bouton « Préparer mon réveil » ; avec session : redirection vers `ActiveSession`). Cette redirection est une **garantie d'accès au scan** inscrite en SPEC_ANDROID §10.4 depuis l'étape 6, pas un simple confort : ouvrir Niumi pendant une session active ne doit jamais mener à l'accueil, la mesure ayant montré qu'un déverrouillage détruit `AlarmActivity` et y ramène l'utilisateur pendant que l'alarme sonne.
 - Tests : `AndroidDeviceReadinessCheckerTest` (fakes pour chaque source ; chaque contrôle passe/échoue avec la bonne sévérité et la bonne action ; `canScheduleExactAlarms == false` → `BLOCKING_FOR_ALARM` avec `ShowExactAlarmDiagnostic`, jamais une action vers « Alarmes et rappels » ; plein écran sous Android 13 → contrôle non applicable), `ReadinessViewModelTest` (ordre : premier blocage affiché d'abord ; `WARNING` seul → activation permise via `evaluateActivation`), `OnboardingScreenTest` (les quatre limites sont affichées, bouton inactif sans case cochée), `ReadinessScreenTest` (une seule action visible).
 
 **Produit :** `DeviceReadinessChecker`, `ReadinessDtoMapper`, `NiumiNavHost`, écrans 1, 2 et 12.
 
-- [ ] **Écrire `AndroidDeviceReadinessCheckerTest`** ligne par ligne du tableau §13, implémenter.
+- [ ] **Écrire `AndroidDeviceReadinessCheckerTest`** ligne par ligne du tableau §13, implémenter. Inclure le cas mesuré à l'étape 6 : `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` → `BLOCKING_FOR_ALARM` avec `OpenDndSettings` ; les autres filtres → `WARNING`.
 - [ ] **Écrire `ReadinessViewModelTest`**, implémenter avec `NiumiCoreFacade.evaluateActivation`.
+- [ ] **Implémenter la surveillance de session** (SPEC_ANDROID §13.1, ajoutée à l'étape 6) : `DeviceReadinessChecker` réexécuté à chaque réconciliation, à chaque passage au premier plan, sur `ACTION_INTERRUPTION_FILTER_CHANGED` (receiver enregistré à chaud) et au déclenchement ; tout contrôle bloquant devenu faux pendant `ARMED` produit l'incident correspondant (`ANDROID_ALARM_MUTED_BY_DND`, `ANDROID_ALARM_VOLUME_ZERO`, `ANDROID_NOTIFICATIONS_REVOKED`, `ANDROID_FULL_SCREEN_REVOKED`, ou les codes communs `BLOCKING_PERMISSION_REVOKED` / `ALARM_PERMISSION_REVOKED`), une notification du canal `niumi_session_warning` et l'événement `SESSION_READINESS_DEGRADED`. Ne jamais utiliser l'`AccessibilityService` comme sentinelle (§13.1). Tests : chaque contrôle bloquant qui bascule pendant `ARMED` → un incident et une notification, une seule fois tant que l'état ne change pas.
 - [ ] **Écrire `OnboardingScreenTest` et `ReadinessScreenTest`**, implémenter les écrans avec TalkBack (`contentDescription` sur chaque action) et bord à bord.
 - [ ] **Écrire `NiumiNavHost` et `HomeScreen`** ; brancher `SessionSnapshotPublisher` pour rediriger vers la session active.
 - [ ] **Vérifier :**
@@ -694,9 +697,10 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 - Supprimer l'appel direct `RingingController.startRinging()` introduit dans `AlarmReceiver` à l'étape 3 ; après cette étape, seul `StartRingingExecutor` appelle cette méthode (vérifier par grep).
 - Tests : `AlarmReceiverTest` (fakes : `revision` obsolète → aucun `dispatch`, journal `ALARM_RECEIVED` tout de même ; `sessionId` inconnu → refus ; nominal → `dispatch(ALARM_FIRED)`), `AlarmRingingServiceRecreationTest` (unitaire sur une classe `RingingServiceRecovery` pure : chaque état → action attendue), `AlarmScreenStateTest` étendu (mapping des cinq états vers les textes), instrumenté `AlarmChainInstrumentedTest` (session `ARMED` en base de test avec `triggerAt = now + 5 s`, alarme réelle → `RINGING` en base, service au premier plan, notification sans action).
 
-- [ ] **Écrire `AlarmReceiverTest`**, refondre le receiver.
+- [ ] **Écrire `AlarmReceiverTest`**, refondre le receiver. Ajouter le cas mesuré à l'étape 6 : si `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` au déclenchement, créer l'incident `ANDROID_ALARM_MUTED_BY_DND` (`CRITICAL`) et journaliser `ALARM_MUTED_BY_DND` (SPEC_ANDROID §13, §17), sans empêcher le reste de la chaîne : la session reste active et le blocage est conservé.
 - [ ] **Écrire `AlarmRingingServiceRecreationTest`**, implémenter `RingingServiceRecovery` et l'appeler depuis le service.
 - [ ] **Étendre `AlarmScreenStateTest`**, compléter l'écran de réveil et l'écran 10.
+- [ ] **Garantir la présence de l'écran de réveil pendant `RINGING`** (SPEC_ANDROID §10.2, §10.4, §11.2 — trois situations mesurées à l'étape 6 où `AlarmActivity` disparaît alors que l'alarme sonne, privant l'utilisateur du seul moyen de terminer sa session) : le service surveille sa notification via `NotificationManager.getActiveNotifications()` et la republie avec son `fullScreenIntent` si elle a été retirée ; `AlarmActivity` recalcule son état au changement de verrouillage (`ACTION_USER_PRESENT` ou `KeyguardManager.addKeyguardLockedStateListener` en API 34+) au lieu du seul `onResume()`. Tests : notification retirée pendant `RINGING` → republication ; verrouillage levé → le texte « Déverrouille ton téléphone… » disparaît.
 - [ ] **Écrire `AlarmChainInstrumentedTest`**.
 - [ ] **Vérifier :**
 
@@ -789,20 +793,25 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 **Terminé quand :** aucune session armée ne passe à `FAILED` dans ces scénarios (tests), la corruption est explicite et non destructive, chaque perte de permission produit un incident unique.
 
-### Étape 21 : finalisation release, suppression du POC, documentation QA et porte finale
+### Étape 21 : finalisation release, suppression du POC, documentation QA, soumission Play et porte finale
 
-**Specs à lire :** SPEC_ANDROID §16, §19, §20, §21, §22 (dernier paragraphe), §23 ; SPEC_CORE_KMP §19.
+**Specs à lire :** SPEC_ANDROID §16, §19, §20, §21, §22 (dernier paragraphe), §23 ; SPEC_CORE_KMP §19 ; les six documents `docs/android/play-console/` rédigés à l'étape 6.
+
+**Rattaché ici (déviation validée à l'étape 6, voir `LOT-0.md`) : la porte de validation 0b.**
+Le tournage de la vidéo de revue et la soumission Play, initialement prévus à l'étape 6, se font
+maintenant que le POC est supprimé et que le parcours utilisateur réel existe.
 
 **Fichiers :**
 - Supprimer `androidApp/app/src/debug/kotlin/com/niumi/app/poc/` entièrement, `tools/` conservé.
 - Créer `androidApp/app/proguard-rules.pro` (règles Room, Hilt, kotlinx-serialization, `NiumiCore` DTO conservés), `.github/workflows/mobile.yml` (runner macOS : `jvmTest`, `linkDebugFrameworkIosSimulatorArm64`, `testDebugUnitTest`, `assembleRelease`, `ktlintCheck detekt lintRelease`).
 - Créer `docs/android/QA_MATRIX.md` (tableau §20 complet, colonnes fabricant/modèle/Android/firmware/permissions/résultat/retard/logs), `docs/android/RELEASE_REPORT.md` (critères §21 cochés un par un avec preuve), `docs/android/LIMITES.md` (texte de l'aide intégrée : arrêt forcé, FGS, NFC verrouillé, absence de secours logiciel).
 - Ajouter dans `:app` un écran « Aide et limites » accessible depuis l'accueil, reprenant `LIMITES.md`.
+- Configurer la signature release (keystore d'upload créé par l'utilisateur, hors dépôt) pour produire un AAB.
 - Tests : `ReleaseHygieneTest` (`:app` unitaire : le manifeste fusionné release ne contient ni `INTERNET`, ni `SCHEDULE_EXACT_ALARM`, ni `QUERY_ALL_PACKAGES` ; aucune classe `*Poc*`, `*Fake*`, `*Debug*Store` dans le classpath release ; grep du code source `main` sans `TODO`, `FIXME`, `STOP_RINGING_ACTION`).
 
 - [ ] **Supprimer le POC** et vérifier que `:app:assembleDebug` compile encore.
 - [ ] **Écrire `ReleaseHygieneTest`**, corriger tout écart.
-- [ ] **Configurer R8** et vérifier qu'une session complète fonctionne sur un APK release signé avec une clé locale non versionnée.
+- [ ] **Configurer R8 et la signature release** et vérifier qu'une session complète fonctionne sur un APK/AAB release signé avec une clé locale non versionnée.
 - [ ] **Ajouter l'écran d'aide** et `LIMITES.md`.
 - [ ] **Écrire le workflow CI** ; l'exécuter localement commande par commande.
 - [ ] **Vérifier :**
@@ -818,8 +827,11 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 - [ ] **Remplir `QA_MATRIX.md`** sur la matrice P0 (§20) : au minimum Pixel, Samsung, Xiaomi, sur Android 14, 15, 16 et 17 si disponibles.
 - [ ] **Remplir `RELEASE_REPORT.md`** : chaque critère §21 avec la preuve (test, log ou vidéo).
+- [ ] **Compléter les préconditions de soumission** listées en `LOT-0.md` (identité éditeur, contact, URL de `PRIVACY_POLICY.md` publiée, compte Play vérifié).
+- [ ] **Tourner la vidéo de revue** selon `REVIEW_VIDEO_SCRIPT.md`, sur l'application complète.
+- [ ] **Soumettre sur piste interne ou fermée** dès que le compte Play le permet (action humaine) ; consigner la date et la réponse de Google dans `LOT-0.md`.
 
-**Porte de validation finale :** le MVP n'est déclaré terminé qu'avec `QA_MATRIX.md` verte dans le périmètre §4.1, `RELEASE_REPORT.md` complet et les portes §23 traitées (déclarations Play, vidéo, réponse de Google). Un critère non prouvé reste ouvert dans le rapport, jamais coché par défaut.
+**Porte de validation finale (0b + finale) :** le MVP n'est déclaré terminé qu'avec `QA_MATRIX.md` verte dans le périmètre §4.1, `RELEASE_REPORT.md` complet et les portes §23 traitées (déclarations Play, vidéo, réponse de Google). Un critère non prouvé reste ouvert dans le rapport, jamais coché par défaut.
 
 ## Recette et critères d'acceptation
 
@@ -840,7 +852,7 @@ Repris de SPEC_ANDROID §21 ; chaque point renvoie à l'étape qui le prouve.
 - [ ] Aucun appel réseau, aucun `INTERNET` (étape 21).
 - [ ] Lint, ktlint, detekt, tests unitaires et instrumentés verts (chaque étape, étape 21).
 - [ ] Limites documentées dans l'application et le rapport QA (étapes 12, 21).
-- [ ] Dossier Play AccessibilityService préparé et soumis (étape 6).
+- [ ] Dossier Play AccessibilityService préparé (étape 6) et soumis avec réponse de Google traitée (étape 21).
 
 ## Hypothèses et limites du plan
 

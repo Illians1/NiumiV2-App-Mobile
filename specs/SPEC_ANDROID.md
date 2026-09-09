@@ -85,6 +85,7 @@ Niumi doit exécuter le parcours garanti, avec sonnerie et interface de scan imm
 - l'accès aux alarmes exactes est disponible;
 - les notifications et les alarmes plein écran sont autorisées lorsque la version d'Android les contrôle;
 - le volume des alarmes n'est pas nul;
+- le mode Ne pas déranger n'est pas en silence total, qui mute le flux d'alarme et supprime l'écran de réveil (13);
 - le système Android n'est pas défaillant;
 - l'application a terminé l'activation de la session et a affiché sa confirmation.
 
@@ -100,6 +101,7 @@ L'application ne peut pas garantir la sonnerie dans les cas suivants:
 - arrêt de l'application depuis le gestionnaire des services actifs du système;
 - permissions retirées après l'activation;
 - volume d'alarme rendu inaudible après l'activation;
+- mode Ne pas déranger passé en silence total après l'activation: l'alarme est muette et l'écran de réveil ne s'affiche pas; l'incident `ANDROID_ALARM_MUTED_BY_DND` est créé, sans que Niumi puisse rétablir le son;
 - panne du système, du haut-parleur ou du matériel NFC;
 - comportement OEM incompatible non détecté.
 
@@ -535,6 +537,10 @@ Règle Android 17: le son du réveil doit toujours utiliser `USAGE_ALARM`. L'app
 
 Le service ne doit exposer aucune action `STOP` dans l'intent, la notification ou le binding.
 
+Tant que la session est en `RINGING`, le service doit garantir que l'écran de réveil reste atteignable. Depuis Android 14, l'utilisateur peut rejeter la notification d'un service au premier plan malgré `setOngoing(true)`: les drapeaux `ONGOING_EVENT|NO_CLEAR|FOREGROUND_SERVICE` n'y suffisent plus. Le service doit donc vérifier périodiquement, via `NotificationManager.getActiveNotifications()`, que sa notification est toujours postée, et la republier avec son `fullScreenIntent` si elle a disparu. Le plein écran est le seul mécanisme qu'Android autorise pour ouvrir une activité depuis l'arrière-plan; c'est par lui que l'écran de réveil revient, que l'appareil soit verrouillé ou non.
+
+Cette exigence n'est pas cosmétique. Le Reader Mode NFC ne peut vivre que dans une activité au premier plan (11.2): si l'écran de réveil disparaît pendant que l'alarme sonne, l'utilisateur n'a plus aucun moyen de terminer sa session par le scan. Trois situations ordinaires ont été mesurées à l'étape 6 où l'écran disparaît: le mode Ne pas déranger en silence total, le balayage de la notification par l'utilisateur, et le simple déverrouillage de l'écran. Voir `docs/android/implementation-reports/LOT-0.md`.
+
 ### 10.3 Notification et plein écran
 
 Créer un canal `niumi_alarm_ringing`:
@@ -562,10 +568,12 @@ L'activité doit:
 - rester utilisable en mode bord à bord;
 - ne pas arrêter le service dans `onStop()` ou `onDestroy()`;
 - gérer le retour prédictif en renvoyant vers l'accueil sans modifier la session;
+- être re-présentée tant que la session sonne: si l'activité est détruite ou quittée alors que l'état est `RINGING`, le service la ramène par le plein écran de sa notification (10.2). L'utilisateur peut écarter l'écran volontairement; il ne doit jamais perdre tout accès au scan. L'écran n'est pas ramené de force en boucle: une activité impossible à quitter serait hostile et contraire aux règles de Google Play;
+- recalculer son état quand le verrouillage de l'appareil change, et pas seulement dans `onResume()`: un écran affiché au-dessus du verrouillage reste visible après le déverrouillage, et le texte « Déverrouille ton téléphone, puis approche-le du boîtier. » (11.2) doit disparaître dès que la condition est fausse. Écouter `ACTION_USER_PRESENT`, ou `KeyguardManager.addKeyguardLockedStateListener` à partir de l'API 34;
 - afficher l'heure, l'état du NFC et l'instruction de scan;
 - activer le Reader Mode dans `onResume()`;
 - le désactiver dans `onPause()`;
-- rouvrir l'écran de réveil si l'état commun est `RINGING`; afficher la progression de nettoyage si l'état est `RELEASING`; afficher le mode scan sans audio si l'état est `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`;
+- rouvrir l'écran de réveil si l'état commun est `RINGING`; afficher la progression de nettoyage si l'état est `RELEASING`; afficher le mode scan sans audio si l'état est `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`. Ouvrir Niumi depuis le lanceur pendant une session active mène toujours à l'écran correspondant à l'état, jamais à l'accueil: c'est la seconde garantie d'accès au scan, indépendante de la notification;
 - ne contenir aucun bouton d'arrêt.
 
 Texte principal si l'état est `RINGING`:
@@ -638,6 +646,8 @@ Le tag MVP reste clonable par une personne qui lit puis recopie son contenu. La 
 ### 11.2 Lecture pendant la sonnerie
 
 Activer au minimum les technologies compatibles avec le tag matériel retenu. Pour un tag NFC Type 2 classique, utiliser `FLAG_READER_NFC_A` et lire le premier enregistrement NDEF URI reconnu.
+
+`NfcAdapter.enableReaderMode(Activity, ...)` exige une `Activity` au premier plan et n'offre aucune variante utilisable depuis un `Service`. Le Reader Mode ne peut donc pas être déplacé hors de `AlarmActivity`, alors qu'il porte le seul moyen de terminer une session. La garantie de scan repose par conséquent entièrement sur la présence de l'écran de réveil, assurée par 10.2 et 10.4: si cet écran disparaît, le scan devient inopérant sans qu'aucune erreur ne soit produite. Toute évolution qui retirerait la re-présentation de l'écran doit d'abord proposer un autre chemin de sortie de session.
 
 Le lecteur Android transmet l'URI brute au parseur de `:shared:core`. Il ne duplique aucune règle de validité. Le parseur commun doit:
 
@@ -776,7 +786,7 @@ Avant d'ouvrir les réglages d'accessibilité, afficher une page dédiée qui ex
 
 Le bouton peut être intitulé "Ouvrir les réglages d'accessibilité". Ne jamais simuler un consentement ou cliquer à la place de l'utilisateur.
 
-L'acceptation de cet usage par Google Play n'est pas considérée comme acquise. Le POC doit inclure la déclaration Play Console, le texte de divulgation, le consentement et une vidéo montrant le parcours réel. Cette validation de politique fait partie du Lot 0 et peut bloquer la poursuite du produit Android.
+L'acceptation de cet usage par Google Play n'est pas considérée comme acquise. Le POC doit inclure la déclaration Play Console et le texte de divulgation et de consentement intégré. La vidéo montrant le parcours réel et la soumission sont tournées et déposées sur l'application complète, une fois le POC supprimé (Lot 5, décision du 2026-09-07 — voir §22 et `docs/android/implementation-reports/LOT-0.md`), le POC de debug ne représentant pas fidèlement le parcours utilisateur. Cette validation de politique reste un risque produit bloquant, quel que soit le lot où elle est instruite.
 
 ## 13. Diagnostic avant activation
 
@@ -809,7 +819,8 @@ La politique produit du MVP refuse l'activation pour les deux niveaux bloquants.
 | notifications autorisées | `BLOCKING_FOR_NIUMI_EXPERIENCE` à partir d'Android 13 | permission + état du canal | demander la permission |
 | canal d'alarme actif | `BLOCKING_FOR_NIUMI_EXPERIENCE` | `NotificationChannel` | réglages du canal |
 | volume alarme supérieur à zéro | `BLOCKING_FOR_ALARM` | `AudioManager` | réglages du son |
-| mode Ne pas déranger préoccupant | `WARNING` | état d'interruption disponible | réglages Ne pas déranger et explication |
+| Ne pas déranger en silence total | `BLOCKING_FOR_ALARM` | `NotificationManager.getCurrentInterruptionFilter() == INTERRUPTION_FILTER_NONE` | réglages Ne pas déranger, avec explication |
+| Ne pas déranger dans un autre mode | `WARNING` | filtre d'interruption courant | réglages Ne pas déranger et explication |
 | service d'accessibilité actif | `BLOCKING_FOR_NIUMI_EXPERIENCE` | services activés | réglages d'accessibilité |
 | date future valide | `BLOCKING_FOR_ALARM` | calcul métier | corriger l'heure |
 | batterie optimisée | `BLOCKING_FOR_NIUMI_EXPERIENCE` | `PowerManager.isIgnoringBatteryOptimizations()`, détection partielle | aide OEM et parcours vers l'exemption |
@@ -817,6 +828,17 @@ La politique produit du MVP refuse l'activation pour les deux niveaux bloquants.
 Niumi déclare `USE_EXACT_ALARM`, car le réveil est une fonction centrale du produit. La spec ne doit pas ajouter `SCHEDULE_EXACT_ALARM` ni présenter l'accès aux alarmes exactes comme une permission utilisateur ordinaire. `canScheduleExactAlarms()` reste vérifié par sécurité. S'il renvoie `false`, l'application signale un état anormal, une incompatibilité ou un problème d'éligibilité. Elle ne redirige pas automatiquement vers les réglages "Alarmes et rappels" comme elle le ferait avec `SCHEDULE_EXACT_ALARM`.
 
 La détection du mode Ne pas déranger varie selon la version Android et les surcouches. Le diagnostic doit signaler les états observables qui risquent de rendre l'alarme inaudible, sans promettre une analyse parfaite de toutes les configurations OEM. Les tests physiques restent la source de validation.
+
+Le mode Ne pas déranger était classé `WARNING` en bloc jusqu'à la validation de l'étape 6. La mesure sur appareil réel a montré que ce niveau est faux pour le silence total, et seulement pour lui. Sur Redmi 25080RABDG, Android 16, avec un volume d'alarme réglé à 12 et l'écran éteint:
+
+- `ZEN_MODE_IMPORTANT_INTERRUPTIONS` (interruptions prioritaires, `alarms=allow`) et `ZEN_MODE_ALARMS` (alarmes seules): `STREAM_ALARM` reste `Muted: false` à son volume réglé, le service démarre sans retard, l'écran se rallume et `AlarmActivity` s'affiche. Le parcours garanti est tenu.
+- `ZEN_MODE_NO_INTERRUPTIONS` (silence total): le système force `STREAM_ALARM` à `Muted: true` avec `streamVolume:0` bien que le lecteur emploie `USAGE_ALARM`; l'écran reste éteint, `AlarmActivity` ne s'ouvre pas et, par voie de conséquence, le Reader Mode NFC n'est jamais activé. L'utilisateur n'est pas réveillé et ne peut pas terminer sa session par le scan tant qu'il n'ouvre pas lui-même l'application. Seules la notification et le service au premier plan subsistent.
+
+Le contrôle du silence total est donc `BLOCKING_FOR_ALARM` et doit être réévalué à chaque activation, l'utilisateur pouvant l'enclencher entre deux sessions. Niumi ne demande pas `ACCESS_NOTIFICATION_POLICY` et ne modifie jamais le mode Ne pas déranger de l'utilisateur: le MVP refuse l'activation et l'explique, plutôt que de contourner un réglage système délibéré.
+
+Si le silence total est enclenché après l'armement, le déclenchement ne peut plus être empêché ni rendu audible. `AlarmReceiver` relit alors le filtre d'interruption au moment de sonner et, s'il vaut `INTERRUPTION_FILTER_NONE`, crée un incident `ANDROID_ALARM_MUTED_BY_DND` de gravité `CRITICAL` — le réveil sonore a échoué, l'utilisateur doit le voir explicitement dans le diagnostic d'incident. L'événement technique `ALARM_MUTED_BY_DND` est journalisé (17). La session reste active et le blocage est conservé: l'échec est sonore, pas métier. Voir `docs/android/implementation-reports/LOT-0.md` pour les mesures.
+
+Ce comportement est établi sur HyperOS. Les autres surcouches peuvent traiter le silence total différemment; le contrôle reste bloquant dans tous les cas et la matrice physique documente les écarts au fur et à mesure.
 
 L'optimisation de batterie était classée `WARNING` "sans blocage par défaut" jusqu'à la validation de l'étape 5. La mesure sur appareil réel a montré que cette hypothèse est fausse pour le blocage d'applications: sur HyperOS, tant que Niumi reste soumis aux restrictions de batterie, le système gèle son processus environ une minute après son passage en arrière-plan et cesse de lui remettre les événements d'accessibilité. Le service continue d'apparaître comme actif dans les réglages, le processus reste vivant, aucune erreur n'est produite, mais le blocage devient silencieusement inopérant. Le cas correspond exactement à l'usage réel: l'utilisateur engage sa session, pose son téléphone, puis tente d'ouvrir une application bloquée. Le contrôle est donc bloquant et l'onboarding doit conduire l'utilisateur jusqu'au réglage d'exemption avant la première session. Voir `docs/android/implementation-reports/ETAPE-05.md` pour les mesures.
 
@@ -827,6 +849,34 @@ La détection de ce contrôle est structurellement partielle et la spec ne doit 
 Ce comportement est établi sur HyperOS. Les autres surcouches appliquent des politiques d'énergie différentes, à documenter au fur et à mesure de leur couverture; l'exemption est demandée dans tous les cas, la gravité du contrôle restant la même.
 
 L'écran n'affiche qu'une action principale à la fois, en commençant par le premier blocage. Il doit recalculer l'état après chaque retour des réglages.
+
+### 13.1 Surveillance pendant une session armée
+
+Le diagnostic ne sert pas qu'à autoriser l'activation. Un réglage modifié après l'armement peut rendre le réveil inaudible ou le parcours inopérant sans que rien ne le signale, et l'utilisateur ne le découvrirait qu'au matin. `DeviceReadinessChecker` est donc réexécuté pendant la vie d'une session, et tout contrôle bloquant qui devient faux alors que la session est `ARMED` produit un incident et une notification d'avertissement.
+
+Contrôles surveillés, avec le code d'incident associé:
+
+| Contrôle devenu faux | Code d'incident | Gravité |
+| --- | --- | --- |
+| Ne pas déranger passé en silence total | `ANDROID_ALARM_MUTED_BY_DND` | `CRITICAL` |
+| Volume d'alarme tombé à zéro | `ANDROID_ALARM_VOLUME_ZERO` | `CRITICAL` |
+| Notifications révoquées | `ANDROID_NOTIFICATIONS_REVOKED` | `CRITICAL` |
+| Plein écran révoqué | `ANDROID_FULL_SCREEN_REVOKED` | `CRITICAL` |
+| Service d'accessibilité désactivé | `BLOCKING_PERMISSION_REVOKED` (code commun) | `CRITICAL` |
+| Accès aux alarmes exactes perdu | `ALARM_PERMISSION_REVOKED` (code commun) | `CRITICAL` |
+
+Quand la surveillance s'exécute:
+
+- à chaque réconciliation (`PROCESS_START`, `USER_UNLOCKED`, `BOOT`, `PACKAGE_REPLACED`, `TIME_CHANGED`, `TIMEZONE_CHANGED`);
+- à chaque passage de l'application au premier plan;
+- immédiatement, par un `BroadcastReceiver` enregistré à chaud, pour les seuls changements qu'Android diffuse publiquement, au premier rang desquels `NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`;
+- au déclenchement, avant de démarrer la sonnerie.
+
+**Limite à ne pas masquer.** L'avertissement est émis au plus tôt, jamais garanti immédiat. Entre l'armement et la sonnerie, Niumi n'a aucun composant garanti en vie: le processus est régulièrement tué par le système, ce qui a été mesuré à l'étape 6. Un receiver enregistré à chaud disparaît avec lui, et aucun broadcast public n'existe pour plusieurs de ces réglages, notamment le volume. Si l'utilisateur modifie un réglage alors que Niumi est mort, l'avertissement n'arrive qu'au réveil suivant du processus. L'aide et l'onboarding doivent l'énoncer ainsi, sans promettre une surveillance continue.
+
+Le service d'accessibilité ne doit jamais servir de sentinelle pour cette surveillance, bien qu'il soit le seul composant Niumi vivant en continu pendant une session. Son usage déclaré à Google Play (12.3) est le blocage d'applications et la lecture du seul `event.packageName`; l'employer à observer des réglages système contredirait cette déclaration.
+
+Notification d'avertissement: créer un canal `niumi_session_warning`, importance haute, sans son ni vibration, sans `fullScreenIntent`, `setOngoing(false)`, au tap ouvrir le diagnostic d'incident. Le texte nomme le réglage en cause et sa conséquence, par exemple: « Ton réveil ne sonnera pas tant que le silence total est activé. » L'événement technique `SESSION_READINESS_DEGRADED` est journalisé (17).
 
 Exemples de messages:
 
@@ -933,6 +983,8 @@ AUDIO_START_FAILED
 FULL_SCREEN_DENIED
 EXACT_ALARM_LOST
 MISSED_TRIGGER_WINDOW
+ALARM_MUTED_BY_DND
+SESSION_READINESS_DEGRADED
 SCAN_REQUEST_NOTIFIED
 SCAN_REQUEST_CLEARED
 NFC_DISABLED
@@ -1147,7 +1199,7 @@ Le MVP est accepté si tous les critères suivants sont vrais:
 - les limites de l'arrêt forcé, du FGS et du NFC verrouillé sont documentées dans l'application et dans le rapport QA;
 - l'absence de mécanisme logiciel de secours en cas de boîtier ou de NFC indisponible est expliquée avant la première activation;
 - les scénarios DND, Bluetooth, USB-C et changement de route audio sont consignés sur la matrice P0;
-- le dossier de déclaration Google Play pour l'AccessibilityService est prêt et a été testé sur une piste interne ou fermée dès que le processus Play le permet.
+- le dossier de déclaration Google Play pour l'AccessibilityService est prêt (Lot 0) et a été testé sur une piste interne ou fermée dès que le processus Play le permet, sur l'application complète plutôt que le POC (Lot 5, décision du 2026-09-07, voir `docs/android/implementation-reports/LOT-0.md`).
 
 ## 22. Ordre d'implémentation demandé à Codex
 
@@ -1167,16 +1219,28 @@ Créer une application minimale qui valide sur appareils réels:
 - détection d'une application factice avec `AccessibilityService`;
 - retour à l'accueil et overlay.
 
-Le Lot 0 comprend aussi la preuve de publiabilité liée à l'AccessibilityService:
+Le Lot 0 comprend aussi la préparation de la preuve de publiabilité liée à l'AccessibilityService:
 
 - préparer la déclaration Play Console;
 - intégrer la divulgation et le consentement utilisateur dans le POC;
-- enregistrer la vidéo de démonstration demandée pour la revue;
-- soumettre une version sur piste interne ou fermée dès que le processus Play le permet;
 - traiter un refus ou une demande de justification comme un risque produit bloquant.
 
+**Décision validée le 2026-09-07 (étape 6, voir `docs/android/implementation-reports/LOT-0.md`)** :
+l'enregistrement de la vidéo de démonstration et la soumission sur piste interne ou fermée sont
+reportés au Lot 5 (étape 21), après suppression du POC et livraison du parcours utilisateur réel.
+La [politique Play pour AccessibilityService](https://support.google.com/googleplay/android-developer/answer/10964491)
+exige une vidéo montrant la divulgation et le consentement en usage normal, que le POC de debug
+ne peut pas représenter fidèlement; de plus, seule la première publication d'une piste passe une
+revue de politique standard, ce qui rend une soumission précoce sur le POC largement formelle.
+Cette déviation accepte le risque, explicité ci-dessous, d'investir dans l'interface complète
+avant le verdict de Google.
+
 Ne pas commencer l'interface complète avant validation du POC sur Pixel, Samsung et Xiaomi.
-Ne pas investir dans l'interface complète ou le backend avant validation du parcours système critique et de la stratégie de publication liée à l'accessibilité.
+**Risque accepté par la décision ci-dessus** : la spec demandait par ailleurs de ne pas investir
+dans l'interface complète ou le backend avant validation de la stratégie de publication liée à
+l'accessibilité; cette validation (vidéo, soumission, réponse de Google) n'intervient
+désormais qu'au Lot 5. Si Google refuse l'usage à ce moment, une révision remontant jusqu'aux
+lots précédents peut être nécessaire.
 
 ### Lot 0.5: contrat commun KMP
 
@@ -1249,9 +1313,9 @@ La publication Google Play reste bloquée tant que les points suivants ne sont p
 - l'usage du plein écran est déclaré comme alarme;
 - le type de service au premier plan `mediaPlayback` est déclaré;
 - l'usage de l'Accessibility Service est déclaré;
-- une version du POC a été soumise sur une piste interne ou fermée dès que le processus Play le permet, et les éventuelles demandes de Google ont été traitées;
+- une version de l'application a été soumise sur une piste interne ou fermée dès que le processus Play le permet, et les éventuelles demandes de Google ont été traitées — soumission effectuée sur le parcours utilisateur réel (Lot 5, étape 21), pas sur le POC de debug: voir la décision du 2026-09-07 en `docs/android/implementation-reports/LOT-0.md`;
 - l'acceptation Play de l'AccessibilityService est suivie comme une porte de validation produit, jamais comme une formalité garantie;
-- l'écran de divulgation et de consentement est visible dans la vidéo de revue;
+- l'écran de divulgation et de consentement est visible dans la vidéo de revue, tournée sur l'application complète et non sur le POC;
 - `isAccessibilityTool` reste à `false`;
 - la fiche Play explique le blocage d'applications sans prétendre qu'il est impossible à contourner;
 - la politique de confidentialité décrit exactement les données consultées et conservées;
