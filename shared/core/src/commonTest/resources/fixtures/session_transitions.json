@@ -1,0 +1,479 @@
+[
+  {
+    "name": "activation_requested_from_none_creates_preparing",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 1700000000000,
+      "activationRequestAppCount": 5
+    },
+    "expectedState": "PREPARING",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "SCHEDULE_ALARM", "APPLY_BLOCKING"],
+    "expectedViolations": []
+  },
+  {
+    "name": "activation_requested_with_zero_apps_is_refused",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 1700000000000,
+      "activationRequestAppCount": 0
+    },
+    "expectedState": null,
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_APP_SELECTION"]
+  },
+  {
+    "name": "activation_requested_with_fifty_one_apps_is_refused",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 1700000000000,
+      "activationRequestAppCount": 51
+    },
+    "expectedState": null,
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_APP_SELECTION"]
+  },
+  {
+    "name": "activation_requested_with_one_app_is_accepted",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 1700000000000,
+      "activationRequestAppCount": 1
+    },
+    "expectedState": "PREPARING",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "SCHEDULE_ALARM", "APPLY_BLOCKING"],
+    "expectedViolations": []
+  },
+  {
+    "name": "activation_requested_with_fifty_apps_is_accepted",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 1700000000000,
+      "activationRequestAppCount": 50
+    },
+    "expectedState": "PREPARING",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "SCHEDULE_ALARM", "APPLY_BLOCKING"],
+    "expectedViolations": []
+  },
+  {
+    "name": "activation_requested_while_session_active_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 1700000005000,
+      "activationRequestAppCount": 5
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+  },
+  {
+    "name": "activation_succeeded_from_preparing_creates_armed",
+    "snapshot": "preparing",
+    "event": {
+      "kind": "ACTIVATION_SUCCEEDED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000001000,
+      "expectedRevision": 1
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedViolations": []
+  },
+  {
+    "name": "activation_succeeded_from_armed_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "ACTIVATION_SUCCEEDED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000005000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+  },
+  {
+    "name": "activation_failed_from_preparing_creates_failed",
+    "snapshot": "preparing",
+    "event": {
+      "kind": "ACTIVATION_FAILED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000001000,
+      "expectedRevision": 1,
+      "failureCode": "ANDROID_ALARM_SCHEDULE_FAILED"
+    },
+    "expectedState": "FAILED",
+    "expectedEffects": [
+      "CANCEL_ALARM",
+      "REMOVE_BLOCKING",
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "CLEAR_ACTIVE_SESSION"
+    ],
+    "expectedViolations": []
+  },
+  {
+    "name": "activation_failed_without_failure_code_is_refused",
+    "snapshot": "preparing",
+    "event": {
+      "kind": "ACTIVATION_FAILED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000001000,
+      "expectedRevision": 1
+    },
+    "expectedState": "PREPARING",
+    "expectedEffects": [],
+    "expectedViolations": ["MISSING_FAILURE_CODE"]
+  },
+  {
+    "name": "activation_failed_from_armed_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "ACTIVATION_FAILED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000005000,
+      "expectedRevision": 2,
+      "failureCode": "ANDROID_ALARM_SCHEDULE_FAILED"
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+  },
+  {
+    "name": "alarm_fired_from_armed_creates_ringing",
+    "snapshot": "armed",
+    "event": {
+      "kind": "ALARM_FIRED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000000000,
+      "expectedRevision": 2
+    },
+    "expectedState": "RINGING",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "START_RINGING"],
+    "expectedViolations": []
+  },
+  {
+    "name": "alarm_fired_in_final_state_is_refused",
+    "snapshot": "failed",
+    "event": {
+      "kind": "ALARM_FIRED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000005000,
+      "expectedRevision": 2
+    },
+    "expectedState": "FAILED",
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+  },
+  {
+    "name": "alarm_sound_stopped_from_armed_creates_awaiting_nfc",
+    "snapshot": "armed",
+    "event": {
+      "kind": "ALARM_SOUND_STOPPED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000001000,
+      "expectedRevision": 2
+    },
+    "expectedState": "AWAITING_NFC",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedViolations": []
+  },
+  {
+    "name": "alarm_sound_stopped_from_ringing_creates_awaiting_nfc",
+    "snapshot": "ringing",
+    "event": {
+      "kind": "ALARM_SOUND_STOPPED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000001000,
+      "expectedRevision": 3
+    },
+    "expectedState": "AWAITING_NFC",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedViolations": []
+  },
+  {
+    "name": "alarm_sound_stopped_from_triggered_awaiting_nfc_stays_unchanged",
+    "snapshot": "triggeredAwaitingNfc",
+    "event": {
+      "kind": "ALARM_SOUND_STOPPED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000001000,
+      "expectedRevision": 3
+    },
+    "expectedState": "TRIGGERED_AWAITING_NFC",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedViolations": []
+  },
+  {
+    "name": "trigger_elapsed_at_trigger_time_from_armed",
+    "snapshot": "armed",
+    "event": {
+      "kind": "TRIGGER_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000000000,
+      "expectedRevision": 2
+    },
+    "expectedState": "TRIGGERED_AWAITING_NFC",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedViolations": []
+  },
+  {
+    "name": "trigger_elapsed_after_trigger_time_with_incident",
+    "snapshot": "armed",
+    "event": {
+      "kind": "TRIGGER_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800001000000,
+      "expectedRevision": 2,
+      "incidentCode": "MISSED_TRIGGER_WINDOW",
+      "incidentSeverity": "DEGRADED"
+    },
+    "expectedState": "TRIGGERED_AWAITING_NFC",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST", "RECORD_INCIDENT"],
+    "expectedViolations": []
+  },
+  {
+    "name": "trigger_elapsed_before_trigger_time_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "TRIGGER_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799999999000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["TRIGGER_NOT_REACHED"]
+  },
+  {
+    "name": "release_failed_with_incident_stays_releasing",
+    "snapshot": "releasingCompleted",
+    "event": {
+      "kind": "RELEASE_FAILED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000003000,
+      "expectedRevision": 5,
+      "incidentCode": "RELEASE_PARTIAL_FAILURE",
+      "incidentSeverity": "DEGRADED"
+    },
+    "expectedState": "RELEASING",
+    "expectedEffects": ["RECORD_INCIDENT", "PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedViolations": []
+  },
+  {
+    "name": "release_failed_without_incident_is_refused",
+    "snapshot": "releasingCompleted",
+    "event": {
+      "kind": "RELEASE_FAILED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000003000,
+      "expectedRevision": 5
+    },
+    "expectedState": "RELEASING",
+    "expectedEffects": [],
+    "expectedViolations": ["MISSING_INCIDENT"]
+  },
+  {
+    "name": "release_succeeded_from_releasing_completed_reaches_final_state",
+    "snapshot": "releasingCompleted",
+    "event": {
+      "kind": "RELEASE_SUCCEEDED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000003000,
+      "expectedRevision": 5
+    },
+    "expectedState": "COMPLETED",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "CLEAR_ACTIVE_SESSION"],
+    "expectedViolations": []
+  },
+  {
+    "name": "release_succeeded_from_releasing_cancelled_reaches_final_state",
+    "snapshot": "releasingCancelled",
+    "event": {
+      "kind": "RELEASE_SUCCEEDED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799999998000,
+      "expectedRevision": 5
+    },
+    "expectedState": "CANCELLED",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "CLEAR_ACTIVE_SESSION"],
+    "expectedViolations": []
+  },
+  {
+    "name": "release_succeeded_outside_releasing_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "RELEASE_SUCCEEDED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000005000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+  },
+  {
+    "name": "incident_reported_on_armed_stays_unchanged",
+    "snapshot": "armed",
+    "event": {
+      "kind": "INCIDENT_REPORTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000005000,
+      "expectedRevision": 2,
+      "incidentCode": "TIME_CHANGED",
+      "incidentSeverity": "WARNING"
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": ["RECORD_INCIDENT", "PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedViolations": []
+  },
+  {
+    "name": "incident_reported_on_final_state_is_refused",
+    "snapshot": "completed",
+    "event": {
+      "kind": "INCIDENT_REPORTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000006000,
+      "expectedRevision": 6,
+      "incidentCode": "SNAPSHOT_CORRUPTED",
+      "incidentSeverity": "CRITICAL"
+    },
+    "expectedState": "COMPLETED",
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+  },
+  {
+    "name": "incident_reported_without_incident_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "INCIDENT_REPORTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000005000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["MISSING_INCIDENT"]
+  },
+  {
+    "name": "invalid_nfc_scanned_on_ringing_stays_unchanged",
+    "snapshot": "ringing",
+    "event": {
+      "kind": "INVALID_NFC_SCANNED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000001000,
+      "expectedRevision": 3
+    },
+    "expectedState": "RINGING",
+    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedViolations": []
+  },
+  {
+    "name": "invalid_nfc_scanned_on_final_state_is_refused",
+    "snapshot": "cancelled",
+    "event": {
+      "kind": "INVALID_NFC_SCANNED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1700000006000,
+      "expectedRevision": 4
+    },
+    "expectedState": "CANCELLED",
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+  },
+  {
+    "name": "stale_revision_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "ALARM_FIRED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000000000,
+      "expectedRevision": 999
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["STALE_REVISION"]
+  },
+  {
+    "name": "unknown_session_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "ALARM_FIRED",
+      "sessionId": "22222222-2222-2222-2222-222222222222",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000000000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": ["UNKNOWN_SESSION"]
+  },
+  {
+    "name": "invalid_identifier_is_refused",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "not-a-canonical-uuid",
+      "occurredAtEpochMillis": 1700000000000,
+      "activationRequestAppCount": 5
+    },
+    "expectedState": null,
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_IDENTIFIER"]
+  },
+  {
+    "name": "invalid_timestamp_is_refused",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 0,
+      "activationRequestAppCount": 5
+    },
+    "expectedState": null,
+    "expectedEffects": [],
+    "expectedViolations": ["INVALID_TIMESTAMP"]
+  }
+]

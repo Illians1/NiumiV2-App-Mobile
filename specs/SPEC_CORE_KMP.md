@@ -659,8 +659,78 @@ class NiumiCoreFacade {
     fun evaluateActivation(
         input: ActivationPolicyInputDto
     ): ActivationPolicyResultDto
+
+    fun evaluateTriggerDelay(
+        input: TriggerDelayInputDto
+    ): TriggerDelayResultDto
 }
 ```
+
+`evaluateTriggerDelay` : sixième méthode, ajoutée à l'étape 8 de l'implémentation Android. Elle
+expose la fenêtre de grâce Android de 15 minutes du §8.2 (politique de reprogrammation calculée et
+testée dans le module commun, sans équivalent iOS faute d'API de reprogrammation sonore équivalente
+à `setAlarmClock()`). iOS peut l'ignorer.
+
+Types cités par la présente section mais non détaillés ailleurs dans ce contrat (décision
+d'implémentation, étape 8) :
+
+```kotlin
+data class WakeScheduleInputDto(
+    val localTimeIso: String,
+    val zoneId: String,
+    val nowEpochMillis: Long
+)
+
+enum class WakeScheduleStatusDto { VALID, INVALID_TIME, UNKNOWN_ZONE }
+
+data class WakeScheduleResultDto(
+    val status: WakeScheduleStatusDto,
+    val schedule: WakeScheduleDto?
+)
+
+data class TriggerDelayInputDto(
+    val triggerAtEpochMillis: Long,
+    val nowEpochMillis: Long
+)
+
+enum class TriggerDelayOutcomeDto { NOT_REACHED, FIRE_NOW, MISSED }
+
+data class TriggerDelayResultDto(
+    val outcome: TriggerDelayOutcomeDto
+)
+
+data class ReadinessCheckInputDto(
+    val id: String,
+    val severity: ReadinessSeverity,
+    val passed: Boolean
+)
+
+data class ActivationPolicyInputDto(
+    val checks: List<ReadinessCheckInputDto>,
+    val appSelectionCount: Int,
+    val triggerAtEpochMillis: Long,
+    val nowEpochMillis: Long,
+    val hasPairedBox: Boolean
+)
+
+data class ActivationReasonDto(
+    val code: String,
+    val checkId: String?
+)
+
+data class ActivationPolicyResultDto(
+    val allowed: Boolean,
+    val blockingReasons: List<ActivationReasonDto>,
+    val warnings: List<ActivationReasonDto>
+)
+```
+
+`ActivationReasonDto.code` ne porte jamais de texte affiché à l'utilisateur (§7.3) : uniquement un
+code stable, éventuellement accompagné de `checkId` pour retrouver le contrôle de préparation natif
+en cause. `WakeScheduleResultDto.schedule` et `TriggerDelayResultDto` suivent la même convention que
+`BoxPayloadResultDto`/`BoxVerificationResultDto` (§9.3) plutôt qu'un type scellé `Success`/`Failure` :
+uniformité du module et confort d'appel depuis Swift, décision validée avec l'utilisateur le
+2026-09-08.
 
 Contraintes d'interopérabilité:
 

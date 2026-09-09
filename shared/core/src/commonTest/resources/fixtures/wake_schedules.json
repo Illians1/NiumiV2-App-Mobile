@@ -1,0 +1,70 @@
+[
+  {
+    "name": "later_time_same_day_is_chosen_the_same_day",
+    "localTimeIso": "22:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-09-08",
+    "expectedTriggerAtEpochMillis": 1788897600000
+  },
+  {
+    "name": "earlier_time_than_now_rolls_over_to_next_day",
+    "localTimeIso": "07:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-09-09",
+    "expectedTriggerAtEpochMillis": 1788930000000
+  },
+  {
+    "name": "time_exactly_equal_to_now_rolls_over_to_next_day",
+    "localTimeIso": "07:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788843600000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-09-09",
+    "expectedTriggerAtEpochMillis": 1788930000000
+  },
+  {
+    "name": "non_existent_time_in_spring_gap_resolves_to_first_valid_instant",
+    "localTimeIso": "02:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1774738800000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-03-29",
+    "expectedTriggerAtEpochMillis": 1774746000000
+  },
+  {
+    "name": "repeated_time_in_autumn_overlap_resolves_to_first_occurrence",
+    "localTimeIso": "02:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1792879200000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-10-25",
+    "expectedTriggerAtEpochMillis": 1792888200000
+  },
+  {
+    "name": "unknown_zone_is_rejected",
+    "localTimeIso": "07:00",
+    "zoneId": "Not/AZone",
+    "nowEpochMillis": 1788890400000,
+    "expectedStatus": "UNKNOWN_ZONE"
+  },
+  {
+    "name": "invalid_local_time_is_rejected",
+    "localTimeIso": "25:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "expectedStatus": "INVALID_TIME"
+  },
+  {
+    "name": "valid_result_preserves_local_intent_and_zone",
+    "localTimeIso": "22:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "expectedStatus": "VALID",
+    "expectedLocalTimeIso": "22:00",
+    "expectedZoneIdAtActivation": "Europe/Paris"
+  }
+]
