@@ -1,12 +1,11 @@
 package com.niumi.core.nfc
 
+import com.niumi.core.common.CanonicalUuid
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.Base64.PaddingOption
 
-// Fonctions de classification de caractères privées au fichier, hors de l'objet
+// Fonction de classification de caractères privée au fichier, hors de l'objet
 // `BoxPayloadParser` pour rester sous le seuil detekt `TooManyFunctions`.
-private fun Char.isLowerCaseHexDigit(): Boolean = this in '0'..'9' || this in 'a'..'f'
-
 private fun Char.isBase64UrlChar(): Boolean =
     this in 'A'..'Z' || this in 'a'..'z' || this in '0'..'9' || this == '-' || this == '_'
 
@@ -25,15 +24,11 @@ public object BoxPayloadParser {
     private const val SUPPORTED_PROTOCOL_VERSION = 1
     private const val TOKEN_BYTE_LENGTH = 16
     private const val TOKEN_ENCODED_LENGTH = 22
-    private const val BOX_ID_LENGTH = 36
     private const val SCHEME = "niumi"
     private const val HOST = "box"
     private const val VERSION_SEGMENT = "v1"
     private const val TOKEN_KEY = "token"
     private const val SCHEME_SEPARATOR = "://"
-
-    // Longueurs des cinq groupes hexadécimaux d'un UUID canonique 8-4-4-4-12.
-    private val BOX_ID_GROUP_LENGTHS = listOf(8, 4, 4, 4, 12)
 
     // Derniers caractères Base64 URL valides pour un token de 16 octets : 22 caractères encodent
     // 132 bits utiles sur les 4 derniers, dont seulement 8 bits utiles restent après les 15
@@ -81,7 +76,7 @@ public object BoxPayloadParser {
         checkVersionSegment(components.segmentsAfterAuthority)?.let { return invalid(it) }
 
         val boxId = components.segmentsAfterAuthority[1]
-        if (!isCanonicalBoxId(boxId)) return invalid(BoxPayloadStatus.INVALID_BOX_ID)
+        if (!CanonicalUuid.isCanonical(boxId)) return invalid(BoxPayloadStatus.INVALID_BOX_ID)
 
         val tokenExtraction = extractTokenValue(components.rawQuery)
         if (tokenExtraction.status != null) return invalid(tokenExtraction.status)
@@ -178,24 +173,6 @@ public object BoxPayloadParser {
                 TokenExtraction(status = null, tokenValue = tokenParam[1])
             }
         }
-    }
-
-    // Boucle de validation par groupe, à clauses de garde : voir la justification sur `parse`.
-    @Suppress("ReturnCount")
-    private fun isCanonicalBoxId(candidate: String): Boolean {
-        if (candidate.length != BOX_ID_LENGTH) return false
-        var index = 0
-        for ((groupIndex, groupLength) in BOX_ID_GROUP_LENGTHS.withIndex()) {
-            val group = candidate.substring(index, index + groupLength)
-            if (!group.all { it.isLowerCaseHexDigit() }) return false
-            index += groupLength
-            val isLastGroup = groupIndex == BOX_ID_GROUP_LENGTHS.lastIndex
-            if (!isLastGroup) {
-                if (candidate.getOrNull(index) != '-') return false
-                index++
-            }
-        }
-        return true
     }
 
     // Chaîne de contrôles indépendants sur le token : voir la justification sur `parse`. La

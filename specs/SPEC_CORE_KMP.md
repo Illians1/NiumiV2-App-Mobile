@@ -296,6 +296,14 @@ data class IncidentEffectPayload(
 | `VALID_NFC_SCANNED` | publier `RELEASING`, annuler l'alarme, arrêter la sonnerie, retirer la demande de scan, retirer le blocage |
 | `RELEASE_FAILED` | enregistrer l'incident, publier |
 | `RELEASE_SUCCEEDED` | publier l'état final, effacer le pointeur actif |
+| `INCIDENT_REPORTED` | enregistrer l'incident, publier |
+
+`INCIDENT_REPORTED` : ligne ajoutée à l'étape 7 de l'implémentation Android. Cette table ne
+couvrait pas l'événement d'incident autonome à l'origine. Le même ordre que `RELEASE_FAILED` est
+retenu, plutôt que `publier` seul : sans `RECORD_INCIDENT`, la cause de la dégradation ne serait
+pas rejouable depuis l'outbox après interruption (exigé par la section 17) et un incident
+`CRITICAL` n'aurait rien à présenter dans le diagnostic visible imposé par la section 7.3. Décision
+validée avec l'utilisateur le 2026-09-08, voir `ETAPE-07.md`.
 
 Tous les effets sont idempotents. La réconciliation peut les rejouer après avoir comparé l'état métier et l'état natif observé. `ACTIVATION_SUCCEEDED` et `RELEASE_SUCCEEDED` ne sont produits qu'après la réussite de tous les effets requis de leur phase.
 
@@ -401,7 +409,14 @@ MISSING_NFC_PROOF
 UNEXPECTED_EVENT_PAYLOAD
 TRIGGER_NOT_REACHED
 TRIGGER_ALREADY_ELAPSED
+INVALID_APP_SELECTION
 ```
+
+`INVALID_APP_SELECTION` : ajouté à l'étape 7 de l'implémentation Android. La section 7.4 refuse une
+activation dont `count` est hors de 1..50, mais aucun des treize codes d'origine ne couvrait ce
+refus ; `UNEXPECTED_EVENT_PAYLOAD` aurait alors porté deux causes distinctes (charge hors de son
+événement, et sélection hors bornes), rendant le diagnostic natif ambigu. Décision validée avec
+l'utilisateur le 2026-09-08, voir `ETAPE-07.md`.
 
 Les codes communs initiaux sont, avec leur gravité par défaut:
 
