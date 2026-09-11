@@ -3,9 +3,9 @@ package com.niumi.system.readiness.di
 import android.content.Context
 import android.os.Build
 import com.niumi.database.logging.TechnicalEventLog
+import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.apps.AppSelectionSource
-import com.niumi.system.apps.EmptyAppSelectionSource
 import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.blocking.AccessibilityServiceStatus
 import com.niumi.system.common.Clock
@@ -15,7 +15,6 @@ import com.niumi.system.notification.InterruptionFilterSource
 import com.niumi.system.notification.NotificationAvailability
 import com.niumi.system.notification.NotificationChannelStatus
 import com.niumi.system.notification.SessionWarningNotifier
-import com.niumi.system.pairing.PairedBoxStore
 import com.niumi.system.power.BatteryOptimizationStatus
 import com.niumi.system.readiness.AndroidDeviceReadinessChecker
 import com.niumi.system.readiness.DeviceReadinessChecker
@@ -26,28 +25,13 @@ import com.niumi.system.session.SessionCoordinator
 import com.niumi.system.session.SessionEventFactory
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.setup.SetupPreferences
-import dagger.BindsOptionalOf
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
-import java.util.Optional
 import javax.inject.Singleton
-
-/**
- * `PairedBoxStore` n'a aucune implémentation en `main` avant l'étape 13 : la seule existante
- * (`DebugPairedBoxStore`) vit dans `src/debug` de `:app`. Même motif que `NfcScanHandler` à
- * l'étape 4 — `@BindsOptionalOf` évite un binding no-op en production (CLAUDE.md), et l'absence
- * de dépôt se traduit exactement par « aucun boîtier associé ».
- */
-@Module
-@InstallIn(SingletonComponent::class)
-interface PairedBoxStoreModule {
-    @BindsOptionalOf
-    fun optionalPairedBoxStore(): PairedBoxStore
-}
 
 /** Bindings du diagnostic avant activation et de sa surveillance (SPEC_ANDROID §13, §13.1). */
 @Module
@@ -85,15 +69,10 @@ object ReadinessModule {
         com.niumi.system.setup
             .DataStoreSetupPreferences(context)
 
-    /** Remplacé par `AppSelectionStore` à l'étape 13, quand le sélecteur existera. */
-    @Provides
-    @Singleton
-    fun provideAppSelectionSource(): AppSelectionSource = EmptyAppSelectionSource()
-
     @Provides
     fun provideReadinessSources(
         nfcReader: NfcReader,
-        pairedBoxStore: Optional<PairedBoxStore>,
+        pairedBoxStore: PairedBoxStore,
         appSelectionSource: AppSelectionSource,
         alarmScheduler: AlarmScheduler,
         notificationAvailability: NotificationAvailability,

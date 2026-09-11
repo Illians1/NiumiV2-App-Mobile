@@ -6,6 +6,7 @@ import com.niumi.system.alarm.AndroidAlarmScheduler
 import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.IdGenerator
+import com.niumi.system.common.IoDispatcher
 import com.niumi.system.common.SystemClock
 import com.niumi.system.common.UuidIdGenerator
 import com.niumi.system.intent.AndroidPendingIntentFactory
@@ -43,6 +44,11 @@ object SystemModule {
     @DefaultDispatcher
     @Suppress("InjectDispatcher") // Seul endroit légitime : c'est le point d'injection lui-même.
     fun provideDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
+
+    @Provides
+    @IoDispatcher
+    @Suppress("InjectDispatcher") // Seul endroit légitime : c'est le point d'injection lui-même.
+    fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
 
     @Provides
     @Singleton

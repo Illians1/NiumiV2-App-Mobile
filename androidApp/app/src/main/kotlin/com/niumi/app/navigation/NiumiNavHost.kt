@@ -5,7 +5,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.niumi.feature.setup.accessibility.AccessibilityConsentRoute
+import com.niumi.feature.setup.apps.AppPickerRoute
 import com.niumi.feature.setup.onboarding.OnboardingRoute
+import com.niumi.feature.setup.pairing.PairingRoute
 import com.niumi.feature.setup.readiness.ReadinessRoute
 
 /**
@@ -40,8 +42,25 @@ fun NiumiNavHost(contributors: Set<@JvmSuppressWildcards NavGraphContributor>) {
                 },
             )
         }
-        composable<NiumiRoute.Readiness> { ReadinessRoute() }
+        composable<NiumiRoute.Readiness> {
+            ReadinessRoute(
+                onStartPairing = { navController.navigate(NiumiRoute.Pairing) },
+                onOpenAppPicker = { navController.navigate(NiumiRoute.AppPicker) },
+            )
+        }
         composable<NiumiRoute.AccessibilityConsent> { AccessibilityConsentRoute() }
+        composable<NiumiRoute.Pairing> {
+            PairingRoute(
+                onContinue = { navController.popBackStack() },
+                onSessionInProgress = { navController.popBackStack() },
+            )
+        }
+        composable<NiumiRoute.AppPicker> {
+            AppPickerRoute(
+                onConfirmed = { navController.popBackStack() },
+                onSessionInProgress = { navController.popBackStack() },
+            )
+        }
         contributors.forEach { it.register(this, navController) }
     }
 }

@@ -3,9 +3,9 @@ package com.niumi.app.poc
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.nfc.BoxPayloadStatus
 import com.niumi.core.nfc.BoxVerificationStatus
+import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.nfc.NfcScanHandler
 import com.niumi.system.nfc.ScanOutcome
-import com.niumi.system.pairing.PairedBoxStore
 import com.niumi.system.ringing.RingingController
 import javax.inject.Inject
 
@@ -23,7 +23,7 @@ class PocNfcScanHandler
     @Inject
     constructor(
         private val facade: NiumiCoreFacade,
-        private val pairedBoxStore: PairedBoxStore,
+        @PocPairedBoxStore private val pairedBoxStore: PairedBoxStore,
         private val ringingController: RingingController,
     ) : NfcScanHandler {
         override suspend fun onUriRead(uri: String): ScanOutcome {

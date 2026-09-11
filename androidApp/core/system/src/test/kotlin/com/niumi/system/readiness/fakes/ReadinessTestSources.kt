@@ -3,6 +3,7 @@ package com.niumi.system.readiness.fakes
 import android.app.Activity
 import android.app.NotificationManager
 import com.niumi.core.interop.PairedBoxCredentialDto
+import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.apps.AppSelectionSource
 import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.common.OperationResult
@@ -12,13 +13,11 @@ import com.niumi.system.notification.InterruptionFilterSource
 import com.niumi.system.notification.NiumiNotificationChannels
 import com.niumi.system.notification.NotificationAvailability
 import com.niumi.system.notification.NotificationChannelStatus
-import com.niumi.system.pairing.PairedBoxStore
 import com.niumi.system.power.BatteryOptimizationStatus
 import com.niumi.system.readiness.ReadinessSources
 import com.niumi.system.session.fakes.FakeAccessibilityServiceStatus
 import com.niumi.system.session.fakes.FakeAlarmScheduler
 import com.niumi.system.setup.SetupPreferences
-import java.util.Optional
 
 class FakeNfcReader(
     var availabilityValue: NfcAvailability = NfcAvailability.ENABLED,
@@ -130,12 +129,10 @@ class ReadinessTestSources(
     val batteryOptimizationStatus = FakeBatteryOptimizationStatus()
     val setupPreferences = FakeSetupPreferences()
 
-    var pairedBoxStoreBound: Boolean = true
-
     fun build(): ReadinessSources =
         ReadinessSources(
             nfcReader = nfcReader,
-            pairedBoxStore = if (pairedBoxStoreBound) Optional.of(pairedBoxStore) else Optional.empty(),
+            pairedBoxStore = pairedBoxStore,
             appSelectionSource = appSelectionSource,
             alarmScheduler = alarmScheduler,
             notificationAvailability = notificationAvailability,

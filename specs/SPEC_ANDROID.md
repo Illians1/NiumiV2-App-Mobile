@@ -415,6 +415,8 @@ Ce snapshot est une projection partielle de Room, mais son enveloppe de session 
 
 Les composants `directBootAware` ne doivent pas créer Room ou un dépôt qui ouvre Room avant `UserManager.isUserUnlocked == true`. Utiliser des dépendances différées et le snapshot comme unique source avant le déverrouillage.
 
+**Exception documentée — `RoomPairedBoxStore.current()` (étape 13).** Tous les dépôts Room refusent l'accès avant déverrouillage en levant (`ROOM_BEFORE_UNLOCK`), sauf la lecture du boîtier associé, qui renvoie « aucun boîtier » sans jamais ouvrir la base. Raison : le diagnostic de §13 est rejoué pendant la réconciliation Direct Boot (raison `LOCKED_BOOT`, §13.1), et une levée y interromprait la reprogrammation de l'alarme. L'exception est sans effet sur la sûreté : le contrôle `PAIRED_BOX` ne fait pas partie des six contrôles surveillés pendant `ARMED` (§13.1), donc aucun incident faux n'est produit, et le contrat commun impose déjà que la vérification NFC d'une session armée utilise le credential figé à l'activation (SPEC_CORE_KMP §10), jamais le dépôt courant. L'écriture (`replace`, `clear`) conserve le refus strict : une association n'a lieu qu'à l'écran dédié, hors session, donc toujours après déverrouillage.
+
 ## 8. Calcul de l'heure de déclenchement
 
 Conserver à la fois l'intention locale et l'instant calculé:
@@ -731,6 +733,10 @@ Exclure:
 - le composeur téléphonique et les composants d'urgence;
 - toute application sans activité de lancement.
 
+**Comment ces exclusions sont réellement obtenues (mesuré à l'étape 13).** `RoleManager.getRoleHolders()` est `@SystemApi` et exige la permission `MANAGE_ROLE_HOLDERS`, réservée au système ; l'API publique `isRoleHeld()` ne renseigne que sur l'application appelante. Les rôles ne sont donc pas interrogeables et les exclusions passent par des intents publics : les détenteurs du rôle Home par `queryIntentActivities(ACTION_MAIN + CATEGORY_HOME)` — tous les lanceurs installés, pas seulement celui par défaut, pour qu'un changement de lanceur pendant une session ne rende pas l'appareil inutilisable ; les Réglages par `resolveActivity(ACTION_SETTINGS)` ; le composeur par `TelecomManager.getDefaultDialerPackage()` (publique, sans permission) complété par `resolveActivity(ACTION_DIAL)` ; l'interface système par son package `com.android.systemui`. « Toute application sans activité de lancement » est garanti par la requête elle-même.
+
+**Limite assumée : l'application d'urgence.** Aucune API publique ne permet de l'identifier (`RoleManager.ROLE_EMERGENCY` n'est lisible que par le système). Elle n'est exclue que dans la mesure où elle coïncide avec le composeur par défaut, ce qui est le cas sur AOSP et sur la plupart des surcouches. Sur un appareil où une application d'urgence distincte serait lançable, elle resterait proposable au blocage. Le recours reste celui de §4.2 — extinction ou arrêt forcé — et les appels d'urgence du système, hors application, ne sont jamais affectés par l'`AccessibilityService` de §12.2, qui ne fait que superposer un overlay.
+
 ### 12.2 AccessibilityService
 
 Déclarer `NiumiBlockingAccessibilityService` avec la permission système `BIND_ACCESSIBILITY_SERVICE` et `isAccessibilityTool=false`.
@@ -957,6 +963,8 @@ Permissions et fonctionnalité attendues:
 ```
 
 Ne pas déclarer `SCHEDULE_EXACT_ALARM` dans le MVP. Toute évolution de cette stratégie exige une modification explicite de la spec, du diagnostic et du parcours utilisateur.
+
+**Visibilité des paquets (étape 13).** Le manifeste déclare en plus une section `<queries>` ciblée, limitée à `ACTION_MAIN` + `CATEGORY_LAUNCHER`, sans laquelle `queryIntentActivities()` ne renverrait rien depuis Android 11 et le sélecteur de §12.1 serait vide. Elle vit dans le manifeste de `:core:system`, avec le seul code qui en dépend (`PackageManagerPackageQuery`), et le manifeste fusionné la porte pour tous les variants. La permission de visibilité totale des paquets reste interdite : l'absence de toute permission de ce type dans le manifeste fusionné est un critère vérifié à chaque étape qui touche au sélecteur.
 
 Composants:
 

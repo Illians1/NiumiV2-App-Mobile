@@ -94,18 +94,6 @@ class AndroidDeviceReadinessCheckerTest {
         }
 
     @Test
-    fun anUnboundPairedBoxStoreCountsAsNoPairedBox() =
-        runTest {
-            val sources = ReadinessTestSources()
-            sources.pairedBoxStoreBound = false
-
-            val report = report(sources)
-
-            assertThat(report.check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.FAILED)
-            assertThat(report.hasPairedBox).isFalse()
-        }
-
-    @Test
     fun anEmptyOrOversizedAppSelectionBlocksAndProposesThePicker() =
         runTest {
             val sources = ReadinessTestSources()

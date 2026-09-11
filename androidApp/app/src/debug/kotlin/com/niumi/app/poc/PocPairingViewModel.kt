@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.core.nfc.BoxPayloadStatus
-import com.niumi.system.pairing.PairedBoxStore
+import com.niumi.database.pairing.PairedBoxStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,7 +31,7 @@ class PocPairingViewModel
     @Inject
     constructor(
         private val facade: NiumiCoreFacade,
-        private val pairedBoxStore: PairedBoxStore,
+        @PocPairedBoxStore private val pairedBoxStore: PairedBoxStore,
     ) : ViewModel() {
         var state by mutableStateOf(PocPairingUiState())
             private set

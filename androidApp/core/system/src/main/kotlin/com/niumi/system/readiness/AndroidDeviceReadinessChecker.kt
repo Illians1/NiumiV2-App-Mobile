@@ -24,7 +24,7 @@ class AndroidDeviceReadinessChecker(
     override suspend fun check(input: ReadinessInput): ReadinessReport {
         val now = clock.nowEpochMillis()
         val availability = sources.nfcReader.availability
-        val hasPairedBox = sources.pairedBoxStore.orElse(null)?.current() != null
+        val hasPairedBox = sources.pairedBoxStore.current() != null
         val appSelectionCount = sources.appSelectionSource.selectedCount()
         val interruptionFilter = sources.interruptionFilterSource.currentInterruptionFilter()
 

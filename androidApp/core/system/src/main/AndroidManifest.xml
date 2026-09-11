@@ -1,2 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Visibilité des packages (SPEC_ANDROID §12.1, §14). Depuis Android 11, une application ne
+        voit que ce qu'elle déclare : sans ce bloc, `PackageManagerPackageQuery` ne recevrait
+        aucune application et le sélecteur serait vide. Déclaré ici, avec le seul code qui appelle
+        `queryIntentActivities()`, plutôt que dans `:app`.
+
+        La portée est volontairement minimale — les seules applications qui ont une icône dans le
+        lanceur, exactement celles que l'utilisateur peut choisir de bloquer. La permission de
+        visibilité totale des paquets reste interdite (§14) : elle déclencherait une justification
+        auprès de Google Play. Son nom n'est volontairement pas écrit ici, pour qu'un `grep` sur le
+        manifeste fusionné reste une vérification fiable (critère de fin de l'étape 13).
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+</manifest>

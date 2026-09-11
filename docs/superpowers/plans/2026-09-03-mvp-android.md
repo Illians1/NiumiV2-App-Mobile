@@ -689,10 +689,32 @@ l'utilisateur ; le contributeur ne survit que pour la route POC de debug, suppri
 
 ### Étape 13 : association du boîtier et sélecteur d'applications
 
+**Deux défauts trouvés sur appareil (2026-09-11) et corrigés dans le même changement**, décrits
+dans les tests manuels ci-dessous : écrans 3 et 4 inatteignables une fois leurs contrôles au vert
+(§13 gagne une exception pour les étapes de parcours) et message de scan périmé survivant à la
+coupure du NFC (§15).
+
+**Six écarts constatés à l'exécution (2026-09-11), détaillés dans `ETAPE-13.md`.** Les trois
+premiers touchent le contrat et ont été répercutés dans les specs : `RoleManager` est inutilisable
+pour les exclusions de §12.1 (`getRoleHolders()` est `@SystemApi`), l'application d'urgence n'a
+aucune API publique et n'est exclue qu'à travers le composeur par défaut (§12.1) ;
+`RoomPairedBoxStore.current()` ne lève pas avant déverrouillage, sans quoi la réconciliation
+Direct Boot échouerait (§7.3) ; la section `<queries>` est inscrite en §14. Les trois autres sont
+internes : `SetupNavigation.kt` n'existe pas (un module `feature` ne peut pas dépendre de `:app`,
+constat de l'étape 12b) — `SetupGate` est une fonction pure appliquée par les `Route` ; le POC de
+debug garde son dépôt sous un qualificatif plutôt qu'en classe concrète, pour ne pas priver
+`PocNfcScanHandlerTest` de son faux dépôt ; `SESSION_FINAL_STATES` devient public dans
+`:core:system`, l'ensemble étant déjà dupliqué dans `:app`.
+
+**Correction au texte d'origine ci-dessous.** `PairedBoxStore` vivait dans `:core:system` depuis
+l'étape 4 ; l'interface est **déplacée** dans `:core:database` (package `com.niumi.database.pairing`),
+faute de quoi `RoomPairedBoxStore` y serait inaccessible (règle de dépendance §6). Elle y rejoint
+`SessionStore`, `DirectBootStore` et `TechnicalEventLog`.
+
 **Specs à lire :** SPEC_CORE_KMP §2 (points 11, 12), §9.2, §10 ; SPEC_ANDROID §11.1, §12.1, §14 (`<queries>`), §15 (écrans 3, 4).
 
 **Fichiers :**
-- Créer dans `androidApp/core/database/src/main/kotlin/com/niumi/database/pairing/` : `RoomPairedBoxStore.kt` (implémente `PairedBoxStore` de l'étape 4 sur `PairedBoxDao` ; `replace()` supprime l'ancien boîtier).
+- Créer dans `androidApp/core/database/src/main/kotlin/com/niumi/database/pairing/` : `RoomPairedBoxStore.kt` (implémente `PairedBoxStore`, déplacée ici depuis `:core:system`, sur `PairedBoxDao` ; `replace()` supprime l'ancien boîtier).
 - Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/apps/` : `InstalledAppsSource.kt` (interface : `suspend fun launchableApps(): List<InstalledApp>`), `PackageManagerInstalledAppsSource.kt` (`queryIntentActivities(ACTION_MAIN + CATEGORY_LAUNCHER)`, dédoublonnage par package, exclusions : package Niumi, rôle Home via `RoleManager`/résolution `CATEGORY_HOME`, package des Réglages résolu par `ACTION_SETTINGS`, `com.android.systemui`, composeur résolu par `ACTION_DIAL`, `RoleManager.ROLE_EMERGENCY`, applications sans activité de lancement), `AppSelectionStore.kt` (DataStore : sélection courante hors session, `Set<String>` + libellés).
 - Manifeste `:core:system` : `<queries>` avec `<intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent>` uniquement.
 - Créer dans `androidApp/feature/setup/src/main/kotlin/com/niumi/feature/setup/` : `pairing/PairingScreen.kt` (Reader Mode via `NfcReader` dans une `PairingActivity` ou l'activité hôte, `parseBoxPayload` → `PairedBoxCredential.fromPayload` via la façade, confirmation « Remplacer le boîtier actuel ? » si un boîtier existe, affichage du `boxId` tronqué), `pairing/PairingViewModel.kt`, `apps/AppPickerScreen.kt` (icône, libellé, package en petit si doublon de libellé, compteur `n / 50`, confirmation bloquée à 0 et à 51), `apps/AppPickerViewModel.kt`, `SetupGate.kt` (refuse l'entrée dans `Pairing` et `AppPicker` si `SessionSnapshotPublisher` expose un état non final).
@@ -700,12 +722,12 @@ l'utilisateur ; le contributeur ne survit que pour la route POC de debug, suppri
 
 **Produit :** `PairedBoxStore` définitif, `InstalledAppsSource`, `AppSelectionStore`, `SetupGate`, écrans 3 et 4.
 
-- [ ] **Écrire `RoomPairedBoxStoreTest`**, implémenter et remplacer la liaison Hilt de `DebugPairedBoxStore` (le debug garde sa propre liaison uniquement pour `PocScreen`).
-- [ ] **Écrire `PackageManagerInstalledAppsSourceTest`**, implémenter avec la section `<queries>`.
-- [ ] **Écrire `PairingViewModelTest`** puis l'écran ; aucune trace du token dans les logs (assertion sur un `TechnicalEventLog` faux).
-- [ ] **Écrire `AppPickerViewModelTest`** puis l'écran ; la limite 1..50 est vérifiée par `evaluateActivation`, l'écran ne la duplique que pour l'état du bouton.
-- [ ] **Écrire `SetupGateTest`**, brancher la garde dans `SetupNavigation`.
-- [ ] **Vérifier :**
+- [x] **Écrire `RoomPairedBoxStoreTest`**, implémenter et remplacer la liaison Hilt de `DebugPairedBoxStore` (le debug garde sa propre liaison uniquement pour `PocScreen`). *(Interface déplacée dans `:core:database`. `PairedBoxDao` gagne `current()` et `deleteAll()` — sans changement de schéma, donc sans migration ; `replace()` fait `DELETE` puis `INSERT` en une transaction, `OnConflictStrategy.REPLACE` ne couvrant que le remplacement d'un même `boxId`. Le POC garde `DebugPairedBoxStore` sous le qualificatif `@PocPairedBoxStore`. `ReadinessSources.pairedBoxStore` cesse d'être `Optional`.)*
+- [x] **Écrire `PackageManagerInstalledAppsSourceTest`**, implémenter avec la section `<queries>`. *(8 tests, une exclusion par test. `PackageQuery` isole la traduction Android ; `<queries>` déclarée dans le manifeste de `:core:system`, retirée du manifeste debug de `:app`. Écart `RoleManager` documenté ci-dessus.)*
+- [x] **Écrire `PairingViewModelTest`** puis l'écran ; aucune trace du token dans les logs (assertion sur un `TechnicalEventLog` faux). *(11 tests. `RecordingTechnicalEventLog` conserve le `detailsJson`, seul moyen de prouver §16 sur le contenu écrit et pas seulement sur le type. Reader Mode branché dans `PairingRoute` (ON_RESUME/ON_PAUSE), `enableReaderMode()` exigeant une `Activity`.)*
+- [x] **Écrire `AppPickerViewModelTest`** puis l'écran ; la limite 1..50 est vérifiée par `evaluateActivation`, l'écran ne la duplique que pour l'état du bouton. *(11 tests. Les bornes viennent de `AppSelectionSummary` partout, jamais de littéraux. La sélection courante est persistée en JSON dans DataStore, avec les libellés figés exigés par §12.2 — `kotlinx-serialization-json` ajouté à `:core:system`, accord utilisateur.)*
+- [x] **Écrire `SetupGateTest`**, brancher la garde dans `SetupNavigation`. *(5 tests, exhaustifs sur `SessionStateDto.entries`. `SetupNavigation` n'existe pas : la garde est branchée dans `PairingRoute` et `AppPickerRoute`, alimentée par `SessionSnapshotPublisher`. Non observable avant l'étape 14, aucune session ne pouvant être armée.)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :core:system:testDebugUnitTest :core:database:connectedDebugAndroidTest :feature:setup:testDebugUnitTest
@@ -713,9 +735,11 @@ l'utilisateur ; le contributeur ne survit que pour la route POC de debug, suppri
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** associer un tag, ré-associer avec confirmation ; le sélecteur ne montre ni Niumi, ni le launcher, ni Réglages, ni Téléphone ; sélectionner 50 puis tenter 51.
+*(Faite le 2026-09-11 — 145 tests JVM `:core:system` (+12 nouveaux, −1 devenu sans objet), 68 `:feature:setup` (+31), 93 `:core:database` (+3), non-régression sur `:app` (11), `:shared:core` (160), `:feature:ringing` (21), `:feature:session` (1) ; `:app:assembleDebug`, compilation `androidTest` des trois modules, ktlint, detekt et `:app:lintDebug` verts. Aucune règle detekt assouplie : les quatre remontées ont été corrigées sur le fond — qualificatif `@IoDispatcher` ajouté à côté de `@DefaultDispatcher`, `PairingActions` pour regrouper les rappels, extraction de `drawIntoBitmap`, `if` au lieu d'un `when` à branche vide. Détails dans `ETAPE-13.md`.)*
 
-**Terminé quand :** tests verts, `QUERY_ALL_PACKAGES` absent du manifeste fusionné (`./gradlew :app:processDebugManifest` puis grep), association et sélecteur inaccessibles pendant une session (test de garde).
+**Tests manuels :** associer un tag, ré-associer avec confirmation ; le sélecteur ne montre ni Niumi, ni le launcher, ni Réglages, ni Téléphone ; sélectionner 50 puis tenter 51. *(Déroulés essai par essai le 2026-09-11 sur Xiaomi 25080RABDG, Android 16 — 95 tests instrumentés verts (41 `:core:database`, 13 `:core:system`, 36 `:feature:setup`, 5 `:feature:ringing`) et les neuf essais du protocole observés. **Ce passage a révélé deux défauts qu'aucun test ne pouvait attraper**, tous deux corrigés dans le même changement : les écrans 3 et 4 devenaient inatteignables une fois leurs contrôles au vert, le diagnostic ne donnant un bouton qu'au premier contrôle en échec — §13 gagne une exception pour les deux étapes de parcours, décision validée avec l'utilisateur ; et un message de scan périmé survivait à la coupure du NFC, conseillant une action impossible (§15). Sept tests de régression ajoutés. Deux cas non exercés sur appareil et couverts par les tests seuls : le chemin `UNKNOWN_PAYLOAD` (demande un tag NDEF non Niumi) et le remplacement par un `boxId` différent (un seul boîtier disponible). Détails dans `ETAPE-13.md`.)*
+
+**Terminé quand :** tests verts, `QUERY_ALL_PACKAGES` absent du manifeste fusionné (`./gradlew :app:processDebugManifest` puis grep), association et sélecteur inaccessibles pendant une session (test de garde). *(Vérifications automatisées atteintes le 2026-09-11 : manifeste fusionné sans permission de visibilité totale des paquets — exactement les neuf permissions de §14 — et une seule section `<queries>` limitée à `ACTION_MAIN` + `CATEGORY_LAUNCHER` ; garde prouvée sur tous les états par `SetupGateTest`. **Validations sur appareil réel restantes** : 24 tests instrumentés écrits et non encore exécutés, et le protocole manuel en neuf points de `ETAPE-13.md`. L'inaccessibilité pendant une session n'est pas observable avant l'étape 14, aucune session ne pouvant être armée.)*
 
 ### Étape 14 : choix de l'heure, récapitulatif et activation en deux phases
 

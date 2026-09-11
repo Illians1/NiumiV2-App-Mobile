@@ -8,10 +8,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.niumi.database.BlockedPackage
+import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.blocking.BlockingController
 import com.niumi.system.common.Clock
-import com.niumi.system.pairing.PairedBoxStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
@@ -35,7 +35,7 @@ class PocViewModel
     constructor(
         private val alarmScheduler: AlarmScheduler,
         private val clock: Clock,
-        private val pairedBoxStore: PairedBoxStore,
+        @PocPairedBoxStore private val pairedBoxStore: PairedBoxStore,
         private val blockingController: BlockingController,
         @ApplicationContext private val context: Context,
     ) : ViewModel() {

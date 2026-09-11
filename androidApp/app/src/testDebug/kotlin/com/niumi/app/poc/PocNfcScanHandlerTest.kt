@@ -3,9 +3,9 @@ package com.niumi.app.poc
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.PairedBoxCredentialDto
+import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.common.OperationResult
 import com.niumi.system.nfc.ScanOutcome
-import com.niumi.system.pairing.PairedBoxStore
 import com.niumi.system.ringing.RingingController
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
