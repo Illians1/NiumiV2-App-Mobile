@@ -63,21 +63,40 @@ class AndroidScanRequestNotifierInstrumentedTest {
         )
     private val sessionId = "44444444-4444-4444-4444-444444444444"
 
+    /**
+     * Le nettoyage était absent de `@Before` : un test héritait de l'annulation encore en vol du
+     * précédent, ce qui faisait échouer tantôt l'un tantôt l'autre (voir [awaitNotifications]).
+     * `clearWithoutPresentIsAlreadySatisfied` en dépend directement, son verdict étant lu sur
+     * l'état du système.
+     */
     @Before
     fun setUp() {
         AndroidNotificationChannelRegistrar(context).registerAll()
+        clearAndWait()
     }
 
     @After
     fun tearDown() {
+        clearAndWait()
+    }
+
+    private fun clearAndWait() {
         notifier.clear(sessionId)
+        awaitNotifications(
+            description = "plus aucune notification d'attente de scan",
+            read = ::awaitingScanNotification,
+        ) { it == null }
     }
 
     @Test
     fun presentPublishesAnOngoingAlarmCategoryNotificationWithNoAction() {
         notifier.present(sessionId)
 
-        val posted = awaitingScanNotification()
+        val posted =
+            awaitNotifications(
+                description = "la notification d'attente de scan publiée",
+                read = ::awaitingScanNotification,
+            ) { it != null }
         assertThat(posted).isNotNull()
         assertThat(posted!!.category).isEqualTo(Notification.CATEGORY_ALARM)
         assertThat(posted.actions).isNull()
@@ -87,10 +106,19 @@ class AndroidScanRequestNotifierInstrumentedTest {
     @Test
     fun presentThenClearRemovesTheNotification() {
         notifier.present(sessionId)
+        awaitNotifications(
+            description = "la notification publiée avant de la retirer",
+            read = ::awaitingScanNotification,
+        ) { it != null }
 
         notifier.clear(sessionId)
 
-        assertThat(awaitingScanNotification()).isNull()
+        val remaining =
+            awaitNotifications(
+                description = "la notification retirée",
+                read = ::awaitingScanNotification,
+            ) { it == null }
+        assertThat(remaining).isNull()
     }
 
     @Test
@@ -100,8 +128,15 @@ class AndroidScanRequestNotifierInstrumentedTest {
         assertThat(result).isEqualTo(OperationResult.AlreadySatisfied)
     }
 
+    /**
+     * Le résumé de groupe fabriqué par Android au-delà de trois notifications sans groupe explicite
+     * (`FLAG_GROUP_SUMMARY`, même canal) est exclu : Niumi n'en publie jamais, et le compter
+     * ferait passer pour une notification d'attente de scan ce qui n'en est pas une. Même raison
+     * que dans `AndroidSessionWarningNotifierInstrumentedTest`.
+     */
     private fun awaitingScanNotification(): Notification? =
         notificationManager.activeNotifications
+            .filter { it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
             .firstOrNull { it.notification.channelId == NiumiNotificationChannels.sessionAwaitingScan.id }
             ?.notification
 }

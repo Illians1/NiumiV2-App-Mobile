@@ -53,15 +53,27 @@ class AndroidSessionWarningNotifierInstrumentedTest {
             iconResolver = { android.R.drawable.ic_dialog_alert },
         )
 
+    /**
+     * L'attente n'est pas décorative : sans elle, un test hérite de l'annulation encore en vol du
+     * précédent, et l'échec se déplace d'une exécution à l'autre (voir [awaitNotifications]).
+     */
     @Before
     fun setUp() {
         AndroidNotificationChannelRegistrar(context).registerAll()
-        notifier.clearAll()
+        clearAllAndWait()
     }
 
     @After
     fun tearDown() {
+        clearAllAndWait()
+    }
+
+    private fun clearAllAndWait() {
         notifier.clearAll()
+        awaitNotifications(
+            description = "plus aucun avertissement actif",
+            read = ::warningNotifications,
+        ) { it.isEmpty() }
     }
 
     @Test
@@ -78,7 +90,11 @@ class AndroidSessionWarningNotifierInstrumentedTest {
     fun aWarningIsDismissibleAndCarriesNeitherFullScreenIntentNorAction() {
         notifier.present(ReadinessCheckId.ALARM_VOLUME)
 
-        val posted = warningNotifications().single()
+        val posted =
+            awaitNotifications(
+                description = "un avertissement publié",
+                read = ::warningNotifications,
+            ) { it.size == 1 }.single()
         assertThat(posted.actions).isNull()
         assertThat(posted.fullScreenIntent).isNull()
         assertThat(posted.flags and Notification.FLAG_ONGOING_EVENT).isEqualTo(0)
@@ -90,28 +106,50 @@ class AndroidSessionWarningNotifierInstrumentedTest {
         notifier.present(ReadinessCheckId.ALARM_VOLUME)
         notifier.present(ReadinessCheckId.NOTIFICATIONS)
 
-        assertThat(warningNotifications()).hasSize(2)
+        val posted =
+            awaitNotifications(
+                description = "deux avertissements publiés",
+                read = ::warningNotifications,
+            ) { it.size == 2 }
+        assertThat(posted).hasSize(2)
     }
 
     @Test
     fun clearRemovesOnlyItsOwnWarning() {
         notifier.present(ReadinessCheckId.ALARM_VOLUME)
         notifier.present(ReadinessCheckId.NOTIFICATIONS)
+        awaitNotifications(
+            description = "les deux avertissements publiés avant d'en retirer un",
+            read = ::warningNotifications,
+        ) { it.size == 2 }
 
         notifier.clear(ReadinessCheckId.ALARM_VOLUME)
 
-        assertThat(warningNotifications()).hasSize(1)
-        assertThat(activeWarningIds())
+        val remaining =
+            awaitNotifications(
+                description = "un seul avertissement restant",
+                read = ::activeWarningIds,
+            ) { it.size == 1 }
+        assertThat(remaining)
             .containsExactly(SessionWarningNotificationSpecs.notificationId(ReadinessCheckId.NOTIFICATIONS))
     }
 
     @Test
     fun clearAllWithdrawsEveryWarning() {
         MonitoredReadinessChecks.incidentCodes.keys.forEach { notifier.present(it) }
+        awaitNotifications(
+            description = "tous les avertissements publiés avant de les retirer",
+            read = ::warningNotifications,
+        ) { it.size == MonitoredReadinessChecks.incidentCodes.size }
 
         notifier.clearAll()
 
-        assertThat(warningNotifications()).isEmpty()
+        val remaining =
+            awaitNotifications(
+                description = "plus aucun avertissement actif",
+                read = ::warningNotifications,
+            ) { it.isEmpty() }
+        assertThat(remaining).isEmpty()
     }
 
     @Test
@@ -119,13 +157,22 @@ class AndroidSessionWarningNotifierInstrumentedTest {
         assertThat(notifier.clear(ReadinessCheckId.EXACT_ALARM)).isEqualTo(OperationResult.AlreadySatisfied)
     }
 
-    private fun warningNotifications(): List<Notification> =
+    /**
+     * Les résumés de groupe sont exclus : au-delà de trois notifications sans groupe explicite,
+     * Android en fabrique un lui-même (`id = 0`, `FLAG_GROUP_SUMMARY`, **même canal**), qui survit
+     * à l'annulation de ses enfants et se retrouvait compté comme un avertissement Niumi par le
+     * test suivant — `[5, 0]` au lieu de `[5]`. Niumi ne publie jamais de résumé : tout ce qui
+     * porte ce drapeau vient du système et n'a rien à voir avec ce qui est vérifié ici.
+     *
+     * C'est la vraie cause de l'intermittence mesurée à l'étape 13, et elle ne se manifestait
+     * qu'après le test qui publie les six avertissements.
+     */
+    private fun warningStatusBarNotifications() =
         notificationManager.activeNotifications
             .filter { it.notification.channelId == NiumiNotificationChannels.sessionWarning.id }
-            .map { it.notification }
+            .filter { it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
 
-    private fun activeWarningIds(): List<Int> =
-        notificationManager.activeNotifications
-            .filter { it.notification.channelId == NiumiNotificationChannels.sessionWarning.id }
-            .map { it.id }
+    private fun warningNotifications(): List<Notification> = warningStatusBarNotifications().map { it.notification }
+
+    private fun activeWarningIds(): List<Int> = warningStatusBarNotifications().map { it.id }
 }
