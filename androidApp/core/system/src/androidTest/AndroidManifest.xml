@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Manifeste propre aux tests instrumentés de :core:system.
+
+    `POST_NOTIFICATIONS` est requise depuis Android 13 (API 33) pour qu'un `notify()` produise
+    réellement une notification : sans elle, `AndroidScanRequestNotifier.present()` est sans effet
+    et `activeNotifications` reste vide. `:app` la déclare déjà pour la production
+    (SPEC_ANDROID §14) ; ce manifeste met l'APK de test dans la même condition, il n'ajoute aucune
+    permission au module de production.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+</manifest>

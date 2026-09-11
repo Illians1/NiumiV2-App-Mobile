@@ -1,18 +1,23 @@
 package com.niumi.system.notification
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.rule.GrantPermissionRule
 import com.google.common.truth.Truth.assertThat
 import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.intent.NiumiComponentResolver
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 
 /**
@@ -23,6 +28,20 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class AndroidScanRequestNotifierInstrumentedTest {
+    /**
+     * Sans `POST_NOTIFICATIONS` accordée (Android 13+), `notify()` est sans effet et
+     * `activeNotifications` reste vide — l'échec ressemblerait à un défaut du notifier alors qu'il
+     * ne s'agit que de la condition d'exécution. La permission n'existe pas avant l'API 33 : la
+     * règle est neutralisée en dessous plutôt que de tenter un `pm grant` qui échouerait.
+     */
+    @get:Rule
+    val notificationPermission: TestRule =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            TestRule { base, _ -> base }
+        }
+
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
     private val notifier =

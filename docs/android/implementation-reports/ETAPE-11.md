@@ -19,8 +19,9 @@ d'attente de scan, SPEC_ANDROID §10.5).
 91 tests JVM `:core:system` verts (35 nouveaux à cette étape, dans `session` et `notification`),
 non-régression `:core:database` (90), `:shared:core` (160), `:feature:ringing` (21),
 `:feature:session` (1), `:app` (6). `:app:assembleDebug`, ktlint, detekt et `:app:lintDebug` verts
-sur tout le dépôt. Trois tests instrumentés compilent mais n'ont pas pu être exécutés sur appareil
-(voir « Validations sur appareil réel restantes »).
+sur tout le dépôt. **41 tests instrumentés verts sur Xiaomi 25080RABDG / Android 16 (API 36)**,
+dont 12 nouveaux — ce passage a révélé un défaut de production datant de l'étape 9
+(`INSERT OR REPLACE` effaçait l'historique de session par cascade), corrigé ici.
 
 ## Décisions validées avec l'utilisateur (2026-09-10)
 
@@ -182,26 +183,77 @@ n'ont pas encore été rejoués dessus — point ajouté aux validations sur app
   épinglée à l'étape 1). Deux options à l'étape 12 : monter AGP à 9.2.0 en s'éloignant davantage de
   la borne KMP, ou vérifier que `NiumiNavHost` compile malgré tout en 9.1.1.
 
-## Validations sur appareil réel restantes
+## Validation sur appareil réel (2026-09-11)
 
-Trois tests instrumentés ajoutés à cette étape compilent (`compileDebugAndroidTestKotlin` vert)
-mais n'ont pas été exécutés — aucun appareil Android n'était branché pendant cette session :
-
-- `androidApp/core/database` : `RoomSessionStoreReceiptsTest`, `RoomSessionStoreIncidentsTest`.
-- `androidApp/core/system` : `AndroidScanRequestNotifierInstrumentedTest`.
-
-À exécuter avec un appareil ou émulateur branché (`adb devices`) :
+Exécutée sur **Xiaomi 25080RABDG, Android 16 (API 36)**, build `BP2A.250605.031.A3` — le même
+appareil qu'aux étapes 9 et 10.
 
 ```bash
-./gradlew :core:database:connectedDebugAndroidTest
-./gradlew :core:system:connectedDebugAndroidTest
+./gradlew :core:database:connectedDebugAndroidTest   # 37 tests verts
+./gradlew :core:system:connectedDebugAndroidTest     # 4 tests verts
 ```
 
-Résultat attendu : les trois tests verts, sans régression sur les 29 tests instrumentés déjà
-verts de `:core:database` (étapes 9-10). Point de vigilance supplémentaire depuis la montée en
-Room 2.8.5 : son unique correctif fait lever `IllegalStateException` aux requêtes `suspend`
-appelées après fermeture de la base — les tests instrumentés Room ferment la base dans
-`tearDown()`, ce passage sur appareil est donc aussi la vérification de ce changement.
+**41 tests instrumentés verts au total**, aucun échec. Couvre les 29 tests des étapes 9-10 en
+non-régression, les 8 nouveaux de `:core:database` et les 4 de `:core:system`. Le passage valide
+aussi la montée en Room 2.8.5 (son correctif fait lever `IllegalStateException` aux requêtes
+`suspend` appelées après fermeture de la base, et tous ces tests ferment la base dans
+`tearDown()`).
+
+### Défaut de production trouvé sur appareil : `INSERT OR REPLACE` effaçait l'historique de session
+
+Le premier passage a fait échouer `RoomSessionStoreReceiptsTest` : après deux décisions committées
+pour la même session, `receipts()` ne renvoyait que le dernier reçu.
+
+**Cause.** `SessionDao.upsert` était un `@Insert(onConflict = OnConflictStrategy.REPLACE)`. En
+SQLite, `INSERT OR REPLACE` n'est pas une mise à jour : c'est un **DELETE suivi d'un INSERT**. Il
+déclenchait donc les `ForeignKey(onDelete = CASCADE)` des cinq tables enfants d'`alarm_session`
+(`session_event_receipt`, `session_effect_outbox`, `session_incident`, `blocked_app`,
+`active_session_pointer`) et effaçait tout l'historique de la session **à chaque transition
+d'état**. Seules les données de la décision courante survivaient, parce que `writeDecision` les
+réinsère juste après.
+
+**Portée réelle, bien au-delà du test.** Le défaut date de l'étape 9 et touche trois invariants :
+
+- le **registre d'idempotence** se réduisait au dernier événement — un doublon d'un événement
+  antérieur aurait été réappliqué au lieu d'être reconnu (SPEC_CORE_KMP §6.1 : « Les reçus sont
+  conservés avec l'historique de session ») ;
+- les **effets `PENDING`/`FAILED` des révisions antérieures** étaient détruits au lieu d'être
+  rejoués (§6.1 : « Les effets interrompus sont remis en attente et rejoués ») ;
+- les **incidents** étaient perdus à la transition suivante (SPEC_ANDROID §7.1, §18 : historique
+  et diagnostic d'incident `CRITICAL`).
+
+**Pourquoi rien ne l'avait vu.** Aucun test antérieur ne committait deux décisions pour une même
+session : ceux des étapes 9-10 committent une seule fois. Et les tests JVM du coordinateur de cette
+étape, qui enchaînent pourtant plusieurs événements par session, passent par
+`InMemoryPersistenceGateway` — jamais par Room. C'est exactement l'angle mort que ferme le passage
+sur appareil.
+
+**Correction.** `SessionDao.upsert` passe en `@Upsert` (INSERT, puis UPDATE en cas de conflit :
+aucun DELETE, donc aucune cascade). Aucun changement de schéma, la version v1 exportée est
+inchangée. Régression couverte par `RoomSessionStoreHistoryTest` (4 tests : reçus, effets,
+incidents, et non-accumulation des applications bloquées), écrit et vérifié en échec sur appareil
+**avant** le correctif — 3 de ses 4 tests échouaient, le quatrième passait déjà.
+
+### Condition d'exécution ajoutée : `POST_NOTIFICATIONS` pour l'APK de test
+
+`AndroidScanRequestNotifierInstrumentedTest` échouait aussi au premier passage
+(`activeNotifications` vide) : `:core:system` n'avait aucun manifeste `androidTest`, donc
+`POST_NOTIFICATIONS` n'était pas déclarée et `notify()` reste sans effet depuis Android 13.
+Ajout de `androidApp/core/system/src/androidTest/AndroidManifest.xml` (permission déclarée pour
+l'APK de test uniquement, pas pour le module de production, `:app` la déclarant déjà par §14) et
+d'une `GrantPermissionRule` neutralisée en dessous de l'API 33, où la permission n'existe pas.
+
+À noter pour la matrice de tests physiques : l'installation de l'APK de test a d'abord été refusée
+par MIUI (`INSTALL_FAILED_USER_RESTRICTED`) sur une **première** installation ; une installation
+manuelle `adb install -r -t` l'a débloquée, les exécutions suivantes (mises à jour) passent sans
+intervention.
+
+## Validations restantes
+
+Le comportement de `CATEGORY_ALARM` sans son sous Ne pas déranger, variable selon la version
+Android et les surcouches OEM, reste non validé : il demande le parcours réel de la notification
+d'attente de scan, qui n'existera qu'à l'étape 17 (SPEC_ANDROID §10.5, déjà inscrit à la matrice
+de tests physiques).
 
 Comportement non validable sans appareil, à garder en tête pour l'étape 17 (parcours réel de la
 notification d'attente de scan) : `CATEGORY_ALARM` sans son sous Ne pas déranger, dont le
