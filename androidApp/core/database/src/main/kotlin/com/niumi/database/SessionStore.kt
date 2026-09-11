@@ -1,5 +1,6 @@
 package com.niumi.database
 
+import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
 
 /** Session active reconstruite depuis Room (« Interfaces transverses » du plan MVP). */
@@ -32,6 +33,10 @@ interface SessionStore {
 
     suspend fun findReceipt(eventId: String): EventReceipt?
 
+    // Étape 11 : miroir Direct Boot (`DirectBootMapper.projectionOf`, `eventReceipts` de
+    // SPEC_ANDROID §7.3). `findReceipt` ne lit qu'un reçu à la fois.
+    suspend fun receipts(sessionId: String): List<EventReceipt>
+
     suspend fun pendingEffects(sessionId: String): List<PendingEffect>
 
     suspend fun markEffect(
@@ -41,4 +46,12 @@ interface SessionStore {
     )
 
     suspend fun clearActivePointer(sessionId: String)
+
+    // Étape 11 : écrivain de `RECORD_INCIDENT` (`SessionIncidentEntity`/`IncidentDao` livrés à
+    // l'étape 9, sans appelant jusqu'ici). Hérite de la garde `ROOM_BEFORE_UNLOCK` comme tout accès
+    // Room.
+    suspend fun recordIncident(
+        sessionId: String,
+        incident: SessionIncidentDto,
+    )
 }

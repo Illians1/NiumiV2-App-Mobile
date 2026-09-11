@@ -1,11 +1,13 @@
 package com.niumi.database.mapping
 
+import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
 import com.niumi.database.entity.BlockedAppEntity
 import com.niumi.database.entity.SessionEffectOutboxEntity
 import com.niumi.database.entity.SessionEventReceiptEntity
+import com.niumi.database.entity.SessionIncidentEntity
 
 fun BlockedPackage.toEntity(sessionId: String): BlockedAppEntity =
     BlockedAppEntity(sessionId = sessionId, packageName = packageName, displayNameSnapshot = displayNameSnapshot)
@@ -40,3 +42,12 @@ fun PendingEffect.toEntity(updatedAtEpochMillis: Long): SessionEffectOutboxEntit
 
 fun SessionEffectOutboxEntity.toPendingEffect(): PendingEffect =
     PendingEffect(effectId, sessionId, revision, kind, ordinal, payloadJson, status, lastError)
+
+fun SessionIncidentDto.toEntity(sessionId: String): SessionIncidentEntity =
+    SessionIncidentEntity(
+        sessionId = sessionId,
+        code = code,
+        severity = severity,
+        occurredAtEpochMillis = occurredAtEpochMillis,
+        platform = platform,
+    )

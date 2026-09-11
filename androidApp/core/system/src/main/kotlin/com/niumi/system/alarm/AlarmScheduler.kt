@@ -14,4 +14,8 @@ interface AlarmScheduler {
 
     // PendingIntent.getBroadcast(..., FLAG_NO_CREATE) != null
     fun isScheduled(sessionId: String): Boolean
+
+    // Étape 11 : `SessionRuntimeStatusProbe` (SPEC_ANDROID §7.1, champ `alarmScheduled` mis à part)
+    // et l'incident `ALARM_PERMISSION_REVOKED` du réconciliateur (§13.1) en ont besoin.
+    fun canScheduleExact(): Boolean
 }

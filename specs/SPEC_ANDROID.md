@@ -289,6 +289,8 @@ data class SessionRuntimeStatus(
 
 `SessionRuntimeStatus` sert au diagnostic et à la réconciliation. Il ne remplace pas `SessionState`.
 
+**Implémentation (étape 11).** `SessionRuntimeStatusProbe` (`:core:system.session`) construit cette structure à partir de sources déjà existantes, réutilisées telles quelles par le `DeviceReadinessChecker` de l'étape 12 plutôt que redéfinies : `alarmScheduled` via `AlarmScheduler.isScheduled(sessionId)`, `accessibilityReady` via `AccessibilityServiceStatus.isEnabled()`, `notificationReady` et `fullScreenReady` via `NotificationAvailability` (`areNotificationsEnabled()`, `canUseFullScreenIntent()` — toujours `true` avant Android 14, l'API n'existant pas), `nfcReady` via `NfcReader.availability == ENABLED`, `audioReady` via `AlarmVolumeSource.alarmStreamVolume() > 0` (`AudioManager.STREAM_ALARM`).
+
 Toute nouvelle session reçoit `health = HEALTHY`. Seul un incident postérieur au passage à `ARMED` peut la faire passer à `DEGRADED`. La santé ne revient pas silencieusement à `HEALTHY`; une réconciliation réussie doit être journalisée.
 
 ### 7.2 Entités Room
@@ -699,7 +701,9 @@ Ordre logique:
 13. persister `CANCELLED` ou `COMPLETED` et son horodatage;
 14. effacer le pointeur et le snapshot actifs après réconciliation.
 
-Les effets requis pour `RELEASE_SUCCEEDED` sont l'annulation de l'alarme (étape 7) et le retrait de la liste de blocage (étape 10); l'arrêt du son et de la vibration, la suppression de la notification et l'arrêt du service sont best-effort et consignés en cas d'échec sans bloquer la phase. Si le service d'accessibilité a déjà été désactivé par l'utilisateur avant le scan, le retrait du blocage est considéré satisfait dès que `NiumiBlockingAccessibilityService` n'est plus actif, avec un incident `BLOCKING_PERMISSION_REVOKED` consigné, plutôt que de bloquer indéfiniment `RELEASING`.
+Les effets requis pour `RELEASE_SUCCEEDED` sont l'annulation de l'alarme (étape 7), l'arrêt du son et de la vibration (étape 8) et le retrait de la liste de blocage (étape 10); la suppression de la notification et l'arrêt du service restent best-effort et consignés en cas d'échec sans bloquer la phase. Si le service d'accessibilité a déjà été désactivé par l'utilisateur avant le scan, le retrait du blocage est considéré satisfait dès que `NiumiBlockingAccessibilityService` n'est plus actif, avec un incident `BLOCKING_PERMISSION_REVOKED` consigné, plutôt que de bloquer indéfiniment `RELEASING`.
+
+**Écart corrigé à l'étape 11 (2026-09-10) :** ce paragraphe classait l'arrêt du son en best-effort, alors que SPEC_CORE_KMP §6 le range parmi les effets requis de `RELEASE_SUCCEEDED` (`STOP_RINGING`). Les deux textes se contredisaient. Le contrat commun l'emporte : déclarer une session terminée pendant que le réveil sonne encore serait le pire résultat possible pour un produit de réveil, et l'outbox existe précisément pour rejouer un arrêt du son resté en échec (§6.1) — la règle d'échappement (`AlreadySatisfied` quand le moteur audio ne joue déjà plus) évite tout blocage indu de `RELEASING`. Ce paragraphe est corrigé en conséquence ; voir `docs/android/implementation-reports/ETAPE-11.md`.
 
 Si un effet requis échoue alors que sa précondition tient toujours, envoyer `RELEASE_FAILED`, enregistrer `RELEASE_PARTIAL_FAILURE` et conserver `RELEASING`. `SessionReconciler` compare l'état natif au snapshot et reprend uniquement les effets manquants, sans réappliquer un blocage déjà retiré. L'application ne présente pas la session comme terminée avant `RELEASE_SUCCEEDED`.
 

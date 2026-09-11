@@ -3,6 +3,8 @@ package com.niumi.system.di
 import android.content.Context
 import com.niumi.system.audio.AlarmAudioEngine
 import com.niumi.system.audio.AlarmPlayerFactory
+import com.niumi.system.audio.AlarmVolumeSource
+import com.niumi.system.audio.AndroidAlarmVolumeSource
 import com.niumi.system.audio.AndroidAudioFocusController
 import com.niumi.system.audio.AndroidVibrationController
 import com.niumi.system.audio.AudioFocusController
@@ -50,4 +52,10 @@ object AudioModule {
         focusController: AudioFocusController,
         vibrationController: VibrationController,
     ): AlarmAudioEngine = DefaultAlarmAudioEngine(playerFactory, focusController, vibrationController)
+
+    @Provides
+    @Singleton
+    fun provideAlarmVolumeSource(
+        @ApplicationContext context: Context,
+    ): AlarmVolumeSource = AndroidAlarmVolumeSource(context)
 }

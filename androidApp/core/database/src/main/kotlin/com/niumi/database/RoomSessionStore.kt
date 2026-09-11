@@ -1,6 +1,9 @@
 package com.niumi.database
 
 import androidx.room.withTransaction
+import com.niumi.core.interop.SessionIncidentDto
+import com.niumi.database.dao.BlockedAppDao
+import com.niumi.database.dao.OutboxDao
 import com.niumi.database.directboot.UnlockState
 import com.niumi.database.entity.ActiveSessionPointerEntity
 import com.niumi.database.entity.AlarmSessionEntity
@@ -41,6 +44,7 @@ class RoomSessionStore(
     private val pointerDao get() = database.activeSessionPointerDao()
     private val receiptDao get() = database.receiptDao()
     private val outboxDao get() = database.outboxDao()
+    private val incidentDao get() = database.incidentDao()
 
     override suspend fun activeSession(): StoredSession? = database.withTransaction { loadActiveSession() }
 
@@ -49,6 +53,9 @@ class RoomSessionStore(
     }
 
     override suspend fun findReceipt(eventId: String): EventReceipt? = receiptDao.findByEventId(eventId)?.toDomain()
+
+    override suspend fun receipts(sessionId: String): List<EventReceipt> =
+        receiptDao.forSession(sessionId).map { it.toDomain() }
 
     override suspend fun pendingEffects(sessionId: String): List<PendingEffect> =
         outboxDao.replayable(sessionId).map { it.toPendingEffect() }
@@ -65,19 +72,19 @@ class RoomSessionStore(
         pointerDao.clear(sessionId)
     }
 
+    override suspend fun recordIncident(
+        sessionId: String,
+        incident: SessionIncidentDto,
+    ) {
+        incidentDao.insert(incident.toEntity(sessionId))
+    }
+
     private suspend fun loadActiveSession(): StoredSession? =
         pointerDao
             .current()
             ?.sessionId
             ?.let { sessionDao.findById(it) }
-            ?.let { entity -> toStoredSession(entity) }
-
-    private suspend fun toStoredSession(entity: AlarmSessionEntity): StoredSession =
-        StoredSession(
-            snapshot = entity.toSnapshotDto(),
-            extras = entity.toExtras(blockedAppDao.forSession(entity.id).map { it.toBlockedPackage() }),
-            pendingEffects = outboxDao.replayable(entity.id).map { it.toPendingEffect() },
-        )
+            ?.let { entity -> toStoredSession(entity, blockedAppDao, outboxDao) }
 
     private suspend fun writeDecision(decision: StoredDecision) {
         val existing = sessionDao.findById(decision.snapshot.sessionId)
@@ -91,22 +98,35 @@ class RoomSessionStore(
         receiptDao.insert(decision.receipt.toEntity())
         outboxDao.insertAll(decision.effects.map { it.toEntity(decision.receipt.receivedAtEpochMillis) })
     }
-
-    /**
-     * `boxId`, `boxTokenSha256Hex`, `ringtoneKey` et `vibrationEnabled` sont figés à l'activation
-     * (SPEC_ANDROID §7.2, dernier alinéa) : une session déjà présente en base fait toujours foi
-     * sur ces quatre champs, jamais l'appelant. `blockedPackages` n'est pas concerné par cette
-     * garantie à cette étape (voir ETAPE-09.md).
-     */
-    private fun AndroidSessionExtras.freezeFrom(existing: AlarmSessionEntity?): AndroidSessionExtras =
-        if (existing == null) {
-            this
-        } else {
-            copy(
-                boxId = existing.boxId,
-                boxTokenSha256Hex = existing.boxTokenSha256Hex,
-                ringtoneKey = existing.ringtoneKey,
-                vibrationEnabled = existing.vibrationEnabled,
-            )
-        }
 }
+
+// Fonctions de fichier plutôt que membres de `RoomSessionStore` : la classe est au plafond
+// detekt `TooManyFunctions` (11) depuis l'ajout de `receipts`/`recordIncident` à l'étape 11.
+private suspend fun toStoredSession(
+    entity: AlarmSessionEntity,
+    blockedAppDao: BlockedAppDao,
+    outboxDao: OutboxDao,
+): StoredSession =
+    StoredSession(
+        snapshot = entity.toSnapshotDto(),
+        extras = entity.toExtras(blockedAppDao.forSession(entity.id).map { it.toBlockedPackage() }),
+        pendingEffects = outboxDao.replayable(entity.id).map { it.toPendingEffect() },
+    )
+
+/**
+ * `boxId`, `boxTokenSha256Hex`, `ringtoneKey` et `vibrationEnabled` sont figés à l'activation
+ * (SPEC_ANDROID §7.2, dernier alinéa) : une session déjà présente en base fait toujours foi sur
+ * ces quatre champs, jamais l'appelant. `blockedPackages` n'est pas concerné par cette garantie à
+ * cette étape (voir ETAPE-09.md).
+ */
+private fun AndroidSessionExtras.freezeFrom(existing: AlarmSessionEntity?): AndroidSessionExtras =
+    if (existing == null) {
+        this
+    } else {
+        copy(
+            boxId = existing.boxId,
+            boxTokenSha256Hex = existing.boxTokenSha256Hex,
+            ringtoneKey = existing.ringtoneKey,
+            vibrationEnabled = existing.vibrationEnabled,
+        )
+    }

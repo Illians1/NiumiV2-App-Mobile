@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.intent.NiumiComponent
@@ -49,6 +50,15 @@ class AndroidAlarmScheduler(
     }
 
     override fun isScheduled(sessionId: String): Boolean = existingAlarmPendingIntent(sessionId) != null
+
+    // En dessous d'Android 12 (API 31), la restriction sur les alarmes exactes n'existe pas :
+    // aucune autorisation à vérifier, toujours autorisé.
+    override fun canScheduleExact(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
 
     private fun existingAlarmPendingIntent(sessionId: String): PendingIntent? {
         val spec = AlarmPendingIntentSpecs.alarm(sessionId, revision = 0L)

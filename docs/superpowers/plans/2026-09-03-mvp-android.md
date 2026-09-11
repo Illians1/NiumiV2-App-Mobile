@@ -43,9 +43,9 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 | Kotlin / KMP | 2.4.10 | Compatibilité officielle : Gradle 7.6.3–9.5.0, AGP 8.5.2–9.1.0, Xcode 26.4 |
 | AGP | 9.1.1 | Exigé par Compose BOM 2026.08 pour compileSdk 37 ; JDK 17 ; Kotlin intégré (ne pas appliquer `org.jetbrains.kotlin.android`). Un patch au-dessus du maximum testé par KGP 2.4.10 (9.1.0) — inévitable pour compileSdk 37, reconfirmé à l'étape 1 |
 | Gradle | 9.5.0 | Maximum testé par KGP 2.4.10 (reconfirmé à l'étape 1 ; 9.3.1 n'était que le minimum d'AGP 9.1.1) |
-| Compose BOM | 2026.08.00 | Compose 1.12 |
-| Navigation Compose | 2.10.0 | |
-| Room | 2.8.4 | KSP2 |
+| Compose BOM | 2026.09.00 | Compose 1.12.1, material3 1.4.0 (résolution vérifiée). Montée depuis 2026.08.00 (Compose 1.12.0) le 2026-09-11, voir « Montée de versions » ci-dessous |
+| Navigation Compose | 2.10.1 | Montée depuis 2.10.0 le 2026-09-11 |
+| Room | 2.8.5 | KSP2. Montée depuis 2.8.4 le 2026-09-11 |
 | DataStore | 1.2.1 | `createInDeviceProtectedStorage()` disponible |
 | Hilt / androidx.hilt | 2.60.1 / 1.4.0 | Reconfirmé à l'étape 1 |
 | KSP | 2.3.11 | Reconfirmé à l'étape 1 ; versionnage découplé de Kotlin depuis KSP 2.3.0 |
@@ -55,6 +55,33 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 | detekt | `dev.detekt` 2.0.0-alpha.6, épinglé, bloquant | Seule variante construite contre Kotlin 2.4.10 ; la dernière stable (1.23.8) embarque Kotlin 2.0.21 et échoue sur Kotlin 2.4+. Voir SPEC_ANDROID §5 et `ETAPE-01.md` |
 
 AGP 9.1.1 dépasse d'un patch la borne testée par KMP 2.4.10 (9.1.0). Si le build KMP échoue pour cette raison, arrêter et proposer une mise à jour explicite des specs ; ne jamais réduire `compileSdk`.
+
+### Montée de versions du 2026-09-11
+
+`:app:lintDebug` remontait 7 `GradleDependency` : trois bibliothèques avaient publié un correctif
+depuis l'épinglage du 3 septembre. Notes de version officielles consultées avant la montée
+(Context7 n'avait pas encore indexé ces versions, ses données s'arrêtant à juillet 2026) :
+
+| Montée | Contenu réel | Nouvelle exigence annoncée |
+| --- | --- | --- |
+| Room 2.8.4 → 2.8.5 (2026-09-09) | Un correctif : les requêtes `suspend` et les opérations de l'invalidation tracker lèvent désormais `IllegalStateException` après fermeture de la base | Aucune |
+| Navigation Compose 2.10.0 → 2.10.1 (2026-09-09) | Un correctif : `NavHost` prend en compte `sizeTransform` quand il saute l'animation (évite un rognage inattendu) | Aucune |
+| Compose BOM 2026.08.00 → 2026.09.00 (2026-09-09) | Compose 1.12.0 → 1.12.1 ; material3 reste 1.4.0 | Aucune |
+
+Résolution vérifiée empiriquement (`:app:dependencies --configuration debugRuntimeClasspath`) :
+`compose-bom:2026.09.00` tire bien `compose.ui/foundation/runtime:1.12.1` et `material3:1.4.0`,
+`navigation-compose:2.10.1`, `room-runtime/room-ktx:2.8.5`. Batterie complète verte après montée
+(tests, `:app:assembleDebug`, ktlint, detekt) et `:app:lintDebug` sans aucune remontée.
+
+**Risque signalé, non traité — AGP et Navigation Compose.** Les notes de `navigation 2.10.0-alpha03`
+indiquent : « Updated Compose `compileSdk` to API 37. This means that a minimum AGP version of
+9.2.0 is required when using Compose. » Le projet est en AGP 9.1.1, lui-même déjà un patch au-dessus
+de la borne testée par KGP 2.4.10 (9.1.0). L'exigence ne s'est pas encore manifestée parce que
+`navigation-compose` est sur le classpath sans être compilé contre : `NiumiNavHost` n'arrive qu'à
+l'étape 12. Elle préexiste à cette montée (elle vaut déjà pour 2.10.0, épinglée à l'étape 1) et
+n'est donc pas introduite ici. **À trancher au début de l'étape 12** : monter AGP à 9.2.0 en
+s'éloignant davantage de la borne KMP, ou vérifier que la compilation de `NiumiNavHost` passe
+malgré tout en 9.1.1.
 
 ## Points de vigilance sur les specs
 
@@ -90,6 +117,10 @@ interface AlarmScheduler {
     fun schedule(sessionId: String, revision: Long, triggerAtEpochMillis: Long): OperationResult
     fun cancel(sessionId: String): OperationResult
     fun isScheduled(sessionId: String): Boolean        // PendingIntent.getBroadcast(..., FLAG_NO_CREATE) != null
+    // Étape 11 : toujours true en dessous d'Android 12 (API 31), où la restriction sur les
+    // alarmes exactes n'existe pas. Utilisée par SessionRuntimeStatusProbe et l'incident
+    // ALARM_PERMISSION_REVOKED du réconciliateur (SPEC_ANDROID §13.1).
+    fun canScheduleExact(): Boolean
 }
 
 // :core:system — com.niumi.system.audio
@@ -151,9 +182,11 @@ interface SessionStore {
     suspend fun activeSession(): StoredSession?
     suspend fun commitDecision(decision: StoredDecision)             // une seule transaction Room
     suspend fun findReceipt(eventId: String): EventReceipt?
+    suspend fun receipts(sessionId: String): List<EventReceipt>      // étape 11 : miroir Direct Boot (eventReceipts, §7.3)
     suspend fun pendingEffects(sessionId: String): List<PendingEffect>
     suspend fun markEffect(effectId: String, status: EffectStatus, error: String?)
     suspend fun clearActivePointer(sessionId: String)
+    suspend fun recordIncident(sessionId: String, incident: SessionIncidentDto)  // étape 11 : écrivain de RECORD_INCIDENT
 }
 interface DirectBootStore {
     fun read(): DirectBootSnapshot?                                   // null si absent ; DirectBootSnapshot.Corrupted si illisible
@@ -170,8 +203,12 @@ sealed interface DirectBootWriteResult {
 }
 
 // :core:system — com.niumi.system.session
+// `extras` étendu à l'étape 11 : StoredDecision exige androidExtras, non porté par SessionEventDto
+// (boîtier figé, sonnerie, sélection d'applications). Lu uniquement pour ACTIVATION_REQUESTED ;
+// absent alors, l'activation est rejetée. Pour tout autre événement la session déjà persistée
+// fait foi (`freezeFrom`).
 interface SessionCoordinator {
-    suspend fun dispatch(event: SessionEventDto): DispatchResult
+    suspend fun dispatch(event: SessionEventDto, extras: AndroidSessionExtras? = null): DispatchResult
     suspend fun reconcile(reason: ReconcileReason): ReconcileResult
 }
 sealed interface DispatchResult {
@@ -180,6 +217,42 @@ sealed interface DispatchResult {
     data class Rejected(val violations: List<DomainViolationDto>) : DispatchResult
 }
 enum class ReconcileReason { PROCESS_START, USER_UNLOCKED, LOCKED_BOOT, BOOT, PACKAGE_REPLACED, TIME_CHANGED, TIMEZONE_CHANGED, BEFORE_SCAN, SERVICE_RECREATED }
+
+// Étape 11 : non définis par le plan avant cette étape.
+sealed interface ReconcileAction {
+    data class OutboxReplayed(val effectCount: Int) : ReconcileAction
+    data class DecisionApplied(val dispatchResult: DispatchResult) : ReconcileAction
+    data class AlarmRescheduled(val triggerAtEpochMillis: Long) : ReconcileAction
+    data class IncidentDispatched(val code: String, val severity: IncidentSeverityDto) : ReconcileAction
+    data object SnapshotCorrupted : ReconcileAction
+    data object PointerCleared : ReconcileAction
+}
+data class ReconcileResult(val sessionId: String?, val actions: List<ReconcileAction>)
+
+// Abstraction fine de NiumiCoreFacade.reduce (classe finale sans interface) : permet de prouver
+// qu'un doublon strict n'appelle jamais le moteur, sans instancier de vraie façade en test.
+fun interface SessionReducer {
+    fun reduce(snapshot: SessionSnapshotDto?, event: SessionEventDto): SessionDecisionDto
+}
+
+// Un Corrupted Direct Boot ne doit jamais se lire « pas de session » (§13 : aucune suppression
+// silencieuse du blocage à cause d'un snapshot illisible).
+sealed interface LoadResult {
+    data object Absent : LoadResult
+    data class Present(val snapshot: SessionSnapshotDto, val extras: AndroidSessionExtras, val pendingEffects: List<PendingEffect>) : LoadResult
+    data class Unreadable(val reason: String) : LoadResult
+}
+interface SessionPersistenceGateway {
+    suspend fun load(): LoadResult
+    suspend fun commit(decision: StoredDecision)
+    suspend fun receipt(eventId: String): EventReceipt?
+    suspend fun pendingEffects(sessionId: String): List<PendingEffect>
+    suspend fun markEffect(effectId: String, status: EffectStatus, error: String?)
+    suspend fun clearActive(sessionId: String)
+    // Avant déverrouillage, le snapshot Direct Boot n'a pas de table d'incidents : renvoie
+    // Failure("INCIDENT_DEFERRED_UNTIL_UNLOCK"), best-effort, rejoué à USER_UNLOCKED.
+    suspend fun recordIncident(sessionId: String, incident: SessionIncidentDto): OperationResult
+}
 ```
 
 `SessionCoordinator` sérialise `dispatch()` et `reconcile()` sous un unique `Mutex`. Il persiste (snapshot, reçu, effets) avant d'exécuter le moindre effet, puis renvoie `ACTIVATION_SUCCEEDED`/`ACTIVATION_FAILED` ou `RELEASE_SUCCEEDED`/`RELEASE_FAILED` au moteur selon le résultat des effets requis (SPEC_CORE_KMP §6). Avant `UserManager.isUserUnlocked`, il travaille exclusivement sur `DirectBootStore` ; après, Room fait foi et Direct Boot reçoit une copie à chaque décision.
@@ -527,22 +600,22 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 **Specs à lire :** SPEC_CORE_KMP §4, §6, §6.1, §10, §12, §13 ; SPEC_ANDROID §7.1 (`SessionRuntimeStatus`), §9.2, §11.3, §18.
 
 **Fichiers :**
-- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/session/` : `SessionCoordinator.kt`, `DispatchResult.kt`, `ReconcileReason.kt`, `ReconcileResult.kt`, `DefaultSessionCoordinator.kt`, `SessionPersistenceGateway.kt` (interface : `load()`, `commit(decision)`, `receipt(eventId)`, `pendingEffects()`, `markEffect()`, `clearActive()`), `UnlockAwarePersistenceGateway.kt` (Room si déverrouillé, Direct Boot sinon ; miroir Direct Boot après chaque commit Room), `EffectExecutor.kt` (interface `execute(effect, snapshot, extras): OperationResult`), `EffectDispatcher.kt` (table `SessionEffectKind → EffectExecutor`, ordre de §6, distinction requis / best-effort), `executors/PublishSnapshotExecutor.kt`, `executors/ScheduleAlarmExecutor.kt`, `executors/CancelAlarmExecutor.kt`, `executors/ApplyBlockingExecutor.kt`, `executors/RemoveBlockingExecutor.kt`, `executors/StartRingingExecutor.kt`, `executors/StopRingingExecutor.kt`, `executors/PresentScanRequestExecutor.kt`, `executors/ClearScanRequestExecutor.kt`, `executors/ClearActiveSessionExecutor.kt`, `executors/RecordIncidentExecutor.kt`, `SessionRuntimeStatus.kt`, `SessionRuntimeStatusProbe.kt`, `SessionReconciler.kt`, `PhaseCompletion.kt` (décide `ACTIVATION_SUCCEEDED`/`FAILED` et `RELEASE_SUCCEEDED`/`FAILED` selon les effets requis), `SessionSnapshotPublisher.kt` (`StateFlow<SessionSnapshotDto?>` pour l'UI).
-- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/notification/` : `ScanRequestNotifier.kt`, `AndroidScanRequestNotifier.kt` (canal `niumi_session_awaiting_scan`, titre « Ton réveil Niumi est passé », texte « Scanne ton boîtier pour débloquer tes applications. », `ongoing`, sans son, vibration, full-screen ni action ; tap → `AlarmActivity` en mode scan ; fonctionne avec un `DeviceProtectedStorageContext`).
-- Tests unitaires avec fakes (`FakeAlarmScheduler`, `FakeBlockingController`, `FakeRingingController`, `FakeScanRequestNotifier`, `InMemoryPersistenceGateway`) : `SessionCoordinatorActivationTest`, `SessionCoordinatorIdempotenceTest`, `SessionCoordinatorReleaseTest`, `SessionCoordinatorOutboxReplayTest`, `EffectDispatcherTest`, `PhaseCompletionTest`, `SessionReconcilerTest`, `AndroidScanRequestNotifierTest` (construction de la notification), `SessionCoordinatorMutexTest` (deux `dispatch` concurrents sont sérialisés : Turbine + `runTest`).
+- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/session/` : `SessionCoordinator.kt`, `DispatchResult.kt`, `ReconcileReason.kt`, `ReconcileResult.kt`, `DefaultSessionCoordinator.kt`, `SessionPersistenceGateway.kt` (interface : `load()`, `commit(decision)`, `receipt(eventId)`, `pendingEffects()`, `markEffect()`, `clearActive()`, `recordIncident()`), `UnlockAwarePersistenceGateway.kt` (Room si déverrouillé, Direct Boot sinon ; miroir Direct Boot après chaque commit Room), `EffectExecutor.kt` (interface `execute(effect, snapshot, extras): ExecutionOutcome`, un couple résultat + incident optionnel), `EffectDispatcher.kt` (table `SessionEffectKind → EffectExecutor`, ordre de §6, distinction requis / best-effort), `executors/PublishSnapshotExecutor.kt`, `executors/ScheduleAlarmExecutor.kt`, `executors/CancelAlarmExecutor.kt`, `executors/ApplyBlockingExecutor.kt`, `executors/RemoveBlockingExecutor.kt`, `executors/StartRingingExecutor.kt`, `executors/StopRingingExecutor.kt`, `executors/PresentScanRequestExecutor.kt`, `executors/ClearScanRequestExecutor.kt`, `executors/ClearActiveSessionExecutor.kt`, `executors/RecordIncidentExecutor.kt`, `SessionRuntimeStatus.kt`, `SessionRuntimeStatusProbe.kt`, `SessionReconciler.kt`, `ReconcilerSources.kt`, `PhaseCompletion.kt` (décide `ACTIVATION_SUCCEEDED`/`FAILED` et `RELEASE_SUCCEEDED`/`FAILED` selon les effets requis), `SessionSnapshotPublisher.kt` (`StateFlow<SessionSnapshotDto?>` pour l'UI), `SessionEventFactory.kt`, `SessionReducer.kt`, `SessionStates.kt`, `di/SessionModule.kt`, `di/EffectExecutorModule.kt`.
+- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/notification/` : `ScanRequestNotifier.kt`, `ScanRequestNotificationSpecs.kt`, `ScanRequestPendingIntentSpecs.kt`, `AndroidScanRequestNotifier.kt` (canal `niumi_session_awaiting_scan`, titre « Ton réveil Niumi est passé », texte « Scanne ton boîtier pour débloquer tes applications. », `ongoing`, sans son, vibration, full-screen ni action ; tap → `AlarmActivity` en mode scan ; fonctionne avec un `DeviceProtectedStorageContext`), `NotificationAvailability.kt`, `di/ScanRequestModule.kt`.
+- Tests unitaires avec fakes (`FakeAlarmScheduler`, `FakeBlockingController`, `FakeRingingController`, `FakeScanRequestNotifier`, `InMemoryPersistenceGateway`, `TestCoordinatorHarness`) : `SessionCoordinatorActivationTest`, `SessionCoordinatorIdempotenceTest`, `SessionCoordinatorReleaseTest`, `SessionCoordinatorOutboxReplayTest`, `EffectDispatcherTest`, `PhaseCompletionTest`, `SessionReconcilerTest`, `ScanRequestNotificationSpecsTest`, `ScanRequestPendingIntentSpecsTest`, `SessionCoordinatorMutexTest` (deux `dispatch` concurrents du même événement sont sérialisés). Test instrumenté : `AndroidScanRequestNotifierInstrumentedTest`.
 
 **Produit :** `SessionCoordinator` complet, `EffectDispatcher`, `SessionReconciler`, `SessionSnapshotPublisher`, `ScanRequestNotifier`. Consommé par toutes les étapes suivantes.
 
-- [ ] **Écrire `SessionCoordinatorIdempotenceTest`** : même `eventId` + même empreinte → `Duplicate`, `reduce` non appelé (façade espionnée), aucun effet ; même `eventId` + empreinte différente → `Rejected(EVENT_ID_CONFLICT)` ; événement d'une autre session → `Rejected(UNKNOWN_SESSION)`. Implémenter le registre dans `DefaultSessionCoordinator.dispatch` avant l'appel à la façade.
-- [ ] **Écrire `SessionCoordinatorActivationTest`** : `ACTIVATION_REQUESTED` → persistance de `PREPARING` + reçu + 3 effets **avant** tout appel aux fakes (ordre vérifié par journal d'appels), puis `SCHEDULE_ALARM` et `APPLY_BLOCKING` exécutés, puis `ACTIVATION_SUCCEEDED` auto-dispatché → `ARMED` ; si `SCHEDULE_ALARM` échoue → `CANCEL_ALARM`, `REMOVE_BLOCKING` puis `ACTIVATION_FAILED` avec `failureCode = "ALARM_SCHEDULE_FAILED"` → `FAILED` et pointeur effacé ; `PUBLISH_PLATFORM_SNAPSHOT` en échec n'empêche pas `ACTIVATION_SUCCEEDED`.
-- [ ] **Implémenter `EffectDispatcher`, `PhaseCompletion` et les exécuteurs** ; `AlreadySatisfied` compte comme succès et journalise un incident `CRITICAL` uniquement pour `REMOVE_BLOCKING` quand le service est désactivé (`BLOCKING_PERMISSION_REVOKED`).
-- [ ] **Écrire `SessionCoordinatorReleaseTest`** : `VALID_NFC_SCANNED` → `RELEASING` persisté, puis `CANCEL_ALARM`, `STOP_RINGING`, `CLEAR_SCAN_REQUEST`, `REMOVE_BLOCKING` ; succès des requis → `RELEASE_SUCCEEDED` → état final + `CLEAR_ACTIVE_SESSION` ; échec de `REMOVE_BLOCKING` avec précondition tenue → `RELEASE_FAILED` avec `RELEASE_PARTIAL_FAILURE`, état `RELEASING`, effet conservé `FAILED` dans l'outbox ; échec de `STOP_RINGING` seul → `RELEASE_SUCCEEDED` quand même, erreur consignée.
-- [ ] **Écrire `SessionCoordinatorOutboxReplayTest`** : outbox avec `CANCEL_ALARM SUCCEEDED` et `REMOVE_BLOCKING PENDING` → `reconcile(PROCESS_START)` n'exécute que `REMOVE_BLOCKING`, jamais `APPLY_BLOCKING` ; `RECORD_INCIDENT PENDING` rejoué avec son payload ; `PRESENT_SCAN_REQUEST` rejoué deux fois → notifier appelé, résultat identique.
-- [ ] **Écrire `SessionReconcilerTest`** : `PREPARING` incomplet avec alarme déjà programmée et blocage appliqué → reprise vers `ARMED` ; `PREPARING` avec alarme absente → rollback vers `FAILED` ; `ARMED` avec `isScheduled() == false` → `ALARM_RESCHEDULED` puis alarme reprogrammée au même `triggerAt` ; `ARMED` et `TriggerDelayPolicy.MISSED` → `TRIGGER_ELAPSED` + `MISSED_TRIGGER_WINDOW` ; `ARMED` et `FIRE_NOW` avec `reason != BEFORE_SCAN` → alarme immédiate reprogrammée ; `ARMED` et `FIRE_NOW` avec `BEFORE_SCAN` → `TRIGGER_ELAPSED` sans incident ; service d'accessibilité inactif pendant `ARMED` → `INCIDENT_REPORTED BLOCKING_PERMISSION_REVOKED CRITICAL`, état conservé ; `canScheduleExactAlarms == false` → `ALARM_PERMISSION_REVOKED`.
-- [ ] **Implémenter `SessionRuntimeStatusProbe` et `SessionReconciler`** ; la politique de retard est lue via `NiumiCoreFacade.evaluateTriggerDelay()` (ajoutée à l'étape 8), jamais recalculée côté Android.
-- [ ] **Écrire `SessionCoordinatorMutexTest`**, garantir le `Mutex` unique partagé par `dispatch` et `reconcile`.
-- [ ] **Implémenter `AndroidScanRequestNotifier`** et son test.
-- [ ] **Vérifier :**
+- [x] **Écrire `SessionCoordinatorIdempotenceTest`** : même `eventId` + même empreinte → `Duplicate`, `reduce` non appelé (compteur d'appels), aucun effet ; même `eventId` + empreinte différente → `Rejected(EVENT_ID_CONFLICT)` ; événement d'une autre session → `Rejected(UNKNOWN_SESSION)`. Implémenter le registre dans `DefaultSessionCoordinator.dispatchLocked` avant l'appel au réducteur. *(Écart : réducteur espionné par comptage d'appels — `RecordingSessionReducer` enrobant la vraie `NiumiCoreFacade` — plutôt qu'une façade mockée : le comportement de domaine réel reste exercé dans tous les scénarios.)*
+- [x] **Écrire `SessionCoordinatorActivationTest`** : `ACTIVATION_REQUESTED` → persistance de `PREPARING` + reçu + 3 effets **avant** tout appel aux fakes (ordre vérifié par journal d'appels), puis `SCHEDULE_ALARM` et `APPLY_BLOCKING` exécutés, puis `ACTIVATION_SUCCEEDED` auto-dispatché → `ARMED` ; si `SCHEDULE_ALARM` échoue → `CANCEL_ALARM`, `REMOVE_BLOCKING` puis `ACTIVATION_FAILED` avec `failureCode = "ANDROID_ALARM_SCHEDULE_FAILED"` → `FAILED` et pointeur effacé ; `PUBLISH_PLATFORM_SNAPSHOT` en échec n'empêche pas `ACTIVATION_SUCCEEDED`. *(Écart : `"ANDROID_ALARM_SCHEDULE_FAILED"`, pas `"ALARM_SCHEDULE_FAILED"` — convention de préfixe d'`IncidentCodes` (§14), déjà utilisée par `SessionFixtures`/`FixturesTest`/`RoomSessionStoreEffectsTest` de `:shared:core`. `failureCode` est un `String` libre non validé par le moteur : la valeur exacte vient du code d'erreur du composant Android en échec, jamais codée en dur côté coordinateur.)*
+- [x] **Implémenter `EffectDispatcher`, `PhaseCompletion` et les exécuteurs** ; `AlreadySatisfied` compte comme succès et journalise un incident `CRITICAL` uniquement pour `REMOVE_BLOCKING` quand le service est désactivé (`BLOCKING_PERMISSION_REVOKED`).
+- [x] **Écrire `SessionCoordinatorReleaseTest`** : `VALID_NFC_SCANNED` → `RELEASING` persisté, puis `CANCEL_ALARM`, `STOP_RINGING`, `CLEAR_SCAN_REQUEST`, `REMOVE_BLOCKING` ; succès des requis → `RELEASE_SUCCEEDED` → état final + `CLEAR_ACTIVE_SESSION` ; échec de `REMOVE_BLOCKING` avec précondition tenue → `RELEASE_FAILED` avec `RELEASE_PARTIAL_FAILURE`, état `RELEASING`, effet conservé `FAILED` dans l'outbox. **Décision validée le 2026-09-10 (écart au texte ci-dessus) : `STOP_RINGING` est désormais requis pour `RELEASE_SUCCEEDED`**, pas best-effort — SPEC_CORE_KMP §6 et SPEC_ANDROID §11.3 se contredisaient (§11.3 corrigée dans le même changement, voir `ETAPE-11.md`) ; un échec isolé de `STOP_RINGING` produit donc `RELEASE_FAILED`, pas `RELEASE_SUCCEEDED`, testé explicitement.
+- [x] **Écrire `SessionCoordinatorOutboxReplayTest`** : outbox avec `CANCEL_ALARM SUCCEEDED` et `REMOVE_BLOCKING PENDING` → `reconcile(PROCESS_START)` n'exécute que `REMOVE_BLOCKING`, jamais `APPLY_BLOCKING` ; `RECORD_INCIDENT PENDING` rejoué avec son payload ; `PRESENT_SCAN_REQUEST` rejoué deux fois → notifier appelé, résultat identique à chaque fois.
+- [x] **Écrire `SessionReconcilerTest`** : `PREPARING` incomplet avec alarme déjà programmée et blocage appliqué → reprise vers `ARMED` ; `PREPARING` avec alarme absente → rollback vers `FAILED` ; `ARMED` avec `isScheduled() == false` → `ALARM_RESCHEDULED` puis alarme reprogrammée au même `triggerAt` ; `ARMED` et `TriggerDelayPolicy.MISSED` → `TRIGGER_ELAPSED` + `MISSED_TRIGGER_WINDOW` ; `ARMED` et `FIRE_NOW` avec `reason != BEFORE_SCAN` → alarme immédiate reprogrammée ; `ARMED` et `FIRE_NOW` avec `BEFORE_SCAN` → `TRIGGER_ELAPSED` sans incident ; service d'accessibilité inactif pendant `ARMED` → `INCIDENT_REPORTED BLOCKING_PERMISSION_REVOKED CRITICAL`, état conservé ; `canScheduleExactAlarms == false` → `ALARM_PERMISSION_REVOKED`.
+- [x] **Implémenter `SessionRuntimeStatusProbe` et `SessionReconciler`** ; la politique de retard est lue via `NiumiCoreFacade.evaluateTriggerDelay()` (ajoutée à l'étape 8), jamais recalculée côté Android. *(Écart de détekt : le constructeur de `SessionReconciler` regroupe `AlarmScheduler`/`AccessibilityServiceStatus`/`BlockedPackagesProjection` dans un petit porteur `ReconcilerSources`, et lit l'horloge via `SessionEventFactory.nowEpochMillis()` plutôt qu'une dépendance `Clock` séparée — `LongParameterList` (6 paramètres) sinon dépassé. `detekt.yml` gagne en plus une exemption `LongParameterList: ignoreAnnotated: ['Provides']`, même motif que l'exemption Compose déjà présente : un `@Provides` Hilt prend un paramètre par dépendance distincte, regrouper ces paramètres en objets artificiels rien que pour la fonction de câblage n'améliorerait pas la lisibilité.)*
+- [x] **Écrire `SessionCoordinatorMutexTest`**, garantir le `Mutex` unique partagé par `dispatch` et `reconcile`. *(Écart : pas de Turbine — deux `dispatch` concurrents du même événement sous un `SessionPersistenceGateway` qui force un point de suspension réel dans `commit()` ; sans le mutex, la seconde coroutine passerait la vérification de doublon avant que la première n'ait committé. Turbine reste réservé à l'observation de `Flow`, non nécessaire ici.)*
+- [x] **Implémenter `AndroidScanRequestNotifier`** et son test. *(Test JVM du spec pur + test instrumenté de la vraie `Notification`, même répartition que `RingingNotificationSpecs`/`RingingNotificationFactory`. Écart : `ScanRequestPendingIntentSpecs` ajouté — non listé dans le plan — avec un code de requête distinct de `AlarmPendingIntentSpecs.fullScreen` pour ne jamais partager l'identité d'un `PendingIntent` entre la notification de sonnerie et celle d'attente de scan.)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :core:system:testDebugUnitTest
@@ -550,7 +623,9 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Terminé quand :** tous les scénarios ci-dessus sont verts, aucun exécuteur n'écrit un `SessionState`, la persistance précède toujours l'exécution (test d'ordre), la spec §14 documente `evaluateTriggerDelay`.
+*(Fait le 2026-09-10 — 91 tests JVM `:core:system` verts dont 35 nouveaux à cette étape (`session` et `notification`), non-régression `:core:database` (90), `:shared:core` (160), `:feature:ringing` (21), `:feature:session` (1), `:app` (6) ; `:app:assembleDebug` vert (graphe Hilt fermé, y compris après le retrait de `PocFacadeModule`, devenu redondant avec `SessionModule.provideNiumiCoreFacade`) ; ktlint, detekt et `:app:lintDebug` verts sur tout le dépôt — les 7 `GradleDependency` que lint remontait ont été levées par la montée de versions du 2026-09-11 (Room 2.8.5, Navigation Compose 2.10.1, Compose BOM 2026.09.00, voir « Montée de versions » plus haut). Les tests instrumentés `RoomSessionStoreReceiptsTest`, `RoomSessionStoreIncidentsTest` et `AndroidScanRequestNotifierInstrumentedTest` compilent (`compileDebugAndroidTestKotlin` vert) mais restent à exécuter sur appareil réel. Détails dans `docs/android/implementation-reports/ETAPE-11.md`.)*
+
+**Terminé quand :** tous les scénarios ci-dessus sont verts, aucun exécuteur n'écrit un `SessionState`, la persistance précède toujours l'exécution (test d'ordre), la spec §14 documente `evaluateTriggerDelay`. *(Fait le 2026-09-10, sous réserve des validations sur appareil réel listées ci-dessus.)*
 
 ## Phase E — Lot 2 : configuration
 

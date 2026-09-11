@@ -13,3 +13,12 @@ style:
     # Convention Compose : une fonction @Preview n'est appelée que par l'outillage Android
     # Studio, jamais par du code du module — un faux positif classique de cette règle.
     ignoreAnnotated: ['Preview']
+
+complexity:
+  LongParameterList:
+    active: true
+    # Convention Hilt/Dagger (étape 11) : un `@Provides` prend un paramètre par type de
+    # dépendance distinct nécessaire à la construction (ex. la table des onze exécuteurs
+    # d'effets) ; regrouper ces paramètres en objets artificiels rien que pour la fonction de
+    # câblage n'améliorerait pas la lisibilité, contrairement à un vrai constructeur métier.
+    ignoreAnnotated: ['Provides']

@@ -15,4 +15,9 @@ interface ReceiptDao {
 
     @Query("SELECT * FROM session_event_receipt WHERE eventId = :eventId")
     suspend fun findByEventId(eventId: String): SessionEventReceiptEntity?
+
+    // Projection Direct Boot (SPEC_ANDROID §7.3, `eventReceipts`) : ordre d'insertion, pas de tri
+    // explicite requis par le contrat, l'ordre naturel des lignes (rowid croissant) suffit.
+    @Query("SELECT * FROM session_event_receipt WHERE sessionId = :sessionId")
+    suspend fun forSession(sessionId: String): List<SessionEventReceiptEntity>
 }
