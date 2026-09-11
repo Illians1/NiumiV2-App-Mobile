@@ -113,13 +113,84 @@ class ReadinessViewModelTest {
         assertThat(state.isDeviceReady).isTrue()
     }
 
+    /** Les écrans 3 et 4 existent depuis l'étape 13 : leurs recours sont désormais actionnables. */
     @Test
-    fun pairingAndAppPickerActionsAreNotAvailableBeforeTheirScreensExist() {
+    fun pairingAndAppPickerActionsAreAvailableNowThatTheirScreensExist() {
         report = reportWith(failing = setOf(ReadinessCheckId.PAIRED_BOX, ReadinessCheckId.APP_SELECTION))
 
         val state = viewModel().state
 
         assertThat(state.primary?.id).isEqualTo(ReadinessCheckId.PAIRED_BOX)
+        assertThat(state.primary?.isActionAvailable).isTrue()
+
+        val appSelection = state.items.single { it.id == ReadinessCheckId.APP_SELECTION }
+        assertThat(appSelection.isActionAvailable).isTrue()
+    }
+
+    /**
+     * Mesuré sur appareil à l'étape 13 : une fois le boîtier associé et les applications choisies,
+     * ces deux lignes passaient au vert et perdaient leur bouton — or c'était le seul chemin vers
+     * les écrans 3 et 4, qui devenaient définitivement inatteignables. SPEC_ANDROID §11.1 exige
+     * pourtant qu'une nouvelle association puisse remplacer l'ancienne. Les deux contrôles de
+     * parcours gardent donc leur action une fois satisfaits ; les contrôles de blocage, non.
+     */
+    @Test
+    fun theTwoJourneyChecksKeepAnActionOnceSatisfied() {
+        report = reportWith()
+
+        val state = viewModel().state
+
+        val journey = state.items.filter { it.id in setOf(ReadinessCheckId.PAIRED_BOX, ReadinessCheckId.APP_SELECTION) }
+        assertThat(journey).hasSize(2)
+        journey.forEach { item ->
+            assertThat(item.outcome).isEqualTo(ReadinessOutcome.PASSED)
+            assertThat(item.isRevisitable).isTrue()
+            assertThat(item.isActionAvailable).isTrue()
+        }
+    }
+
+    @Test
+    fun theRevisitLabelSaysChangeRatherThanSetUpOnceSatisfied() {
+        report = reportWith()
+
+        val pairedBox = viewModel().state.items.single { it.id == ReadinessCheckId.PAIRED_BOX }
+
+        assertThat(pairedBox.actionLabel).isEqualTo(ReadinessMessages.CHANGE_PAIRED_BOX_LABEL)
+        assertThat(pairedBox.actionLabel).isNotEqualTo(ReadinessMessages.actionLabelFor(ReadinessCheckId.PAIRED_BOX))
+    }
+
+    /** Un contrôle de blocage satisfait n'est pas une étape de parcours : il reste sans action. */
+    @Test
+    fun aSatisfiedBlockingCheckOffersNoAction() {
+        report = reportWith()
+
+        val volume = viewModel().state.items.single { it.id == ReadinessCheckId.ALARM_VOLUME }
+
+        assertThat(volume.outcome).isEqualTo(ReadinessOutcome.PASSED)
+        assertThat(volume.isRevisitable).isFalse()
+    }
+
+    /** En échec, les contrôles de parcours restent l'action principale, pas une action secondaire. */
+    @Test
+    fun aFailingJourneyCheckIsStillThePrimaryActionAndKeepsItsSetUpLabel() {
+        report = reportWith(failing = setOf(ReadinessCheckId.PAIRED_BOX))
+
+        val state = viewModel().state
+
+        assertThat(state.primary?.id).isEqualTo(ReadinessCheckId.PAIRED_BOX)
+        assertThat(state.primary?.actionLabel)
+            .isEqualTo(ReadinessMessages.actionLabelFor(ReadinessCheckId.PAIRED_BOX))
+        assertThat(state.primary?.isRevisitable).isFalse()
+    }
+
+    /** `FixTime` attend le choix de l'heure (étape 14) : son recours reste inactif. */
+    @Test
+    fun anActionWhoseScreenIsStillMissingStaysUnavailable() {
+        report = reportWith(failing = setOf(ReadinessCheckId.FUTURE_TRIGGER))
+
+        val state = viewModel().state
+
+        assertThat(state.primary?.id).isEqualTo(ReadinessCheckId.FUTURE_TRIGGER)
         assertThat(state.primary?.isActionAvailable).isFalse()
     }
 

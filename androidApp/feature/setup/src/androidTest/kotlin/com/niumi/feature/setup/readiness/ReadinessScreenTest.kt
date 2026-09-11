@@ -135,6 +135,46 @@ class ReadinessScreenTest {
             .assertCountEquals(0)
     }
 
+    /**
+     * Défaut mesuré sur appareil à l'étape 13 : une fois le boîtier associé, sa ligne passait au
+     * vert et perdait son bouton, rendant l'écran 3 inatteignable alors que §11.1 autorise une
+     * nouvelle association. Une étape de parcours satisfaite garde donc un recours.
+     */
+    @Test
+    fun aSatisfiedJourneyCheckKeepsAWayBackToItsScreen() {
+        val primary =
+            item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.FAILED, ReadinessAction.OpenSoundSettings, true)
+        val pairedBox =
+            item(ReadinessCheckId.PAIRED_BOX, ReadinessOutcome.PASSED, ReadinessAction.StartPairing, true)
+                .copy(actionLabel = ReadinessMessages.CHANGE_PAIRED_BOX_LABEL)
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, listOf(pairedBox)), onPrimaryAction = {})
+        }
+
+        composeRule
+            .onNode(hasContentDescription(ReadinessMessages.CHANGE_PAIRED_BOX_LABEL))
+            .performScrollTo()
+            .assertExists()
+        // Le libellé de première association contredirait la ligne verte juste au-dessus (§15).
+        composeRule
+            .onAllNodesWithText(ReadinessMessages.actionLabelFor(ReadinessCheckId.PAIRED_BOX))
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun aSatisfiedBlockingCheckOffersNoWayBack() {
+        val primary =
+            item(ReadinessCheckId.PAIRED_BOX, ReadinessOutcome.FAILED, ReadinessAction.StartPairing, true)
+        val passedVolume =
+            item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.PASSED, ReadinessAction.OpenSoundSettings, true)
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, listOf(passedVolume)), onPrimaryAction = {})
+        }
+
+        val clickableNodes = composeRule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
+        assertThat(clickableNodes).hasSize(1)
+    }
+
     @Test
     fun aReadyDeviceSaysSoOnce() {
         composeRule.setContent {

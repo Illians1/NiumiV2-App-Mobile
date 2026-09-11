@@ -6,6 +6,15 @@ import com.niumi.system.readiness.ReadinessCheckId
 import com.niumi.system.readiness.ReadinessOutcome
 
 /**
+ * Les deux contrôles de §13 qui ne décrivent pas l'état de l'appareil mais une étape du parcours
+ * de préparation. `AndroidDeviceReadinessChecker.journeyChecks()` les traite déjà à part depuis
+ * l'étape 12a : ils sont convertis vers les champs dédiés d'`ActivationPolicyInputDto`, pas vers
+ * sa liste `checks`.
+ */
+private val JOURNEY_CHECK_IDS =
+    setOf(ReadinessCheckId.PAIRED_BOX, ReadinessCheckId.APP_SELECTION)
+
+/**
  * Un contrôle affichable. [isActionAvailable] vaut `false` quand le recours n'existe pas encore
  * dans l'application : le blocage est alors énoncé sans proposer un bouton qui ne mènerait nulle
  * part, ce qui serait un faux état de fiabilité (SPEC_ANDROID §15).
@@ -20,6 +29,18 @@ data class ReadinessItem(
     val actionLabel: String,
     val isActionAvailable: Boolean,
 ) {
+    /**
+     * Les deux étapes de parcours de §13 restent accessibles une fois satisfaites : ce ne sont pas
+     * des remédiations mais des choix de l'utilisateur, que §11.1 et §12.1 l'autorisent à refaire
+     * tant qu'aucune session n'est en cours. Sans cela leur bouton disparaîtrait avec leur échec,
+     * et les écrans 3 et 4 deviendraient inatteignables — défaut mesuré sur appareil à l'étape 13.
+     *
+     * Les contrôles de blocage, eux, n'ont rien à rouvrir une fois satisfaits : un volume d'alarme
+     * correct ne se « remodifie » pas depuis le diagnostic.
+     */
+    val isRevisitable: Boolean
+        get() = outcome == ReadinessOutcome.PASSED && id in JOURNEY_CHECK_IDS
+
     val isBlocking: Boolean
         get() = outcome == ReadinessOutcome.FAILED && severity != ReadinessSeverityDto.WARNING
 

@@ -15,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
@@ -68,6 +69,16 @@ fun ReadinessScreen(
                         text = "${statusMarker(item)}  ${item.summary}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    // Une étape de parcours satisfaite reste modifiable (§11.1, §12.1) : sans ce
+                    // recours, les écrans 3 et 4 seraient inatteignables une fois la ligne verte.
+                    if (item.isRevisitable) {
+                        TextButton(
+                            onClick = { onPrimaryAction(item) },
+                            modifier = Modifier.semantics { contentDescription = item.actionLabel },
+                        ) {
+                            Text(item.actionLabel)
+                        }
+                    }
                 }
         }
     }
@@ -103,7 +114,11 @@ private fun statusMarker(item: ReadinessItem): String =
  * chaque retour des réglages » (§13) — et n'ouvre jamais un réglage à la place de l'utilisateur.
  */
 @Composable
-fun ReadinessRoute(viewModel: ReadinessViewModel = hiltViewModel()) {
+fun ReadinessRoute(
+    onStartPairing: () -> Unit,
+    onOpenAppPicker: () -> Unit,
+    viewModel: ReadinessViewModel = hiltViewModel(),
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -128,6 +143,16 @@ fun ReadinessRoute(viewModel: ReadinessViewModel = hiltViewModel()) {
                 item.id == ReadinessCheckId.BATTERY_OPTIMIZATION &&
                     item.actionLabel == ReadinessMessages.BATTERY_CONFIRM_LABEL -> {
                     viewModel.confirmBatteryExemption()
+                }
+
+                // Recours internes : une destination de l'application, jamais un réglage système
+                // (`settingsIntentFor` renvoie `null` pour ces deux actions).
+                item.action == ReadinessAction.StartPairing -> {
+                    onStartPairing()
+                }
+
+                item.action == ReadinessAction.OpenAppPicker -> {
+                    onOpenAppPicker()
                 }
 
                 item.action == ReadinessAction.RequestNotificationPermission -> {

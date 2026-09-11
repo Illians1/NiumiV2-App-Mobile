@@ -100,7 +100,15 @@ class ReadinessViewModel
                     actionLabel = ReadinessMessages.actionLabelFor(check.id),
                     isActionAvailable = check.action !in UNAVAILABLE_ACTIONS,
                 ),
-            )
+            ).withRevisitLabel()
+
+        /**
+         * Une étape de parcours satisfaite garde son action mais change de libellé : « Changer de
+         * boîtier » plutôt que « Associer mon boîtier », qui contredirait la ligne verte juste
+         * au-dessus (§15, ne jamais afficher un faux état).
+         */
+        private fun ReadinessItem.withRevisitLabel(): ReadinessItem =
+            if (isRevisitable) copy(actionLabel = ReadinessMessages.revisitLabelFor(id)) else this
 
         private fun withBatteryLabel(item: ReadinessItem): ReadinessItem =
             if (item.id == ReadinessCheckId.BATTERY_OPTIMIZATION && batterySettingsOpened) {
@@ -111,14 +119,14 @@ class ReadinessViewModel
 
         private companion object {
             /**
-             * Recours dont l'écran n'existe pas encore : l'association et le sélecteur arrivent à
-             * l'étape 13. `Unsupported` n'a de recours sur aucune version : le matériel manque.
-             * Ce jeu se vide au fil des étapes ; il ne doit jamais servir à masquer un contrôle.
+             * Recours dont l'écran n'existe pas encore : `FixTime` attend le choix de l'heure
+             * (étape 14). `Unsupported` n'a de recours sur aucune version : le matériel manque.
+             * `StartPairing` et `OpenAppPicker` en sont sortis à l'étape 13, leurs écrans étant
+             * livrés. Ce jeu se vide au fil des étapes ; il ne doit jamais servir à masquer un
+             * contrôle.
              */
             val UNAVAILABLE_ACTIONS =
                 setOf(
-                    ReadinessAction.StartPairing,
-                    ReadinessAction.OpenAppPicker,
                     ReadinessAction.FixTime,
                     ReadinessAction.Unsupported,
                 )

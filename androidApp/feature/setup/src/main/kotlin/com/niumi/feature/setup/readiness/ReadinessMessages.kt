@@ -133,6 +133,22 @@ object ReadinessMessages {
     const val BATTERY_CONFIRM_LABEL = "J'ai levé les restrictions"
 
     /**
+     * Libellés des deux étapes de parcours **déjà satisfaites** (§11.1, §12.1) : l'utilisateur
+     * peut refaire son choix tant qu'aucune session n'est en cours. « Associer mon boîtier » sur
+     * une ligne verte laisserait croire qu'aucun boîtier n'est associé.
+     */
+    const val CHANGE_PAIRED_BOX_LABEL = "Changer de boîtier"
+
+    const val CHANGE_APP_SELECTION_LABEL = "Modifier ma sélection"
+
+    fun revisitLabelFor(id: ReadinessCheckId): String =
+        when (id) {
+            ReadinessCheckId.PAIRED_BOX -> CHANGE_PAIRED_BOX_LABEL
+            ReadinessCheckId.APP_SELECTION -> CHANGE_APP_SELECTION_LABEL
+            else -> actionLabelFor(id)
+        }
+
+    /**
      * `ShowExactAlarmDiagnostic` : Niumi déclare `USE_EXACT_ALARM` et jamais
      * `SCHEDULE_EXACT_ALARM` (§13). Il n'existe donc **aucun** réglage utilisateur à ouvrir, et ce
      * texte remplace l'action au lieu de rediriger vers « Alarmes et rappels ».
