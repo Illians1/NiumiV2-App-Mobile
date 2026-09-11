@@ -27,6 +27,10 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.android)
 
+    // SetupPreferences (étape 12) : les deux accusés de réception de la mise en route vivent
+    // hors Room, pour rester lisibles sans déverrouillage et sans migration de schéma.
+    implementation(libs.datastore.preferences)
+
     testImplementation(libs.junit4)
     testImplementation(libs.truth)
     testImplementation(libs.turbine)

@@ -2,6 +2,10 @@ package com.niumi.system.session.fakes
 
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.SessionEffectKindDto
+import com.niumi.system.readiness.AndroidDeviceReadinessChecker
+import com.niumi.system.readiness.SessionReadinessMonitor
+import com.niumi.system.readiness.fakes.FakeSessionWarningNotifier
+import com.niumi.system.readiness.fakes.ReadinessTestSources
 import com.niumi.system.session.DefaultSessionCoordinator
 import com.niumi.system.session.EffectDispatcher
 import com.niumi.system.session.EffectExecutor
@@ -34,6 +38,8 @@ import com.niumi.system.session.executors.StopRingingExecutor
  * scénarios configurent les propriétés mutables des fakes après coup) : un constructeur à onze
  * paramètres dépasserait `LongParameterList` de detekt sans bénéfice réel.
  */
+private const val ANDROID_16 = 36
+
 class TestCoordinatorHarness {
     val journal: CallJournal = CallJournal()
     val gateway: InMemoryPersistenceGateway = InMemoryPersistenceGateway(journal)
@@ -52,7 +58,22 @@ class TestCoordinatorHarness {
     val eventFactory = SessionEventFactory(idGenerator, clock)
     val recordingReducer = RecordingSessionReducer(FacadeSessionReducer(facade))
 
-    private val sources = ReconcilerSources(alarmScheduler, accessibilityServiceStatus, blockedPackagesProjection)
+    /**
+     * Le moniteur de §13.1 partage les fakes du harnais (`alarmScheduler`,
+     * `accessibilityServiceStatus`) : un test qui coupe une permission la coupe donc aussi pour
+     * le diagnostic, comme sur un vrai appareil.
+     */
+    val readinessSources = ReadinessTestSources(alarmScheduler, accessibilityServiceStatus)
+    val warningNotifier = FakeSessionWarningNotifier()
+    val readinessMonitor =
+        SessionReadinessMonitor(
+            readinessChecker = AndroidDeviceReadinessChecker(readinessSources.build(), clock, ANDROID_16),
+            warningNotifier = warningNotifier,
+            eventFactory = eventFactory,
+            technicalEventLog = technicalEventLog,
+        )
+
+    private val sources = ReconcilerSources(alarmScheduler, blockedPackagesProjection, readinessMonitor)
 
     private val executors: Map<SessionEffectKindDto, EffectExecutor> =
         mapOf(
@@ -72,7 +93,8 @@ class TestCoordinatorHarness {
 
     val effectDispatcher = EffectDispatcher(executors, gateway)
 
-    val reconciler = SessionReconciler(gateway, effectDispatcher, sources, facade, eventFactory, technicalEventLog)
+    val reconciler =
+        SessionReconciler(gateway, effectDispatcher, sources, facade, eventFactory, technicalEventLog)
 
     val coordinator: SessionCoordinator =
         DefaultSessionCoordinator(recordingReducer, gateway, effectDispatcher, reconciler, eventFactory)
@@ -88,7 +110,8 @@ class TestCoordinatorHarness {
     ): SessionCoordinator {
         val overridden = executors + (kind to executor)
         val dispatcher = EffectDispatcher(overridden, gateway)
-        val recon = SessionReconciler(gateway, dispatcher, sources, facade, eventFactory, technicalEventLog)
+        val recon =
+            SessionReconciler(gateway, dispatcher, sources, facade, eventFactory, technicalEventLog)
         return DefaultSessionCoordinator(recordingReducer, gateway, dispatcher, recon, eventFactory)
     }
 

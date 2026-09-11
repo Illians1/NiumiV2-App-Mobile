@@ -14,6 +14,7 @@ import com.niumi.system.common.Clock
 import com.niumi.system.common.IdGenerator
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.notification.NotificationAvailability
+import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.session.DefaultSessionCoordinator
 import com.niumi.system.session.DefaultSessionRuntimeStatusProbe
 import com.niumi.system.session.EffectDispatcher
@@ -68,18 +69,26 @@ object SessionModule {
         unlockState: UnlockState,
     ): SessionPersistenceGateway = UnlockAwarePersistenceGateway(sessionStore, directBootStore, unlockState)
 
+    /**
+     * `@JvmSuppressWildcards` : Kotlin compile ce paramètre en
+     * `Map<SessionEffectKind, ? extends EffectExecutor>`, que Dagger considère comme un type
+     * distinct de la `Map<SessionEffectKind, EffectExecutor>` fournie par [EffectExecutorModule].
+     * Le défaut datait de l'étape 11 mais restait invisible : aucun composant de production ne
+     * demandait encore `SessionCoordinator`, donc Dagger ne résolvait jamais cette branche.
+     * L'étape 12 est la première à l'injecter (`SessionReadinessWatcher`).
+     */
     @Provides
     fun provideEffectDispatcher(
-        executors: Map<SessionEffectKindDto, EffectExecutor>,
+        executors: Map<SessionEffectKindDto, @JvmSuppressWildcards EffectExecutor>,
         gateway: SessionPersistenceGateway,
     ): EffectDispatcher = EffectDispatcher(executors, gateway)
 
     @Provides
     fun provideReconcilerSources(
         alarmScheduler: AlarmScheduler,
-        accessibilityServiceStatus: AccessibilityServiceStatus,
         blockedPackagesProjection: BlockedPackagesProjection,
-    ): ReconcilerSources = ReconcilerSources(alarmScheduler, accessibilityServiceStatus, blockedPackagesProjection)
+        readinessMonitor: SessionReadinessMonitor,
+    ): ReconcilerSources = ReconcilerSources(alarmScheduler, blockedPackagesProjection, readinessMonitor)
 
     @Provides
     fun provideSessionReconciler(

@@ -22,3 +22,13 @@ complexity:
     # d'effets) ; regrouper ces paramètres en objets artificiels rien que pour la fonction de
     # câblage n'améliorerait pas la lisibilité, contrairement à un vrai constructeur métier.
     ignoreAnnotated: ['Provides']
+  CyclomaticComplexMethod:
+    active: true
+    # Une fonction dont le corps est *un seul* `when` exhaustif sur une énumération est une table
+    # de correspondance, pas de la logique ramifiée : sa complexité mesurée ne fait que compter
+    # les valeurs de l'énumération. `ReadinessMessages.forCheck` en a quatorze, une par contrôle
+    # de SPEC_ANDROID §13. L'alternative — une `Map` — ferait perdre l'exhaustivité vérifiée à la
+    # compilation, qui est précisément la propriété de sûreté recherchée ici. L'exemption est
+    # volontairement `ignoreSingleWhenExpression` et non `ignoreSimpleWhenEntries` : elle ne
+    # pardonne rien à une fonction qui mêlerait un `when` à d'autres branchements.
+    ignoreSingleWhenExpression: true

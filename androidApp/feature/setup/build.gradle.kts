@@ -39,6 +39,9 @@ dependencies {
     // (SPEC_ANDROID §13), même motif que PocScreen dans :app.
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.hilt.navigation.compose)
+    // `rememberLauncherForActivityResult` : ReadinessScreen demande POST_NOTIFICATIONS
+    // (SPEC_ANDROID §13, §15 « expliquer les autorisations juste avant leur demande »).
+    implementation(libs.activity.compose)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

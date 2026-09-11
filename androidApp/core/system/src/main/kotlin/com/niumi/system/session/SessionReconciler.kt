@@ -11,6 +11,7 @@ import com.niumi.core.interop.TriggerDelayOutcomeDto
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.blocking.BlockedPackagesState
+import com.niumi.system.readiness.ReadinessCheckId
 
 /**
  * Reprend un état incomplet et compare l'état métier aux sous-systèmes Android (SPEC_CORE_KMP §6.1
@@ -102,32 +103,26 @@ class SessionReconciler(
         actions += ReconcileAction.DecisionApplied(dispatch(followUp))
     }
 
+    /**
+     * La surveillance de §13.1 remplace les deux contrôles ad hoc de l'étape 11 : les six
+     * contrôles bloquants sont désormais évalués d'un seul tenant, chacun avec son incident et
+     * sa notification. Le comportement d'origine est conservé sur un point clé — une permission
+     * perdue interrompt la passe avant toute reprogrammation d'alarme. La condition porte sur
+     * `failing`, l'état courant, et non sur `newlyReported` : un contrôle cassé depuis la passe
+     * précédente n'est plus signalé mais reste cassé.
+     */
     private suspend fun reconcileArmed(
         snapshot: SessionSnapshotDto,
         reason: ReconcileReason,
         dispatch: suspend (SessionEventDto) -> DispatchResult,
         actions: MutableList<ReconcileAction>,
     ) {
-        if (!sources.alarmScheduler.canScheduleExact()) {
-            reportIncident(
-                snapshot,
-                IncidentCodes.ALARM_PERMISSION_REVOKED,
-                TechnicalEventType.EXACT_ALARM_LOST,
-                dispatch,
-                actions,
-            )
-            return
+        val monitored = sources.readinessMonitor.evaluate(snapshot, dispatch)
+        for (degradation in monitored.newlyReported) {
+            actions += ReconcileAction.IncidentDispatched(degradation.incidentCode, IncidentSeverityDto.CRITICAL)
+            actions += ReconcileAction.DecisionApplied(degradation.dispatchResult)
         }
-        if (!sources.accessibilityServiceStatus.isEnabled()) {
-            reportIncident(
-                snapshot,
-                IncidentCodes.BLOCKING_PERMISSION_REVOKED,
-                TechnicalEventType.ACCESSIBILITY_DISABLED,
-                dispatch,
-                actions,
-            )
-            return
-        }
+        if (monitored.failing.any { it in PERMISSION_CHECKS }) return
         reconcileTriggerDelay(snapshot, reason, dispatch, actions)
     }
 
@@ -169,19 +164,6 @@ class SessionReconciler(
         }
     }
 
-    private suspend fun reportIncident(
-        snapshot: SessionSnapshotDto,
-        code: String,
-        logType: TechnicalEventType,
-        dispatch: suspend (SessionEventDto) -> DispatchResult,
-        actions: MutableList<ReconcileAction>,
-    ) {
-        technicalEventLog.log(logType, snapshot.sessionId)
-        val incident = eventFactory.buildIncident(code, IncidentSeverityDto.CRITICAL)
-        actions += ReconcileAction.IncidentDispatched(code, IncidentSeverityDto.CRITICAL)
-        actions += ReconcileAction.DecisionApplied(dispatch(eventFactory.incidentReported(snapshot, incident)))
-    }
-
     private fun rescheduleAlarm(
         snapshot: SessionSnapshotDto,
         triggerAtEpochMillis: Long,
@@ -190,5 +172,17 @@ class SessionReconciler(
         sources.alarmScheduler.schedule(snapshot.sessionId, snapshot.revision, triggerAtEpochMillis)
         technicalEventLog.log(TechnicalEventType.ALARM_RESCHEDULED, snapshot.sessionId)
         actions += ReconcileAction.AlarmRescheduled(triggerAtEpochMillis)
+    }
+
+    private companion object {
+        /**
+         * Les deux pertes de permission qui rendent toute suite de la passe absurde :
+         * reprogrammer une alarme sans accès aux alarmes exactes, ou poursuivre un blocage sans
+         * service d'accessibilité. Les quatre autres contrôles de §13.1 sont signalés sans
+         * interrompre la réconciliation — le réveil reste programmé, seul son audibilité ou son
+         * affichage est compromis.
+         */
+        val PERMISSION_CHECKS =
+            setOf(ReadinessCheckId.EXACT_ALARM, ReadinessCheckId.ACCESSIBILITY_SERVICE)
     }
 }

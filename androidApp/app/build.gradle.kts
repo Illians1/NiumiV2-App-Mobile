@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    // Routes typées @Serializable de `navigation/NiumiRoute.kt` (navigation-compose 2.8+).
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
@@ -79,6 +81,10 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
     implementation(libs.lifecycle.viewmodel.compose)
+    // `LocalLifecycleOwner` (androidx.lifecycle.compose) : l'accueil relit l'accusé de réception
+    // de l'onboarding sur ON_RESUME. La dépendance était en `debug` tant que seul PocScreen s'en
+    // servait ; elle passe en production avec l'écran 1.
+    implementation(libs.lifecycle.runtime.compose)
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
@@ -89,9 +95,6 @@ dependencies {
     // DataStore de la route POC (debug uniquement, SPEC_ANDROID §22 Lot 0) :
     // `PairedBoxStore` a son implémentation Room à l'étape 13.
     debugImplementation(libs.datastore.preferences)
-    // `LocalLifecycleOwner` (androidx.lifecycle.compose) : PocScreen recharge le boîtier
-    // associé au retour de PocPairingActivity (debug uniquement).
-    debugImplementation(libs.lifecycle.runtime.compose)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)

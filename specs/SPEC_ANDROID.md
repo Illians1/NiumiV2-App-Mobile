@@ -262,6 +262,7 @@ Exemples de codes d'incident:
 | `BLOCKING_PERMISSION_REVOKED` | `CRITICAL` |
 | `ANDROID_AUDIO_START_FAILED` | `CRITICAL` |
 | `ANDROID_FULL_SCREEN_REVOKED` | `CRITICAL` |
+| `ANDROID_ALARM_VOLUME_ZERO` | `CRITICAL` |
 | `NFC_DISABLED` | `CRITICAL` |
 | `TIME_CHANGED` | `WARNING` |
 | `PROCESS_RECREATED` | `WARNING` |
@@ -856,6 +857,41 @@ Ce comportement est établi sur HyperOS. Les autres surcouches appliquent des po
 
 L'écran n'affiche qu'une action principale à la fois, en commençant par le premier blocage. Il doit recalculer l'état après chaque retour des réglages.
 
+**Implémentation (étape 12).** `DeviceReadinessChecker` (`:core:system.readiness`) renvoie les quatorze contrôles dans l'ordre du tableau ci-dessus, chacun avec une issue à trois valeurs — `PASSED`, `FAILED`, `NOT_APPLICABLE` — et non un booléen. Trois points méritent d'être fixés ici plutôt que laissés au code.
+
+1. **Un contrôle sans objet n'est ni réussi ni échoué.** `NOT_APPLICABLE` couvre l'autorisation plein écran avant Android 14 (l'API n'existe pas), l'activation du NFC sur un appareil sans matériel NFC (proposer d'activer ce qui n'existe pas serait un faux recours), et la validité de l'instant de réveil tant qu'aucune heure n'a été choisie — l'écran de diagnostic précède le choix de l'heure dans le parcours. Un contrôle `NOT_APPLICABLE` est exclu de `ActivationPolicyInputDto` : il ne peut ni bloquer ni rassurer.
+
+2. **Les trois contrôles de parcours ne transitent pas par la liste `checks`.** « boîtier associé », « applications choisies » et « date future valide » sont affichés comme les onze autres, mais convertis vers les champs dédiés `hasPairedBox`, `appSelectionCount` et `triggerAtEpochMillis` d'`ActivationPolicyInputDto`. La politique commune les refuse déjà avec `NO_PAIRED_BOX`, `INVALID_APP_SELECTION` et `TRIGGER_NOT_IN_FUTURE` (SPEC_CORE_KMP §7.4, §10) ; les verser aussi dans `checks` ferait remonter deux refus pour une seule cause, l'un précis et l'autre générique. Un diagnostic lancé avant tout choix d'heure reçoit donc `triggerAtEpochMillis = nowEpochMillis` et se voit refuser l'activation par `TRIGGER_NOT_IN_FUTURE`, ce qui est le verdict exact à ce stade.
+
+3. **Le contrôle d'énergie repose sur la confirmation de l'utilisateur, pas sur la détection.** Puisque `isIgnoringBatteryOptimizations()` n'observe que la liste blanche AOSP et reste faux après correction du réglage OEM sur HyperOS, exiger qu'il soit vrai rendrait l'activation impossible sur ces appareils ; s'en contenter laisserait passer un appareil qui gèle Niumi. Le contrôle est donc satisfait quand, et seulement quand, l'utilisateur a confirmé avoir levé les restrictions — confirmation persistée hors Room, réévaluée à chaque diagnostic. La valeur renvoyée par `isIgnoringBatteryOptimizations()` ne décide de rien : elle choisit le recours proposé, demande d'exemption AOSP tant qu'elle est fausse, guide vers le réglage OEM une fois acquise.
+
+**Messages (étape 12b).** §13 n'illustrait que cinq messages pour quatorze contrôles ; les cinq restent identiques et les neuf autres sont fixés ici. Chacun nomme le réglage en cause **et** sa conséquence, en tutoiement (15). Les textes vivent dans `:feature:setup` (`readiness/ReadinessMessages.kt`), jamais dans `:core:system`, qui reste sans interface.
+
+| Contrôle | Message |
+| --- | --- |
+| NFC présent | Cet appareil n'a pas de puce NFC. Niumi ne peut pas fonctionner sans boîtier à scanner. |
+| NFC activé | Le NFC est désactivé. Active-le avant de démarrer la session. |
+| boîtier associé | Aucun boîtier n'est associé. Associe ton boîtier Niumi : c'est lui qui terminera ta session. |
+| applications choisies | Aucune application n'est choisie. Sélectionne celles que Niumi bloquera pendant ta session. |
+| alarme exacte disponible | Niumi ne peut pas programmer ce réveil, car l'accès aux alarmes exactes n'est pas disponible sur cet appareil. |
+| plein écran autorisé | Autorise les alarmes plein écran, sinon l'écran de réveil ne s'ouvrira pas tout seul au moment de sonner. |
+| notifications autorisées | Active les notifications pour que l'écran du réveil puisse s'afficher. |
+| canal d'alarme actif | Le canal de notification du réveil est désactivé. Réactive-le, sinon la sonnerie ne pourra pas démarrer. |
+| volume alarme supérieur à zéro | Le volume des alarmes est à zéro. Augmente-le avant de continuer. |
+| Ne pas déranger en silence total | Le silence total coupe le son des alarmes et empêche l'écran de réveil de s'afficher. Désactive-le avant de démarrer la session. |
+| Ne pas déranger dans un autre mode | Le mode Ne pas déranger peut empêcher la sonnerie d'être audible. Vérifie qu'il autorise les alarmes. |
+| service d'accessibilité actif | Le service d'accessibilité de Niumi est inactif. Sans lui, les applications choisies ne seront pas bloquées. |
+| date future valide | L'heure de réveil choisie est déjà passée. Choisis une heure future. |
+| batterie optimisée | Les restrictions de batterie peuvent geler Niumi et désactiver le blocage sans prévenir. Lève-les, puis confirme ici que c'est fait. |
+
+**Recours système (étape 12b).** Les `Intent` de réglages sont construits par l'écran de diagnostic, jamais par `DeviceReadinessChecker` : celui-ci ne décrit que le recours. Trois choix méritent d'être fixés ici.
+
+- **Ne pas déranger.** Le SDK n'expose aucune action publique ouvrant l'interrupteur lui-même ; `Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS` est la plus proche. Niumi amène l'utilisateur devant le réglage et ne le modifie jamais, faute de demander `ACCESS_NOTIFICATION_POLICY`.
+- **Exemption d'énergie.** `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` n'est **jamais** émise : elle exige la permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, restreinte par Google Play, que Niumi ne déclare pas et dont il n'a pas besoin puisque c'est l'utilisateur qui confirme. Tant que la liste blanche AOSP manque, l'écran ouvre `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` (liste système) ; une fois acquise, il ouvre la fiche de l'application, où vit le réglage de la surcouche qui commande réellement le gel.
+- **Alarmes exactes.** Aucune branche ne produit `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`, un test instrumenté le prouve en énumérant toutes les actions. Un `canScheduleExactAlarms()` faux n'affiche qu'une explication.
+
+**Présentation (étape 12b).** L'écran n'attache un bouton qu'au premier contrôle en échec ; les autres ne sont qu'affichés. Un recours dont l'écran n'existe pas encore laisse le bouton inactif plutôt que de promettre une destination absente (15, « ne jamais afficher un faux état de fiabilité »). Le contrôle d'énergie procède en deux temps sous une seule action à la fois : ouvrir le réglage, puis confirmer au retour.
+
 ### 13.1 Surveillance pendant une session armée
 
 Le diagnostic ne sert pas qu'à autoriser l'activation. Un réglage modifié après l'armement peut rendre le réveil inaudible ou le parcours inopérant sans que rien ne le signale, et l'utilisateur ne le découvrirait qu'au matin. `DeviceReadinessChecker` est donc réexécuté pendant la vie d'une session, et tout contrôle bloquant qui devient faux alors que la session est `ARMED` produit un incident et une notification d'avertissement.
@@ -883,6 +919,14 @@ Quand la surveillance s'exécute:
 Le service d'accessibilité ne doit jamais servir de sentinelle pour cette surveillance, bien qu'il soit le seul composant Niumi vivant en continu pendant une session. Son usage déclaré à Google Play (12.3) est le blocage d'applications et la lecture du seul `event.packageName`; l'employer à observer des réglages système contredirait cette déclaration.
 
 Notification d'avertissement: créer un canal `niumi_session_warning`, importance haute, sans son ni vibration, sans `fullScreenIntent`, `setOngoing(false)`, au tap ouvrir le diagnostic d'incident. Le texte nomme le réglage en cause et sa conséquence, par exemple: « Ton réveil ne sonnera pas tant que le silence total est activé. » L'événement technique `SESSION_READINESS_DEGRADED` est journalisé (17).
+
+**Implémentation (étape 12).** `SessionReadinessMonitor` (`:core:system.readiness`) rejoue `DeviceReadinessChecker` et n'émet un incident et une notification **qu'au basculement** d'un contrôle : tant qu'un contrôle reste faux, il n'est pas re-signalé ; s'il repasse vrai, son avertissement est retiré et une dégradation ultérieure est de nouveau signalée. L'état de déduplication vit en mémoire et disparaît donc avec le processus, ce qui republie un avertissement encore valable au redémarrage — préférable à le taire.
+
+Chaque contrôle surveillé porte son propre identifiant de notification : deux réglages cassés en même temps produisent deux avertissements distincts, aucun n'écrasant l'autre. La catégorie est `CATEGORY_ERROR` et non `CATEGORY_ALARM` : ces notifications signalent un réglage dégradé, jamais une alarme en cours, et les confondre ferait croire que le réveil sonne.
+
+Le réconciliateur n'interrompt sa passe que pour les deux pertes de permission — accès aux alarmes exactes et service d'accessibilité — parce que poursuivre y serait absurde (reprogrammer une alarme exacte sans y avoir droit). Les quatre autres contrôles sont signalés sans interrompre la réconciliation : le réveil reste programmé, seules son audibilité ou sa présentation sont compromises. La condition porte sur l'état courant du contrôle, pas sur le fait qu'il vienne d'être signalé.
+
+Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic d'incident. Cet écran est livré à l'étape 16 (15, écran 12) ; jusque-là, le tap ramène l'utilisateur dans l'application, jamais vers un `PendingIntent` mort. Le déclencheur « au déclenchement, avant de démarrer la sonnerie » relève d'`AlarmReceiver` et arrive à l'étape 17.
 
 Exemples de messages:
 
@@ -943,6 +987,8 @@ Tous les composants non destinés à des applications externes restent `exported
 10. session terminée;
 11. session annulée;
 12. diagnostic d'incident.
+
+**Étapes de livraison.** Les écrans n'arrivent pas tous en même temps et l'ordre d'implémentation (22) ne le disait pas explicitement : accueil (1) et diagnostic-onboarding (2) à l'étape 12b ; association (3) et sélection (4) à l'étape 13 ; choix de l'heure (5) et récapitulatif (6) à l'étape 14 ; session active (7), scan requis (9), terminée (10) et annulée (11) à l'étape 15 ; écran de réveil (8) livré dès l'étape 7 ; diagnostic d'incident (12) à l'étape 16. L'étape 12b déclare les treize destinations de navigation en une fois mais n'enregistre que celles dont l'écran existe : naviguer vers une route non enregistrée lève, ce qui vaut mieux qu'un écran vide donnant l'illusion d'une fonctionnalité livrée.
 
 Règles UI:
 

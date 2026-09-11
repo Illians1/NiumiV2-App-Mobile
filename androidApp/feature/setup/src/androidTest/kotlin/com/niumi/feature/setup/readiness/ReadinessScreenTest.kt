@@ -1,0 +1,146 @@
+package com.niumi.feature.setup.readiness
+
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
+import com.niumi.core.interop.ReadinessSeverityDto
+import com.niumi.system.readiness.ReadinessAction
+import com.niumi.system.readiness.ReadinessCheckId
+import com.niumi.system.readiness.ReadinessOutcome
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * SPEC_ANDROID §13 : « L'écran n'affiche qu'une action principale à la fois, en commençant par le
+ * premier blocage. » §15 exige en plus TalkBack, d'où la `contentDescription` sur l'action.
+ */
+@RunWith(AndroidJUnit4::class)
+class ReadinessScreenTest {
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    private fun item(
+        id: ReadinessCheckId,
+        outcome: ReadinessOutcome,
+        action: ReadinessAction,
+        available: Boolean,
+    ) = ReadinessItem(
+        id = id,
+        message = ReadinessMessages.forCheck(id),
+        label = ReadinessMessages.labelFor(id),
+        severity = ReadinessSeverityDto.BLOCKING_FOR_ALARM,
+        outcome = outcome,
+        action = action,
+        actionLabel = ReadinessMessages.actionLabelFor(id),
+        isActionAvailable = available,
+    )
+
+    private fun stateWith(
+        primary: ReadinessItem,
+        others: List<ReadinessItem>,
+    ) = ReadinessUiState(
+        items = listOf(primary) + others,
+        primary = primary,
+        isAllowed = false,
+        isLoading = false,
+    )
+
+    @Test
+    fun onlyThePrimaryFailureCarriesAClickableAction() {
+        val primary =
+            item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.FAILED, ReadinessAction.OpenSoundSettings, true)
+        val others =
+            listOf(
+                item(
+                    ReadinessCheckId.DND_TOTAL_SILENCE,
+                    ReadinessOutcome.FAILED,
+                    ReadinessAction.OpenDndSettings,
+                    true,
+                ),
+                item(
+                    ReadinessCheckId.ACCESSIBILITY_SERVICE,
+                    ReadinessOutcome.FAILED,
+                    ReadinessAction.OpenAccessibilitySettings,
+                    true,
+                ),
+            )
+        composeRule.setContent { ReadinessScreen(state = stateWith(primary, others), onPrimaryAction = {}) }
+
+        val clickableNodes = composeRule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
+        assertThat(clickableNodes).hasSize(1)
+    }
+
+    @Test
+    fun thePrimaryActionCarriesItsLabelAsAContentDescription() {
+        val primary =
+            item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.FAILED, ReadinessAction.OpenSoundSettings, true)
+        composeRule.setContent { ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}) }
+
+        composeRule
+            .onNode(hasContentDescription(ReadinessMessages.actionLabelFor(ReadinessCheckId.ALARM_VOLUME)))
+            .assertExists()
+    }
+
+    @Test
+    fun anActionWithoutADestinationIsShownDisabledRatherThanHidden() {
+        val primary =
+            item(ReadinessCheckId.PAIRED_BOX, ReadinessOutcome.FAILED, ReadinessAction.StartPairing, false)
+        composeRule.setContent { ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}) }
+
+        composeRule.onNodeWithText(ReadinessMessages.forCheck(ReadinessCheckId.PAIRED_BOX)).assertExists()
+        composeRule
+            .onNodeWithText(ReadinessMessages.actionLabelFor(ReadinessCheckId.PAIRED_BOX))
+            .performScrollTo()
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun theExactAlarmFailureExplainsItselfInsteadOfOfferingASetting() {
+        val primary =
+            item(
+                ReadinessCheckId.EXACT_ALARM,
+                ReadinessOutcome.FAILED,
+                ReadinessAction.ShowExactAlarmDiagnostic,
+                true,
+            )
+        composeRule.setContent { ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}) }
+
+        composeRule.onNodeWithText(ReadinessMessages.EXACT_ALARM_DIAGNOSTIC).performScrollTo().assertExists()
+    }
+
+    @Test
+    fun aSatisfiedCheckIsNamedAndNeverDescribedByItsFailure() {
+        // Régression du 2026-09-11, trouvée sur appareil : la liste affichait
+        // « ✓ Le volume des alarmes est à zéro » pour un volume correct (§15).
+        val primary =
+            item(ReadinessCheckId.PAIRED_BOX, ReadinessOutcome.FAILED, ReadinessAction.StartPairing, false)
+        val passed =
+            item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.PASSED, ReadinessAction.OpenSoundSettings, true)
+        composeRule.setContent { ReadinessScreen(state = stateWith(primary, listOf(passed)), onPrimaryAction = {}) }
+
+        composeRule
+            .onNodeWithText(ReadinessMessages.labelFor(ReadinessCheckId.ALARM_VOLUME), substring = true)
+            .performScrollTo()
+            .assertExists()
+        composeRule
+            .onAllNodesWithText(ReadinessMessages.forCheck(ReadinessCheckId.ALARM_VOLUME), substring = true)
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun aReadyDeviceSaysSoOnce() {
+        composeRule.setContent {
+            ReadinessScreen(state = ReadinessUiState(isLoading = false), onPrimaryAction = {})
+        }
+
+        composeRule.onNodeWithText(ReadinessMessages.ALL_CLEAR).assertExists()
+    }
+}

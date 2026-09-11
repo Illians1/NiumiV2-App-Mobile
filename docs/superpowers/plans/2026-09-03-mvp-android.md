@@ -40,9 +40,9 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 
 | Composant | Version | Note |
 | --- | --- | --- |
-| Kotlin / KMP | 2.4.10 | Compatibilité officielle : Gradle 7.6.3–9.5.0, AGP 8.5.2–9.1.0, Xcode 26.4 |
-| AGP | 9.1.1 | Exigé par Compose BOM 2026.08 pour compileSdk 37 ; JDK 17 ; Kotlin intégré (ne pas appliquer `org.jetbrains.kotlin.android`). Un patch au-dessus du maximum testé par KGP 2.4.10 (9.1.0) — inévitable pour compileSdk 37, reconfirmé à l'étape 1 |
-| Gradle | 9.5.0 | Maximum testé par KGP 2.4.10 (reconfirmé à l'étape 1 ; 9.3.1 n'était que le minimum d'AGP 9.1.1) |
+| Kotlin / KMP | 2.4.20 | Compatibilité officielle : Gradle 7.6.3–9.7.0, AGP 8.5.2–9.3.1, Xcode 26.4. Montée depuis 2.4.10 le 2026-09-11 (étape 12a), voir « Montée de versions » ci-dessous |
+| AGP | 9.1.1 | Exigé par Compose BOM 2026.08 pour compileSdk 37 ; JDK 17 ; Kotlin intégré (ne pas appliquer `org.jetbrains.kotlin.android`). Était un patch au-dessus du maximum testé par KGP 2.4.10 (9.1.0) ; **désormais bien à l'intérieur** de la matrice de KGP 2.4.20 (max 9.3.1) |
+| Gradle | 9.5.0 | Était le maximum testé par KGP 2.4.10 ; KGP 2.4.20 teste jusqu'à 9.7.0, la marge est donc plus large qu'à l'étape 1 |
 | Compose BOM | 2026.09.00 | Compose 1.12.1, material3 1.4.0 (résolution vérifiée). Montée depuis 2026.08.00 (Compose 1.12.0) le 2026-09-11, voir « Montée de versions » ci-dessous |
 | Navigation Compose | 2.10.1 | Montée depuis 2.10.0 le 2026-09-11 |
 | Room | 2.8.5 | KSP2. Montée depuis 2.8.4 le 2026-09-11 |
@@ -52,9 +52,9 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 | kotlinx-datetime | 0.8.0 | `Instant` et `Clock` viennent de `kotlin.time` |
 | kotlinx-serialization | 1.11.0 | |
 | ktlint | plugin `org.jlleitschuh.gradle.ktlint` 14.2.0, CLI 1.8.0 épinglé | Le plugin embarque 1.5.0 par défaut ; épinglé pour éviter la dérive entre patchs |
-| detekt | `dev.detekt` 2.0.0-alpha.6, épinglé, bloquant | Seule variante construite contre Kotlin 2.4.10 ; la dernière stable (1.23.8) embarque Kotlin 2.0.21 et échoue sur Kotlin 2.4+. Voir SPEC_ANDROID §5 et `ETAPE-01.md` |
+| detekt | `dev.detekt` 2.0.0-alpha.6, épinglé, bloquant | Construite contre Kotlin 2.4.x ; la dernière stable (1.23.8) embarque Kotlin 2.0.21 et échoue sur Kotlin 2.4+. Vérifiée verte sous Kotlin 2.4.20 à l'étape 12a. Voir SPEC_ANDROID §5 et `ETAPE-01.md` |
 
-AGP 9.1.1 dépasse d'un patch la borne testée par KMP 2.4.10 (9.1.0). Si le build KMP échoue pour cette raison, arrêter et proposer une mise à jour explicite des specs ; ne jamais réduire `compileSdk`.
+Cet écart n'existe plus depuis la montée de Kotlin 2.4.20 (étape 12a) : AGP 9.1.1 et Gradle 9.5.0 sont tous deux à l'intérieur de la matrice officielle. Si un build KMP échoue pour une raison de version, arrêter et proposer une mise à jour explicite des specs ; ne jamais réduire `compileSdk`.
 
 ### Montée de versions du 2026-09-11
 
@@ -73,15 +73,27 @@ Résolution vérifiée empiriquement (`:app:dependencies --configuration debugRu
 `navigation-compose:2.10.1`, `room-runtime/room-ktx:2.8.5`. Batterie complète verte après montée
 (tests, `:app:assembleDebug`, ktlint, detekt) et `:app:lintDebug` sans aucune remontée.
 
-**Risque signalé, non traité — AGP et Navigation Compose.** Les notes de `navigation 2.10.0-alpha03`
-indiquent : « Updated Compose `compileSdk` to API 37. This means that a minimum AGP version of
-9.2.0 is required when using Compose. » Le projet est en AGP 9.1.1, lui-même déjà un patch au-dessus
-de la borne testée par KGP 2.4.10 (9.1.0). L'exigence ne s'est pas encore manifestée parce que
-`navigation-compose` est sur le classpath sans être compilé contre : `NiumiNavHost` n'arrive qu'à
-l'étape 12. Elle préexiste à cette montée (elle vaut déjà pour 2.10.0, épinglée à l'étape 1) et
-n'est donc pas introduite ici. **À trancher au début de l'étape 12** : monter AGP à 9.2.0 en
-s'éloignant davantage de la borne KMP, ou vérifier que la compilation de `NiumiNavHost` passe
-malgré tout en 9.1.1.
+**Risque tranché à l'étape 12a — AGP et Navigation Compose : AGP reste en 9.1.1.** Les notes de
+`navigation 2.10.0-alpha03` indiquent : « Updated Compose `compileSdk` to API 37. This means that a
+minimum AGP version of 9.2.0 is required when using Compose. » La note d'origine supposait que
+l'exigence ne s'était pas manifestée « parce que `navigation-compose` est sur le classpath sans
+être compilé contre, `NiumiNavHost` n'arrivant qu'à l'étape 12 ». **Cette prémisse était fausse** :
+`androidApp/app/src/main/kotlin/com/niumi/app/ui/NiumiNavHost.kt` et
+`androidApp/app/src/debug/kotlin/com/niumi/app/poc/PocNavigation.kt` existent depuis l'étape 3 et
+compilent contre `NavHost`, `composable` et `rememberNavController` ; le build est vert depuis,
+étape 11 comprise. Aucun blocage n'a donc jamais été observé. Décision validée avec l'utilisateur
+le 2026-09-11 : rester en AGP 9.1.1, et ne monter que si un build casse réellement.
+
+### Montée de Kotlin du 2026-09-11 (étape 12a)
+
+`:app:lintDebug` s'est mis à remonter trois `NewerVersionAvailable` sur Kotlin 2.4.10, publiées
+après la montée du matin. La matrice officielle (`kotlinlang.org/docs/gradle-configure-project`)
+consultée avant la montée donne, pour KGP 2.4.20 : Gradle 7.6.3–9.7.0 et AGP 8.5.2–9.3.1. La montée
+**resserre** donc le risque au lieu de l'élargir — AGP 9.1.1 était un patch au-dessus de la borne de
+2.4.10 (9.1.0) et se retrouve largement à l'intérieur de celle de 2.4.20. KSP reste en 2.3.11
+(versionnage découplé depuis KSP 2.3.0) et detekt 2.0.0-alpha.6 reste vert. Batterie complète
+rejouée après la montée : tests JVM des six modules, `:app:assembleDebug`, ktlint, detekt et
+`:app:lintDebug`, tous verts.
 
 ## Points de vigilance sur les specs
 
@@ -631,6 +643,21 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 ### Étape 12 : onboarding, `DeviceReadinessChecker` et écran de diagnostic
 
+**Scindée en deux passes le 2026-09-11, décision validée avec l'utilisateur.** Cinq livrables
+lourds tenaient dans une seule étape. **12a** (`:core:system`) : les quatorze contrôles de §13, le
+mapper vers la politique commune, le canal `niumi_session_warning` et la surveillance de §13.1.
+**12b** (`:feature:setup`, `:app`) : onboarding, écran de diagnostic, navigation typée et accueil.
+Un rapport et une batterie de vérifications par passe (`ETAPE-12A.md`, `ETAPE-12B.md`).
+
+**Deux corrections au texte d'origine ci-dessous.** Le « Terminé quand » parle de **13** contrôles :
+le tableau de §13 en compte **14** depuis la scission du mode Ne pas déranger à l'étape 6. Et
+« Produit : … écrans 1, 2 et 12 » est faux pour l'écran 12 : le diagnostic d'incident est livré à
+l'**étape 16**, l'étape 12 n'en crée que la route. Enfin, `NiumiNavHost.kt` et `HomeScreen.kt` ne
+sont pas à créer : ils existent depuis l'étape 3 dans `com.niumi.app.ui`, bâtis sur
+`NavGraphContributor` (routes en chaînes contribuées par les modules). L'étape 12b les déplace vers
+`com.niumi.app.navigation` et les réécrit en routes typées `@Serializable`, décision validée avec
+l'utilisateur ; le contributeur ne survit que pour la route POC de debug, supprimée à l'étape 21.
+
 **Specs à lire :** SPEC_ANDROID §3 (dernier point), §4.5, §10.3 (Android 14), §12.3, §13, §15 (écrans 1, 2, 12) ; SPEC_CORE_KMP §7.3 (`ReadinessSeverity`).
 
 **Fichiers :**
@@ -641,11 +668,11 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 **Produit :** `DeviceReadinessChecker`, `ReadinessDtoMapper`, `NiumiNavHost`, écrans 1, 2 et 12.
 
-- [ ] **Écrire `AndroidDeviceReadinessCheckerTest`** ligne par ligne du tableau §13, implémenter. Inclure le cas mesuré à l'étape 6 : `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` → `BLOCKING_FOR_ALARM` avec `OpenDndSettings` ; les autres filtres → `WARNING`.
-- [ ] **Écrire `ReadinessViewModelTest`**, implémenter avec `NiumiCoreFacade.evaluateActivation`.
-- [ ] **Implémenter la surveillance de session** (SPEC_ANDROID §13.1, ajoutée à l'étape 6) : `DeviceReadinessChecker` réexécuté à chaque réconciliation, à chaque passage au premier plan, sur `ACTION_INTERRUPTION_FILTER_CHANGED` (receiver enregistré à chaud) et au déclenchement ; tout contrôle bloquant devenu faux pendant `ARMED` produit l'incident correspondant (`ANDROID_ALARM_MUTED_BY_DND`, `ANDROID_ALARM_VOLUME_ZERO`, `ANDROID_NOTIFICATIONS_REVOKED`, `ANDROID_FULL_SCREEN_REVOKED`, ou les codes communs `BLOCKING_PERMISSION_REVOKED` / `ALARM_PERMISSION_REVOKED`), une notification du canal `niumi_session_warning` et l'événement `SESSION_READINESS_DEGRADED`. Ne jamais utiliser l'`AccessibilityService` comme sentinelle (§13.1). Tests : chaque contrôle bloquant qui bascule pendant `ARMED` → un incident et une notification, une seule fois tant que l'état ne change pas.
-- [ ] **Écrire `OnboardingScreenTest` et `ReadinessScreenTest`**, implémenter les écrans avec TalkBack (`contentDescription` sur chaque action) et bord à bord.
-- [ ] **Écrire `NiumiNavHost` et `HomeScreen`** ; brancher `SessionSnapshotPublisher` pour rediriger vers la session active.
+- [x] **Écrire `AndroidDeviceReadinessCheckerTest`** ligne par ligne du tableau §13, implémenter. Inclure le cas mesuré à l'étape 6 : `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` → `BLOCKING_FOR_ALARM` avec `OpenDndSettings` ; les autres filtres → `WARNING`. *(12a. Quatorze contrôles, pas treize. Trois écarts documentés dans SPEC_ANDROID §13 et `ETAPE-12A.md` : issue à trois valeurs `PASSED`/`FAILED`/`NOT_APPLICABLE` plutôt qu'un booléen ; les trois contrôles de parcours routés vers les champs dédiés d'`ActivationPolicyInputDto` au lieu de sa liste `checks` ; contrôle d'énergie satisfait par la confirmation de l'utilisateur, `isIgnoringBatteryOptimizations()` ne choisissant que le recours proposé.)*
+- [x] **Écrire `ReadinessViewModelTest`**, implémenter avec `NiumiCoreFacade.evaluateActivation`. *(12b. Le ViewModel ne décide rien : il rejoue `DeviceReadinessChecker`, convertit par `toActivationPolicyInput()` et laisse la façade trancher — le test passe par la **vraie** `NiumiCoreFacade`, jamais par une politique simulée. Écart : les neuf messages manquants de §13 ont été rédigés et ajoutés à la spec dans le même changement (`ReadinessMessages`, 14 contrôles, exhaustivité prouvée sur `entries`). `ReadinessActionIntents` a été ajouté — non prévu au plan — parce que §13 interdit à `:core:system` de construire des `Intent` ; un test instrumenté énumère les quatorze actions et prouve qu'aucune ne produit `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` ni `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.)*
+- [x] **Implémenter la surveillance de session** (SPEC_ANDROID §13.1, ajoutée à l'étape 6) : `DeviceReadinessChecker` réexécuté à chaque réconciliation, à chaque passage au premier plan, sur `ACTION_INTERRUPTION_FILTER_CHANGED` (receiver enregistré à chaud) et au déclenchement ; tout contrôle bloquant devenu faux pendant `ARMED` produit l'incident correspondant (`ANDROID_ALARM_MUTED_BY_DND`, `ANDROID_ALARM_VOLUME_ZERO`, `ANDROID_NOTIFICATIONS_REVOKED`, `ANDROID_FULL_SCREEN_REVOKED`, ou les codes communs `BLOCKING_PERMISSION_REVOKED` / `ALARM_PERMISSION_REVOKED`), une notification du canal `niumi_session_warning` et l'événement `SESSION_READINESS_DEGRADED`. Ne jamais utiliser l'`AccessibilityService` comme sentinelle (§13.1). Tests : chaque contrôle bloquant qui bascule pendant `ARMED` → un incident et une notification, une seule fois tant que l'état ne change pas. *(12a. `SessionReadinessMonitor` remplace les deux contrôles ad hoc que `SessionReconciler` portait depuis l'étape 11 ; `AccessibilityServiceStatus` sort de `ReconcilerSources` au profit du moniteur. Le déclencheur « au déclenchement, avant la sonnerie » reste à l'étape 17, et `MainActivity.ON_RESUME` à la passe 12b.)*
+- [x] **Écrire `OnboardingScreenTest` et `ReadinessScreenTest`**, implémenter les écrans avec TalkBack (`contentDescription` sur chaque action) et bord à bord. *(12b. Décision validée : ces deux tests sont **instrumentés** (`androidTest`), comme `AccessibilityConsentScreenTest` — aucun test Compose ne tourne en JVM dans ce dépôt et Robolectric n'y est pas introduit. La logique testable sans rendu — textes, ordre des contrôles, action unique — reste couverte en JVM par des objets purs. Décision validée le 2026-09-11 : **onboarding en page unique défilante**, et non un pager — tout le contenu passe devant l'utilisateur dans l'ordre, y compris sous TalkBack, et la case reste l'unique passage. Six points et non quatre : §13 et §13.1 en ajoutent deux, la réinitialisation possible de l'exemption d'énergie par une mise à jour et le caractère jamais immédiat de l'avertissement.)*
+- [x] **Écrire `NiumiNavHost` et `HomeScreen`** ; brancher `SessionSnapshotPublisher` pour rediriger vers la session active. *(12b. Déplacés de `com.niumi.app.ui` vers `com.niumi.app.navigation` et réécrits en routes typées `@Serializable` ; le paquet `ui` est supprimé. Les treize destinations sont déclarées, **quatre seulement sont enregistrées** — celles dont l'écran existe. Écart validé avec l'utilisateur : la redirection vers `ActiveSession` est livrée comme fonction pure testée (`homeDestinationFor`) et consommée par `HomeViewModel`, mais le NavHost n'y navigue pas, l'écran 7 arrivant à l'étape 15 ; aucune session ne peut être armée avant l'étape 14, le cas ne peut donc pas se produire d'ici là. Deux dépendances annoncées par le plan se sont révélées inutiles à `:feature:setup` : `navigation.compose` (le module n'a pas de `NavHost`, les routes vivent dans `:app`) et `datastore.preferences` (`SetupPreferences` est une interface de `:core:system` injectée par Hilt). Seule `activity.compose` est ajoutée, pour le lanceur de `POST_NOTIFICATIONS`. `SetupNavigation.kt` n'existe pas : un module `feature` ne peut pas dépendre de `:app` (§6), il expose des lambdas.)*
 - [ ] **Vérifier :**
 
 ```bash
@@ -654,9 +681,11 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
+*(12b faite le 2026-09-11 — 37 tests JVM `:feature:setup` (29 nouveaux) et 11 `:app` (5 nouveaux) verts, non-régression sur `:core:system` (134), `:shared:core` (160), `:core:database` (90), `:feature:ringing` (21), `:feature:session` (1) ; `:app:assembleDebug`, les deux `compileDebugAndroidTestKotlin`, ktlint, detekt et `:app:lintDebug` verts. `detekt.yml` gagne une exemption `CyclomaticComplexMethod: ignoreSingleWhenExpression` : une fonction dont le corps est un seul `when` exhaustif sur une énumération est une table de correspondance, et la remplacer par une `Map` ferait perdre l'exhaustivité vérifiée à la compilation. Détails dans `docs/android/implementation-reports/ETAPE-12B.md`.)*
+
 **Tests manuels :** refuser les notifications → blocage affiché avec demande de permission ; retirer le plein écran (Android 14+) → blocage avec raccourci réglages ; volume alarme à zéro → blocage ; Ne pas déranger → avertissement ; retour des réglages → recalcul automatique.
 
-**Terminé quand :** les 13 contrôles sont testés, aucune redirection vers `SCHEDULE_EXACT_ALARM`, l'onboarding explique l'absence de secours logiciel avant la première activation.
+**Terminé quand :** les **14** contrôles sont testés, aucune redirection vers `SCHEDULE_EXACT_ALARM`, l'onboarding explique l'absence de secours logiciel avant la première activation. *(12a atteinte le 2026-09-11 : 134 tests JVM `:core:system` verts dont 43 nouveaux, non-régression sur les cinq autres modules, `:app:assembleDebug`, ktlint, detekt et `:app:lintDebug` verts. 12b atteinte le 2026-09-11 : les quatorze contrôles portent chacun leur message de §13, l'onboarding énonce l'absence de secours logiciel avant la première activation, et aucune action ne redirige vers « Alarmes et rappels » — prouvé en énumérant les quatorze actions. **Validé sur appareil le 2026-09-11 (Xiaomi 25080RABDG, Android 16) : 69 tests instrumentés verts (17 `:feature:setup`, 10 `:core:system`, 37 `:core:database`, 5 `:feature:ringing`) et protocole manuel de §13 déroulé essai par essai.** Ce passage a révélé un défaut d'affichage qu'aucun test ne pouvait attraper — la liste montrait le message de remédiation à côté d'un contrôle satisfait, donc l'inverse de la vérité (§15) — corrigé et couvert par trois tests de régression. Deux points ne sont pas observables avant l'étape 13 : la confirmation de l'exemption d'énergie, et le blocage par volume d'alarme, `STREAM_ALARM` ayant `Min: 1` sur cet appareil. Détails dans `ETAPE-12B.md`.)*
 
 ### Étape 13 : association du boîtier et sélecteur d'applications
 

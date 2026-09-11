@@ -11,6 +11,7 @@ import com.niumi.database.EventReceipt
 import com.niumi.database.StoredDecision
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.blocking.BlockedPackagesState
+import com.niumi.system.readiness.AndroidIncidentCodes
 import com.niumi.system.session.fakes.SessionDtoFixtures
 import com.niumi.system.session.fakes.TestCoordinatorHarness
 import kotlinx.coroutines.test.runTest
@@ -178,6 +179,59 @@ class SessionReconcilerTest {
             assertThat(harness.gateway.incidentsRecorded.map { it.second.code })
                 .contains(IncidentCodes.BLOCKING_PERMISSION_REVOKED)
             assertThat(harness.technicalEventLog.logged).contains(TechnicalEventType.ACCESSIBILITY_DISABLED)
+        }
+
+    @Test
+    fun armedWithADegradedAndroidControlStillEvaluatesTheTriggerDelay() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.clock.now = 1_000L
+            // Volume d'alarme à zéro : le réveil devient inaudible, mais il reste programmé —
+            // l'incident ne doit pas interrompre la passe (SPEC_ANDROID §13.1).
+            harness.readinessSources.alarmVolumeSource.volume = 0
+            seed(harness, armedSnapshot())
+
+            harness.coordinator.reconcile(ReconcileReason.PROCESS_START)
+
+            assertThat(harness.gateway.incidentsRecorded.map { it.second.code })
+                .contains(AndroidIncidentCodes.ALARM_VOLUME_ZERO)
+            assertThat(harness.alarmScheduler.isScheduled(SessionDtoFixtures.SESSION_ID)).isTrue()
+            assertThat(harness.technicalEventLog.logged).contains(TechnicalEventType.ALARM_RESCHEDULED)
+            assertThat(harness.technicalEventLog.logged).contains(TechnicalEventType.SESSION_READINESS_DEGRADED)
+            assertThat(harness.warningNotifier.presented).hasSize(1)
+        }
+
+    @Test
+    fun armedWithExactAlarmPermissionRevokedNeverReschedulesTheAlarm() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.clock.now = 1_000L
+            harness.alarmScheduler.canScheduleExactValue = false
+            seed(harness, armedSnapshot())
+
+            harness.coordinator.reconcile(ReconcileReason.PROCESS_START)
+
+            // Reprogrammer une alarme exacte sans y avoir droit n'aurait aucun sens : la passe
+            // s'arrête après l'incident, comme à l'étape 11.
+            assertThat(harness.alarmScheduler.isScheduled(SessionDtoFixtures.SESSION_ID)).isFalse()
+            assertThat(harness.technicalEventLog.logged).doesNotContain(TechnicalEventType.ALARM_RESCHEDULED)
+        }
+
+    @Test
+    fun aDegradedControlIsReportedOnceAcrossSuccessiveReconciliations() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.clock.now = 1_000L
+            harness.readinessSources.alarmVolumeSource.volume = 0
+            seed(harness, armedSnapshot())
+
+            harness.coordinator.reconcile(ReconcileReason.PROCESS_START)
+            harness.coordinator.reconcile(ReconcileReason.USER_UNLOCKED)
+
+            assertThat(
+                harness.gateway.incidentsRecorded.count { it.second.code == AndroidIncidentCodes.ALARM_VOLUME_ZERO },
+            ).isEqualTo(1)
+            assertThat(harness.warningNotifier.presented).hasSize(1)
         }
 
     @Test
