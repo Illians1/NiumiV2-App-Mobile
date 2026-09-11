@@ -7,6 +7,7 @@ import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
+import com.niumi.database.directboot.UnlockState
 
 /** Base Room en mémoire, une par test (patron `:core:system` : `AndroidJUnit4`, sans Hilt). */
 internal fun newInMemoryDatabase(): NiumiDatabase =
@@ -15,6 +16,11 @@ internal fun newInMemoryDatabase(): NiumiDatabase =
             ApplicationProvider.getApplicationContext<Context>(),
             NiumiDatabase::class.java,
         ).build()
+
+/** Déverrouillé en permanence : ces tests portent sur Room, pas sur la garde `ROOM_BEFORE_UNLOCK`. */
+internal object AlwaysUnlockedState : UnlockState {
+    override val isUserUnlocked: Boolean = true
+}
 
 internal object RoomTestFixtures {
     private val referenceWakeSchedule =

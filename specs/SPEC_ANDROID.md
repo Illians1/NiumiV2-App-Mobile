@@ -400,13 +400,15 @@ failureCode
 ringtoneKey
 vibrationEnabled
 boxId
-tokenSha256
-blockedPackageNames
+boxTokenSha256Hex
+blockedPackages
 eventReceipts
 pendingEffects
 ```
 
-Ce snapshot est une projection partielle de Room, mais son enveloppe de session active contient tous les champs requis pour reconstruire un `SessionSnapshot` et appeler KMP avant déverrouillage. Chaque effet de `pendingEffects` conserve aussi son payload sérialisé afin de reprendre `RECORD_INCIDENT`. Il permet de reprogrammer et de déclencher l'alarme avant le premier déverrouillage après un redémarrage. Il ne contient aucune donnée de compte. Son écriture doit être atomique. Utiliser un fichier temporaire dans le même répertoire, puis un renommage, ou des préférences synchrones dédiées avec contrôle de version. Une réécriture à `domainRevision` égale est idempotente; une révision inférieure est refusée.
+`boxTokenSha256Hex` reprend le nom de colonne de `AlarmSessionEntity` (§7.2) plutôt que `tokenSha256` (nom propre à `PairedBoxEntity`) : le snapshot projette la session, pas le boîtier associé. `blockedPackages` conserve la paire `(packageName, displayNameSnapshot)` de `BlockedAppEntity`, pas seulement le nom du package : le libellé figé à l'activation est requis par le texte imposé de l'overlay (§12.2, « {Nom de l'application} reste bloquée… ») et doit rester disponible si le blocage doit être reconstruit avant déverrouillage.
+
+Ce snapshot est une projection partielle de Room, mais son enveloppe de session active contient tous les champs requis pour reconstruire un `SessionSnapshot` et appeler KMP avant déverrouillage. Chaque effet de `pendingEffects` conserve aussi son payload sérialisé afin de reprendre `RECORD_INCIDENT`. Il permet de reprogrammer et de déclencher l'alarme avant le premier déverrouillage après un redémarrage. Il ne contient aucune donnée de compte. Son écriture doit être atomique. Utiliser un fichier temporaire dans le même répertoire, puis un renommage, ou des préférences synchrones dédiées avec contrôle de version. Une réécriture à `domainRevision` égale, pour la même session, est idempotente; une révision inférieure pour cette même session est refusée. Une nouvelle session (autre `sessionId`) repart légitimement à une révision inférieure : la garde est scopée par `sessionId`, pas globale.
 
 Les composants `directBootAware` ne doivent pas créer Room ou un dépôt qui ouvre Room avant `UserManager.isUserUnlocked == true`. Utiliser des dépendances différées et le snapshot comme unique source avant le déverrouillage.
 

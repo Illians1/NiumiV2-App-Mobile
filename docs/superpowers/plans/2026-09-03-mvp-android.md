@@ -157,8 +157,16 @@ interface SessionStore {
 }
 interface DirectBootStore {
     fun read(): DirectBootSnapshot?                                   // null si absent ; DirectBootSnapshot.Corrupted si illisible
-    fun write(snapshot: DirectBootSnapshot): OperationResult        // refuse domainRevision inférieure
+    fun write(snapshot: DirectBootSnapshot.Active): DirectBootWriteResult  // refuse domainRevision inférieure (même sessionId)
     fun clear()
+}
+// DirectBootWriteResult remplace OperationResult (étape 10) : OperationResult vit dans
+// :core:system, DirectBootStore dans :core:database, et :core:system → :core:database jamais
+// l'inverse (règle de dépendance §6). Voir ETAPE-10.md.
+sealed interface DirectBootWriteResult {
+    data object Written : DirectBootWriteResult
+    data object StaleRevision : DirectBootWriteResult
+    data class Failed(val reason: String) : DirectBootWriteResult
 }
 
 // :core:system — com.niumi.system.session
@@ -501,18 +509,18 @@ adb shell cmd audio set-enable-hardening throw   # Android 17 : vérifier que le
 
 **Produit :** `DirectBootStore`, `DirectBootMapper`, `UnlockState`.
 
-- [ ] **Écrire `DirectBootSnapshotJsonTest`** et le type sérialisable.
-- [ ] **Écrire `DirectBootMapperTest`**, implémenter le mapper (réutilise `SessionSnapshotMapper` de l'étape 9 pour les champs communs).
-- [ ] **Écrire `FileDirectBootStoreTest`**, implémenter `FileDirectBootStore` avec `AtomicFile.startWrite()/finishWrite()` et comparaison de révision avant écriture.
-- [ ] **Ajouter dans `DatabaseModule`** une règle Hilt : `NiumiDatabase` est fourni via `Lazy`/`Provider` et `RoomSessionStore` vérifie `UnlockState.isUserUnlocked` avant tout accès, sinon `IllegalStateException("ROOM_BEFORE_UNLOCK")` (testé unitairement avec un `UnlockState` faux).
-- [ ] **Vérifier :**
+- [x] **Écrire `DirectBootSnapshotJsonTest`** et le type sérialisable. *(Types de projection dédiés — `DirectBootBlockedPackage`, `DirectBootReceipt`, `DirectBootEffect` — plutôt que les types de production, mêmes raisons que le `@SerialName` de l'étape 9 ; JSON doré épinglé a révélé qu'un `Json` par défaut (`encodeDefaults = false`) omet silencieusement `projectionSchemaVersion` (valeur par défaut) — corrigé par un `Json` dédié au format persisté, `encodeDefaults = true`. Voir `ETAPE-10.md`.)*
+- [x] **Écrire `DirectBootMapperTest`**, implémenter le mapper (réutilise `SessionSnapshotMapper` de l'étape 9 pour les champs communs). *(Écart : ne partage pas de code avec `SessionSnapshotMapper` — deux mappers indépendants vers deux formats physiques distincts, leur cohérence prouvée par `DirectBootRoomParityTest` plutôt que par du partage. `DirectBootReduceTest` prouve explicitement l'exigence du « Terminé quand ». Voir `ETAPE-10.md`.)*
+- [x] **Écrire `FileDirectBootStoreTest`**, implémenter `FileDirectBootStore` avec `AtomicFile.startWrite()/finishWrite()` et comparaison de révision avant écriture. *(Politique de révision extraite en une fonction pure `decideWrite`, testée en JVM (`DirectBootWriteDecisionTest`) — même motif que `AlarmPendingIntentSpecs`/`RingingNotificationSpecs`. `DirectBootWriteResult` remplace `OperationResult` des « Interfaces transverses » (`:core:system → :core:database` jamais l'inverse) : écart 4, plan MVP corrigé. Garde de révision scopée par `sessionId` : écart 6. 10 tests, vérifiés sur appareil réel — voir `ETAPE-10.md`.)*
+- [x] **Ajouter dans `DatabaseModule`** une règle Hilt : `NiumiDatabase` est fourni via `Lazy`/`Provider` et `RoomSessionStore` vérifie `UnlockState.isUserUnlocked` avant tout accès, sinon `IllegalStateException("ROOM_BEFORE_UNLOCK")` (testé unitairement avec un `UnlockState` faux). *(La garde vit dans `RoomSessionStore` lui-même, pas dans `DatabaseModule` : `RoomSessionStore(databaseProvider: Provider<NiumiDatabase>, unlockState: UnlockState)` lève avant même d'appeler `databaseProvider.get()`, prouvé par `RoomSessionStoreUnlockGuardTest` avec un provider qui échoue s'il est sollicité. `UnlockAwareTechnicalEventLog` branche en plus `RoomTechnicalEventLog`, écrit à l'étape 9 mais jamais utilisé jusqu'ici — décision validée avec l'utilisateur. Voir `ETAPE-10.md`.)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :core:database:testDebugUnitTest :core:database:connectedDebugAndroidTest
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Terminé quand :** un snapshot Direct Boot actif se convertit en `SessionSnapshotDto` accepté par `NiumiCoreFacade.reduce` (test explicite), écriture atomique, révision protégée, corruption explicite.
+**Terminé quand :** un snapshot Direct Boot actif se convertit en `SessionSnapshotDto` accepté par `NiumiCoreFacade.reduce` (test explicite), écriture atomique, révision protégée, corruption explicite. *(Fait le 2026-09-10 — 90 tests JVM `:core:database` (36 nouveaux) verts, non-régression sur `:shared:core` (160), `:core:system` (56), `:feature:ringing` (21), `:feature:session` (1), `:app` (6) ; **29 tests instrumentés verts sur Xiaomi 25080RABDG / Android 16 (API 36)**, dont les 10 nouveaux de `FileDirectBootStoreTest` ; ktlint/detekt/lint verts sur tout le dépôt, `:app:assembleDebug` vert. Détails dans `docs/android/implementation-reports/ETAPE-10.md`.)*
 
 ### Étape 11 : `SessionCoordinator`, registre idempotent, outbox, exécution des effets et réconciliateur
 

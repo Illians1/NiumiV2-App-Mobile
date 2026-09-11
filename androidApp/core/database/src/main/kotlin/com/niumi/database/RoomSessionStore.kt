@@ -1,6 +1,7 @@
 package com.niumi.database
 
 import androidx.room.withTransaction
+import com.niumi.database.directboot.UnlockState
 import com.niumi.database.entity.ActiveSessionPointerEntity
 import com.niumi.database.entity.AlarmSessionEntity
 import com.niumi.database.mapping.toBlockedPackage
@@ -9,19 +10,32 @@ import com.niumi.database.mapping.toEntity
 import com.niumi.database.mapping.toExtras
 import com.niumi.database.mapping.toPendingEffect
 import com.niumi.database.mapping.toSnapshotDto
+import javax.inject.Provider
+
+private const val ROOM_BEFORE_UNLOCK_MESSAGE = "ROOM_BEFORE_UNLOCK"
 
 /**
  * Implémentation Room de [SessionStore] (SPEC_CORE_KMP §13). Chaque décision est écrite dans une
  * seule transaction (`database.withTransaction`, `room-ktx`) : session, applications bloquées,
  * pointeur, reçu et effets. `@Transaction` sur un DAO est écarté ici : il ne peut appeler que des
- * méthodes de son propre DAO, ce qui imposerait un DAO unique pour cinq tables. Les DAO sont
- * dérivés de [database] plutôt qu'injectés un à un : sept paramètres dépasseraient
- * `LongParameterList` (detekt) pour un gain nul, `NiumiDatabase` les exposant déjà tous.
+ * méthodes de son propre DAO, ce qui imposerait un DAO unique pour cinq tables.
+ *
+ * [databaseProvider] plutôt qu'un [NiumiDatabase] direct : SPEC_ANDROID §7.3 interdit d'ouvrir
+ * Room avant `UserManager.isUserUnlocked == true`. [database] vérifie [UnlockState] et lève avant
+ * même d'appeler `databaseProvider.get()` — la base n'est donc jamais construite si l'appareil
+ * est verrouillé, pas seulement inutilisée (`RoomSessionStoreUnlockGuardTest`, `ETAPE-10.md`).
  */
 class RoomSessionStore(
-    private val database: NiumiDatabase,
+    private val databaseProvider: Provider<NiumiDatabase>,
+    private val unlockState: UnlockState,
     private val nowEpochMillis: () -> Long = { System.currentTimeMillis() },
 ) : SessionStore {
+    private val database: NiumiDatabase
+        get() {
+            check(unlockState.isUserUnlocked) { ROOM_BEFORE_UNLOCK_MESSAGE }
+            return databaseProvider.get()
+        }
+
     private val sessionDao get() = database.sessionDao()
     private val blockedAppDao get() = database.blockedAppDao()
     private val pointerDao get() = database.activeSessionPointerDao()

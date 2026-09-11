@@ -8,6 +8,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.inject.Provider
 
 /**
  * `commitDecision` écrit session, applications, pointeur, reçu et effets dans une seule
@@ -22,7 +23,7 @@ class RoomSessionStoreCommitTest {
     @Before
     fun setUp() {
         database = newInMemoryDatabase()
-        store = RoomSessionStore(database)
+        store = RoomSessionStore(Provider { database }, AlwaysUnlockedState)
     }
 
     @After

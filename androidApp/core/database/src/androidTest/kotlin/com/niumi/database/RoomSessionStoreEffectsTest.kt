@@ -8,6 +8,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.inject.Provider
 
 /**
  * Tri et filtrage de l'outbox (SPEC_CORE_KMP §6.1) : `PENDING` et `FAILED` sont rejoués — écart
@@ -23,7 +24,7 @@ class RoomSessionStoreEffectsTest {
     @Before
     fun setUp() {
         database = newInMemoryDatabase()
-        store = RoomSessionStore(database)
+        store = RoomSessionStore(Provider { database }, AlwaysUnlockedState)
     }
 
     @After
