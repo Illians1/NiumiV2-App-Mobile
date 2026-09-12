@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
  * **ne peut pas** être testé ici : l'APK de test d'un module `library` est une application
  * distincte (`com.niumi.feature.session.test`), alors que le service activé appartient à
  * `com.niumi.app` et vit dans son process. Les deux ont donc chacun leur
- * `InMemoryBlockedPackagesProjection` et le test ne peut pas piloter le service réel. Ce test
+ * `PersistedBlockedPackagesProjection` et le test ne peut pas piloter le service réel. Ce test
  * de bout en bout doit vivre dans `androidTest` de `:app` ; voir `ETAPE-05.md`.
  */
 @RunWith(AndroidJUnit4::class)

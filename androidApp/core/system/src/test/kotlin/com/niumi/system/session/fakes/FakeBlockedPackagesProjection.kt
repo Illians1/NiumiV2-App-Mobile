@@ -1,7 +1,7 @@
 package com.niumi.system.session.fakes
 
+import com.niumi.database.blocking.BlockedPackagesState
 import com.niumi.system.blocking.BlockedPackagesProjection
-import com.niumi.system.blocking.BlockedPackagesState
 
 class FakeBlockedPackagesProjection : BlockedPackagesProjection {
     var state: BlockedPackagesState = BlockedPackagesState.Inactive

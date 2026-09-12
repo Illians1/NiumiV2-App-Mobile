@@ -43,6 +43,17 @@ fun PendingEffect.toEntity(updatedAtEpochMillis: Long): SessionEffectOutboxEntit
 fun SessionEffectOutboxEntity.toPendingEffect(): PendingEffect =
     PendingEffect(effectId, sessionId, revision, kind, ordinal, payloadJson, status, lastError)
 
+/** Sens lecture, ajouté à l'étape 15 pour l'écran de session active. `id` n'a pas d'équivalent
+ * dans le DTO : c'est une clé de stockage, jamais une donnée métier.
+ */
+fun SessionIncidentEntity.toDomain(): SessionIncidentDto =
+    SessionIncidentDto(
+        code = code,
+        severity = severity,
+        occurredAtEpochMillis = occurredAtEpochMillis,
+        platform = platform,
+    )
+
 fun SessionIncidentDto.toEntity(sessionId: String): SessionIncidentEntity =
     SessionIncidentEntity(
         sessionId = sessionId,

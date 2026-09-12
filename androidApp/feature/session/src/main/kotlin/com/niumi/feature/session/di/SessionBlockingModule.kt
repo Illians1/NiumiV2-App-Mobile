@@ -8,7 +8,7 @@ import com.niumi.feature.session.blocking.WindowManagerBlockOverlayController
 import com.niumi.system.blocking.AccessibilityServiceStatus
 import com.niumi.system.blocking.AndroidAccessibilityServiceStatus
 import com.niumi.system.blocking.BlockingController
-import com.niumi.system.blocking.InMemoryBlockedPackagesProjection
+import com.niumi.system.blocking.PersistedBlockedPackagesProjection
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,7 +37,7 @@ object SessionBlockingModule {
     @Provides
     @Singleton
     fun provideBlockingController(
-        projection: InMemoryBlockedPackagesProjection,
+        projection: PersistedBlockedPackagesProjection,
         accessibilityServiceStatus: AccessibilityServiceStatus,
     ): BlockingController = AndroidBlockingController(projection, accessibilityServiceStatus)
 

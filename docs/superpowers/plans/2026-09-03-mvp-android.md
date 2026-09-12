@@ -792,47 +792,101 @@ SPEC_CORE_KMP §8.1 dit désormais ce qui doit être **affiché** quand l'heure 
 
 ### Étape 15 : écran de session active, blocage branché sur la persistance, modification ou annulation par scan
 
+**Trois écarts au plan, validés avec l'utilisateur le 2026-09-12** et répercutés dans les specs
+dans le même changement. Détails dans `ETAPE-15.md`.
+
+1. **`RoomBlockedPackagesProjection` était irréalisable au chemin annoncé.** Le plan la plaçait
+   dans `:core:database` en implémentant `BlockedPackagesProjection`, qui vit dans `:core:system` ;
+   §6 n'autorise que `:core:system → :core:database`. Précédent identique : `DirectBootWriteResult`
+   (étape 10). En outre `current()` est synchrone, appelée dans `onAccessibilityEvent`, alors que
+   tous les DAO sont `suspend` — une lecture Room directe y est impossible. La lecture est donc
+   scindée : `BlockedPackagesState` descend dans `:core:database` (il y importait déjà
+   `BlockedPackage`), `RoomBlockedPackagesSource` y porte toute la logique de lecture derrière
+   l'interface `BlockedPackagesSource`, et `PersistedBlockedPackagesProjection` (`:core:system`)
+   garde le cache que le service lit. La variante d'illisibilité sort de `BlockedPackagesState`
+   pour devenir `BlockedPackagesRead.Unreadable` : le cache ne peut alors **structurellement** pas
+   mémoriser un snapshot corrompu comme « aucune session ».
+2. **Pas d'`AccessibilityServiceWatcher`.** `SessionReadinessMonitor` (étape 12) porte déjà le
+   mapping `ACCESSIBILITY_SERVICE → BLOCKING_PERMISSION_REVOKED CRITICAL` et sa garde de
+   déduplication ; un composant parallèle aurait produit deux incidents `CRITICAL` pour le même
+   fait. Le monitor est étendu au-delà de `ARMED` pour ce seul contrôle, et le déclencheur
+   « passage au premier plan » de §13.1 — qui n'avait aucun appelant depuis l'étape 12 — est
+   branché sur le `ON_RESUME` de l'écran 7, derrière la nouvelle interface
+   `ForegroundReadinessTrigger`.
+3. **`PendingNfcScanHandler` sous qualificatif `@SessionNfcScanHandler`.** Une liaison non
+   qualifiée entrait en conflit avec `PocNfcBindingsModule` (debug), et en debug l'écran 9 aurait
+   hérité de `PocNfcScanHandler`, qui retourne `Accepted` sur le boîtier associé sans toucher à la
+   session réelle — donc un faux « Session annulée ».
+
+**Deux points non prévus par le plan, découverts à l'implémentation.**
+
+- **`PREPARING` ne peut pas se lire `Active` sur la seule présence des lignes `blocked_app`.**
+  `SessionReconciler.reconcilePreparing` déduit de `current() is Active` que l'activation a réussi :
+  une activation interrompue aurait été prise pour une activation aboutie. La projection lit donc
+  le statut de l'effet `APPLY_BLOCKING`, exactement comme celui de `REMOVE_BLOCKING` en `RELEASING`.
+- **Aucun chemin de lecture des incidents n'existait.** `IncidentDao.forSession` n'avait aucun
+  appelant et `SessionStore` n'expose que l'écriture. `SessionIncidentsReader` (`:core:database`,
+  unlock-aware) est ajouté plutôt qu'une douzième méthode sur `RoomSessionStore`, déjà au plafond
+  `TooManyFunctions` de detekt.
+
 **Specs à lire :** SPEC_CORE_KMP §2 (points 3, 4, 11), §4 ; SPEC_ANDROID §3, §11.3, §12.2, §15 (écrans 7, 9, 11), §19.1 (`feature`).
 
 **Fichiers :**
 - Créer dans `androidApp/feature/session/src/main/kotlin/com/niumi/feature/session/active/` : `ActiveSessionScreen.kt` (date, heure et fuseau d'activation, heure recalculée dans le fuseau courant si différent, liste des applications bloquées, santé et incidents récents, bouton « Modifier ou annuler » → `ScanToModify`), `ActiveSessionViewModel.kt`, `ScanToModifyScreen.kt` (Reader Mode via `NfcReader`, texte « Scanne ton boîtier Niumi pour annuler ou modifier ta session. Tes applications resteront bloquées jusqu'au scan. », aucune autre action), `ScanToModifyViewModel.kt` (délègue à `NfcScanHandler` ; après `Accepted` et état final `CANCELLED`, navigation vers `Cancelled`), `CancelledScreen.kt` (écran 11 : « Session annulée », bouton « Préparer un nouveau réveil »).
-- Créer dans `androidApp/core/database/src/main/kotlin/com/niumi/database/blocking/` : `RoomBlockedPackagesProjection.kt` (implémente `BlockedPackagesProjection` de l'étape 5 : lit le pointeur actif, l'état, les `BlockedAppEntity` et, en `RELEASING`, le statut de l'effet `REMOVE_BLOCKING` dans l'outbox ; avant déverrouillage, lit `DirectBootStore`).
-- Modifier `NiumiBlockingAccessibilityService` : injection de `RoomBlockedPackagesProjection` (Hilt `@AndroidEntryPoint` sur le service), rechargement dans `onServiceConnected` et à chaque changement de `SessionSnapshotPublisher`.
-- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/blocking/` : `AccessibilityServiceWatcher.kt` (à chaque `reconcile` et au retour au premier plan, si session active et service inactif → `INCIDENT_REPORTED BLOCKING_PERMISSION_REVOKED CRITICAL` une seule fois par session).
-- `HandleValidNfcUseCase` n'existe pas encore (étape 18) : à cette étape, `ScanToModifyViewModel` consomme l'interface `NfcScanHandler` dont l'implémentation de production est livrée à l'étape 18. En attendant, la liaison Hilt de production pointe vers `PendingNfcScanHandler` qui retourne `Ignored` et journalise ; ce n'est pas un fake de comportement, l'écran affiche « Fonction disponible à l'étape suivante » uniquement en debug.
-- Tests : `ActiveSessionViewModelTest` (affichage du fuseau courant différent du fuseau d'activation ; santé `DEGRADED` visible ; incident `CRITICAL` mis en avant), `RoomBlockedPackagesProjectionTest` (instrumenté : `ARMED` → `Active` ; `RELEASING` avec `REMOVE_BLOCKING SUCCEEDED` → `Releasing` liste vide ; `RELEASING` avec `PENDING` → `Releasing` liste pleine ; `COMPLETED` → `Inactive`), `AccessibilityServiceWatcherTest` (incident une seule fois), `ScanToModifyViewModelTest` (aucune donnée modifiée avant `CANCELLED` : le `AppSelectionStore` n'est pas touché tant que l'état n'est pas final).
+- Créer dans `androidApp/core/database/src/main/kotlin/com/niumi/database/blocking/` : `BlockedPackagesState.kt` (déplacé depuis `:core:system`), `BlockedPackagesRead.kt`, `BlockedPackagesSource.kt`, `RoomBlockedPackagesSource.kt` (lit le pointeur actif, l'état, les `BlockedAppEntity` et le statut des effets `APPLY_BLOCKING`/`REMOVE_BLOCKING` dans l'outbox ; avant déverrouillage, lit `DirectBootStore`). Étendre `OutboxDao` d'une requête par `kind` : `replayable()` exclut par construction les statuts réussis. Créer `incident/SessionIncidentsReader.kt` et `di/SessionReadModule.kt`.
+- Renommer `InMemoryBlockedPackagesProjection` en `PersistedBlockedPackagesProjection` (`:core:system`) : cache `@Volatile` plus `suspend fun refresh()`. Créer `BlockingProjectionRefresher`, extrait du service pour être prouvable en JVM — un `AccessibilityService` ne s'instancie pas en test unitaire. Modifier `NiumiBlockingAccessibilityService` : injection du refresher, abonnement lancé dans `onServiceConnected` sur un scope annulé dans `onUnbind`.
+- **Écart 2 ci-dessus** : au lieu d'un `AccessibilityServiceWatcher`, étendre `SessionReadinessMonitor` (le contrôle `ACCESSIBILITY_SERVICE` est évalué dans tous les états non finaux, les cinq autres restant limités à `ARMED`, et un contrôle sortant du périmètre voit sa notification retirée) et créer `readiness/ForegroundReadinessTrigger.kt`, implémentée par `SessionReadinessWatcher`.
+- `HandleValidNfcUseCase` n'existe pas encore (étape 18) : `ScanToModifyViewModel` consomme `NfcScanHandler` sous le qualificatif `@SessionNfcScanHandler` (**écart 3**), lié à `PendingNfcScanHandler` qui retourne `Ignored` et journalise. Ce n'est pas un faux comportement de production : ignorer un scan non validé est exactement ce qu'exige SPEC_CORE_KMP §4, et l'écran n'annonce aucun succès — d'où aussi l'absence du texte « Fonction disponible à l'étape suivante », qui aurait été le seul élément de l'écran à différer entre debug et release.
+- Tests : `RoomBlockedPackagesSourceTest` (instrumenté, `:core:database`) et `DirectBootBlockedPackagesSourceTest` (JVM, branche avant déverrouillage) ; `PersistedBlockedPackagesProjectionTest` et `BlockingProjectionRefresherTest` (`:core:system`) ; `SessionReadinessMonitorTest` étendu ; `RoomSessionIncidentsReaderTest` (instrumenté) et son test de garde JVM ; `ActiveSessionViewModelTest` étendu et `ActiveSessionTextsTest` ; `ScanToModifyViewModelTest`.
 
-**Produit :** écrans 7, 9, 11 ; `BlockedPackagesProjection` définitive ; `AccessibilityServiceWatcher`.
+**Produit :** écrans 7, 9, 11 ; projection de blocage persistée ; surveillance du service d'accessibilité étendue à toute la durée d'une session.
 
-- [ ] **Écrire `RoomBlockedPackagesProjectionTest`**, implémenter, remplacer la projection mutable de l'étape 5 (la liaison debug POC disparaît).
-- [ ] **Écrire `ActiveSessionViewModelTest`**, implémenter l'écran 7 complet.
-- [ ] **Écrire `ScanToModifyViewModelTest`**, implémenter les écrans 9 et 11.
-- [ ] **Écrire `AccessibilityServiceWatcherTest`**, implémenter et brancher sur `reconcile` et `ON_RESUME`.
-- [ ] **Vérifier :**
+- [x] **Écrire les tests de la lecture persistée**, implémenter, remplacer la projection mutable de l'étape 5. *(15 tests instrumentés `RoomBlockedPackagesSourceTest` + 8 tests JVM `DirectBootBlockedPackagesSourceTest`. La classe unique du plan devient une source de lecture dans `:core:database` et un cache dans `:core:system` — écart 1 ci-dessus. Aucune « liaison debug POC de la projection » n'existait en réalité : `PocViewModel` injecte `BlockingController`, pas la projection ; seul `BlockingModule.bindBlockedPackagesProjection` a changé de cible.)*
+- [x] **Écrire `PersistedBlockedPackagesProjectionTest` et `BlockingProjectionRefresherTest`**, brancher le service. *(13 + 4 tests. Le service ne porte que le câblage : un scope annulé dans `onUnbind`.)*
+- [x] **Étendre `SessionReadinessMonitorTest`**, brancher le déclencheur de premier plan. *(+6 tests, dont le remplacement de `aSessionThatIsNoLongerArmedIsNotMonitoredAndItsWarningsAreWithdrawn`, qui codifiait la sortie anticipée sur `state != ARMED`.)*
+- [x] **Écrire `ActiveSessionViewModelTest` étendu et `ActiveSessionTextsTest`**, implémenter l'écran 7 complet. *(+11 et 11 tests. `SessionIncidentsReader` ajouté faute de tout chemin de lecture des incidents.)*
+- [x] **Écrire `ScanToModifyViewModelTest`**, implémenter les écrans 9 et 11. *(10 tests. La garde de réentrance ne se prouve qu'avec un vrai chevauchement — `StandardTestDispatcher` et une lecture bloquée sur un `CompletableDeferred` : deux appels successifs sous dispatcher non confiné sont sérialisés et la garde les laisse passer à raison. `startReaderMode`/`stopReaderMode` ne sont pas couverts en JVM, une `Activity` n'y étant pas instanciable — même convention que `PairingViewModelTest`.)*
+- [x] **Vérifier :**
 
 ```bash
-./gradlew :feature:session:testDebugUnitTest :core:system:testDebugUnitTest :core:database:connectedDebugAndroidTest
+./gradlew :feature:session:testDebugUnitTest :core:system:testDebugUnitTest :core:database:testDebugUnitTest
 ./gradlew :app:assembleDebug
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** session armée → ouvrir une application bloquée depuis launcher, récents, notification → accueil et overlay ; désactiver le service → incident `CRITICAL` visible sur l'écran de session ; changer le fuseau du téléphone → heure locale recalculée, instant inchangé.
+*(Faite le 2026-09-12 — **641 tests JVM verts** : `:feature:session` 100 (+31), `:core:system` 168 (+14), `:core:database` 102 (+9), non-régression sur `:shared:core` (160), `:feature:setup` (76), `:feature:ringing` (21) et `:app` (14) ; `:app:assembleDebug`, `:app:lintDebug`, ktlint et detekt verts. `:core:database:testDebugUnitTest` s'ajoute aux deux cibles citées par le plan. Aucune règle detekt assouplie : `NiumiNavHost` dépassait `LongMethod` (71 > 60), les trois destinations de session sont extraites dans `NavGraphBuilder.activeSessionDestinations`. **`:core:database:connectedDebugAndroidTest` reste à exécuter : appareil requis.**)*
 
-**Terminé quand :** le service lit exclusivement la projection persistée, aucune modification de sélection ou de boîtier n'est possible pendant une session (garde de l'étape 13 + test), tests verts.
+- [x] **Valider sur appareil.** *(**Déroulé essai par essai le 2026-09-12 sur Xiaomi 25080RABDG, Android 16, HyperOS** — **59 tests instrumentés `:core:database` verts** (41 + 18 nouveaux) et les onze essais observés. Deux échecs au premier passage, **dans les tests et non dans le code** : deux boucles réutilisaient le même `eventId` de reçu, ce que le registre d'idempotence de l'étape 11 rejette à raison (`UNIQUE constraint failed: session_event_receipt.eventId`) ; `seed()` prend désormais un `eventId` par itération. **Le correctif central est prouvé** : service relié seul dans un processus neuf, aucune activité ouverte, et le blocage s'applique — la projection vient de Room. Détails dans `ETAPE-15.md`.)*
+
+**Tests manuels :** session armée → ouvrir une application bloquée depuis launcher, récents, notification → accueil et overlay ; **service recréé seul → le blocage tient** (c'est la régression que corrige cette étape) ; désactiver le service → incident `CRITICAL` visible sur l'écran de session ; changer le fuseau du téléphone → heure locale recalculée, instant inchangé ; écran 7 → « Modifier ou annuler » → écran 9, où un scan du boîtier associé ne doit **rien** faire à cette étape. *(Tous validés. **Deux constats de plateforme, hors périmètre**, consignés dans `ETAPE-15.md` : Android ne relie pas le service d'accessibilité après une mort de processus — `am crash` laisse le service déclaré actif mais jamais relié, donc le blocage est inactif jusqu'à ce que la plateforme le relie, ce que l'étape 15 ne peut pas corriger ; et `ReaderModeNfcReader` n'emploie pas `FLAG_READER_NO_PLATFORM_SOUNDS` (étape 4), donc la plateforme vibre à chaque détection de tag, ce qui vide de son sens la vibration d'erreur de §11.2. **Un essai non effectué** : service désactivé pendant que l'alarme sonne, qui exigerait une session en train de sonner — couvert en JVM seulement.)*
+
+**Terminé quand :** le service lit exclusivement la projection persistée, aucune modification de sélection ou de boîtier n'est possible pendant une session (garde de l'étape 13 + test), tests verts. *(**Atteint le 2026-09-12**, sous les deux réserves de plateforme ci-dessus.)*
 
 ### Étape 16 : journal local, diagnostic d'incident et export
 
-**Specs à lire :** SPEC_ANDROID §7.1 (incidents), §15 (écran 12), §16, §17, §18.
+**Report de l'étape 15 — remédiation des incidents sur l'écran 7.** Constaté sur appareil le
+2026-09-12 et décidé avec l'utilisateur : l'écran 7 présente les incidents `CRITICAL` **sans aucun
+recours**. Pendant une session, c'est le seul écran atteignable (§10.4) ; l'utilisateur y lit « le
+service d'accessibilité a été désactivé : le blocage ne s'applique plus » et ne peut rien faire. Le
+cas visé est le plus courant — l'utilisateur désactive le service depuis les réglages Android, ce
+que l'onboarding annonce comme possible à tout moment (§4.3) — et non le cas exotique de la mort du
+processus. Spécifié en SPEC_ANDROID §15, « Remédiation des incidents sur l'écran 7 ». Origine et
+mesures dans `ETAPE-15.md`.
+
+**Specs à lire :** SPEC_CORE_KMP §7.3 ; SPEC_ANDROID §7.1 (incidents), §13 (colonne « Action
+proposée »), §15 (écran 7 « Remédiation des incidents », écran 12), §16, §17, §18.
 
 **Fichiers :**
 - Créer dans `androidApp/feature/session/src/main/kotlin/com/niumi/feature/session/diagnostics/` : `IncidentDiagnosticScreen.kt` (incidents de la session avec gravité, `CRITICAL` en tête et explicité ; résultats du dernier `DeviceReadinessChecker` ; 200 événements techniques ; bouton « Exporter le diagnostic » → `ACTION_SEND` texte), `IncidentDiagnosticViewModel.kt`, `DiagnosticExporter.kt` (texte : modèle, version Android, version de l'application, contrôles, incidents, événements ; masque `boxId` aux 8 premiers caractères, jamais de hash ni d'identifiant matériel).
 - Modifier `TechnicalEventLog` (étape 9) : ajout des champs de contexte (`deviceModel`, `androidVersion`, `appVersion`) et de la règle « `packageName` accepté uniquement pour `BLOCK_APPLIED` » (test).
 - Brancher `RecordIncidentExecutor` (étape 11) sur `IncidentDao` ; brancher chaque exécuteur et le coordinateur sur `TechnicalEventLog` avec les types de §17 (`SESSION_PREPARING`, `SESSION_ARMED`, `ALARM_SCHEDULED`, `ALARM_RESCHEDULED`, `SCAN_REQUEST_NOTIFIED`, `SCAN_REQUEST_CLEARED`, `SESSION_RELEASING`, `SESSION_COMPLETED`, `SESSION_CANCELLED`, `SESSION_FAILED`, `RELEASE_PARTIAL_FAILURE`, `PROCESS_RECREATED`, `ACCESSIBILITY_DISABLED`, `EXACT_ALARM_LOST`, `MISSED_TRIGGER_WINDOW`).
-- Tests : `DiagnosticExporterTest` (aucune occurrence du hash complet, du token ni d'un `boxId` complet ; 200 lignes maximum), `TechnicalEventLogTest` étendu (`packageName` refusé hors `BLOCK_APPLIED`), `IncidentDiagnosticViewModelTest` (`CRITICAL` avant `DEGRADED` avant `WARNING`).
+- Modifier `ActiveSessionScreen`/`ActiveSessionViewModel`/`ActiveSessionTexts` (`:feature:session/active/`, étape 15) : chaque incident remédiable porte son action, au minimum « Ouvrir les réglages d'accessibilité » pour `BLOCKING_PERMISSION_REVOKED`. Réutiliser `ReadinessAction` (`:core:system/readiness/`) et le `settingsIntentFor(...)` de `:feature:setup`, plutôt qu'un second mécanisme — quitte à extraire ce dernier dans un module commun s'il n'est pas atteignable depuis `:feature:session`. **Ne pas** ajouter d'autre action à l'écran 7 : le scan du boîtier reste le seul chemin de sortie (§3, §10.2), et cette action rétablit un sous-système sans toucher à la session.
+- Tests : `DiagnosticExporterTest` (aucune occurrence du hash complet, du token ni d'un `boxId` complet ; 200 lignes maximum), `TechnicalEventLogTest` étendu (`packageName` refusé hors `BLOCK_APPLIED`), `IncidentDiagnosticViewModelTest` (`CRITICAL` avant `DEGRADED` avant `WARNING`), `ActiveSessionViewModelTest` étendu (un incident remédiable expose son action, un incident sans recours n'en expose aucune, et **aucune action n'annule ni ne modifie la session**).
 
 - [ ] **Écrire `DiagnosticExporterTest`**, implémenter.
 - [ ] **Étendre `TechnicalEventLogTest`**, brancher les émetteurs.
 - [ ] **Écrire `IncidentDiagnosticViewModelTest`**, implémenter l'écran 12 et sa route depuis l'écran de session et l'accueil.
+- [ ] **Étendre `ActiveSessionViewModelTest`**, donner leur action aux incidents remédiables de l'écran 7 (report de l'étape 15, voir en tête d'étape).
 - [ ] **Vérifier :**
 
 ```bash
@@ -840,6 +894,8 @@ SPEC_CORE_KMP §8.1 dit désormais ce qui doit être **affiché** quand l'heure 
 ./gradlew :app:assembleDebug
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
+
+**Tests manuels :** session armée → désactiver le service d'accessibilité dans les réglages Android → revenir dans Niumi → l'écran 7 montre l'incident `CRITICAL` **et** son action ; appuyer dessus ouvre les réglages d'accessibilité ; réactiver le service → rouvrir une application bloquée, le blocage doit reprendre sans autre geste (reconstruction depuis Room, étape 15).
 
 **Terminé quand :** l'export ne contient aucune donnée interdite (test), chaque événement du coordinateur apparaît dans le journal, l'écran 12 est accessible.
 

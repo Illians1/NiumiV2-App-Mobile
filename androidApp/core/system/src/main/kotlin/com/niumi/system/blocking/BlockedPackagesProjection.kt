@@ -1,5 +1,7 @@
 package com.niumi.system.blocking
 
+import com.niumi.database.blocking.BlockedPackagesState
+
 /**
  * Lecture de la projection de blocage courante. Le service d'accessibilité ne consomme que
  * cette interface, jamais `BlockingController` : il n'a besoin d'écrire nulle part

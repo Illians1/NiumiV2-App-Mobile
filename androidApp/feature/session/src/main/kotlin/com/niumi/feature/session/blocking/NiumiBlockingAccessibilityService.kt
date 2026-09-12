@@ -8,8 +8,14 @@ import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.blocking.BlockAction
 import com.niumi.system.blocking.BlockedPackagesProjection
 import com.niumi.system.blocking.BlockingDecision
+import com.niumi.system.blocking.BlockingProjectionRefresher
 import com.niumi.system.common.OperationResult
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -18,9 +24,15 @@ import javax.inject.Inject
  * transmet rien à un serveur (aucun accès réseau dans ce module). La configuration XML associée
  * (`niumi_accessibility_service.xml`) filtre déjà les types d'événement reçus.
  *
- * [projection] reste en mémoire (étape 15 : lecture Room ou snapshot) : un process tué perd
- * la liste de blocage active jusqu'à la prochaine décision d'activation. Limite documentée dans
- * `ETAPE-05.md`, pas un contournement — aucune trace durable n'existe encore à relire.
+ * [projection] est reconstruite depuis la persistance depuis l'étape 15 : [refresher] la réaligne
+ * à chaque (re)connexion du service et à chaque décision de session publiée (SPEC_ANDROID §12.2,
+ * « le service doit recharger l'état actif depuis Room ou le snapshot après recréation »). Un
+ * processus tué ne fait donc plus disparaître le blocage d'une session encore active, ce qui
+ * était la limite de l'étape 5 (`ETAPE-05.md`).
+ *
+ * Le service ne porte que le câblage : un scope qu'il annule lui-même dans [onUnbind]. La logique
+ * d'abonnement vit dans [com.niumi.system.blocking.BlockingProjectionRefresher], prouvable en JVM
+ * — un `AccessibilityService` ne s'instancie pas en test unitaire.
  *
  * L'overlay est construit ici, avec le service comme `Context`, et non injecté : seul le
  * service porte le token de fenêtre autorisant `TYPE_ACCESSIBILITY_OVERLAY`
@@ -33,17 +45,32 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
     lateinit var projection: BlockedPackagesProjection
 
     @Inject
+    lateinit var refresher: BlockingProjectionRefresher
+
+    @Inject
     lateinit var technicalEventLog: TechnicalEventLog
 
+    /**
+     * `Dispatchers.Main.immediate` : le cache de la projection est lu par
+     * `onAccessibilityEvent` sur le thread principal, l'y écrire aussi évite toute question de
+     * visibilité entre threads au-delà du `@Volatile` de la projection.
+     */
+    private var refreshScope: CoroutineScope? = null
     private var overlayController: BlockOverlayController? = null
     private var lastBlockedPackage: String? = null
     private var lastBlockAtElapsedMillis: Long = 0L
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        // Peut être rappelé à chaque reconnexion : ne recrée l'overlay que si nécessaire.
+        // Peut être rappelé à chaque reconnexion : ne recrée ni l'overlay ni l'abonnement si
+        // l'un et l'autre tiennent déjà.
         if (overlayController == null) {
             overlayController = WindowManagerBlockOverlayController(this)
+        }
+        if (refreshScope == null) {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+            refreshScope = scope
+            scope.launch { refresher.observeDecisions() }
         }
     }
 
@@ -115,6 +142,8 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: android.content.Intent?): Boolean {
         overlayController?.hide()
         overlayController = null
+        refreshScope?.cancel()
+        refreshScope = null
         return super.onUnbind(intent)
     }
 

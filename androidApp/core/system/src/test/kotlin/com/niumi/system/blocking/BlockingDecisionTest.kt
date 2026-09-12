@@ -2,6 +2,7 @@ package com.niumi.system.blocking
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.database.BlockedPackage
+import com.niumi.database.blocking.BlockedPackagesState
 import org.junit.Test
 
 private const val SESSION_ID = "3f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6b"

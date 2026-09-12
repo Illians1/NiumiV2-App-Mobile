@@ -97,6 +97,18 @@ object SessionDtoFixtures {
         )
     }
 
+    /**
+     * Snapshot synthétique dans l'état demandé, pour les appelants qui n'ont besoin que de
+     * l'état et de la révision (abonnements au publisher, surveillance §13.1). Les horodatages
+     * ne sont pas rendus cohérents avec l'état : seul le moteur KMP en est responsable, et
+     * aucun consommateur de cette fixture ne les lit.
+     */
+    fun snapshotInState(
+        state: SessionStateDto,
+        sessionId: String = SESSION_ID,
+        revision: Long = 1,
+    ): SessionSnapshotDto = releasingSnapshot(sessionId, revision).copy(state = state)
+
     /** Snapshot `RELEASING` synthétique, pour les tests de rejeu d'outbox (réconciliateur). */
     fun releasingSnapshot(
         sessionId: String = SESSION_ID,

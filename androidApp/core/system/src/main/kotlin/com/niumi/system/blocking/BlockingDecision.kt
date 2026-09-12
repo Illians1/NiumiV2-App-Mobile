@@ -1,5 +1,7 @@
 package com.niumi.system.blocking
 
+import com.niumi.database.blocking.BlockedPackagesState
+
 /** Action à exécuter à la suite d'un changement de fenêtre (SPEC_ANDROID §12.2). */
 sealed interface BlockAction {
     data object None : BlockAction

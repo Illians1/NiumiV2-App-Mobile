@@ -34,13 +34,20 @@ class SessionReadinessMonitorTest {
     private val technicalEventLog = FakeTechnicalEventLog()
     private val dispatched = mutableListOf<SessionEventDto>()
 
-    private val monitor =
+    /**
+     * Fabrique plutôt qu'unique instance : la garde de déduplication vit dans le monitor, donc un
+     * test qui veut repartir d'un état vierge (la même panne observée depuis plusieurs états) a
+     * besoin d'une instance neuve.
+     */
+    private fun newMonitor() =
         SessionReadinessMonitor(
             readinessChecker = AndroidDeviceReadinessChecker(sources.build(), FakeClock(NOW), ANDROID_16),
             warningNotifier = notifier,
             eventFactory = SessionEventFactory(SequentialIdGenerator(), FakeClock(NOW)),
             technicalEventLog = technicalEventLog,
         )
+
+    private val monitor = newMonitor()
 
     private val dispatch: suspend (SessionEventDto) -> DispatchResult = { event ->
         dispatched += event
@@ -223,8 +230,13 @@ class SessionReadinessMonitorTest {
             assertThat(dispatched).hasSize(2)
         }
 
+    /**
+     * Étape 15 : au-delà de `ARMED`, les cinq contrôles de réveil se taisent. Un volume d'alarme
+     * signalé pendant `ARMED` sort du périmètre en `RINGING` et son avertissement est retiré —
+     * il resterait sinon affiché sans qu'aucune passe ne puisse plus le réévaluer.
+     */
     @Test
-    fun aSessionThatIsNoLongerArmedIsNotMonitoredAndItsWarningsAreWithdrawn() =
+    fun theWakeUpControlsGoSilentOnceTheSessionHasLeftArmed() =
         runTest {
             breakCheck(ReadinessCheckId.ALARM_VOLUME)
             monitor.evaluate(snapshot(), dispatch)
@@ -233,7 +245,79 @@ class SessionReadinessMonitorTest {
 
             assertThat(result.failing).isEmpty()
             assertThat(result.newlyReported).isEmpty()
-            assertThat(notifier.clearAllCallCount).isEqualTo(1)
+            assertThat(notifier.cleared).containsExactly(ReadinessCheckId.ALARM_VOLUME)
+            assertThat(dispatched).hasSize(1)
+        }
+
+    /**
+     * SPEC_ANDROID §12.2 : « si le service est désactivé pendant une session, Niumi doit le
+     * détecter à sa prochaine exécution et afficher un incident ». Le blocage court jusqu'au scan
+     * (§3), donc bien après `ARMED` — c'est le seul contrôle qui reste surveillé.
+     */
+    @Test
+    fun theAccessibilityServiceIsStillMonitoredAfterArmed() =
+        runTest {
+            breakCheck(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            listOf(
+                SessionStateDto.RINGING,
+                SessionStateDto.AWAITING_NFC,
+                SessionStateDto.TRIGGERED_AWAITING_NFC,
+                SessionStateDto.RELEASING,
+            ).forEach { state ->
+                val monitor = newMonitor()
+                val result = monitor.evaluate(snapshot(state), dispatch)
+
+                assertThat(result.failing).containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+                assertThat(result.newlyReported.map { it.incidentCode })
+                    .containsExactly(IncidentCodes.BLOCKING_PERMISSION_REVOKED)
+            }
+        }
+
+    @Test
+    fun aServiceLostWhileRingingIsReportedOnlyOnce() =
+        runTest {
+            breakCheck(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            monitor.evaluate(snapshot(SessionStateDto.RINGING), dispatch)
+            val second = monitor.evaluate(snapshot(SessionStateDto.RINGING), dispatch)
+
+            assertThat(second.failing).containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            assertThat(second.newlyReported).isEmpty()
+            assertThat(dispatched).hasSize(1)
+        }
+
+    /** Une session `ARMED` puis `RELEASING` ne doit pas resignaler le même service coupé. */
+    @Test
+    fun aServiceAlreadyReportedWhileArmedIsNotReportedAgainWhileReleasing() =
+        runTest {
+            breakCheck(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            monitor.evaluate(snapshot(), dispatch)
+
+            val result = monitor.evaluate(snapshot(SessionStateDto.RELEASING), dispatch)
+
+            assertThat(result.newlyReported).isEmpty()
+            assertThat(dispatched).hasSize(1)
+        }
+
+    @Test
+    fun aFinishedSessionIsNotMonitoredAndAllItsWarningsAreWithdrawn() =
+        runTest {
+            breakCheck(ReadinessCheckId.ALARM_VOLUME)
+            monitor.evaluate(snapshot(), dispatch)
+
+            listOf(
+                SessionStateDto.COMPLETED,
+                SessionStateDto.CANCELLED,
+                SessionStateDto.FAILED,
+            ).forEach { state ->
+                val result = monitor.evaluate(snapshot(state), dispatch)
+
+                assertThat(result.failing).isEmpty()
+                assertThat(result.newlyReported).isEmpty()
+                // Un seul retrait global : les passes suivantes n'ont plus rien à retirer.
+                assertThat(notifier.clearAllCallCount).isEqualTo(1)
+            }
             assertThat(dispatched).hasSize(1)
         }
 }

@@ -18,6 +18,7 @@ import com.niumi.system.notification.SessionWarningNotifier
 import com.niumi.system.power.BatteryOptimizationStatus
 import com.niumi.system.readiness.AndroidDeviceReadinessChecker
 import com.niumi.system.readiness.DeviceReadinessChecker
+import com.niumi.system.readiness.ForegroundReadinessTrigger
 import com.niumi.system.readiness.ReadinessSources
 import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.readiness.SessionReadinessWatcher
@@ -125,4 +126,13 @@ object ReadinessModule {
         coordinator: SessionCoordinator,
         @DefaultDispatcher dispatcher: CoroutineDispatcher,
     ): SessionReadinessWatcher = SessionReadinessWatcher(publisher, monitor, coordinator, dispatcher)
+
+    /**
+     * Même instance que ci-dessus, vue par son seul contrat utile aux appelants d'interface
+     * (étape 15) : l'écran de session active n'a pas à connaître le receveur de broadcast ni le
+     * scope du watcher.
+     */
+    @Provides
+    @Singleton
+    fun provideForegroundReadinessTrigger(watcher: SessionReadinessWatcher): ForegroundReadinessTrigger = watcher
 }

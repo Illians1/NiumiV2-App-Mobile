@@ -1,7 +1,7 @@
 package com.niumi.system.di
 
 import com.niumi.system.blocking.BlockedPackagesProjection
-import com.niumi.system.blocking.InMemoryBlockedPackagesProjection
+import com.niumi.system.blocking.PersistedBlockedPackagesProjection
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -22,5 +22,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface BlockingModule {
     @Binds
-    fun bindBlockedPackagesProjection(impl: InMemoryBlockedPackagesProjection): BlockedPackagesProjection
+    fun bindBlockedPackagesProjection(impl: PersistedBlockedPackagesProjection): BlockedPackagesProjection
 }

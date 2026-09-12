@@ -787,6 +787,29 @@ Texte de l'overlay:
 
 Le service doit recharger l'état actif depuis Room ou le snapshot après recréation. Si le service est désactivé pendant une session, Niumi doit le détecter à sa prochaine exécution et afficher un incident. Il ne doit pas tenter de réactiver le service ou d'empêcher l'utilisateur d'accéder aux réglages.
 
+#### Reconstruction de la projection de blocage
+
+La liste de blocage lue par le service est reconstruite depuis la persistance, jamais conservée en mémoire comme seule source de vérité: un processus tué ferait sinon disparaître le blocage d'une session encore active, ce que 13 interdit. La lecture emploie Room une fois l'appareil déverrouillé, le snapshot Direct Boot de 7.3 avant.
+
+`onAccessibilityEvent` doit décider immédiatement, sur le thread principal, alors que toute lecture de persistance est asynchrone. La projection est donc gardée en cache et réalignée sur la persistance à deux moments: à la connexion du service, et à chaque décision de session publiée.
+
+L'état de la session ne suffit pas à décider seul, SPEC_CORE_KMP 4 rappelant que `RELEASING` autorise un nettoyage partiel. Le statut des effets de blocage tranche:
+
+| État persisté | Effet déterminant | Projection |
+| --- | --- | --- |
+| `PREPARING` | `APPLY_BLOCKING` réussi | blocage actif |
+| `PREPARING` | `APPLY_BLOCKING` en attente, échoué ou absent | aucun blocage |
+| `ARMED`, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` | — | blocage actif |
+| `RELEASING` | `REMOVE_BLOCKING` réussi ou satisfait | libération totale, plus aucun package |
+| `RELEASING` | `REMOVE_BLOCKING` en attente, échoué ou absent | blocage maintenu sur tous les packages |
+| `COMPLETED`, `CANCELLED`, `FAILED`, ou pointeur absent | — | aucun blocage |
+
+La distinction sur `PREPARING` est nécessaire: une activation interrompue laisse les lignes de sélection en base sans que le blocage ait été posé, et la réconciliation de 9.2 déduit de la projection si l'activation a abouti.
+
+Dans Room, l'absence de ligne d'effet signifie « jamais décidé ». Dans le snapshot Direct Boot, qui ne recopie que les effets rejouables, l'absence signifie au contraire « déjà exécuté ».
+
+Un snapshot illisible ne se lit jamais « aucune session »: la lecture le signale comme tel et la projection conserve ce qu'elle savait. Le blocage n'est jamais levé faute de pouvoir lire.
+
 ### 12.3 Information et consentement
 
 Avant d'ouvrir les réglages d'accessibilité, afficher une page dédiée qui explique:
@@ -906,21 +929,23 @@ L'écran n'affiche qu'une action principale à la fois, en commençant par le pr
 
 Le diagnostic ne sert pas qu'à autoriser l'activation. Un réglage modifié après l'armement peut rendre le réveil inaudible ou le parcours inopérant sans que rien ne le signale, et l'utilisateur ne le découvrirait qu'au matin. `DeviceReadinessChecker` est donc réexécuté pendant la vie d'une session, et tout contrôle bloquant qui devient faux alors que la session est `ARMED` produit un incident et une notification d'avertissement.
 
+Le service d'accessibilité fait exception au périmètre `ARMED`: il est surveillé dans **tous** les états non finaux. Le blocage court jusqu'au scan du boîtier (3), donc bien après le réveil, et 12.2 exige que sa désactivation pendant une session soit détectée et présentée. Les cinq autres contrôles restent limités à `ARMED`: une fois la sonnerie commencée, avertir d'un volume d'alarme ou d'un plein écran perdu ne décrit plus rien d'actionnable, et un tel avertissement encore affiché deviendrait mensonger. Un contrôle qui sort ainsi du périmètre voit sa notification retirée.
+
 Contrôles surveillés, avec le code d'incident associé:
 
-| Contrôle devenu faux | Code d'incident | Gravité |
-| --- | --- | --- |
-| Ne pas déranger passé en silence total | `ANDROID_ALARM_MUTED_BY_DND` | `CRITICAL` |
-| Volume d'alarme tombé à zéro | `ANDROID_ALARM_VOLUME_ZERO` | `CRITICAL` |
-| Notifications révoquées | `ANDROID_NOTIFICATIONS_REVOKED` | `CRITICAL` |
-| Plein écran révoqué | `ANDROID_FULL_SCREEN_REVOKED` | `CRITICAL` |
-| Service d'accessibilité désactivé | `BLOCKING_PERMISSION_REVOKED` (code commun) | `CRITICAL` |
-| Accès aux alarmes exactes perdu | `ALARM_PERMISSION_REVOKED` (code commun) | `CRITICAL` |
+| Contrôle devenu faux | Code d'incident | Gravité | Surveillé pendant |
+| --- | --- | --- | --- |
+| Ne pas déranger passé en silence total | `ANDROID_ALARM_MUTED_BY_DND` | `CRITICAL` | `ARMED` |
+| Volume d'alarme tombé à zéro | `ANDROID_ALARM_VOLUME_ZERO` | `CRITICAL` | `ARMED` |
+| Notifications révoquées | `ANDROID_NOTIFICATIONS_REVOKED` | `CRITICAL` | `ARMED` |
+| Plein écran révoqué | `ANDROID_FULL_SCREEN_REVOKED` | `CRITICAL` | `ARMED` |
+| Service d'accessibilité désactivé | `BLOCKING_PERMISSION_REVOKED` (code commun) | `CRITICAL` | tous les états non finaux |
+| Accès aux alarmes exactes perdu | `ALARM_PERMISSION_REVOKED` (code commun) | `CRITICAL` | `ARMED` |
 
 Quand la surveillance s'exécute:
 
 - à chaque réconciliation (`PROCESS_START`, `USER_UNLOCKED`, `BOOT`, `PACKAGE_REPLACED`, `TIME_CHANGED`, `TIMEZONE_CHANGED`);
-- à chaque passage de l'application au premier plan;
+- à chaque passage de l'application au premier plan, porté par l'écran de session active (15, écran 7);
 - immédiatement, par un `BroadcastReceiver` enregistré à chaud, pour les seuls changements qu'Android diffuse publiquement, au premier rang desquels `NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`;
 - au déclenchement, avant de démarrer la sonnerie.
 
@@ -937,6 +962,8 @@ Chaque contrôle surveillé porte son propre identifiant de notification : deux 
 Le réconciliateur n'interrompt sa passe que pour les deux pertes de permission — accès aux alarmes exactes et service d'accessibilité — parce que poursuivre y serait absurde (reprogrammer une alarme exacte sans y avoir droit). Les quatre autres contrôles sont signalés sans interrompre la réconciliation : le réveil reste programmé, seules son audibilité ou sa présentation sont compromises. La condition porte sur l'état courant du contrôle, pas sur le fait qu'il vienne d'être signalé.
 
 Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic d'incident. Cet écran est livré à l'étape 16 (15, écran 12) ; jusque-là, le tap ramène l'utilisateur dans l'application, jamais vers un `PendingIntent` mort. Le déclencheur « au déclenchement, avant de démarrer la sonnerie » relève d'`AlarmReceiver` et arrive à l'étape 17.
+
+**Implémentation (étape 15).** Le déclencheur « passage au premier plan » est branché sur le `ON_RESUME` de l'écran de session active, qui est le seul écran affiché pendant qu'une session court (10.4). Il n'avait aucun appelant avant cette étape. Aucun composant distinct ne surveille le service d'accessibilité : `SessionReadinessMonitor` porte déjà le code d'incident et la garde de déduplication, et un second surveillant produirait deux incidents `CRITICAL` pour le même fait.
 
 Exemples de messages:
 
@@ -1002,7 +1029,30 @@ Tous les composants non destinés à des applications externes restent `exported
 
 **Étapes de livraison.** Les écrans n'arrivent pas tous en même temps et l'ordre d'implémentation (22) ne le disait pas explicitement : accueil (1) et diagnostic-onboarding (2) à l'étape 12b ; association (3) et sélection (4) à l'étape 13 ; choix de l'heure (5), récapitulatif (6) et une **version minimale** de la session active (7) à l'étape 14 ; session active complète (7), scan requis (9), terminée (10) et annulée (11) à l'étape 15 ; écran de réveil (8) livré dès l'étape 7 ; diagnostic d'incident (12) à l'étape 16. L'étape 12b déclare les treize destinations de navigation en une fois mais n'enregistre que celles dont l'écran existe : naviguer vers une route non enregistrée lève, ce qui vaut mieux qu'un écran vide donnant l'illusion d'une fonctionnalité livrée.
 
-L'écran 7 minimal est livré à l'étape 14 et non à l'étape 15 parce que celle-ci est la première à rendre une session armable : sans lui, l'accueil deviendrait un cul-de-sac dès qu'une session existe, alors que 10.4 en fait la seconde garantie d'accès au scan, indépendante de la notification. Sa version minimale affiche l'état, la date, l'heure et le fuseau d'activation, plus l'heure recalculée dans le fuseau courant s'il diffère (8) ; la liste des applications bloquées, la santé, les incidents et le bouton « Modifier ou annuler » arrivent à l'étape 15.
+L'écran 7 minimal est livré à l'étape 14 et non à l'étape 15 parce que celle-ci est la première à rendre une session armable : sans lui, l'accueil deviendrait un cul-de-sac dès qu'une session existe, alors que 10.4 en fait la seconde garantie d'accès au scan, indépendante de la notification. Sa version minimale affiche l'état, la date, l'heure et le fuseau d'activation, plus l'heure recalculée dans le fuseau courant s'il diffère (8).
+
+**Contenu de l'écran 7 complet (étape 15).** S'ajoutent à la version minimale :
+
+- la liste des applications bloquées, nommées par le libellé **figé à l'activation** et jamais résolu au moment de l'affichage : une application désinstallée ou renommée pendant la session doit rester nommable (12.2) ;
+- la santé de la session. Une session `DEGRADED` ne redevient jamais `HEALTHY` d'elle-même (SPEC_CORE_KMP 7.3) : le texte ne promet donc aucun retour à la normale ;
+- les incidents, triés par gravité décroissante puis du plus récent au plus ancien. Les `CRITICAL` sont présentés **à part et en tête**, ce que SPEC_CORE_KMP 7.3 exige pour les distinguer d'un `DEGRADED` simplement consigné. Un code d'incident sans traduction reste affiché tel quel : le taire présenterait la session comme saine ;
+- le bouton « Modifier ou annuler », seule action de sortie de session de l'écran, qui mène à l'écran 9.
+
+**Remédiation des incidents sur l'écran 7 (étape 16).** Un incident `CRITICAL` présenté sans recours laisse l'utilisateur devant un constat qu'il ne peut pas lever : pendant une session, l'écran 7 est le seul écran atteignable (10.4), et il n'offre aucun moyen d'agir. L'écran 2 porte déjà la colonne « Action proposée » de 13, adossée à `ReadinessAction` ; l'écran 7 doit proposer la même action pour les incidents remédiables, au minimum « Ouvrir les réglages d'accessibilité » pour `BLOCKING_PERMISSION_REVOKED`.
+
+Cette action n'est pas une exception à 3 : elle ne termine ni ne modifie la session, elle rétablit un sous-système. Le scan du boîtier reste le seul chemin de sortie, et l'écran 7 ne doit gagner aucune autre action.
+
+Le cas visé est d'abord le plus courant : l'utilisateur désactive le service d'accessibilité depuis les réglages Android, ce que l'onboarding annonce comme possible à tout moment (4.3). Une mort du processus de Niumi produit le même état — le service cesse d'être lié et `Settings.Secure.ACCESSIBILITY_ENABLED` retombe à `0`, ce que le diagnostic détecte correctement — mais reste un cas de défaut, non de fonctionnement normal : un service d'accessibilité lié maintient le processus à `PERCEPTIBLE_APP_ADJ`, bien au-dessus du seuil des processus recyclés en routine (mesuré à l'étape 15, voir `ETAPE-15.md`).
+
+Une fois le service réactivé à la main, le blocage reprend de lui-même : le service reconstruit sa projection depuis Room à la reconnexion (12.2). Aucune action de Niumi ne doit tenter de réactiver le service à la place de l'utilisateur (12.2).
+
+**Écrans 9 et 11 (étape 15).** L'écran 9 ne porte aucune action en dehors du scan : ni bouton d'annulation, ni confirmation, ni chemin de retour qui libérerait quoi que ce soit (3, 10.2). Son texte est :
+
+> Scanne ton boîtier Niumi pour annuler ou modifier ta session. Tes applications resteront bloquées jusqu'au scan.
+
+Un boîtier inconnu et un tag illisible ont chacun leur message et ne changent aucun état (11.2, SPEC_CORE_KMP 4). L'écran 11 n'est atteint qu'après un état final `CANCELLED`, donc après `RELEASE_SUCCEEDED` (11.3) : il peut affirmer que les applications sont débloquées sans mentir. Ses libellés sont « Session annulée » et « Préparer un nouveau réveil », ce dernier ramenant au diagnostic, entrée du parcours de préparation.
+
+L'annulation par scan n'est pas fonctionnelle à l'étape 15 : `HandleValidNfcUseCase` arrive à l'étape 18. Jusque-là l'écran 9 délègue à un handler qui ignore tout scan, ce qui est le comportement attendu d'un scan non validé (SPEC_CORE_KMP 4) et n'annonce aucun succès.
 
 Règles UI:
 

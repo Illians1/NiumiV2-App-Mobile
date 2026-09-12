@@ -31,7 +31,7 @@ class SessionReadinessWatcher(
     private val monitor: SessionReadinessMonitor,
     private val coordinator: SessionCoordinator,
     dispatcher: CoroutineDispatcher,
-) {
+) : ForegroundReadinessTrigger {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     private val interruptionFilterReceiver =
@@ -54,7 +54,7 @@ class SessionReadinessWatcher(
         monitor.evaluate(snapshot) { event -> coordinator.dispatch(event) }
     }
 
-    fun evaluateAsync() {
+    override fun evaluateAsync() {
         scope.launch { evaluate() }
     }
 

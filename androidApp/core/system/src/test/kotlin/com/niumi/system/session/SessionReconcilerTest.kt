@@ -9,8 +9,8 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.core.schedule.TriggerDelayPolicy
 import com.niumi.database.EventReceipt
 import com.niumi.database.StoredDecision
+import com.niumi.database.blocking.BlockedPackagesState
 import com.niumi.database.logging.TechnicalEventType
-import com.niumi.system.blocking.BlockedPackagesState
 import com.niumi.system.readiness.AndroidIncidentCodes
 import com.niumi.system.session.fakes.SessionDtoFixtures
 import com.niumi.system.session.fakes.TestCoordinatorHarness

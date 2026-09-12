@@ -32,4 +32,14 @@ object MonitoredReadinessChecks {
             ReadinessCheckId.DND_TOTAL_SILENCE to AndroidIncidentCodes.ALARM_MUTED_BY_DND,
             ReadinessCheckId.ACCESSIBILITY_SERVICE to IncidentCodes.BLOCKING_PERMISSION_REVOKED,
         )
+
+    /**
+     * Le seul contrôle qui reste surveillé après `ARMED` (étape 15). Le blocage court jusqu'au
+     * scan du boîtier, dans `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` et `RELEASING`
+     * (SPEC_ANDROID §3), et §12.2 exige que la désactivation du service pendant une session soit
+     * détectée et présentée. Les cinq autres contrôles portent sur le déclenchement du réveil :
+     * une fois la sonnerie commencée, ils ne décrivent plus rien d'actionnable.
+     */
+    val blockingOnlyIncidentCodes: Map<ReadinessCheckId, String> =
+        incidentCodes.filterKeys { it == ReadinessCheckId.ACCESSIBILITY_SERVICE }
 }

@@ -2,11 +2,15 @@ package com.niumi.app.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.niumi.feature.session.active.ActiveSessionRoute
+import com.niumi.feature.session.active.CancelledScreen
+import com.niumi.feature.session.active.ScanToModifyRoute
 import com.niumi.feature.session.summary.SummaryRoute
 import com.niumi.feature.session.wake.WakeTimeRoute
 import com.niumi.feature.setup.accessibility.AccessibilityConsentRoute
@@ -81,8 +85,30 @@ fun NiumiNavHost(contributors: Set<@JvmSuppressWildcards NavGraphContributor>) {
                 onSessionInProgress = { navController.navigateToActiveSession() },
             )
         }
-        composable<NiumiRoute.ActiveSession> { ActiveSessionRoute() }
+        activeSessionDestinations(navController)
         contributors.forEach { it.register(this, navController) }
+    }
+}
+
+/**
+ * Destinations d'une session déjà active (écrans 7, 9 et 11, étape 15), extraites pour tenir sous
+ * `LongMethod` de detekt. `NiumiRoute.Completed` n'y est pas : l'écran 10 arrive à l'étape 17.
+ */
+private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostController) {
+    composable<NiumiRoute.ActiveSession> {
+        ActiveSessionRoute(
+            onModifyOrCancel = { navController.navigate(NiumiRoute.ScanToModify) },
+        )
+    }
+    composable<NiumiRoute.ScanToModify> {
+        ScanToModifyRoute(
+            onCancelled = { navController.navigateToCancelled() },
+        )
+    }
+    composable<NiumiRoute.Cancelled> {
+        CancelledScreen(
+            onPrepareAgain = { navController.navigateToPreparation() },
+        )
     }
 }
 
@@ -95,6 +121,31 @@ fun NiumiNavHost(contributors: Set<@JvmSuppressWildcards NavGraphContributor>) {
  */
 private fun NavController.navigateToActiveSession() {
     navigate(NiumiRoute.ActiveSession) {
+        popUpTo(NiumiRoute.Home) { inclusive = false }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * L'écran de session active et l'écran de scan quittent la pile : la session est terminée, y
+ * revenir par Retour afficherait une session annulée comme si elle courait encore (§15, « ne
+ * jamais afficher un faux état de fiabilité »). L'accueil reste dessous.
+ */
+private fun NavController.navigateToCancelled() {
+    navigate(NiumiRoute.Cancelled) {
+        popUpTo(NiumiRoute.Home) { inclusive = false }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * « Préparer un nouveau réveil » (écran 11) rejoint le diagnostic, entrée du parcours de
+ * préparation quand l'onboarding est acquitté — ce qu'il est nécessairement, une session ayant
+ * déjà été armée (voir [homeDestinationFor]). L'écran 11 quitte la pile pour la même raison
+ * qu'il y est entré.
+ */
+private fun NavController.navigateToPreparation() {
+    navigate(NiumiRoute.Readiness) {
         popUpTo(NiumiRoute.Home) { inclusive = false }
         launchSingleTop = true
     }

@@ -9,6 +9,7 @@ import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.notification.SessionWarningNotifier
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.SessionEventFactory
+import com.niumi.system.session.isSessionInProgress
 
 /** Un contrôle bloquant devenu faux pendant `ARMED`, avec l'incident qu'il a produit. */
 data class ReadinessDegradation(
@@ -54,20 +55,22 @@ class SessionReadinessMonitor(
         snapshot: SessionSnapshotDto,
         dispatch: suspend (SessionEventDto) -> DispatchResult,
     ): ReadinessMonitorResult {
-        if (snapshot.state != SessionStateDto.ARMED) {
-            // Hors `ARMED`, un avertissement encore affiché deviendrait mensonger.
+        val monitored = monitoredChecksFor(snapshot.state)
+        if (monitored.isEmpty()) {
+            // Session terminée : un avertissement encore affiché deviendrait mensonger.
             if (alreadyReported.isNotEmpty()) {
                 alreadyReported.clear()
                 warningNotifier.clearAll()
             }
             return ReadinessMonitorResult(failing = emptySet(), newlyReported = emptyList())
         }
+        clearWarningsOutsideScope(monitored)
 
         val report = readinessChecker.check(ReadinessInput(snapshot.wakeSchedule.triggerAtEpochMillis))
         val failing = mutableSetOf<ReadinessCheckId>()
         val newlyReported = mutableListOf<ReadinessDegradation>()
 
-        MonitoredReadinessChecks.incidentCodes.forEach { (checkId, incidentCode) ->
+        monitored.forEach { (checkId, incidentCode) ->
             if (report.check(checkId).outcome == ReadinessOutcome.FAILED) {
                 failing += checkId
                 if (alreadyReported.add(checkId)) {
@@ -79,6 +82,36 @@ class SessionReadinessMonitor(
         }
 
         return ReadinessMonitorResult(failing, newlyReported)
+    }
+
+    /**
+     * Les cinq contrôles de réveil n'ont de sens qu'en `ARMED` : une fois la sonnerie commencée,
+     * avertir d'un volume d'alarme ou d'un plein écran perdu ne décrit plus rien d'actionnable.
+     * Le service d'accessibilité, lui, est surveillé dans **tous** les états non finaux : le
+     * blocage court jusqu'au scan (SPEC_ANDROID §3), et §12.2 exige que sa désactivation pendant
+     * une session soit détectée « à la prochaine exécution » — pas seulement avant le réveil.
+     *
+     * Étape 15 : remplace la sortie anticipée sur `state != ARMED`, qui rendait un service coupé
+     * pendant `RINGING` ou `RELEASING` totalement invisible.
+     */
+    private fun monitoredChecksFor(state: SessionStateDto): Map<ReadinessCheckId, String> =
+        when {
+            !state.isSessionInProgress() -> emptyMap()
+            state == SessionStateDto.ARMED -> MonitoredReadinessChecks.incidentCodes
+            else -> MonitoredReadinessChecks.blockingOnlyIncidentCodes
+        }
+
+    /**
+     * Un contrôle qui sort du périmètre surveillé (l'alarme exacte quand la session passe de
+     * `ARMED` à `RINGING`) doit voir sa notification retirée : elle resterait affichée sans
+     * qu'aucune passe ne puisse plus la réévaluer.
+     */
+    private fun clearWarningsOutsideScope(monitored: Map<ReadinessCheckId, String>) {
+        val outOfScope = alreadyReported - monitored.keys
+        outOfScope.forEach { checkId ->
+            alreadyReported.remove(checkId)
+            warningNotifier.clear(checkId)
+        }
     }
 
     private suspend fun report(
