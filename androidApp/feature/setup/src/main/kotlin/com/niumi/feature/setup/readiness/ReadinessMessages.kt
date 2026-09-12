@@ -130,6 +130,16 @@ object ReadinessMessages {
 
     const val ALL_CLEAR = "Ton appareil est prêt. Tu peux préparer ta session."
 
+    /**
+     * Sortie du diagnostic vers le choix de l'heure (écran 5, étape 14). Seconde action visible
+     * en même temps que l'action principale de §13 : c'est une **continuation de parcours**, pas
+     * une remédiation — même exception que celle accordée à l'étape 13 aux écrans 3 et 4, inscrite
+     * en §13. Sans elle l'écran 5 serait inatteignable : `ReadinessAction.FixTime` n'apparaît
+     * jamais tant qu'aucune heure candidate n'existe, `FUTURE_TRIGGER` étant alors
+     * `NOT_APPLICABLE` et filtré.
+     */
+    const val CHOOSE_WAKE_TIME_LABEL = "Choisir mon heure de réveil"
+
     const val BATTERY_CONFIRM_LABEL = "J'ai levé les restrictions"
 
     /**

@@ -48,6 +48,14 @@ class SessionReconciler(
         val sessionId = snapshot.sessionId
         val actions = mutableListOf<ReconcileAction>()
 
+        // Réamorce le flux observé par l'interface avant toute décision. `SessionSnapshotPublisher`
+        // vit en mémoire et repart à `null` à chaque démarrage du processus ; une session saine ne
+        // produit aucune décision, donc aucun `PUBLISH_PLATFORM_SNAPSHOT` ne la republierait, et
+        // l'accueil afficherait « Aucune session » alors que l'alarme est programmée (défaut mesuré
+        // sur appareil à l'étape 14). Republier une valeur identique est sans effet : `StateFlow`
+        // n'émet que sur changement.
+        sources.snapshotPublisher.publish(snapshot)
+
         val replayable = gateway.pendingEffects(sessionId)
         if (replayable.isNotEmpty()) {
             val execution = effectDispatcher.execute(replayable, snapshot, present.extras)

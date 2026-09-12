@@ -38,6 +38,9 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.lifecycle.viewmodel.compose)
+    // LocalLifecycleOwner : les Route des écrans 5, 6 et 7 rejouent le diagnostic et recalculent
+    // l'horaire sur ON_RESUME (SPEC_ANDROID §13), même motif que :feature:setup.
+    implementation(libs.lifecycle.runtime.compose)
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.hilt.android)

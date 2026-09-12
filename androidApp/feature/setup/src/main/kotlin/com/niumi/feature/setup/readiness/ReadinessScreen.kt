@@ -45,6 +45,7 @@ import com.niumi.system.readiness.ReadinessOutcome
 fun ReadinessScreen(
     state: ReadinessUiState,
     onPrimaryAction: (ReadinessItem) -> Unit,
+    onChooseWakeTime: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
@@ -58,8 +59,17 @@ fun ReadinessScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(text = ReadinessMessages.TITLE, style = MaterialTheme.typography.headlineSmall)
-            if (state.isDeviceReady) {
+            if (state.isDeviceReady && !state.isLoading) {
                 Text(text = ReadinessMessages.ALL_CLEAR, style = MaterialTheme.typography.bodyLarge)
+                // Continuation de parcours, pas une remédiation : `isDeviceReady` et non
+                // `isAllowed`, faux tant qu'aucune heure n'est choisie — c'est précisément
+                // l'écran vers lequel ce bouton mène (§13, exception documentée).
+                Button(
+                    onClick = onChooseWakeTime,
+                    modifier = Modifier.semantics { contentDescription = ReadinessMessages.CHOOSE_WAKE_TIME_LABEL },
+                ) {
+                    Text(ReadinessMessages.CHOOSE_WAKE_TIME_LABEL)
+                }
             }
             state.primary?.let { primary -> PrimaryAction(primary, onPrimaryAction) }
             state.items
@@ -117,6 +127,7 @@ private fun statusMarker(item: ReadinessItem): String =
 fun ReadinessRoute(
     onStartPairing: () -> Unit,
     onOpenAppPicker: () -> Unit,
+    onChooseWakeTime: () -> Unit,
     viewModel: ReadinessViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -138,6 +149,7 @@ fun ReadinessRoute(
 
     ReadinessScreen(
         state = viewModel.state,
+        onChooseWakeTime = onChooseWakeTime,
         onPrimaryAction = { item ->
             when {
                 item.id == ReadinessCheckId.BATTERY_OPTIMIZATION &&
@@ -153,6 +165,12 @@ fun ReadinessRoute(
 
                 item.action == ReadinessAction.OpenAppPicker -> {
                     onOpenAppPicker()
+                }
+
+                // Ne se produit que pendant la surveillance d'une session (§13.1) : avant tout
+                // choix d'heure, `FUTURE_TRIGGER` est `NOT_APPLICABLE` et n'est jamais affiché.
+                item.action == ReadinessAction.FixTime -> {
+                    onChooseWakeTime()
                 }
 
                 item.action == ReadinessAction.RequestNotificationPermission -> {
@@ -205,6 +223,7 @@ private fun ReadinessScreenPreview() {
                     isLoading = false,
                 ).let { it.copy(primary = it.items.first()) },
             onPrimaryAction = {},
+            onChooseWakeTime = {},
         )
     }
 }

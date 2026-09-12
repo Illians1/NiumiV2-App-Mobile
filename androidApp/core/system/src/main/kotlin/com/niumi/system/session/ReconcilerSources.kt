@@ -13,9 +13,14 @@ import com.niumi.system.readiness.SessionReadinessMonitor
  * `AccessibilityServiceStatus` en est sortie à l'étape 12, remplacée par [readinessMonitor] :
  * l'état du service d'accessibilité n'est plus lu isolément, il fait partie des six contrôles
  * que §13.1 surveille d'un seul tenant.
+ *
+ * [snapshotPublisher] rejoint le groupe à l'étape 14 : la réconciliation est le seul chemin qui
+ * relit la persistance après un redémarrage du processus, c'est donc à elle de réamorcer le flux
+ * que l'interface observe (défaut mesuré sur appareil, voir `ETAPE-14.md`).
  */
 data class ReconcilerSources(
     val alarmScheduler: AlarmScheduler,
     val blockedPackagesProjection: BlockedPackagesProjection,
     val readinessMonitor: SessionReadinessMonitor,
+    val snapshotPublisher: SessionSnapshotPublisher,
 )

@@ -743,6 +743,24 @@ faute de quoi `RoomPairedBoxStore` y serait inaccessible (règle de dépendance 
 
 ### Étape 14 : choix de l'heure, récapitulatif et activation en deux phases
 
+**Deux défauts trouvés sur appareil (2026-09-12) et corrigés dans le même changement**, décrits
+dans les tests manuels ci-dessous : une session armée restait invisible après un redémarrage du
+processus (`PROCESS_START` n'était émis par personne depuis l'étape 11, et le réconciliateur ne
+republiait pas le snapshot d'une session saine), et l'écran 7 ignorait le format 12/24 h respecté
+par les écrans 5 et 6.
+
+**Cinq décisions validées avec l'utilisateur (2026-09-12)**, détaillées dans `ETAPE-14.md` :
+`vibrationEnabled` figé à `true` faute de réglage utilisateur ; sortie vers l'écran 5 par un bouton
+du diagnostic ; écran 7 livré en version minimale dès cette étape ; cadran ouvert sur la dernière
+heure confirmée (07:00 par défaut) ; trou d'heure d'été affiché à l'instant réel **et** expliqué.
+
+**Trois écarts aux specs, répercutés dans le même changement.** §15 plaçait l'écran 7 à l'étape 15 —
+il y est désormais décrit comme minimal à l'étape 14, complet à l'étape 15, faute de quoi l'accueil
+serait un cul-de-sac dès qu'une session est armable (§10.4) ; §13 gagne une exception pour le bouton
+de continuation, dans la continuité de celle accordée à l'étape 13 aux étapes de parcours, sans quoi
+l'écran 5 serait inatteignable (`FixTime` n'apparaît jamais avant qu'une heure candidate existe) ;
+SPEC_CORE_KMP §8.1 dit désormais ce qui doit être **affiché** quand l'heure saisie n'existe pas.
+
 **Specs à lire :** SPEC_CORE_KMP §8.1, §10 ; SPEC_ANDROID §8, §9.2, §15 (écrans 5, 6, 7), §19.1 (`feature`).
 
 **Fichiers :**
@@ -752,11 +770,11 @@ faute de quoi `RoomPairedBoxStore` y serait inaccessible (règle de dépendance 
 
 **Produit :** `ArmSessionUseCase`, écrans 5, 6 et un écran 7 minimal.
 
-- [ ] **Écrire `WakeTimeViewModelTest`**, implémenter l'écran et le ViewModel.
-- [ ] **Écrire `ArmSessionUseCaseTest`**, implémenter : 1) `DeviceReadinessChecker.check()` → `evaluateActivation` ; 2) refus si bloquant ; 3) construire `ActivationRequestDto` (`WakeScheduleDto`, `AppSelectionSummaryDto(count)`) et `AndroidSessionExtras` (credential figé, packages, `ringtoneKey = "niumi_alarm"`, `vibrationEnabled`) ; 4) `SessionCoordinator.dispatch(ACTIVATION_REQUESTED)` ; 5) attendre `DispatchResult.Applied` avec état `ARMED` (le coordinateur enchaîne `ACTIVATION_SUCCEEDED` lui-même) ; 6) retourner `Success(snapshot)` ou `ActivationFailure(failureCode)`.
-- [ ] **Écrire `SummaryViewModelTest`**, implémenter l'écran.
-- [ ] **Brancher la navigation** : `Summary` → `ActiveSession` sur succès, message d'échec avec `failureCode` sinon.
-- [ ] **Vérifier :**
+- [x] **Écrire `WakeTimeViewModelTest`**, implémenter l'écran et le ViewModel. *(11 tests + 2 de textes. Le test « changement de fuseau entre saisie et confirmation » est scindé : le ViewModel de l'écran 5 ne peut prouver que le recalcul à l'affichage, celui d'avant activation est une propriété d'`ArmSessionUseCase`. `INVALID_TIME` n'est pas atteignable depuis le cadran (heures et minutes entières) : traité par sûreté, le contrat de la façade l'autorisant. `WakeScheduleFormatter` (8 tests) sort en `ui/`, partagé par les écrans 5, 6 et 7 ; il lit exclusivement `triggerAtEpochMillis`, jamais `localTimeIso`, faute de quoi un trou d'heure d'été afficherait l'heure saisie plutôt que celle programmée.)*
+- [x] **Écrire `ArmSessionUseCaseTest`**, implémenter : 1) `DeviceReadinessChecker.check()` → `evaluateActivation` ; 2) refus si bloquant ; 3) construire `ActivationRequestDto` (`WakeScheduleDto`, `AppSelectionSummaryDto(count)`) et `AndroidSessionExtras` (credential figé, packages, `ringtoneKey = "niumi_alarm"`, `vibrationEnabled`) ; 4) `SessionCoordinator.dispatch(ACTIVATION_REQUESTED)` ; 5) attendre `DispatchResult.Applied` avec état `ARMED` (le coordinateur enchaîne `ACTIVATION_SUCCEEDED` lui-même) ; 6) retourner `Success(snapshot)` ou `ActivationFailure(failureCode)`. *(21 tests. **L'ordre des 10 points de §9.2 ne peut pas être prouvé par un seul journal d'appels** : les points 4 à 9 ne traversent jamais la frontière du use case. La preuve est l'union de deux jeux de tests, et le KDoc d'`ArmSessionUseCase` porte le tableau de traçabilité (1-3 ici, 4-9 dans `:core:system` aux étapes 9 à 11, 10 dans `SummaryViewModelTest`). Le use case expose aussi `preview()`, points 1-2 sans effet de bord, pour que l'écran 6 et l'activation appliquent le même verdict calculé par le même code ; `arm()` rejoue le diagnostic et ne réutilise jamais l'aperçu. `SessionEventFactory` gagne `activationRequested` (5 tests) : aucune fabrique ne couvrait le seul événement sans snapshot préalable. `TimeZoneProvider` est ajouté à `:core:system`, jumeau de `Clock`.)*
+- [x] **Écrire `SummaryViewModelTest`**, implémenter l'écran. *(12 tests + 7 de textes. `SummaryTexts` ne traduit que quatre codes d'`ActivationReasonCode` : les quatorze messages détaillés restent la propriété de l'écran 2, seul porteur de l'action de remédiation (§13). `boxId` tronqué à 8 caractères, jamais le token ni son empreinte (§16). Garde `isActivating` : `dispatch` et `reconcile` partagent un mutex non réentrant, un double appui créerait deux sessions.)*
+- [x] **Brancher la navigation** : `Summary` → `ActiveSession` sur succès, message d'échec avec `failureCode` sinon. *(`NiumiRoute.Summary` devient une `data class` portant `localTimeIso` — seule destination à argument du graphe, et volontairement : elle transporte le choix de l'utilisateur, jamais l'horaire calculé, ce qui rend le recalcul du fuseau avant activation impossible à contourner. `popUpTo(Home)` non inclusif après l'activation. L'accueil gagne un bouton « Voir ma session » : il était un cul-de-sac (§10.4), invisible tant qu'aucune session ne pouvait être armée. Le diagnostic gagne sa sortie vers l'écran 5 et `FixTime` sort de `UNAVAILABLE_ACTIONS`.)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :feature:session:testDebugUnitTest :core:system:testDebugUnitTest
@@ -764,9 +782,11 @@ faute de quoi `RoomPairedBoxStore` y serait inaccessible (règle de dépendance 
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** parcours complet accueil → onboarding → diagnostic → association → sélection → heure → récapitulatif → activation ; vérifier `adb shell dumpsys alarm | grep niumi` (alarme `setAlarmClock` présente) ; tuer le processus pendant l'activation puis relancer → `SessionReconciler` reprend ou annule proprement.
+*(Faite le 2026-09-12 — **587 tests JVM verts** : `:feature:session` 69 (+68), `:core:system` 154 (+9), `:feature:setup` 76 (+1), `:app` 14 (+3), non-régression sur `:shared:core` (160), `:core:database` (93) et `:feature:ringing` (21) ; `:app:assembleDebug`, `:app:lintDebug`, ktlint et detekt verts. `:feature:setup` et `:app` s'ajoutent aux deux modules cités par le plan, tous deux étant modifiés. Aucune règle detekt assouplie : `!!` remplacé par un branchement sur le `schedule` nullable, nombre magique du `@Preview` dérivé de `DEFAULT_LOCAL_TIME_ISO`, `shiftedFromLocalTime` restructurée, et `ReturnCount` de `arm()` suppressé localement avec justification — même convention que `DefaultSessionCoordinator.dispatch`. `TimePicker` est encore expérimental avec la BOM 2026.09.00 : `@OptIn` local. Une seule dépendance ajoutée, `lifecycle.runtime.compose` à `:feature:session`. Détails dans `ETAPE-14.md`.)*
 
-**Terminé quand :** l'ordre §9.2 est prouvé par test, `FAILED` uniquement depuis `PREPARING`, une session `ARMED` est visible sur l'accueil après redémarrage de l'application.
+**Tests manuels :** parcours complet accueil → onboarding → diagnostic → association → sélection → heure → récapitulatif → activation ; vérifier `adb shell dumpsys alarm | grep niumi` (alarme `setAlarmClock` présente) ; tuer le processus pendant l'activation puis relancer → `SessionReconciler` reprend ou annule proprement. *(**Déroulés essai par essai le 2026-09-12 sur Xiaomi 25080RABDG, Android 16, HyperOS 3.0** — 98 tests instrumentés verts (41 `:core:database`, 16 `:core:system`, 38 `:feature:setup`, 3 `:feature:session`) et les neuf essais observés. L'alarme est bien un `setAlarmClock` (`RTC_WAKEUP` + bloc `Alarm clock:`, `window=0`, `exactAllowReason=policy_permission`, PendingIntent explicite vers `AlarmReceiver`). **Ce passage a révélé deux défauts qu'aucun test JVM ne pouvait attraper**, tous deux corrigés dans le même changement : une session armée restait invisible après un redémarrage du processus — `ReconcileReason.PROCESS_START` n'était émis par personne depuis l'étape 11, et `SessionReconciler` ne republiait pas le snapshot d'une session saine — et l'écran 7 ignorait le format 12/24 h que les écrans 5 et 6 respectaient. Quatre tests de régression ajoutés. La garde de l'étape 13 n'est observable qu'au premier niveau (l'accueil cesse de proposer la préparation) : `SetupGate` reste inatteignable par l'interface, ce qui est le comportement voulu. Détails dans `ETAPE-14.md`.)*
+
+**Terminé quand :** l'ordre §9.2 est prouvé par test, `FAILED` uniquement depuis `PREPARING`, une session `ARMED` est visible sur l'accueil après redémarrage de l'application. *(**Atteint le 2026-09-12.** L'ordre §9.2 est prouvé par l'union des tests décrite ci-dessus ; `FAILED` depuis `PREPARING` seulement l'était déjà par `ActivationReducer` (étape 7) ; la visibilité d'une session `ARMED` après redémarrage ne l'était pas et a demandé les deux correctifs ci-dessus — elle est désormais vérifiée sur appareil.)*
 
 ## Phase F — Lot 3 : session active
 

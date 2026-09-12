@@ -94,6 +94,7 @@ class FakeBatteryOptimizationStatus(
 class FakeSetupPreferences(
     var onboardingAcknowledged: Boolean = true,
     var batteryExemptionConfirmed: Boolean = true,
+    var lastWakeTimeIsoValue: String? = null,
 ) : SetupPreferences {
     override suspend fun isOnboardingAcknowledged(): Boolean = onboardingAcknowledged
 
@@ -105,6 +106,12 @@ class FakeSetupPreferences(
 
     override suspend fun setBatteryExemptionConfirmed(confirmed: Boolean) {
         batteryExemptionConfirmed = confirmed
+    }
+
+    override suspend fun lastWakeTimeIso(): String? = lastWakeTimeIsoValue
+
+    override suspend fun setLastWakeTimeIso(value: String) {
+        lastWakeTimeIsoValue = value
     }
 }
 

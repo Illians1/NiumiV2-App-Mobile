@@ -1,6 +1,7 @@
 package com.niumi.system.session
 
 import com.niumi.core.domain.IncidentCodes
+import com.niumi.core.interop.ActivationRequestDto
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.PlatformDto
 import com.niumi.core.interop.SessionEventDto
@@ -30,6 +31,24 @@ class SessionEventFactory(
         code: String,
         severity: IncidentSeverityDto,
     ) = SessionIncidentDto(code, severity, clock.nowEpochMillis(), PlatformDto.ANDROID)
+
+    /**
+     * Seul événement que `ArmSessionUseCase` dispatche lui-même (étape 14) : aucun snapshot
+     * préalable n'existe encore, `sessionId` est donc généré ici plutôt que dérivé d'un
+     * `snapshot` comme [base] le fait pour toutes les suites. `expectedRevision` reste `null`,
+     * la révision n'existant qu'à partir de `PREPARING` (SPEC_CORE_KMP §5.2).
+     */
+    fun activationRequested(request: ActivationRequestDto) =
+        SessionEventDto(
+            eventId = idGenerator.newId(),
+            sessionId = idGenerator.newId(),
+            kind = SessionEventKindDto.ACTIVATION_REQUESTED,
+            occurredAtEpochMillis = clock.nowEpochMillis(),
+            expectedRevision = null,
+            activationRequest = request,
+            failureCode = null,
+            incident = null,
+        )
 
     fun activationSucceeded(snapshot: SessionSnapshotDto) = base(snapshot, SessionEventKindDto.ACTIVATION_SUCCEEDED)
 

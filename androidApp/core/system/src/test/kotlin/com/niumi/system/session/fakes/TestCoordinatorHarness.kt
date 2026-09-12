@@ -73,7 +73,8 @@ class TestCoordinatorHarness {
             technicalEventLog = technicalEventLog,
         )
 
-    private val sources = ReconcilerSources(alarmScheduler, blockedPackagesProjection, readinessMonitor)
+    private val sources =
+        ReconcilerSources(alarmScheduler, blockedPackagesProjection, readinessMonitor, publisher)
 
     private val executors: Map<SessionEffectKindDto, EffectExecutor> =
         mapOf(

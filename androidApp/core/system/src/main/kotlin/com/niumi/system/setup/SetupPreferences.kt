@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -18,7 +19,10 @@ import java.io.IOException
  *   activation, notamment l'absence de tout secours logiciel pendant une session ;
  * - `batteryExemptionConfirmed` : l'utilisateur confirme avoir levé les restrictions d'énergie.
  *   §13 exige cette confirmation parce que la détection système est partielle : sur HyperOS,
- *   `isIgnoringBatteryOptimizations()` reste `false` après correction du réglage OEM.
+ *   `isIgnoringBatteryOptimizations()` reste `false` après correction du réglage OEM ;
+ * - `lastWakeTimeIso` (étape 14) : dernière heure choisie sur l'écran de choix de l'heure, pour
+ *   que le cadran s'ouvre dessus plutôt que sur 07:00 à chaque nouvelle préparation. `null` tant
+ *   qu'aucune heure n'a jamais été confirmée.
  */
 interface SetupPreferences {
     suspend fun isOnboardingAcknowledged(): Boolean
@@ -28,6 +32,10 @@ interface SetupPreferences {
     suspend fun isBatteryExemptionConfirmed(): Boolean
 
     suspend fun setBatteryExemptionConfirmed(confirmed: Boolean)
+
+    suspend fun lastWakeTimeIso(): String?
+
+    suspend fun setLastWakeTimeIso(value: String)
 }
 
 private val Context.setupDataStore: DataStore<Preferences> by preferencesDataStore(name = "niumi_setup")
@@ -44,14 +52,20 @@ class DataStoreSetupPreferences(
     override suspend fun setBatteryExemptionConfirmed(confirmed: Boolean) =
         write(BATTERY_EXEMPTION_CONFIRMED, confirmed)
 
-    private suspend fun read(key: Preferences.Key<Boolean>): Boolean =
+    override suspend fun lastWakeTimeIso(): String? = preferences()[LAST_WAKE_TIME_ISO]
+
+    override suspend fun setLastWakeTimeIso(value: String) = write(LAST_WAKE_TIME_ISO, value)
+
+    private suspend fun read(key: Preferences.Key<Boolean>): Boolean = preferences()[key] ?: false
+
+    private suspend fun preferences(): Preferences =
         context.setupDataStore.data
             .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
-            .first()[key] ?: false
+            .first()
 
-    private suspend fun write(
-        key: Preferences.Key<Boolean>,
-        value: Boolean,
+    private suspend fun <T> write(
+        key: Preferences.Key<T>,
+        value: T,
     ) {
         context.setupDataStore.edit { preferences -> preferences[key] = value }
     }
@@ -59,5 +73,6 @@ class DataStoreSetupPreferences(
     private companion object {
         val ONBOARDING_ACKNOWLEDGED = booleanPreferencesKey("onboarding_acknowledged")
         val BATTERY_EXEMPTION_CONFIRMED = booleanPreferencesKey("battery_exemption_confirmed")
+        val LAST_WAKE_TIME_ISO = stringPreferencesKey("last_wake_time_iso")
     }
 }

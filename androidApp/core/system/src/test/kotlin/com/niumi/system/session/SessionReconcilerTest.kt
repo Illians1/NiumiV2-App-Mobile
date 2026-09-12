@@ -64,6 +64,41 @@ class SessionReconcilerTest {
         )
     }
 
+    /**
+     * Défaut mesuré sur appareil à l'étape 14 : après un redémarrage du processus, l'accueil
+     * affichait « Aucune session » alors que la session était armée et l'alarme programmée.
+     * `SessionSnapshotPublisher` vit en mémoire et repart à `null` ; une session saine ne produit
+     * aucune décision, donc aucun `PUBLISH_PLATFORM_SNAPSHOT` ne la republiait. La réconciliation
+     * est le seul chemin qui relit la persistance : c'est donc à elle de réamorcer le flux, dès
+     * qu'elle trouve une session, avant toute décision.
+     */
+    @Test
+    fun aHealthyArmedSessionIsRepublishedToTheUiEvenWhenNothingNeedsFixing() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            val snapshot = armedSnapshot()
+            seed(harness, snapshot)
+            harness.alarmScheduler.schedule(
+                snapshot.sessionId,
+                snapshot.revision,
+                snapshot.wakeSchedule.triggerAtEpochMillis,
+            )
+            harness.blockedPackagesProjection.state =
+                BlockedPackagesState.Active(snapshot.sessionId, extras.blockedPackages.toSet())
+            assertThat(harness.publisher.snapshot.value).isNull()
+
+            harness.coordinator.reconcile(ReconcileReason.PROCESS_START)
+
+            assertThat(
+                harness.publisher.snapshot.value
+                    ?.sessionId,
+            ).isEqualTo(snapshot.sessionId)
+            assertThat(
+                harness.publisher.snapshot.value
+                    ?.state,
+            ).isEqualTo(SessionStateDto.ARMED)
+        }
+
     @Test
     fun preparingWithAlarmScheduledAndBlockingActiveResumesToArmed() =
         runTest {

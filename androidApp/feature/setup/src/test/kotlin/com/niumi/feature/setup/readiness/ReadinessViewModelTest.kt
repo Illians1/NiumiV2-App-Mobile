@@ -183,14 +183,33 @@ class ReadinessViewModelTest {
         assertThat(state.primary?.isRevisitable).isFalse()
     }
 
-    /** `FixTime` attend le choix de l'heure (étape 14) : son recours reste inactif. */
+    /**
+     * `FixTime` a désormais son écran (étape 14) : son recours devient actif. Le cas ne se produit
+     * qu'avec une heure candidate déjà choisie — pendant la surveillance d'une session armée
+     * (§13.1) — puisque `FUTURE_TRIGGER` est `NOT_APPLICABLE`, donc filtré, tant qu'aucune heure
+     * n'a été saisie.
+     */
     @Test
-    fun anActionWhoseScreenIsStillMissingStaysUnavailable() {
+    fun theWakeTimeRemedyIsAvailableNowThatItsScreenExists() {
         report = reportWith(failing = setOf(ReadinessCheckId.FUTURE_TRIGGER))
 
         val state = viewModel().state
 
         assertThat(state.primary?.id).isEqualTo(ReadinessCheckId.FUTURE_TRIGGER)
+        assertThat(state.primary?.isActionAvailable).isTrue()
+    }
+
+    /**
+     * `Unsupported` reste le seul recours indisponible : le matériel manque, aucune version
+     * d'Android n'y changera rien.
+     */
+    @Test
+    fun anActionWithoutAnyRemedyStaysUnavailable() {
+        report = reportWith(failing = setOf(ReadinessCheckId.NFC_PRESENT))
+
+        val state = viewModel().state
+
+        assertThat(state.primary?.id).isEqualTo(ReadinessCheckId.NFC_PRESENT)
         assertThat(state.primary?.isActionAvailable).isFalse()
     }
 

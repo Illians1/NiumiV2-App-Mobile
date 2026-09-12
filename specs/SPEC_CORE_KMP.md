@@ -461,6 +461,8 @@ Une activation est refusée si `count` est inférieur à 1 ou supérieur à 50. 
 5. enregistrer l'intention locale et l'instant obtenu;
 6. afficher la date complète avant confirmation.
 
+L'interface affiche toujours l'heure de l'**instant obtenu**, jamais l'intention locale enregistrée. Les deux ne coïncident pas au point 3 : une saisie de 02:30 la nuit du passage à l'heure d'été désigne une heure qui n'existe pas ce jour-là, et l'alarme sonnera à 03:00. Afficher la saisie serait un faux état de fiabilité, interdit par SPEC_ANDROID §15. L'intention locale reste enregistrée, mais uniquement pour expliquer l'écart : dans ce seul cas, l'écran de confirmation énonce que le changement d'heure fait sauter l'horloge et nomme les deux heures, sans quoi l'écart passerait pour un défaut de l'application.
+
 ### 8.2 Après activation
 
 `triggerAtEpochMillis` devient immuable après `ACTIVATION_SUCCEEDED`. La fenêtre de grâce de 15 minutes ci-dessous est une politique de reprogrammation Android, calculée et testée dans le module commun mais sans équivalent iOS: iOS produit `TRIGGER_ELAPSED` dès l'heure atteinte, sans délai de grâce, faute d'API de reprogrammation sonore équivalente à `setAlarmClock()`.

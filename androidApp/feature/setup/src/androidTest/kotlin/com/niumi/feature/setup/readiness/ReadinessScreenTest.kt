@@ -72,7 +72,9 @@ class ReadinessScreenTest {
                     true,
                 ),
             )
-        composeRule.setContent { ReadinessScreen(state = stateWith(primary, others), onPrimaryAction = {}) }
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, others), onPrimaryAction = {}, onChooseWakeTime = {})
+        }
 
         val clickableNodes = composeRule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
         assertThat(clickableNodes).hasSize(1)
@@ -82,7 +84,9 @@ class ReadinessScreenTest {
     fun thePrimaryActionCarriesItsLabelAsAContentDescription() {
         val primary =
             item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.FAILED, ReadinessAction.OpenSoundSettings, true)
-        composeRule.setContent { ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}) }
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}, onChooseWakeTime = {})
+        }
 
         composeRule
             .onNode(hasContentDescription(ReadinessMessages.actionLabelFor(ReadinessCheckId.ALARM_VOLUME)))
@@ -93,7 +97,9 @@ class ReadinessScreenTest {
     fun anActionWithoutADestinationIsShownDisabledRatherThanHidden() {
         val primary =
             item(ReadinessCheckId.PAIRED_BOX, ReadinessOutcome.FAILED, ReadinessAction.StartPairing, false)
-        composeRule.setContent { ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}) }
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}, onChooseWakeTime = {})
+        }
 
         composeRule.onNodeWithText(ReadinessMessages.forCheck(ReadinessCheckId.PAIRED_BOX)).assertExists()
         composeRule
@@ -111,7 +117,9 @@ class ReadinessScreenTest {
                 ReadinessAction.ShowExactAlarmDiagnostic,
                 true,
             )
-        composeRule.setContent { ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}) }
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}, onChooseWakeTime = {})
+        }
 
         composeRule.onNodeWithText(ReadinessMessages.EXACT_ALARM_DIAGNOSTIC).performScrollTo().assertExists()
     }
@@ -124,7 +132,9 @@ class ReadinessScreenTest {
             item(ReadinessCheckId.PAIRED_BOX, ReadinessOutcome.FAILED, ReadinessAction.StartPairing, false)
         val passed =
             item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.PASSED, ReadinessAction.OpenSoundSettings, true)
-        composeRule.setContent { ReadinessScreen(state = stateWith(primary, listOf(passed)), onPrimaryAction = {}) }
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, listOf(passed)), onPrimaryAction = {}, onChooseWakeTime = {})
+        }
 
         composeRule
             .onNodeWithText(ReadinessMessages.labelFor(ReadinessCheckId.ALARM_VOLUME), substring = true)
@@ -148,7 +158,7 @@ class ReadinessScreenTest {
             item(ReadinessCheckId.PAIRED_BOX, ReadinessOutcome.PASSED, ReadinessAction.StartPairing, true)
                 .copy(actionLabel = ReadinessMessages.CHANGE_PAIRED_BOX_LABEL)
         composeRule.setContent {
-            ReadinessScreen(state = stateWith(primary, listOf(pairedBox)), onPrimaryAction = {})
+            ReadinessScreen(state = stateWith(primary, listOf(pairedBox)), onPrimaryAction = {}, onChooseWakeTime = {})
         }
 
         composeRule
@@ -168,7 +178,11 @@ class ReadinessScreenTest {
         val passedVolume =
             item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.PASSED, ReadinessAction.OpenSoundSettings, true)
         composeRule.setContent {
-            ReadinessScreen(state = stateWith(primary, listOf(passedVolume)), onPrimaryAction = {})
+            ReadinessScreen(
+                state = stateWith(primary, listOf(passedVolume)),
+                onPrimaryAction = {},
+                onChooseWakeTime = {},
+            )
         }
 
         val clickableNodes = composeRule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
@@ -178,9 +192,38 @@ class ReadinessScreenTest {
     @Test
     fun aReadyDeviceSaysSoOnce() {
         composeRule.setContent {
-            ReadinessScreen(state = ReadinessUiState(isLoading = false), onPrimaryAction = {})
+            ReadinessScreen(state = ReadinessUiState(isLoading = false), onPrimaryAction = {}, onChooseWakeTime = {})
         }
 
         composeRule.onNodeWithText(ReadinessMessages.ALL_CLEAR).assertExists()
+    }
+
+    /**
+     * Sortie vers l'écran 5 (étape 14). Sans elle, le choix de l'heure serait inatteignable :
+     * `ReadinessAction.FixTime` n'apparaît jamais tant qu'aucune heure candidate n'existe.
+     */
+    @Test
+    fun aReadyDeviceOffersTheWayToTheWakeTimeScreen() {
+        composeRule.setContent {
+            ReadinessScreen(state = ReadinessUiState(isLoading = false), onPrimaryAction = {}, onChooseWakeTime = {})
+        }
+
+        composeRule
+            .onNode(hasContentDescription(ReadinessMessages.CHOOSE_WAKE_TIME_LABEL))
+            .performScrollTo()
+            .assertExists()
+    }
+
+    @Test
+    fun aDeviceWithABlockingCheckOffersNoWayToTheWakeTimeScreen() {
+        val primary =
+            item(ReadinessCheckId.ALARM_VOLUME, ReadinessOutcome.FAILED, ReadinessAction.OpenSoundSettings, true)
+        composeRule.setContent {
+            ReadinessScreen(state = stateWith(primary, emptyList()), onPrimaryAction = {}, onChooseWakeTime = {})
+        }
+
+        composeRule
+            .onAllNodesWithText(ReadinessMessages.CHOOSE_WAKE_TIME_LABEL)
+            .assertCountEquals(0)
     }
 }

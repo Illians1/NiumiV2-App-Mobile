@@ -11,6 +11,7 @@ import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.blocking.AccessibilityServiceStatus
 import com.niumi.system.blocking.BlockedPackagesProjection
 import com.niumi.system.common.Clock
+import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.IdGenerator
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.notification.NotificationAvailability
@@ -28,11 +29,13 @@ import com.niumi.system.session.SessionReconciler
 import com.niumi.system.session.SessionReducer
 import com.niumi.system.session.SessionRuntimeStatusProbe
 import com.niumi.system.session.SessionSnapshotPublisher
+import com.niumi.system.session.SessionStartupReconciler
 import com.niumi.system.session.UnlockAwarePersistenceGateway
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Singleton
 
 /**
@@ -88,7 +91,9 @@ object SessionModule {
         alarmScheduler: AlarmScheduler,
         blockedPackagesProjection: BlockedPackagesProjection,
         readinessMonitor: SessionReadinessMonitor,
-    ): ReconcilerSources = ReconcilerSources(alarmScheduler, blockedPackagesProjection, readinessMonitor)
+        snapshotPublisher: SessionSnapshotPublisher,
+    ): ReconcilerSources =
+        ReconcilerSources(alarmScheduler, blockedPackagesProjection, readinessMonitor, snapshotPublisher)
 
     @Provides
     fun provideSessionReconciler(
@@ -110,6 +115,13 @@ object SessionModule {
         reconciler: SessionReconciler,
         eventFactory: SessionEventFactory,
     ): SessionCoordinator = DefaultSessionCoordinator(reducer, gateway, effectDispatcher, reconciler, eventFactory)
+
+    @Provides
+    @Singleton
+    fun provideSessionStartupReconciler(
+        coordinator: SessionCoordinator,
+        @DefaultDispatcher dispatcher: CoroutineDispatcher,
+    ): SessionStartupReconciler = SessionStartupReconciler(coordinator, dispatcher)
 
     @Provides
     fun provideSessionRuntimeStatusProbe(

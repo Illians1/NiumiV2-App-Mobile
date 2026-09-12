@@ -1,9 +1,14 @@
 package com.niumi.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import com.niumi.feature.session.active.ActiveSessionRoute
+import com.niumi.feature.session.summary.SummaryRoute
+import com.niumi.feature.session.wake.WakeTimeRoute
 import com.niumi.feature.setup.accessibility.AccessibilityConsentRoute
 import com.niumi.feature.setup.apps.AppPickerRoute
 import com.niumi.feature.setup.onboarding.OnboardingRoute
@@ -46,6 +51,7 @@ fun NiumiNavHost(contributors: Set<@JvmSuppressWildcards NavGraphContributor>) {
             ReadinessRoute(
                 onStartPairing = { navController.navigate(NiumiRoute.Pairing) },
                 onOpenAppPicker = { navController.navigate(NiumiRoute.AppPicker) },
+                onChooseWakeTime = { navController.navigate(NiumiRoute.WakeTime) },
             )
         }
         composable<NiumiRoute.AccessibilityConsent> { AccessibilityConsentRoute() }
@@ -61,6 +67,35 @@ fun NiumiNavHost(contributors: Set<@JvmSuppressWildcards NavGraphContributor>) {
                 onSessionInProgress = { navController.popBackStack() },
             )
         }
+        composable<NiumiRoute.WakeTime> {
+            WakeTimeRoute(
+                onContinue = { localTimeIso -> navController.navigate(NiumiRoute.Summary(localTimeIso)) },
+            )
+        }
+        composable<NiumiRoute.Summary> { backStackEntry ->
+            SummaryRoute(
+                localTimeIso = backStackEntry.toRoute<NiumiRoute.Summary>().localTimeIso,
+                onArmed = { navController.navigateToActiveSession() },
+                // Revenir à l'écran 5 plutôt qu'en empiler un second.
+                onChangeTime = { navController.popBackStack() },
+                onSessionInProgress = { navController.navigateToActiveSession() },
+            )
+        }
+        composable<NiumiRoute.ActiveSession> { ActiveSessionRoute() }
         contributors.forEach { it.register(this, navController) }
+    }
+}
+
+/**
+ * `popUpTo(Home)` non inclusif : le récapitulatif et le choix de l'heure disparaissent de la pile
+ * — y revenir par Retour afficherait un bouton « Activer ma session » que
+ * `ActivationReducer.onRequested` refuserait systématiquement, soit un faux état au sens §15 —
+ * tandis que l'accueil reste dessous. `inclusive = true` viderait la pile et ferait quitter
+ * l'application au premier Retour, en perdant la seconde garantie d'accès au scan de §10.4.
+ */
+private fun NavController.navigateToActiveSession() {
+    navigate(NiumiRoute.ActiveSession) {
+        popUpTo(NiumiRoute.Home) { inclusive = false }
+        launchSingleTop = true
     }
 }

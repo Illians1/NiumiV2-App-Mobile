@@ -8,6 +8,8 @@ import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.IdGenerator
 import com.niumi.system.common.IoDispatcher
 import com.niumi.system.common.SystemClock
+import com.niumi.system.common.SystemTimeZoneProvider
+import com.niumi.system.common.TimeZoneProvider
 import com.niumi.system.common.UuidIdGenerator
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.intent.NiumiComponentResolver
@@ -39,6 +41,10 @@ object SystemModule {
     @Provides
     @Singleton
     fun provideIdGenerator(): IdGenerator = UuidIdGenerator()
+
+    @Provides
+    @Singleton
+    fun provideTimeZoneProvider(): TimeZoneProvider = SystemTimeZoneProvider()
 
     @Provides
     @DefaultDispatcher

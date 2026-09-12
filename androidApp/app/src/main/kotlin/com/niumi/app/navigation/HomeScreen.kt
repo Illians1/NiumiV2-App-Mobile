@@ -24,6 +24,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.niumi.designsystem.ui.theme.NiumiTheme
 
 const val PREPARE_BUTTON_LABEL = "Préparer mon réveil"
+
+/**
+ * Une session en cours doit garder une sortie depuis l'accueil : §10.4 en fait la seconde
+ * garantie d'accès au scan, indépendante de la notification. Sans ce bouton, l'accueil serait un
+ * cul-de-sac dès que l'étape 14 rend une session armable.
+ */
+const val VIEW_SESSION_BUTTON_LABEL = "Voir ma session"
 private const val NO_SESSION_TITLE = "Aucune session"
 private const val ACTIVE_SESSION_TITLE = "Une session est en cours."
 
@@ -31,9 +38,9 @@ private const val ACTIVE_SESSION_TITLE = "Une session est en cours."
  * Accueil (SPEC_ANDROID §15, écran 1). En `release`, `entryPoints` est toujours vide : le seul
  * `NavGraphContributor` vit dans `src/debug` et disparaît à l'étape 21.
  *
- * Quand une session non finale existe, l'accueil ne propose pas de préparer un réveil. La
- * redirection vers l'écran de session active de §10.4 sera branchée à l'étape 15, avec l'écran 7 ;
- * aucune session ne peut être armée avant l'étape 14.
+ * Quand une session non finale existe, l'accueil ne propose pas de préparer un réveil : son bouton
+ * mène à l'écran de session active (§10.4, seconde garantie d'accès au scan). La destination est
+ * calculée par [homeDestinationFor], jamais par l'écran.
  */
 @Composable
 fun HomeScreen(
@@ -57,13 +64,12 @@ fun HomeScreen(
                 text = if (state.hasActiveSession) ACTIVE_SESSION_TITLE else NO_SESSION_TITLE,
                 style = MaterialTheme.typography.headlineMedium,
             )
-            if (!state.hasActiveSession) {
-                Button(
-                    onClick = onPrepare,
-                    modifier = Modifier.semantics { contentDescription = PREPARE_BUTTON_LABEL },
-                ) {
-                    Text(PREPARE_BUTTON_LABEL)
-                }
+            val primaryLabel = if (state.hasActiveSession) VIEW_SESSION_BUTTON_LABEL else PREPARE_BUTTON_LABEL
+            Button(
+                onClick = onPrepare,
+                modifier = Modifier.semantics { contentDescription = primaryLabel },
+            ) {
+                Text(primaryLabel)
             }
             entryPoints.forEach { entryPoint ->
                 TextButton(onClick = { onEntryPointClick(entryPoint.route) }) {

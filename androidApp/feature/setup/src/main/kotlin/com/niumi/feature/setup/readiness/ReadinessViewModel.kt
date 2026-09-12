@@ -119,16 +119,11 @@ class ReadinessViewModel
 
         private companion object {
             /**
-             * Recours dont l'écran n'existe pas encore : `FixTime` attend le choix de l'heure
-             * (étape 14). `Unsupported` n'a de recours sur aucune version : le matériel manque.
-             * `StartPairing` et `OpenAppPicker` en sont sortis à l'étape 13, leurs écrans étant
-             * livrés. Ce jeu se vide au fil des étapes ; il ne doit jamais servir à masquer un
-             * contrôle.
+             * Recours dont l'écran n'existe pas : `Unsupported` n'en a sur aucune version, le
+             * matériel manque. `StartPairing` et `OpenAppPicker` en sont sortis à l'étape 13,
+             * `FixTime` à l'étape 14, leurs écrans étant livrés. Ce jeu se vide au fil des étapes ;
+             * il ne doit jamais servir à masquer un contrôle.
              */
-            val UNAVAILABLE_ACTIONS =
-                setOf(
-                    ReadinessAction.FixTime,
-                    ReadinessAction.Unsupported,
-                )
+            val UNAVAILABLE_ACTIONS = setOf(ReadinessAction.Unsupported)
         }
     }
