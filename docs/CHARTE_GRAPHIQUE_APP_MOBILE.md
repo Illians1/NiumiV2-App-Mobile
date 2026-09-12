@@ -275,7 +275,6 @@ Il ne doit donc pas être recréé avec Switzer.
 
 Ses formes géométriques font partie de son identité propre.
 
-
 ---
 
 ## Versions principales
