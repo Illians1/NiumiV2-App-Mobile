@@ -275,7 +275,6 @@ Il ne doit donc pas être recréé avec Switzer.
 
 Ses formes géométriques font partie de son identité propre.
 
-Le point carré du `i` constitue notamment un élément distinctif intéressant et peut accueillir la couleur signature.
 
 ---
 
@@ -425,7 +424,6 @@ Il est possible d’utiliser :
 - une animation courte ;
 - un changement de contraste ;
 - l’Ambre ;
-- une transformation du point carré de Niumi ;
 - une vibration ou un retour sensoriel lorsque le média le permet.
 
 L’animation ne doit pas transformer l’action en jeu.
