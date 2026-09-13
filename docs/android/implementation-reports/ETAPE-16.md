@@ -264,10 +264,37 @@ jamais une dégradation pour cause de stockage indisponible — un test fige ce 
 sans remontée. Trois tests ajoutés ou réécrits sur `SessionReadinessMonitorTest`, dont un qui
 reproduit exactement le scénario mesuré sur appareil — monitor neuf, base conservée.
 
-**Non revalidé sur appareil.** Reproduire le scénario demande une session armée, donc le boîtier NFC ;
-la session de test a été supprimée à la demande de l'utilisateur juste avant ce correctif. Le
-comportement est couvert par les tests JVM, qui simulent la mort de processus par une instance
-neuve de monitor face à un lecteur d'incidents inchangé. À reconfirmer sur appareil à la prochaine
-session armée — étape 17.
+### Validé sur appareil le 2026-09-13
+
+Session réarmée par l'utilisateur (boîtier scanné, `com.adobe.reader` bloquée), puis service
+d'accessibilité coupé par `adb` et **cinq évaluations** provoquées, dont quatre après un arrêt forcé
+du processus — le scénario qui produisait les doublons.
+
+| Mesure | Avant le correctif | Après |
+| --- | --- | --- |
+| Incidents en base | 5 | **1** |
+| Détections au journal technique (`ACCESSIBILITY_DISABLED`) | 5 | **5** |
+| `SESSION_READINESS_DEGRADED` | 5 | **5** |
+| Notification republiée à chaque relance | oui | **oui** |
+| Écran 7 | deux incidents, deux boutons | **un incident, un bouton** |
+
+Les deux moitiés du contrat tiennent : l'incident ne se duplique plus, et la notification continue
+d'être republiée — vérifié en la supprimant avant un arrêt forcé, puis en la voyant réapparaître à
+la relance (0 notification après l'arrêt, republiée ensuite). La santé est passée à `DEGRADED` au
+premier incident et n'en est jamais revenue, conformément à SPEC_CORE_KMP §7.3.
+
+**Constat annexe, hors périmètre.** Pendant tout le test, **aucune alarme n'a été reprogrammée** :
+`SessionReconciler.reconcileArmed` interrompt sa passe dès qu'un contrôle de `PERMISSION_CHECKS` est
+en échec, et `ACCESSIBILITY_SERVICE` y figure au même titre qu'`EXACT_ALARM`. Couper le service
+d'accessibilité empêche donc aussi la réparation de l'alarme — un sous-système sans rapport avec la
+sonnerie bloque la remise en état de la sonnerie. C'est §13.1 appliqué à la lettre, donc conforme,
+mais l'effet de bord mérite d'être connu : à examiner à l'étape 19 (résilience), pas avant.
+
+**Suppression de la session de test.** Faite chirurgicalement plutôt que par `pm clear`, pour
+conserver l'association du boîtier : lignes de session supprimées de Room (`alarm_session`,
+`active_session_pointer`, `blocked_app`, `session_incident`, les reçus et l'outbox), `paired_box` et
+`technical_event` conservés, **et le snapshot Direct Boot supprimé**. Ce dernier point n'est pas
+cosmétique : le fichier contenait encore la session `ARMED` avec son `triggerAtEpochMillis`, et un
+redémarrage du téléphone l'aurait relu avant déverrouillage pour reprogrammer l'alarme.
 
 §13.1 et §15 mises à jour en conséquence.
