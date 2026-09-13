@@ -934,20 +934,51 @@ changement. Détails dans `ETAPE-16.md`.
 
 **Specs à lire :** SPEC_CORE_KMP §6 (effets `ALARM_FIRED`), §11.1 ; SPEC_ANDROID §10.1, §10.2, §10.4, §18.
 
-**Fichiers :**
-- Modifier `AlarmReceiver` : valide `sessionId` et `revision` contre le snapshot actif (Room si déverrouillé, sinon Direct Boot), construit `SessionEventDto(ALARM_FIRED, expectedRevision = snapshot.revision)`, appelle `SessionCoordinator.dispatch` dans `goAsync()` avec un délai maximal de 8 s ; `START_RINGING` est exécuté par `StartRingingExecutor` → `RingingController.startRinging`. Aucun démarrage direct du service depuis le receiver.
-- Modifier `AlarmRingingService` : `onStartCommand` avec `intent == null` (recréation) relit le snapshot actif ; si `RINGING` → redémarre l'audio et journalise `PROCESS_RECREATED` ; si `RELEASING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` ou final → `stopSelf()` sans toucher l'état ; si `ARMED` → `reconcile(SERVICE_RECREATED)` puis `stopSelf()`.
-- Modifier `AlarmActivity`/`AlarmScreen` : observe `SessionSnapshotPublisher` ; `RINGING` → texte §10.4 ; `TRIGGERED_AWAITING_NFC` → « L'heure de ton réveil est passée. Scanne ton boîtier Niumi pour débloquer tes applications. » sans audio ; `AWAITING_NFC` → « Le son est arrêté, mais tes applications restent bloquées. Scanne ton boîtier Niumi pour terminer la session. » ; `RELEASING` → progression de nettoyage (liste des effets `PENDING`/`SUCCEEDED`) ; état final → navigation vers `Completed` ou `Cancelled` ; `null` → fermeture.
-- Créer `androidApp/feature/ringing/src/main/kotlin/com/niumi/feature/ringing/CompletedScreen.kt` (écran 10 : « Session terminée. Tes applications sont débloquées. », bouton retour à l'accueil).
-- Supprimer l'appel direct `RingingController.startRinging()` introduit dans `AlarmReceiver` à l'étape 3 ; après cette étape, seul `StartRingingExecutor` appelle cette méthode (vérifier par grep).
-- Tests : `AlarmReceiverTest` (fakes : `revision` obsolète → aucun `dispatch`, journal `ALARM_RECEIVED` tout de même ; `sessionId` inconnu → refus ; nominal → `dispatch(ALARM_FIRED)`), `AlarmRingingServiceRecreationTest` (unitaire sur une classe `RingingServiceRecovery` pure : chaque état → action attendue), `AlarmScreenStateTest` étendu (mapping des cinq états vers les textes), instrumenté `AlarmChainInstrumentedTest` (session `ARMED` en base de test avec `triggerAt = now + 5 s`, alarme réelle → `RINGING` en base, service au premier plan, notification sans action).
+**Quatre arbitrages validés avec l'utilisateur le 2026-09-13**, répercutés dans les specs dans le
+même changement. Détails dans `ETAPE-17.md`.
 
-- [ ] **Écrire `AlarmReceiverTest`**, refondre le receiver. Ajouter le cas mesuré à l'étape 6 : si `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` au déclenchement, créer l'incident `ANDROID_ALARM_MUTED_BY_DND` (`CRITICAL`) et journaliser `ALARM_MUTED_BY_DND` (SPEC_ANDROID §13, §17), sans empêcher le reste de la chaîne : la session reste active et le blocage est conservé.
-- [ ] **Écrire `AlarmRingingServiceRecreationTest`**, implémenter `RingingServiceRecovery` et l'appeler depuis le service.
-- [ ] **Étendre `AlarmScreenStateTest`**, compléter l'écran de réveil et l'écran 10.
-- [ ] **Garantir la présence de l'écran de réveil pendant `RINGING`** (SPEC_ANDROID §10.2, §10.4, §11.2 — trois situations mesurées à l'étape 6 où `AlarmActivity` disparaît alors que l'alarme sonne, privant l'utilisateur du seul moyen de terminer sa session) : le service surveille sa notification via `NotificationManager.getActiveNotifications()` et la republie avec son `fullScreenIntent` si elle a été retirée ; `AlarmActivity` recalcule son état au changement de verrouillage (`ACTION_USER_PRESENT` ou `KeyguardManager.addKeyguardLockedStateListener` en API 34+) au lieu du seul `onResume()`. Tests : notification retirée pendant `RINGING` → republication ; verrouillage levé → le texte « Déverrouille ton téléphone… » disparaît.
-- [ ] **Écrire `AlarmChainInstrumentedTest`**.
-- [ ] **Vérifier :**
+1. **Garde de révision : monotonie, pas égalité.** « `revision` obsolète → aucun `dispatch` » était
+   une **panne de réveil silencieuse** : `IncidentReducer` incrémente la révision sans produire
+   `SCHEDULE_ALARM`, le réconciliateur ne reprogramme que si l'alarme a disparu, et
+   `revisionViolations` exige l'égalité stricte. Chaque incident de §13.1 survenu pendant `ARMED` —
+   six contrôles y sont surveillés — aurait rendu l'alarme muette. Seule une révision **supérieure**
+   au snapshot est refusée.
+2. **Écran 10 dans `:feature:session`**, à côté de l'écran 11, et non dans `:feature:ringing`.
+3. **Redirection depuis le lanceur incluse ici** : les quatre états de scan mènent à l'écran 8,
+   l'écran 7 n'ayant pas de Reader Mode.
+4. **Republication de notification en escalade** : plein écran la première fois, republication
+   silencieuse ensuite. **Remplacé pendant la validation sur appareil** par un critère d'état de
+   l'appareil (verrouillé ou écran éteint → plein écran ; en cours d'usage → silencieux) : la garde
+   à usage unique pouvait être consommée par une absence transitoire.
+5. **Deux demandes produit arbitrées pendant la validation** : pendant un état de scan, aucun autre
+   écran de Niumi n'est atteignable (périmètre « tout l'appareil » écarté — §10.4, §23, mode
+   `lock task`) ; et le retour prédictif est inerte tant que la session attend un scan.
+
+**Fichiers :**
+- Modifier `AlarmReceiver` : coquille `goAsync()` bornée à 8 s qui délègue à `AlarmTriggerHandler`
+  (`:core:system`, écart au plan pour réutiliser les huit doublures de test existantes). Le handler
+  valide `sessionId` et la révision, appelle `SessionReadinessMonitor` **avant** le dispatch, relit
+  le snapshot, puis dispatche `ALARM_FIRED`. Aucun démarrage direct du service.
+- Modifier `AlarmRingingService` : `onStartCommand` avec `intent == null` passe au premier plan puis
+  applique `RingingServiceRecovery` (`:core:system`) ; ajoute la surveillance de notification.
+- Modifier `AlarmActivity`/`AlarmScreen` : `AlarmViewModel` observe la persistance **puis** le
+  publisher ; `AlarmScreenState` est indexé par `SessionStateDto` (`AlarmRingingPhase` supprimé) ;
+  `AlarmUiState` mappe les neuf états ; sortie vers les écrans 10/11 par extra de destination.
+- Créer `CompletedScreen.kt` dans `:feature:session/active/` (écran 10) et enregistrer
+  `NiumiRoute.Completed`.
+- Supprimer l'appel direct `RingingController.startRinging()` du receiver (vérifié par grep).
+- Tests : `AlarmTriggerHandlerTest` (13), `SessionEventFactoryTriggerTest` (1),
+  `RingingServiceRecoveryTest` (9), `RingingNotificationWatchTest` (4), `AlarmScreenStateTest` (13),
+  `AlarmUiStateTest` (6), `ReleaseProgressTest` (5), `AlarmViewModelTest` (8),
+  `LauncherDestinationTest` (6), `HomeViewModelTest` (5), instrumentés `AlarmChainInstrumentedTest`
+  (`:app`) et `RingingNotificationRepublishInstrumentedTest`.
+
+- [x] **Écrire `AlarmTriggerHandlerTest`**, refondre le receiver. Ajouter le cas mesuré à l'étape 6 : si `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` au déclenchement, créer l'incident `ANDROID_ALARM_MUTED_BY_DND` (`CRITICAL`) et journaliser `ALARM_MUTED_BY_DND` (SPEC_ANDROID §13, §17), sans empêcher le reste de la chaîne : la session reste active et le blocage est conservé. *(La détection DND passe par `SessionReadinessMonitor`, que §13.1 désigne déjà, et non par un second lecteur du filtre — une voie parallèle recréerait les doublons corrigés à l'étape 16. Elle s'exécute **avant** le dispatch, sinon l'état est `RINGING` et le périmètre surveillé retombe à l'accessibilité seule ; le snapshot est relu ensuite, l'incident ayant incrémenté la révision.)*
+- [x] **Écrire `RingingServiceRecoveryTest`**, implémenter `RingingServiceRecovery` et l'appeler depuis le service. *(Le cas `Unreadable`, couvert ni par le plan ni par §10.2, est tranché : ne pas sonner, ne rien effacer, réconcilier puis s'arrêter. **`SessionReconciler` a finalement dû être modifié**, après mesure sur appareil : HyperOS n'a rejoué aucun redémarrage `START_STICKY` après un crash, et le rejeu d'outbox ne rattrape pas ce cas (`START_RINGING` est déjà `SUCCEEDED`). La branche `RINGING` relance donc la sonnerie — `SessionReconcilerRingingTest`, 3 tests. `RELEASING`/`AWAITING_NFC` restent à l'étape 18.)*
+- [x] **Étendre `AlarmScreenStateTest`**, compléter l'écran de réveil et l'écran 10. *(`AlarmRingingPhase` supprimé. `RELEASING` passe avant tous les rangs NFC — le scan a déjà eu lieu — et n'affiche que les **trois effets requis** de la libération, les best-effort ne bloquant jamais la phase.)*
+- [x] **Garantir la présence de l'écran de réveil pendant `RINGING`** (SPEC_ANDROID §10.2, §10.4, §11.2). *(Surveillance toutes les 10 s avec escalade ; `KeyguardLockedStateListener` en API 34+, `ACTION_USER_PRESENT` en dessous ; et `launcherDestinationFor` envoie les quatre états de scan vers l'écran 8, avec un acquittement anti-boucle testé.)*
+- [x] **Écrire `AlarmChainInstrumentedTest`**. *(Dans `:app/src/androidTest` : `:app` est le seul module dont le graphe Dagger est complet — Dagger refusait `BlockingController` et `AccessibilityServiceStatus` dans l'APK de test de `:feature:ringing`. Session écrite directement en base, §19.2 interdisant de passer par `ACTIVATION_REQUESTED` sous instrumentation.)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :feature:ringing:testDebugUnitTest :core:system:testDebugUnitTest
@@ -955,9 +986,13 @@ changement. Détails dans `ETAPE-16.md`.
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** session réelle à +2 min, écran éteint → sonnerie, écran de réveil, état `RINGING` visible dans le diagnostic ; `adb shell am kill com.niumi.app` pendant la sonnerie → service et son repris ou incident consigné ; fermeture de l'activité et verrouillage → sonnerie maintenue.
+*(Faite le 2026-09-13 — **749 tests JVM verts** : `:core:system` 217 (+40), `:feature:ringing` 38 (+17), `:app` 31 (+14), `:feature:session` 121 (+1), non-régression sur `:core:database` (106), `:shared:core` (160) et `:feature:setup` (76). `:app:assembleDebug`, ktlint, detekt verts et `:app:lintDebug` sans aucune remontée. Grep de clôture conforme : `StartRingingExecutor` est le seul appelant de `startRinging` hors tests.)*
 
-**Terminé quand :** `RINGING` n'est écrit que par le moteur, le service se reconstruit depuis le snapshot, les cinq états ont leur texte, aucun appel direct au service hors exécuteur.
+- [x] **Valider sur appareil.** *(**Déroulée le 2026-09-13 sur Xiaomi 25080RABDG, Android 16, HyperOS OS3.0** — **125 tests instrumentés verts** et huit sessions réelles déclenchées. **Trois défauts trouvés et corrigés, tous invisibles en JVM :** `KeyguardManager.addKeyguardLockedStateListener` exige `SUBSCRIBE_TO_KEYGUARD_LOCKED_STATE`, absente de §14, et tuait le processus à l'instant où le plein écran ouvrait l'écran de réveil — l'alarme sonnait une seconde ; la garde « plein écran une seule fois » pouvait être consommée par une absence transitoire ; et la redirection vers l'écran de réveil ne se déclenchait ni depuis l'écran 7 ni quand l'alarme sonnait alors que l'utilisateur était déjà dans l'application. **L'arbitrage 1 est confirmé et s'est révélé plus large que prévu** : `SCHEDULE_ALARM` s'exécutant en `PREPARING`, le `PendingIntent` porte **toujours** une révision inférieure au snapshot — la règle littérale du plan aurait rendu **toutes** les alarmes muettes, pas seulement celles suivant un incident. **Un quatrième défaut trouvé par l'essai 7** : deux contrôles de §13.1 tombant ensemble ne produisaient qu'un seul incident, le second étant rejeté en `STALE_REVISION` — même classe que l'arbitrage 1, défaut antérieur à cette étape, corrigé ici. **Essais 2 et 4 (moitié plein écran) non validés**, et une réserve sérieuse ouverte : rien ne ranime la sonnerie si la plateforme ne relance pas le service. Détails dans `ETAPE-17.md`.)*
+
+**Tests manuels :** session réelle à +2 min, écran éteint → sonnerie, écran de réveil, état `RINGING` visible dans le diagnostic ; `adb shell am kill com.niumi.app` pendant la sonnerie → service et son repris ou incident consigné ; fermeture de l'activité et verrouillage → sonnerie maintenue ; balayage de la notification → retour sous 10 s puis, au second balayage, notification sans réouverture de l'écran ; déverrouillage pendant la sonnerie → le texte de verrouillage disparaît ; ouverture depuis le lanceur pendant `RINGING` → écran 8 ; silence total après l'armement → incident `CRITICAL`, session active ; incident pendant `ARMED` puis sonnerie → **l'alarme sonne**.
+
+**Terminé quand :** `RINGING` n'est écrit que par le moteur, le service se reconstruit depuis le snapshot, les cinq états ont leur texte, et **aucun composant ne démarre la sonnerie en contournant le moteur**. Le critère d'origine disait « aucun appel direct au service hors exécuteur » : il est corrigé, deux appelants de production coexistant désormais. `StartRingingExecutor` exécute l'effet du moteur ; `SessionReconciler` répare l'état Android pour le faire correspondre à un `RINGING` que le moteur a déjà écrit, ce que §18 lui demande explicitement (« elle tente les réparations idempotentes autorisées »). Ce que le critère interdit — écrire `RINGING` ou faire sonner sans décision du moteur, comme le faisait `AlarmReceiver` avant cette étape — reste exclu, et le grep de clôture le vérifie. *(**Atteint le 2026-09-13**, validations matérielles comprises, sous quatre réserves consignées dans `ETAPE-17.md` : la reconstruction du service (travail 2) n'est prouvée qu'en JVM — `am kill` est inapplicable et HyperOS ne rejoue pas `START_STICKY` après `am crash` ; la republication avec plein écran n'est pas démontrée ; l'essai 7 n'est pas effectué ; et **rien ne ranime la sonnerie** si la plateforme ne relance pas le service — `SessionReconciler` ne traite pas `RINGING`, à trancher avant la porte finale.)*
 
 ### Étape 18 : `HandleValidNfcUseCase`, libération atomique, reprise de `RELEASING` et notification d'attente de scan
 
@@ -1013,6 +1048,18 @@ changement. Détails dans `ETAPE-16.md`.
 **Terminé quand :** les six broadcasts sont traités, Direct Boot et Room convergent après déverrouillage (test), la fenêtre de 15 minutes est prouvée aux bornes.
 
 ### Étape 20 : mort du processus, pertes de permission, snapshot corrompu
+
+**Report de l'étape 17 — garantir que le processus revienne pendant `RINGING`.** Mesuré sur
+appareil le 2026-09-13 : HyperOS ne rejoue pas le redémarrage `START_STICKY` du service de sonnerie
+après une mort de processus. L'étape 17 a posé le premier maillon — `SessionReconciler` relance
+`START_RINGING` sur l'état `RINGING`, donc le son revient dès que Niumi se réveille — mais **rien
+ne garantit ce réveil** : l'alarme a déjà sonné, il n'y a plus d'événement à venir. Un processus
+mort que rien ne réveille laisse donc le réveil muet, session active et blocage en place.
+
+Piste à concevoir : une alarme de secours posée pendant `RINGING`, qui réveille le processus
+périodiquement et laisse la réconciliation faire le reste. Points ouverts : période, moment de
+l'annulation, distinction d'avec l'alarme du réveil (extras, `requestCode`), et coût en alarmes
+exactes. Voir `ETAPE-17.md`, section « Réserves subsistantes ».
 
 **Specs à lire :** SPEC_ANDROID §4.2, §7.1 (incidents), §9.2 (dernier paragraphe), §18, §20 (scénarios processus et permissions).
 

@@ -52,6 +52,14 @@ class SessionEventFactory(
 
     fun activationSucceeded(snapshot: SessionSnapshotDto) = base(snapshot, SessionEventKindDto.ACTIVATION_SUCCEEDED)
 
+    /**
+     * `AlarmReceiver` → [AlarmTriggerHandler] (SPEC_CORE_KMP §6, SPEC_ANDROID §10.1). `snapshot`
+     * doit être relu après la surveillance de §13.1, qui peut avoir incrémenté la révision via
+     * `INCIDENT_REPORTED` : construire l'événement depuis un snapshot périmé produirait
+     * `STALE_REVISION` et l'alarme resterait muette.
+     */
+    fun alarmFired(snapshot: SessionSnapshotDto) = base(snapshot, SessionEventKindDto.ALARM_FIRED)
+
     fun activationFailed(
         snapshot: SessionSnapshotDto,
         failureCode: String,

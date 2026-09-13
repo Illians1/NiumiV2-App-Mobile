@@ -39,3 +39,13 @@ object CancelledTexts {
 
     const val PREPARE_AGAIN_BUTTON = "Préparer un nouveau réveil"
 }
+
+/** Textes de l'écran 10 (SPEC_ANDROID §15, écran 10). Le corps est imposé par le plan. */
+object CompletedTexts {
+    const val TITLE = "Session terminée"
+
+    /** Imposé. */
+    const val BODY = "Tes applications sont débloquées."
+
+    const val BACK_HOME_BUTTON = "Revenir à l'accueil"
+}

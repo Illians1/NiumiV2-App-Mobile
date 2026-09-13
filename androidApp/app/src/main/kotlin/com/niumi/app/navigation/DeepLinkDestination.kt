@@ -6,6 +6,9 @@ import com.niumi.system.intent.NiumiDeepLink
  * Traduit l'extra de destination d'un `Intent` en route typée (SPEC_ANDROID §13.1 : « Le tap de la
  * notification ouvre `MainActivity`, qui redirige vers le diagnostic d'incident »).
  *
+ * Étape 17 : `AlarmActivity` emprunte le même chemin pour les écrans 10 et 11. Elle vit dans sa
+ * propre tâche, hors du `NavHost`, et ne peut donc pas naviguer elle-même (§15).
+ *
  * Fonction pure, hors de `MainActivity` pour être testable en JVM — un `Intent` lève `Stub!` en
  * test unitaire, une `String?` non.
  *
@@ -16,5 +19,7 @@ import com.niumi.system.intent.NiumiDeepLink
 fun deepLinkDestinationFor(extra: String?): NiumiRoute? =
     when (extra) {
         NiumiDeepLink.DESTINATION_INCIDENT_DIAGNOSTIC -> NiumiRoute.IncidentDiagnostic
+        NiumiDeepLink.DESTINATION_SESSION_COMPLETED -> NiumiRoute.Completed
+        NiumiDeepLink.DESTINATION_SESSION_CANCELLED -> NiumiRoute.Cancelled
         else -> null
     }

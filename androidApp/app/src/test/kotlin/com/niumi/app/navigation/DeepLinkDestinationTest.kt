@@ -16,6 +16,15 @@ class DeepLinkDestinationTest {
         assertThat(route).isEqualTo(NiumiRoute.IncidentDiagnostic)
     }
 
+    /** Écrans 10 et 11, atteints depuis `AlarmActivity` à l'étape 17 (§15). */
+    @Test
+    fun theFinalSessionExtrasOpenTheirScreens() {
+        assertThat(deepLinkDestinationFor(NiumiDeepLink.DESTINATION_SESSION_COMPLETED))
+            .isEqualTo(NiumiRoute.Completed)
+        assertThat(deepLinkDestinationFor(NiumiDeepLink.DESTINATION_SESSION_CANCELLED))
+            .isEqualTo(NiumiRoute.Cancelled)
+    }
+
     @Test
     fun anAbsentExtraOpensTheDefaultDestination() {
         assertThat(deepLinkDestinationFor(null)).isNull()

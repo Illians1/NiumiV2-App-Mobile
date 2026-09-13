@@ -4,6 +4,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.interop.SessionStateDto
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,7 +23,7 @@ class AlarmScreenNoStopActionTest {
     fun alarmScreenExposesNoClickableNode() {
         composeRule.setContent {
             AlarmScreen(
-                state = AlarmScreenState.from(AlarmRingingPhase.RINGING, deviceLocked = false),
+                state = AlarmScreenState.from(SessionStateDto.RINGING, deviceLocked = false),
                 currentTimeText = "07:00",
             )
         }

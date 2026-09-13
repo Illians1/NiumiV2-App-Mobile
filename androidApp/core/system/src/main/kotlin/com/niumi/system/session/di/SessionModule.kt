@@ -16,6 +16,7 @@ import com.niumi.system.common.IdGenerator
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.notification.NotificationAvailability
 import com.niumi.system.readiness.SessionReadinessMonitor
+import com.niumi.system.ringing.RingingController
 import com.niumi.system.session.DefaultSessionCoordinator
 import com.niumi.system.session.DefaultSessionRuntimeStatusProbe
 import com.niumi.system.session.EffectDispatcher
@@ -92,8 +93,15 @@ object SessionModule {
         blockedPackagesProjection: BlockedPackagesProjection,
         readinessMonitor: SessionReadinessMonitor,
         snapshotPublisher: SessionSnapshotPublisher,
+        ringingController: RingingController,
     ): ReconcilerSources =
-        ReconcilerSources(alarmScheduler, blockedPackagesProjection, readinessMonitor, snapshotPublisher)
+        ReconcilerSources(
+            alarmScheduler,
+            blockedPackagesProjection,
+            readinessMonitor,
+            snapshotPublisher,
+            ringingController,
+        )
 
     @Provides
     fun provideSessionReconciler(

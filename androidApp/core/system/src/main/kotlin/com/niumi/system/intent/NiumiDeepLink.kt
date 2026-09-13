@@ -15,4 +15,13 @@ object NiumiDeepLink {
 
     /** Écran 12 (§15), livré à l'étape 16. */
     const val DESTINATION_INCIDENT_DIAGNOSTIC = "incident_diagnostic"
+
+    /**
+     * Écrans 10 et 11 (§15), atteints depuis `AlarmActivity` à l'étape 17. L'écran de réveil vit
+     * dans sa propre tâche, hors du `NavHost` : il ne peut pas naviguer, seulement rouvrir
+     * `MainActivity` sur la bonne destination.
+     */
+    const val DESTINATION_SESSION_COMPLETED = "session_completed"
+
+    const val DESTINATION_SESSION_CANCELLED = "session_cancelled"
 }

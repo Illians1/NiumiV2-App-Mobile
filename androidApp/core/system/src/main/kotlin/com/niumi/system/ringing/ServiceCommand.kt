@@ -1,4 +1,4 @@
-package com.niumi.feature.ringing
+package com.niumi.system.ringing
 
 /**
  * Extras bruts d'un `Intent` de commande, extraits en Kotlin pur avant toute validation.

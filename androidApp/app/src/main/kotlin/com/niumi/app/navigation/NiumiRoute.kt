@@ -57,7 +57,7 @@ sealed interface NiumiRoute {
     @Serializable
     data object ScanToModify : NiumiRoute
 
-    /** Étape 15. */
+    /** Écran 10, étape 17. */
     @Serializable
     data object Completed : NiumiRoute
 

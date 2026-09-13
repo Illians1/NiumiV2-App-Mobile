@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.niumi.core.interop.SessionStateDto
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.system.nfc.NfcAvailability
 
@@ -22,7 +23,8 @@ import com.niumi.system.nfc.NfcAvailability
  * (`AlarmActivity`), jamais lu directement ici, pour garder ce composable pur et testable en
  * isolation. Le raccourci vers les réglages NFC (rang 2 de `AlarmScreenState`) n'arrête ni ne
  * met en pause la sonnerie : ce n'est pas une action d'arrêt, seulement un accès aux réglages
- * système nécessaires pour scanner.
+ * système nécessaires pour scanner. Pendant `RELEASING`, la progression du nettoyage remplace
+ * l'instruction de scan : le scan a déjà eu lieu (étape 17).
  */
 @Composable
 fun AlarmScreen(
@@ -50,6 +52,13 @@ fun AlarmScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 24.dp),
             )
+            state.releaseSteps.forEach { step ->
+                Text(
+                    text = if (step.done) "✓ ${step.label}" else "… ${step.label}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
             if (state.showsNfcSettingsShortcut) {
                 OutlinedButton(onClick = onOpenNfcSettings, modifier = Modifier.padding(top = 24.dp)) {
                     Text("Ouvrir les réglages NFC")
@@ -64,7 +73,7 @@ fun AlarmScreen(
 private fun AlarmScreenRingingPreview() {
     NiumiTheme {
         AlarmScreen(
-            state = AlarmScreenState.from(AlarmRingingPhase.RINGING, deviceLocked = false),
+            state = AlarmScreenState.from(SessionStateDto.RINGING, deviceLocked = false),
             currentTimeText = "07:00",
         )
     }
@@ -77,11 +86,27 @@ private fun AlarmScreenNfcDisabledPreview() {
         AlarmScreen(
             state =
                 AlarmScreenState.from(
-                    AlarmRingingPhase.RINGING,
+                    SessionStateDto.RINGING,
                     deviceLocked = false,
                     nfcAvailability = NfcAvailability.DISABLED,
                 ),
             currentTimeText = "07:00",
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AlarmScreenReleasingPreview() {
+    NiumiTheme {
+        AlarmScreen(
+            state =
+                AlarmScreenState.from(
+                    SessionStateDto.RELEASING,
+                    deviceLocked = false,
+                    releaseSteps = ReleaseProgress.from(replayableEffects = emptyList()),
+                ),
+            currentTimeText = "07:02",
         )
     }
 }

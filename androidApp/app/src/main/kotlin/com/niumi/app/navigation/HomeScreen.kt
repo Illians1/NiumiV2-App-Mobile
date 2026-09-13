@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,6 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.ringing.AlarmActivity
 
 const val PREPARE_BUTTON_LABEL = "Préparer mon réveil"
 
@@ -96,7 +98,11 @@ fun HomeScreen(
     }
 }
 
-/** Point d'entrée réel : relit l'accusé de réception de l'onboarding à chaque retour au premier plan. */
+/**
+ * Point d'entrée réel : relit l'accusé de réception de l'onboarding à chaque retour au premier
+ * plan. La redirection automatique vers l'écran 8 vit dans `MainActivity` (§10.4) — elle doit
+ * s'appliquer quelle que soit la destination du `NavHost`, pas seulement depuis l'accueil.
+ */
 @Composable
 fun HomeRoute(
     entryPoints: List<NavEntryPoint>,
@@ -106,6 +112,7 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
 
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -121,7 +128,15 @@ fun HomeRoute(
         entryPoints = entryPoints,
         actions =
             HomeActions(
-                onPrepare = { onNavigate(viewModel.state.destination) },
+                // §10.4 : tant que la session attend un scan, le bouton principal mène à
+                // l'écran 8, jamais à l'écran 7 — qui n'active pas le Reader Mode (§11.2).
+                onPrepare = {
+                    if (viewModel.state.alarmScreenRequired) {
+                        context.startActivity(AlarmActivity.intent(context))
+                    } else {
+                        onNavigate(viewModel.state.destination)
+                    }
+                },
                 onOpenDiagnostic = onOpenDiagnostic,
                 onEntryPointClick = onEntryPointClick,
             ),

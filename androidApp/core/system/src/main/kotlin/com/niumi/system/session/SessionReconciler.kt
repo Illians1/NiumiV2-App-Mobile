@@ -77,12 +77,17 @@ class SessionReconciler(
                 reconcileArmed(snapshot, reason, dispatch, actions)
             }
 
-            SessionStateDto.RINGING,
+            SessionStateDto.RINGING -> {
+                resumeRinging(snapshot, actions)
+            }
+
             SessionStateDto.AWAITING_NFC,
             SessionStateDto.TRIGGERED_AWAITING_NFC,
             SessionStateDto.RELEASING,
             -> {
-                // Rejeu de l'outbox déjà effectué ci-dessus, aucune nouvelle décision.
+                // Rejeu de l'outbox déjà effectué ci-dessus. Ces trois états relèvent de
+                // l'étape 18, qui apporte la reprise de `RELEASING` et le rejeu de la demande
+                // de scan.
             }
 
             SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED -> {
@@ -92,6 +97,31 @@ class SessionReconciler(
         }
 
         return ReconcileResult(sessionId, actions)
+    }
+
+    /**
+     * §10.2 : « reconstruire son état depuis le snapshot si le processus est recréé ». Le service
+     * s'en charge lui-même quand `START_STICKY` le relance — **mais la plateforme ne le fait pas
+     * toujours** : mesuré sur appareil à l'étape 17, HyperOS n'a rejoué aucun redémarrage après un
+     * crash du processus, et la sonnerie s'est arrêtée définitivement alors que la session restait
+     * active et le blocage en place.
+     *
+     * Le rejeu de l'outbox ne rattrape pas ce cas : `START_RINGING` y est déjà `SUCCEEDED`. Sans
+     * cette reprise, aucun chemin ne ranime le son — pas même ouvrir l'application.
+     *
+     * L'appel est idempotent : c'est exactement le chemin emprunté à chaque `onStartCommand`
+     * valide du service, et `AlarmAudioEngine.start` ne double jamais le son. Le relancer alors
+     * qu'il tourne déjà est donc sans effet.
+     *
+     * **Ne garantit pas le réveil pour autant** : encore faut-il que le processus revienne à la
+     * vie. Une alarme de secours pendant `RINGING` relève de l'étape 20 (mort du processus).
+     */
+    private fun resumeRinging(
+        snapshot: SessionSnapshotDto,
+        actions: MutableList<ReconcileAction>,
+    ) {
+        sources.ringingController.startRinging(snapshot.sessionId, snapshot.revision)
+        actions += ReconcileAction.RingingResumed
     }
 
     private suspend fun reconcilePreparing(

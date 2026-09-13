@@ -8,7 +8,7 @@ import com.niumi.system.readiness.AndroidIncidentCodes
 import org.junit.Test
 
 /**
- * Textes des écrans 7, 9 et 11 (SPEC_ANDROID §15). Deux règles s'y appliquent sans exception :
+ * Textes des écrans 7, 9, 10 et 11 (SPEC_ANDROID §15). Deux règles s'y appliquent sans exception :
  * tutoiement partout, et jamais de faux état de fiabilité.
  */
 class ActiveSessionTextsTest {
@@ -34,6 +34,9 @@ class ActiveSessionTextsTest {
             CancelledTexts.TITLE,
             CancelledTexts.BODY,
             CancelledTexts.PREPARE_AGAIN_BUTTON,
+            CompletedTexts.TITLE,
+            CompletedTexts.BODY,
+            CompletedTexts.BACK_HOME_BUTTON,
         )
 
     @Test
@@ -63,6 +66,16 @@ class ActiveSessionTextsTest {
     fun theCancelledScreenAndItsButtonAreStatedWordForWord() {
         assertThat(CancelledTexts.TITLE).isEqualTo("Session annulée")
         assertThat(CancelledTexts.PREPARE_AGAIN_BUTTON).isEqualTo("Préparer un nouveau réveil")
+    }
+
+    /**
+     * Écran 10 (étape 17). Les deux écrans de fin affirment le déblocage : ils ne sont atteints
+     * qu'après `RELEASE_SUCCEEDED` (§11.3), donc aucun des deux ne peut mentir.
+     */
+    @Test
+    fun theCompletedScreenStatesTheUnblocking() {
+        assertThat(CompletedTexts.TITLE).isEqualTo("Session terminée")
+        assertThat(CompletedTexts.BODY).isEqualTo(CancelledTexts.BODY)
     }
 
     @Test

@@ -7,10 +7,15 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
+import com.niumi.database.logging.TechnicalEventLog
+import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.alarm.AlarmPendingIntentSpecs
 import com.niumi.system.intent.AndroidPendingIntentFactory
+import com.niumi.system.session.LoadResult
+import com.niumi.system.session.SessionPersistenceGateway
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -19,20 +24,18 @@ import org.junit.runner.RunWith
 import javax.inject.Inject
 
 /**
- * SPEC_ANDROID §10.1 : `AlarmReceiver` reçoit un broadcast explicite avec des extras valides et
- * démarre `AlarmRingingService`, qui passe au premier plan. Nécessite un appareil ou un
- * émulateur : voir « Validation sur appareil réel » dans `CLAUDE.md`.
+ * SPEC_ANDROID §10.1, après l'étape 17 : `AlarmReceiver` ne démarre plus le service lui-même. Il
+ * délègue à `AlarmTriggerHandler`, qui refuse de déclencher quand aucune session n'est persistée —
+ * un `PendingIntent` survivant à une session effacée ne doit réveiller personne. Ce qui reste
+ * observable est le journal technique : `ALARM_RECEIVED` est écrit dans **toutes** les branches
+ * (§17), avant toute décision.
  *
- * `@HiltAndroidTest` + [HiltAndroidRule] sont obligatoires même si le test n'injecte rien
- * lui-même : `HiltTestApplication` ne construit son composant que lorsque cette règle s'exécute,
- * et `AlarmReceiver` (`@AndroidEntryPoint`) le réclame dès que le système l'instancie.
+ * La chaîne complète, jusqu'à `RINGING` et au service au premier plan, est couverte par
+ * `AlarmChainInstrumentedTest` (`:app`), seul module dont le graphe Dagger est complet.
  *
- * On observe l'état réel du service (`RunningServiceInfo.foreground`) plutôt que la présence de
- * la notification dans le volet : cette dernière dépend de `POST_NOTIFICATIONS`, permission
- * d'exécution que certaines surcouches (HyperOS) refusent d'accorder à un APK de test, alors
- * que le comportement à vérifier — le service démarre et atteint le premier plan — n'en dépend
- * pas. Le contenu de la notification est couvert ailleurs (`RingingNotificationSpecsTest` en JVM,
- * `RingingNotificationFactoryInstrumentedTest` sur la vraie `Notification`).
+ * `@HiltAndroidTest` + [HiltAndroidRule] sont obligatoires : `HiltTestApplication` ne construit
+ * son composant que lorsque cette règle s'exécute, et `AlarmReceiver` (`@AndroidEntryPoint`) le
+ * réclame dès que le système l'instancie. Nécessite un appareil ou un émulateur.
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -43,15 +46,24 @@ class AlarmReceiverInstrumentedTest {
     @Inject
     lateinit var pendingIntentFactory: AndroidPendingIntentFactory
 
+    @Inject
+    lateinit var technicalEventLog: TechnicalEventLog
+
+    @Inject
+    lateinit var gateway: SessionPersistenceGateway
+
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Before
     fun setUp() {
         hiltRule.inject()
+        // Précondition explicite plutôt que silencieuse : une session laissée par un autre test
+        // ferait sonner l'appareil et rendrait l'assertion suivante trompeuse.
+        assertThat(runBlocking { gateway.load() }).isEqualTo(LoadResult.Absent)
     }
 
     @Test
-    fun receiverStartsTheRingingServiceInForeground() {
+    fun aBroadcastWithoutASessionIsLoggedAndStartsNothing() {
         val intent =
             Intent(context, AlarmReceiver::class.java)
                 .putExtra(AlarmReceiver.EXTRA_SESSION_ID, SESSION_ID)
@@ -60,7 +72,8 @@ class AlarmReceiverInstrumentedTest {
         context.sendBroadcast(intent)
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
-        assertThat(waitForRingingService()).isNotNull()
+        assertThat(waitForAlarmReceivedInJournal()).isTrue()
+        assertThat(ringingService()).isNull()
     }
 
     /**
@@ -71,33 +84,38 @@ class AlarmReceiverInstrumentedTest {
      * `PendingIntent`, comme le ferait `AlarmManager` à l'heure du réveil.
      */
     @Test
-    fun realAlarmPendingIntentStartsTheRingingService() {
+    fun theRealAlarmPendingIntentReachesTheReceiver() {
         val pendingIntent =
             pendingIntentFactory.create(AlarmPendingIntentSpecs.alarm(SESSION_ID, revision = 1L))
 
         pendingIntent.send()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
-        assertThat(waitForRingingService()).isNotNull()
+        assertThat(waitForAlarmReceivedInJournal()).isTrue()
+    }
+
+    /** `AlarmTriggerHandler` travaille dans `goAsync()` : l'écriture n'est pas immédiate. */
+    private fun waitForAlarmReceivedInJournal(): Boolean {
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            val seen =
+                runBlocking { technicalEventLog.recent() }
+                    .any { it.type == TechnicalEventType.ALARM_RECEIVED }
+            if (seen) return true
+            Thread.sleep(POLL_INTERVAL_MS)
+        }
+        return false
     }
 
     /**
      * `getRunningServices` ne retourne que les services de l'appelant depuis l'API 26 — ce qui
      * suffit ici et évite toute dépendance à une permission.
      */
-    private fun waitForRingingService(): ActivityManager.RunningServiceInfo? {
-        val activityManager =
-            context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val deadline = System.currentTimeMillis() + SERVICE_START_TIMEOUT_MS
-        while (System.currentTimeMillis() < deadline) {
-            val service =
-                activityManager
-                    .getRunningServices(Int.MAX_VALUE)
-                    .firstOrNull { it.service.className == AlarmRingingService::class.java.name }
-            if (service != null && service.foreground) return service
-            Thread.sleep(POLL_INTERVAL_MS)
-        }
-        return null
+    private fun ringingService(): ActivityManager.RunningServiceInfo? {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return activityManager
+            .getRunningServices(Int.MAX_VALUE)
+            .firstOrNull { it.service.className == AlarmRingingService::class.java.name }
     }
 
     @After
@@ -107,7 +125,7 @@ class AlarmReceiverInstrumentedTest {
 
     private companion object {
         const val SESSION_ID = "3f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6b"
-        const val SERVICE_START_TIMEOUT_MS = 5_000L
+        const val TIMEOUT_MS = 5_000L
         const val POLL_INTERVAL_MS = 100L
     }
 }

@@ -18,11 +18,17 @@ import com.niumi.system.session.isSessionInProgress
  * [dispatchResult] est `null` quand un incident de ce code était **déjà enregistré pour cette
  * session** : l'avertissement a bien été republié, mais aucun second incident n'a été écrit. Voir
  * [SessionReadinessMonitor].
+ *
+ * [snapshotAfter] est le snapshot tel que le moteur l'a laissé après cet incident. Il sert à
+ * bâtir l'incident **suivant** de la même passe sur une révision à jour : sans lui, deux contrôles
+ * tombés ensemble ne produisaient qu'un seul incident, le second étant rejeté en `STALE_REVISION`
+ * (mesuré sur appareil à l'étape 17). `null` quand aucun incident n'a été dispatché.
  */
 data class ReadinessDegradation(
     val checkId: ReadinessCheckId,
     val incidentCode: String,
     val dispatchResult: DispatchResult?,
+    val snapshotAfter: SessionSnapshotDto? = null,
 )
 
 /**
@@ -92,11 +98,17 @@ class SessionReadinessMonitor(
         val failing = mutableSetOf<ReadinessCheckId>()
         val newlyReported = mutableListOf<ReadinessDegradation>()
 
+        // Le snapshot avance d'un incident à l'autre : chaque `INCIDENT_REPORTED` accepté
+        // incrémente la révision, et réutiliser celui du début de passe ferait rejeter le second
+        // en `STALE_REVISION`. Mesuré sur appareil à l'étape 17 — voir [reportOn].
+        var current = snapshot
         monitored.forEach { (checkId, incidentCode) ->
             if (report.check(checkId).outcome == ReadinessOutcome.FAILED) {
                 failing += checkId
                 if (alreadyReported.add(checkId)) {
-                    newlyReported += report(snapshot, checkId, incidentCode, dispatch)
+                    val degradation = reportOn(current, checkId, incidentCode, dispatch)
+                    newlyReported += degradation
+                    current = degradation.snapshotAfter ?: current
                 }
             } else if (alreadyReported.remove(checkId)) {
                 warningNotifier.clear(checkId)
@@ -136,7 +148,15 @@ class SessionReadinessMonitor(
         }
     }
 
-    private suspend fun report(
+    /**
+     * **Le snapshot reçu doit être le plus récent**, pas celui du début de passe. Deux contrôles
+     * tombés ensemble produisent deux `INCIDENT_REPORTED` successifs, et le premier incrémente la
+     * révision : bâtir le second sur le snapshot d'origine le fait rejeter en `STALE_REVISION`,
+     * **silencieusement**. Mesuré sur appareil à l'étape 17 — le silence total fait aussi tomber le
+     * volume d'alarme à zéro, donc deux contrôles échouent d'un coup, et seul le premier incident
+     * était enregistré alors que §13.1 en promet un par contrôle.
+     */
+    private suspend fun reportOn(
         snapshot: SessionSnapshotDto,
         checkId: ReadinessCheckId,
         incidentCode: String,
@@ -145,10 +165,12 @@ class SessionReadinessMonitor(
         technicalEventLog.log(TechnicalEventType.SESSION_READINESS_DEGRADED, snapshot.sessionId)
         SPECIFIC_TECHNICAL_EVENTS[checkId]?.let { technicalEventLog.log(it, snapshot.sessionId) }
         warningNotifier.present(checkId)
+        val dispatchResult = recordIncidentOnce(snapshot, incidentCode, dispatch)
         return ReadinessDegradation(
             checkId = checkId,
             incidentCode = incidentCode,
-            dispatchResult = recordIncidentOnce(snapshot, incidentCode, dispatch),
+            dispatchResult = dispatchResult,
+            snapshotAfter = (dispatchResult as? DispatchResult.Applied)?.snapshot,
         )
     }
 

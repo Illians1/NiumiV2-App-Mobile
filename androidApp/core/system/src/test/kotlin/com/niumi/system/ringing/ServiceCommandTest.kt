@@ -1,4 +1,4 @@
-package com.niumi.feature.ringing
+package com.niumi.system.ringing
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test

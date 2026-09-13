@@ -18,7 +18,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.niumi.app.HiltTestRunner"
     }
 
     buildTypes {
@@ -108,6 +108,13 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    // Étape 17 : `AlarmChainInstrumentedTest` est le seul test de la chaîne de réveil complète, et
+    // `:app` est le seul module dont le graphe Dagger l'est aussi (les liaisons de blocage vivent
+    // dans `:feature:session`, absent de l'APK de test de `:feature:ringing`).
+    androidTestImplementation(libs.hilt.android.testing)
+    kspAndroidTest(libs.hilt.compiler)
 }
 
 tasks.withType<Test>().configureEach {

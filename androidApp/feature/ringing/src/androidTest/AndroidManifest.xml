@@ -12,6 +12,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        Étape 17 : sans elle, Android 14+ retire silencieusement le `fullScreenIntent` de la
+        notification postée, et `RingingNotificationInstrumentedTest` observerait un défaut qui
+        n'existe pas en production — `:app` déclare bien cette permission (§14).
+    -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
 

@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.niumi.feature.session.active.ActiveSessionRoute
 import com.niumi.feature.session.active.CancelledScreen
+import com.niumi.feature.session.active.CompletedScreen
 import com.niumi.feature.session.active.ScanToModifyRoute
 import com.niumi.feature.session.diagnostics.IncidentDiagnosticRoute
 import com.niumi.feature.session.summary.SummaryRoute
@@ -26,8 +27,8 @@ import com.niumi.feature.setup.readiness.ReadinessRoute
  * ([NiumiRoute]) ; les routes en chaînes des [NavGraphContributor] cohabitent dans le même
  * `NavHost` pour le seul point d'entrée du POC de debug, supprimé à l'étape 21.
  *
- * Seules les destinations dont l'écran existe sont enregistrées : les autres arrivent avec leur
- * écran à l'étape 17 (voir [NiumiRoute]).
+ * Seules les destinations dont l'écran existe sont enregistrées. Depuis l'étape 17, les treize le
+ * sont (voir [NiumiRoute]).
  *
  * [deepLinkDestination] vient du tap d'une notification d'avertissement (§13.1). Elle est empilée
  * **au-dessus** de l'accueil plutôt que substituée à lui comme destination de départ : le bouton
@@ -114,9 +115,9 @@ private fun NavGraphBuilder.setupDestinations(navController: NavHostController) 
 }
 
 /**
- * Destinations d'une session déjà active (écrans 7, 9 et 11, étape 15) et le diagnostic d'incident
- * (écran 12, étape 16), extraites pour tenir sous `LongMethod` de detekt. `NiumiRoute.Completed`
- * n'y est pas : l'écran 10 arrive à l'étape 17.
+ * Destinations d'une session déjà active (écrans 7, 9 et 11, étape 15), le diagnostic d'incident
+ * (écran 12, étape 16) et la session terminée (écran 10, étape 17), extraites pour tenir sous
+ * `LongMethod` de detekt.
  *
  * L'écran 12 est atteignable depuis l'écran 7, depuis l'accueil et depuis le tap d'un
  * avertissement (§13.1). C'est un écran de **consultation** : il n'ajoute aucune action de sortie
@@ -137,6 +138,11 @@ private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostCont
     composable<NiumiRoute.Cancelled> {
         CancelledScreen(
             onPrepareAgain = { navController.navigateToPreparation() },
+        )
+    }
+    composable<NiumiRoute.Completed> {
+        CompletedScreen(
+            onBackHome = { navController.navigateToHome() },
         )
     }
     composable<NiumiRoute.IncidentDiagnostic> { IncidentDiagnosticRoute() }
@@ -164,6 +170,17 @@ private fun NavController.navigateToActiveSession() {
 private fun NavController.navigateToCancelled() {
     navigate(NiumiRoute.Cancelled) {
         popUpTo(NiumiRoute.Home) { inclusive = false }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * « Revenir à l'accueil » (écran 10). L'écran quitte la pile pour la même raison que l'écran 11 :
+ * y revenir par Retour présenterait une session terminée comme si elle courait encore (§15).
+ */
+private fun NavController.navigateToHome() {
+    navigate(NiumiRoute.Home) {
+        popUpTo(NiumiRoute.Home) { inclusive = true }
         launchSingleTop = true
     }
 }

@@ -26,6 +26,9 @@ sealed interface ReconcileAction {
         val severity: IncidentSeverityDto,
     ) : ReconcileAction
 
+    /** Sonnerie relancée sur une session `RINGING` dont le service avait disparu (§10.2). */
+    data object RingingResumed : ReconcileAction
+
     data object SnapshotCorrupted : ReconcileAction
 
     data object PointerCleared : ReconcileAction

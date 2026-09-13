@@ -514,6 +514,22 @@ AlarmManager
 
 `AlarmReceiver` ne fait aucun travail long. Il transmet `ALARM_FIRED` à `NiumiCoreFacade`, puis le coordinateur exécute les effets retournés. La commande explicite envoyée au service contient l'identifiant de session, la révision et les données minimales nécessaires. Le déclenchement d'une alarme exacte demandée par l'utilisateur autorise le démarrage du service au premier plan depuis l'arrière-plan.
 
+**Implémentation (étape 17).** Le receiver est une coquille sans décision : il lit ses extras, ouvre `goAsync()` et délègue à `AlarmTriggerHandler` (`:core:system`), ce qui rend toute la chaîne prouvable en JVM. Il ne démarre plus le service lui-même — `START_RINGING` est un effet du moteur, exécuté par `StartRingingExecutor` — et c'est ce qui fait que `RINGING` n'est jamais écrit par un composant Android.
+
+**Garde de révision : une garde de monotonie, pas d'égalité.** L'extra `revision` du `PendingIntent` est figé au moment de `SCHEDULE_ALARM` et n'est réécrit que si cet effet est rejoué. Or la révision du snapshot avance sans cela : `INCIDENT_REPORTED` l'incrémente et ne produit aucun `SCHEDULE_ALARM` (SPEC_CORE_KMP 6), et le réconciliateur ne reprogramme que si l'alarme a disparu. Un extra en retard est donc le cas **courant** dès que la surveillance de 13.1 a signalé quoi que ce soit — et 13.1 surveille six contrôles pendant `ARMED`. Refuser une révision inférieure rendrait le réveil muet précisément quand l'appareil est déjà dégradé, ce qui serait le pire résultat possible pour un produit de réveil.
+
+Les trois règles sont donc :
+
+| Comparaison | Décision |
+| --- | --- |
+| `sessionId` différent du snapshot actif | aucun dispatch, `ALARM_RECEIVED` journalisé avec `sessionId` nul |
+| révision de l'intent **supérieure** à celle du snapshot | aucun dispatch : la persistance est en retard sur ce qui a été programmé (snapshot Direct Boot périmé, restauration) |
+| révision **inférieure ou égale** | dispatch de `ALARM_FIRED` avec `expectedRevision = snapshot.revision` |
+
+L'état source n'est pas contrôlé côté Android : `TriggerReducer.onAlarmFired` exige déjà `ARMED` et refuse le reste (SPEC_CORE_KMP 5.1). Le dupliquer contredirait la règle « ne jamais dupliquer une règle commune ».
+
+La fenêtre de `goAsync()` est bornée à 8 s. Au dépassement, la coroutine est annulée et `finish()` appelé ; si l'annulation tombe après le `commit` du coordinateur, les effets restent `PENDING` et la prochaine réconciliation les rejoue (SPEC_CORE_KMP 6.1). **Aucun événement technique n'est journalisé dans ce cas** : 17 est une liste fermée et aucune de ses 26 valeurs ne décrit ce fait. C'est une limite d'observabilité assumée, pas un oubli.
+
 ### 10.2 AlarmRingingService
 
 Le service doit:
@@ -550,6 +566,34 @@ Tant que la session est en `RINGING`, le service doit garantir que l'écran de r
 
 Cette exigence n'est pas cosmétique. Le Reader Mode NFC ne peut vivre que dans une activité au premier plan (11.2): si l'écran de réveil disparaît pendant que l'alarme sonne, l'utilisateur n'a plus aucun moyen de terminer sa session par le scan. Trois situations ordinaires ont été mesurées à l'étape 6 où l'écran disparaît: le mode Ne pas déranger en silence total, le balayage de la notification par l'utilisateur, et le simple déverrouillage de l'écran. Voir `docs/android/implementation-reports/LOT-0.md`.
 
+**Republication selon l'état de l'appareil (étape 17).** Republier à l'identique satisferait cet alinéa et violerait 10.4, qui interdit de ramener l'écran « de force en boucle ». Les deux ne se contredisent que si l'on ignore **qui** a fait disparaître la notification :
+
+- notification présente : rien ;
+- absente, **appareil verrouillé ou écran éteint** : republication **avec** `fullScreenIntent`. C'est le scénario même pour lequel cet alinéa existe — l'utilisateur dort, et le plein écran est le seul mécanisme qu'Android autorise pour rouvrir une activité depuis l'arrière-plan ;
+- absente, **appareil déverrouillé et en cours d'usage** : republication **sans** `fullScreenIntent`, avec un `contentIntent` qui ouvre l'écran de réveil. L'utilisateur est réveillé et l'a écartée délibérément ; la notification revient, l'accès au scan est préservé (11.2), l'écran n'est pas imposé.
+
+Un `contentIntent` n'est pas une action au sens de 10.2 : il n'apparaît pas comme un bouton et ne termine aucune session. Période de vérification : **dix secondes**.
+
+Une garde « plein écran une seule fois » avait été retenue d'abord. Elle est **écartée** : mesurée sur appareil à l'étape 17, elle pouvait être consommée par une absence transitoire de `getActiveNotifications()`, si bien que la première disparition réellement subie — celle qui compte, pendant le sommeil — n'obtenait plus que la republication silencieuse. Le critère d'état de l'appareil n'a rien à épuiser. Il suit aussi le comportement réel du système, qui n'honore un `fullScreenIntent` que si l'appareil est verrouillé ou l'écran éteint, et le dégrade ailleurs en notification « heads-up ».
+
+**Reconstruction après une mort de processus (étape 17).** `onStartCommand` avec `intent == null` passe d'abord au premier plan avec une notification silencieuse — `startForeground()` ne peut pas attendre une lecture suspendue — puis applique cette table, dérivée du seul snapshot persisté :
+
+| État lu | Action |
+| --- | --- |
+| `RINGING` | reprendre l'audio, republier la notification plein écran, journaliser `PROCESS_RECREATED` |
+| `ARMED` | `reconcile(SERVICE_RECREATED)` puis `stopSelf()` |
+| `PREPARING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC`, `RELEASING`, état final | `stopSelf()` sans toucher à l'état |
+| aucune session | `stopSelf()` : refuser de sonner |
+| snapshot **illisible** | ne pas sonner, ne rien effacer, `reconcile(SERVICE_RECREATED)` puis `stopSelf()` |
+
+Le cas illisible n'était couvert par aucune des deux issues possibles : sonner exposerait l'utilisateur à une alarme **sans bouton d'arrêt** pour une session peut-être terminée, s'arrêter risque de ne pas réveiller. Ne pas sonner est retenu ; le blocage est conservé (18), et le prochain `PROCESS_START` ou `USER_UNLOCKED` tranchera.
+
+`SERVICE_RECREATED` n'est pas redondant avec `PROCESS_START` : `START_STICKY` peut relancer le service **sans** recréer le processus, cas où `NiumiApplication.onCreate` ne s'exécute pas.
+
+**La réconciliation est le second filet, et il est nécessaire (étape 17).** `START_STICKY` ne suffit pas : mesuré sur appareil, HyperOS n'a rejoué **aucun** redémarrage du service après un crash du processus. Le rejeu de l'outbox ne rattrape pas ce cas, `START_RINGING` y étant déjà `SUCCEEDED`. Sans reprise explicite, la sonnerie s'arrêtait définitivement alors que la session restait active et le blocage en place — le réveil se taisait sans que rien ne le signale. `SessionReconciler` relance donc `START_RINGING` chaque fois qu'il trouve l'état `RINGING`. L'appel est idempotent : c'est le chemin emprunté à chaque `onStartCommand` valide, et le moteur audio ne double jamais le son.
+
+**Ce que cela ne garantit pas.** Encore faut-il que le processus revienne à la vie : la reprise n'a lieu qu'à la prochaine réconciliation, donc au prochain réveil de Niumi — l'utilisateur ouvrant l'application, un redémarrage, un remplacement de paquet. Si rien ne réveille le processus, le réveil reste muet. Une alarme de secours posée pendant `RINGING`, qui réveillerait le processus périodiquement, relève de la résilience et **reste à concevoir (étape 20)** : période, annulation, distinction d'avec l'alarme du réveil et coût en alarmes exactes sont autant de points ouverts.
+
 ### 10.3 Notification et plein écran
 
 Créer un canal `niumi_alarm_ringing`:
@@ -576,14 +620,22 @@ L'activité doit:
 - appeler `setTurnScreenOn(true)`;
 - rester utilisable en mode bord à bord;
 - ne pas arrêter le service dans `onStop()` ou `onDestroy()`;
-- gérer le retour prédictif en renvoyant vers l'accueil sans modifier la session;
+- **rendre le retour prédictif inerte tant que la session attend un scan** (resserré à l'étape 17). Un appui distrait pendant que l'alarme sonne ne doit pas écarter le seul écran qui porte le Reader Mode (11.2). Hors état de scan — écran en cours de chargement, session absente ou terminée — le retour ferme normalement, sans jamais modifier la session. Ce n'est pas l'« activité impossible à quitter » que cette même section interdit : Home, le geste de navigation, les récents et le volet de notifications restent tous disponibles, et rouvrir Niumi ramène à l'écran de réveil. La sortie reste donc volontaire et toujours possible, seule la voie du retour est neutralisée;
 - être re-présentée tant que la session sonne: si l'activité est détruite ou quittée alors que l'état est `RINGING`, le service la ramène par le plein écran de sa notification (10.2). L'utilisateur peut écarter l'écran volontairement; il ne doit jamais perdre tout accès au scan. L'écran n'est pas ramené de force en boucle: une activité impossible à quitter serait hostile et contraire aux règles de Google Play;
-- recalculer son état quand le verrouillage de l'appareil change, et pas seulement dans `onResume()`: un écran affiché au-dessus du verrouillage reste visible après le déverrouillage, et le texte « Déverrouille ton téléphone, puis approche-le du boîtier. » (11.2) doit disparaître dès que la condition est fausse. Écouter `ACTION_USER_PRESENT`, ou `KeyguardManager.addKeyguardLockedStateListener` à partir de l'API 34;
+- recalculer son état quand le verrouillage de l'appareil change, et pas seulement dans `onResume()`: un écran affiché au-dessus du verrouillage reste visible après le déverrouillage, et le texte « Déverrouille ton téléphone, puis approche-le du boîtier. » (11.2) doit disparaître dès que la condition est fausse. Écouter `ACTION_USER_PRESENT`, **à tous les niveaux d'API**. `KeyguardManager.addKeyguardLockedStateListener` (API 34+) était proposé ici comme alternative: **il est interdit**. Il exige `SUBSCRIBE_TO_KEYGUARD_LOCKED_STATE`, absente de la liste figée de 14, et l'appeler sans elle lève une `SecurityException` non rattrapable qui tue le processus — donc la sonnerie — à l'instant précis où le plein écran ouvre l'écran de réveil. Mesuré sur appareil à l'étape 17: l'alarme a sonné une seconde avant que le processus ne meure, le son était inaudible, et le service d'accessibilité s'est délié dans la foulée. La permission n'est pas ajoutée: `ACTION_USER_PRESENT` couvre le besoin réel — faire disparaître un texte quand l'utilisateur déverrouille — sans élargir la surface de permissions;
 - afficher l'heure, l'état du NFC et l'instruction de scan;
 - activer le Reader Mode dans `onResume()`;
 - le désactiver dans `onPause()`;
 - rouvrir l'écran de réveil si l'état commun est `RINGING`; afficher la progression de nettoyage si l'état est `RELEASING`; afficher le mode scan sans audio si l'état est `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`. Ouvrir Niumi depuis le lanceur pendant une session active mène toujours à l'écran correspondant à l'état, jamais à l'accueil: c'est la seconde garantie d'accès au scan, indépendante de la notification;
+- **tant que la session attend un scan, aucun autre écran de Niumi n'est atteignable** (resserré à l'étape 17 après mesure sur appareil). La redirection vers l'écran 8 est portée par `MainActivity` et **observée en continu** tant qu'elle est au premier plan, jamais par un écran du `NavHost` ni par le seul `onResume`: deux mesures l'ont imposé. Posée sur l'accueil, elle ne s'exécutait jamais — après l'armement le `NavHost` est sur `ActiveSession`, donc l'accueil n'est plus composé. Posée sur `onResume` seul, elle ne se déclenchait pas quand l'alarme sonnait **pendant** que l'utilisateur était déjà dans Niumi: `onResume` ne se rejoue pas, et le plein écran de la notification n'est honoré par Android que si l'appareil est verrouillé ou l'écran éteint. Le bouton principal de l'accueil y mène aussi: sans cela, un retour depuis l'écran de réveil laissait l'utilisateur sur l'écran 7, qui n'active pas le Reader Mode (11.2) et n'offre donc aucun chemin vers le scan. Le retour prédictif de l'écran de réveil renvoie au **lanceur** et non à l'accueil — sinon l'accueil redirigerait aussitôt, produisant la boucle que cet alinéa interdit. **Quitter Niumi reste possible à tout instant**: la restriction porte sur les écrans de Niumi, jamais sur l'appareil. Verrouiller l'appareil entier exigerait le mode `lock task` (provisionnement « device owner ») et détournerait le service d'accessibilité de l'usage déclaré à Play (12.3): c'est exclu;
 - ne contenir aucun bouton d'arrêt.
+
+**Implémentation (étape 17).** L'état affiché vient du moteur (`SessionSnapshotDto`), jamais d'une phase devinée. Deux règles encadrent sa lecture :
+
+- **un publisher à `null` ne ferme jamais l'écran.** `SessionSnapshotPublisher` vit en mémoire et vaut `null` dans tout processus neuf — et le processus est **toujours** neuf quand le plein écran ouvre l'activité après un réveil. L'activité lit donc la persistance d'abord, puis suit le flux. Seule une absence **confirmée** par la persistance ferme l'écran ; un snapshot illisible ne la confirme pas (SPEC_CORE_KMP 13) ;
+- **ouvrir Niumi depuis le lanceur pendant `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` ou `RELEASING` mène à l'écran 8**, et non à l'écran 7. L'écran 7 n'active pas le Reader Mode (11.2) : y renvoyer pendant la sonnerie serait un cul-de-sac, alors que c'est justement le cas mesuré à l'étape 6 où l'activité de réveil est détruite par un déverrouillage. La redirection est acquittée dès qu'elle a eu lieu : quitter l'écran 8 ne doit pas le rouvrir, l'utilisateur pouvant l'écarter volontairement. Une nouvelle ouverture depuis le lanceur redirige de nouveau — l'accès au scan n'est jamais perdu.
+
+Un état final ne ferme pas l'écran : il mène à l'écran 10 (`COMPLETED`) ou 11 (`CANCELLED`). `AlarmActivity` vivant dans sa propre tâche, hors du `NavHost`, elle y parvient en rouvrant `MainActivity` avec un extra de destination, le même mécanisme que le tap d'un avertissement (13.1).
 
 Texte principal si l'état est `RINGING`:
 
@@ -972,13 +1024,22 @@ Depuis l'étape 16 :
 
 Conséquence assumée : un contrôle réparé puis re-cassé dans la même session republie son avertissement sans produire de second incident. La santé est déjà `DEGRADED` et n'en revient jamais (SPEC_CORE_KMP 7.3) ; le journal technique, non dédupliqué, garde la trace horodatée de chaque détection. Avant déverrouillage, le lecteur d'incidents ne peut rien lire (7.3) : la déduplication est alors impossible et l'incident est enregistré — on ne perd jamais une dégradation pour cause de stockage indisponible.
 
-Chaque contrôle surveillé porte son propre identifiant de notification : deux réglages cassés en même temps produisent deux avertissements distincts, aucun n'écrasant l'autre. La catégorie est `CATEGORY_ERROR` et non `CATEGORY_ALARM` : ces notifications signalent un réglage dégradé, jamais une alarme en cours, et les confondre ferait croire que le réveil sonne.
+Chaque contrôle surveillé porte son propre identifiant de notification : deux réglages cassés en même temps produisent deux avertissements distincts, aucun n'écrasant l'autre — **et chacun son incident**.
+
+**Le snapshot avance d'un incident à l'autre dans une même passe (étape 17).** Chaque `INCIDENT_REPORTED` accepté incrémente la révision ; bâtir le second sur le snapshot du début de passe le fait rejeter en `STALE_REVISION`, **sans trace**. Mesuré sur appareil : le silence total fait aussi tomber le volume d'alarme à zéro, donc deux contrôles échouent d'un seul coup, et seul le premier incident était enregistré alors que le journal technique laissait croire que les deux l'avaient été. La surveillance reprend donc le snapshot rendu par chaque décision pour bâtir la suivante. La catégorie est `CATEGORY_ERROR` et non `CATEGORY_ALARM` : ces notifications signalent un réglage dégradé, jamais une alarme en cours, et les confondre ferait croire que le réveil sonne.
 
 Le réconciliateur n'interrompt sa passe que pour les deux pertes de permission — accès aux alarmes exactes et service d'accessibilité — parce que poursuivre y serait absurde (reprogrammer une alarme exacte sans y avoir droit). Les quatre autres contrôles sont signalés sans interrompre la réconciliation : le réveil reste programmé, seules son audibilité ou sa présentation sont compromises. La condition porte sur l'état courant du contrôle, pas sur le fait qu'il vienne d'être signalé.
 
 Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic d'incident (15, écran 12). Depuis l'étape 16 la redirection est effective : le `PendingIntent` porte un extra de destination, lu à `onCreate` **et** à `onNewIntent` — sans ce second point, un deuxième avertissement tapé pendant que l'application est au premier plan n'ouvrirait rien. Une valeur de destination inconnue, qu'un `PendingIntent` créé par une version antérieure peut porter, ramène à l'accueil plutôt que d'échouer.
 
-**`MainActivity` doit être déclarée `android:launchMode="singleTop"`.** Mesuré sur appareil à l'étape 16 : en `launchMode` standard, Android ramène simplement la tâche au premier plan sans jamais appeler `onNewIntent`, et le tap restait alors sans effet dès que Niumi était déjà visible. Aucun test JVM ne peut couvrir ce point — la lecture de l'extra est une fonction pure, le comportement testé est celui du système. Le déclencheur « au déclenchement, avant de démarrer la sonnerie » relève d'`AlarmReceiver` et arrive à l'étape 17.
+**`MainActivity` doit être déclarée `android:launchMode="singleTop"`.** Mesuré sur appareil à l'étape 16 : en `launchMode` standard, Android ramène simplement la tâche au premier plan sans jamais appeler `onNewIntent`, et le tap restait alors sans effet dès que Niumi était déjà visible. Aucun test JVM ne peut couvrir ce point — la lecture de l'extra est une fonction pure, le comportement testé est celui du système.
+
+**Implémentation du déclencheur « au déclenchement » (étape 17).** Il est porté par `AlarmTriggerHandler`, qui appelle `SessionReadinessMonitor` **avant** de dispatcher `ALARM_FIRED`. Deux points en découlent, et aucun n'est négociable :
+
+- **avant, pas après.** Une fois `ALARM_FIRED` appliqué, l'état est `RINGING` et le périmètre surveillé retombe à l'accessibilité seule : l'incident `ANDROID_ALARM_MUTED_BY_DND` que 13 exige au déclenchement ne serait jamais créé ;
+- **le snapshot est relu après la passe.** La surveillance peut dispatcher `INCIDENT_REPORTED`, donc incrémenter la révision ; bâtir `ALARM_FIRED` sur le snapshot d'avant produirait `STALE_REVISION` et l'alarme resterait muette.
+
+Aucune seconde détection du filtre d'interruption n'est ajoutée dans le receiver. Le moniteur porte déjà la table code/gravité, la déduplication par session et la notification d'avertissement ; une voie parallèle recréerait exactement les doublons corrigés à l'étape 16. Contrairement au réconciliateur, le handler **n'interrompt jamais** sa chaîne sur un contrôle en échec : 13 impose que la session reste active et que le blocage soit conservé, l'échec étant sonore et non métier.
 
 **Implémentation (étape 15).** Le déclencheur « passage au premier plan » est branché sur le `ON_RESUME` de l'écran de session active, qui est le seul écran affiché pendant qu'une session court (10.4). Il n'avait aucun appelant avant cette étape. Aucun composant distinct ne surveille le service d'accessibilité : `SessionReadinessMonitor` porte déjà le code d'incident et la garde de déduplication, et un second surveillant produirait deux incidents `CRITICAL` pour le même fait.
 
@@ -1044,7 +1105,11 @@ Tous les composants non destinés à des applications externes restent `exported
 11. session annulée;
 12. diagnostic d'incident.
 
-**Étapes de livraison.** Les écrans n'arrivent pas tous en même temps et l'ordre d'implémentation (22) ne le disait pas explicitement : accueil (1) et diagnostic-onboarding (2) à l'étape 12b ; association (3) et sélection (4) à l'étape 13 ; choix de l'heure (5), récapitulatif (6) et une **version minimale** de la session active (7) à l'étape 14 ; session active complète (7), scan requis (9), terminée (10) et annulée (11) à l'étape 15 ; écran de réveil (8) livré dès l'étape 7 ; diagnostic d'incident (12) à l'étape 16. L'étape 12b déclare les treize destinations de navigation en une fois mais n'enregistre que celles dont l'écran existe : naviguer vers une route non enregistrée lève, ce qui vaut mieux qu'un écran vide donnant l'illusion d'une fonctionnalité livrée.
+**Étapes de livraison.** Les écrans n'arrivent pas tous en même temps et l'ordre d'implémentation (22) ne le disait pas explicitement : accueil (1) et diagnostic-onboarding (2) à l'étape 12b ; association (3) et sélection (4) à l'étape 13 ; choix de l'heure (5), récapitulatif (6) et une **version minimale** de la session active (7) à l'étape 14 ; session active complète (7), scan requis (9) et annulée (11) à l'étape 15 ; écran de réveil (8) livré dès l'étape 7 et branché sur l'état réel du moteur à l'étape 17 ; diagnostic d'incident (12) à l'étape 16 ; **session terminée (10) à l'étape 17**.
+
+Cette liste annonçait l'écran 10 à l'étape 15 ; c'était faux, et la contradiction avec le plan avait été relevée à l'étape 16 sans être corrigée. Corrigé ici : l'écran 10 n'est atteint qu'après `COMPLETED`, donc après le scan de libération, et il est livré avec la chaîne du réveil. Comme l'écran 11 à l'étape 15, il est **livré et enregistré mais atteignable seulement à partir de l'étape 18**, qui apporte `HandleValidNfcUseCase` — le livrer maintenant n'annonce donc aucun faux succès.
+
+Les écrans 10 et 11 vivent tous deux dans `:feature:session` : ils sont jumeaux, 15 les traite ensemble, et l'écran 10 n'a ni audio, ni NFC, ni service. Ils sont atteints depuis `AlarmActivity` par le mécanisme de destination de 13.1, l'écran de réveil vivant hors du `NavHost`. L'étape 12b déclare les treize destinations de navigation en une fois mais n'enregistre que celles dont l'écran existe : naviguer vers une route non enregistrée lève, ce qui vaut mieux qu'un écran vide donnant l'illusion d'une fonctionnalité livrée.
 
 L'écran 7 minimal est livré à l'étape 14 et non à l'étape 15 parce que celle-ci est la première à rendre une session armable : sans lui, l'accueil deviendrait un cul-de-sac dès qu'une session existe, alors que 10.4 en fait la seconde garantie d'accès au scan, indépendante de la notification. Sa version minimale affiche l'état, la date, l'heure et le fuseau d'activation, plus l'heure recalculée dans le fuseau courant s'il diffère (8).
 

@@ -9,15 +9,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.app.navigation.NavGraphContributor
 import com.niumi.app.navigation.NiumiNavHost
 import com.niumi.app.navigation.NiumiRoute
 import com.niumi.app.navigation.deepLinkDestinationFor
+import com.niumi.app.navigation.requiresAlarmScreen
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.ringing.AlarmActivity
 import com.niumi.system.intent.NiumiDeepLink
 import com.niumi.system.readiness.SessionReadinessWatcher
+import com.niumi.system.session.SessionSnapshotPublisher
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,6 +36,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var sessionReadinessWatcher: SessionReadinessWatcher
+
+    @Inject
+    lateinit var sessionSnapshotPublisher: SessionSnapshotPublisher
 
     /**
      * Destination demandée par l'`Intent` qui a ouvert l'activité (SPEC_ANDROID §13.1). Un `State`
@@ -53,12 +65,43 @@ class MainActivity : ComponentActivity() {
                 }
             },
         )
+        openAlarmScreenWhileSessionAwaitsScan()
         setContent {
             NiumiTheme {
                 NiumiNavHost(
                     contributors = navGraphContributors,
                     deepLinkDestination = deepLinkDestination,
                 )
+            }
+        }
+    }
+
+    /**
+     * §10.4 : tant que la session attend un scan, aucun autre écran de Niumi n'est atteignable.
+     *
+     * Porté par l'activité et **observé en continu**, pas seulement à `onResume`. Deux mesures sur
+     * appareil à l'étape 17 ont conduit ici :
+     *
+     * - une redirection posée sur l'accueil ne s'exécutait jamais, le `NavHost` étant sur
+     *   `ActiveSession` après l'armement ;
+     * - une redirection posée sur le seul `onResume` ne se déclenchait pas quand l'alarme sonnait
+     *   **pendant** que l'utilisateur était déjà dans Niumi : `onResume` ne se rejoue pas, et le
+     *   plein écran de la notification n'est honoré par Android que si l'appareil est verrouillé
+     *   ou l'écran éteint.
+     *
+     * `repeatOnLifecycle(RESUMED)` suspend la collecte dès que l'écran de réveil passe devant :
+     * aucune relance en boucle. `distinctUntilChanged` n'agit qu'aux transitions, pour qu'une
+     * simple révision de snapshot ne relance pas l'activité.
+     */
+    private fun openAlarmScreenWhileSessionAwaitsScan() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                sessionSnapshotPublisher.snapshot
+                    .map { requiresAlarmScreen(it?.state) }
+                    .distinctUntilChanged()
+                    .collect { required ->
+                        if (required) startActivity(AlarmActivity.intent(this@MainActivity))
+                    }
             }
         }
     }
