@@ -36,6 +36,21 @@ class TechnicalEventDetailsTest {
         assertThat(TechnicalEventDetails.sanitize(TechnicalEventType.ALARM_RECEIVED, raw)).isNull()
     }
 
+    /**
+     * §17 : « Le nom de package est accepté uniquement pour `BLOCK_APPLIED`. » Énuméré sur les 26
+     * types plutôt que sur un échantillon : c'est une règle de confidentialité, et un type ajouté
+     * plus tard doit échouer ici s'il ouvre la porte au nom de package.
+     */
+    @Test
+    fun blockAppliedIsTheOnlyTypeThatEverCarriesAPackageName() {
+        val raw = TechnicalEventDetails.packageName("com.example.app")
+
+        val accepting =
+            TechnicalEventType.entries.filter { TechnicalEventDetails.sanitize(it, raw) != null }
+
+        assertThat(accepting).containsExactly(TechnicalEventType.BLOCK_APPLIED)
+    }
+
     @Test
     fun errorCodeIsKeptForNonBlockAppliedTypes() {
         val raw = TechnicalEventDetails.errorCode("ANDROID_AUDIO_START_FAILED")

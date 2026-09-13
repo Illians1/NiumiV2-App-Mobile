@@ -2,6 +2,8 @@ package com.niumi.feature.session.active
 
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.SessionStateDto
+import com.niumi.feature.session.incident.IncidentTexts
+import com.niumi.system.readiness.ReadinessAction
 
 /** Textes de l'écran 7 (SPEC_ANDROID §15, écran 7), complets depuis l'étape 15. Tutoiement (§15). */
 object ActiveSessionTexts {
@@ -35,6 +37,9 @@ object ActiveSessionTexts {
     /** Écran 9 : le seul chemin de sortie d'une session active (SPEC_CORE_KMP §2, points 3 et 4). */
     const val MODIFY_OR_CANCEL_BUTTON = "Modifier ou annuler"
 
+    /** Écran 12, en consultation : ne termine ni ne modifie la session (§15, étape 16). */
+    const val OPEN_DIAGNOSTIC_BUTTON = "Voir le diagnostic"
+
     /**
      * Un état métier nommé en clair. `RINGING` et les trois états d'attente de scan ont leur propre
      * écran (§10.4) ; ils ne sont listés ici que pour n'afficher jamais un état inconnu.
@@ -52,75 +57,42 @@ object ActiveSessionTexts {
             SessionStateDto.FAILED -> "L'activation a échoué"
         }
 
-    fun severityLabel(severity: IncidentSeverityDto): String =
-        when (severity) {
-            IncidentSeverityDto.WARNING -> "Information"
-            IncidentSeverityDto.DEGRADED -> "Fiabilité réduite"
-            IncidentSeverityDto.CRITICAL -> "Critique"
-        }
+    /** Délègue à [IncidentTexts] : l'écran 12 nomme les mêmes incidents (étape 16). */
+    fun severityLabel(severity: IncidentSeverityDto): String = IncidentTexts.severityLabel(severity)
+
+    /** Délègue à [IncidentTexts] : l'écran 12 nomme les mêmes incidents (étape 16). */
+    fun incidentLabel(code: String): String = IncidentTexts.label(code)
 
     /**
-     * Les codes d'incident sont des identifiants techniques (SPEC_CORE_KMP §7.1) : l'écran 7 en
-     * traduit les six que la surveillance de §13.1 peut produire pendant une session, plus les
-     * quatre du réconciliateur. Un code inconnu reste affiché tel quel plutôt que masqué — §15
-     * interdit de présenter une session comme saine quand elle ne l'est pas.
+     * Libellé du bouton de remédiation d'un incident (§15). `null` signifie « pas de bouton » :
+     * aucun de ces recours n'ouvre de réglage système atteignable depuis l'écran 7 — l'association
+     * et le sélecteur sont bloqués pendant une session (§10.4), la permission de notification passe
+     * par un lanceur qui n'a pas sa place ici, et un accès aux alarmes exactes perdu n'a, par §13,
+     * qu'une explication à offrir. Le libellé de l'incident la porte déjà.
+     *
+     * « Ouvrir les réglages d'accessibilité » est imposé mot pour mot par §15.
      */
-    fun incidentLabel(code: String): String =
-        when (code) {
-            "BLOCKING_PERMISSION_REVOKED" -> {
-                "Le service d'accessibilité a été désactivé : le blocage ne s'applique plus."
-            }
+    fun actionLabel(action: ReadinessAction): String? =
+        when (action) {
+            ReadinessAction.OpenAccessibilitySettings -> "Ouvrir les réglages d'accessibilité"
 
-            "ALARM_PERMISSION_REVOKED" -> {
-                "L'autorisation d'alarme exacte a été retirée : le réveil peut être retardé."
-            }
+            ReadinessAction.OpenSoundSettings -> "Ouvrir les réglages du son"
 
-            "ANDROID_ALARM_MUTED_BY_DND" -> {
-                "Le mode « Ne pas déranger » coupe le son de l'alarme."
-            }
+            ReadinessAction.OpenDndSettings -> "Ouvrir les réglages Ne pas déranger"
 
-            "ANDROID_ALARM_VOLUME_ZERO" -> {
-                "Le volume des alarmes est à zéro."
-            }
+            ReadinessAction.OpenFullScreenIntentSettings -> "Ouvrir les réglages d'alarme plein écran"
 
-            "ANDROID_NOTIFICATIONS_REVOKED" -> {
-                "Les notifications de Niumi sont désactivées."
-            }
+            is ReadinessAction.OpenChannelSettings -> "Ouvrir les réglages de notification"
 
-            "ANDROID_FULL_SCREEN_REVOKED" -> {
-                "Niumi ne peut plus ouvrir l'écran de réveil par-dessus l'écran verrouillé."
-            }
+            ReadinessAction.OpenNfcSettings -> "Ouvrir les réglages NFC"
 
-            "NFC_DISABLED" -> {
-                "Le NFC est désactivé : il faudra le réactiver pour scanner ton boîtier."
-            }
-
-            "TIME_CHANGED" -> {
-                "L'heure du téléphone a changé."
-            }
-
-            "TIMEZONE_CHANGED" -> {
-                "Le fuseau horaire du téléphone a changé."
-            }
-
-            "MISSED_TRIGGER_WINDOW" -> {
-                "Le réveil n'a pas pu sonner à l'heure prévue."
-            }
-
-            "PROCESS_RECREATED" -> {
-                "Niumi a été relancé pendant la session."
-            }
-
-            "RELEASE_PARTIAL_FAILURE" -> {
-                "Le déblocage n'a pas pu être terminé entièrement."
-            }
-
-            "SNAPSHOT_CORRUPTED" -> {
-                "Les données de la session n'étaient pas lisibles."
-            }
-
-            else -> {
-                code
-            }
+            ReadinessAction.ShowExactAlarmDiagnostic,
+            ReadinessAction.StartPairing,
+            ReadinessAction.OpenAppPicker,
+            ReadinessAction.RequestNotificationPermission,
+            ReadinessAction.FixTime,
+            ReadinessAction.Unsupported,
+            is ReadinessAction.OpenBatterySettings,
+            -> null
         }
 }

@@ -1,6 +1,11 @@
 package com.niumi.system.notification
 
 import android.app.Notification
+import android.app.PendingIntent
+import com.niumi.system.intent.IntentExtraValue
+import com.niumi.system.intent.NiumiComponent
+import com.niumi.system.intent.NiumiDeepLink
+import com.niumi.system.intent.PendingIntentSpec
 import com.niumi.system.readiness.MonitoredReadinessChecks
 import com.niumi.system.readiness.ReadinessCheckId
 
@@ -53,4 +58,25 @@ object SessionWarningNotificationSpecs {
      */
     fun notificationId(id: ReadinessCheckId): Int =
         WARNING_NOTIFICATION_ID_BASE + MonitoredReadinessChecks.incidentCodes.keys.indexOf(id)
+
+    /**
+     * §13.1 : « Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic
+     * d'incident. » L'écran 12 existe depuis l'étape 16 : l'extra porte désormais la destination,
+     * là où le tap se contentait de ramener dans l'application.
+     *
+     * Un code de requête par contrôle : deux avertissements simultanés ne doivent pas partager
+     * l'identité d'un `PendingIntent` (même raison qu'à l'étape 11). `FLAG_IMMUTABLE` — §16.
+     */
+    fun tap(id: ReadinessCheckId): PendingIntentSpec =
+        PendingIntentSpec(
+            kind = PendingIntentSpec.Kind.ACTIVITY,
+            target = NiumiComponent.MAIN_ACTIVITY,
+            requestCode = notificationId(id),
+            flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            extras =
+                mapOf(
+                    NiumiDeepLink.EXTRA_DESTINATION to
+                        IntentExtraValue.Text(NiumiDeepLink.DESTINATION_INCIDENT_DIAGNOSTIC),
+                ),
+        )
 }

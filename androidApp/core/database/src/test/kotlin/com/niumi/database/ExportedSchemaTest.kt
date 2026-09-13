@@ -9,38 +9,50 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import java.io.File
 
+private const val CURRENT_VERSION = 2
+
 /**
- * Garde-fou contre un `exportSchema` désactivé ou un schéma v1 non committé (SPEC_CORE_KMP §13 :
- * « migration testée avant toute montée de version »). En v1, `MigrationTestHelper` n'a aucune
- * migration à exercer (`createDatabase(1)` puis `runMigrationsAndValidate(1, emptyList())` ne
- * ferait que revalider le schéma contre lui-même, ce que Room refait de toute façon à chaque
- * ouverture réelle via son *identity hash*) : ce test JVM, qui tourne sans appareil, apporte
- * davantage de valeur.
+ * Garde-fou contre un `exportSchema` désactivé ou un schéma non committé (SPEC_CORE_KMP §13 :
+ * « migration testée avant toute montée de version »). Ce test JVM tourne sans appareil ;
+ * `NiumiDatabaseSchemaTest` (instrumenté) exerce la migration elle-même.
+ *
+ * Le schéma v1 doit rester committé après la montée en v2 : `MigrationTestHelper` en a besoin pour
+ * créer une base v1 avant d'y appliquer `MIGRATION_1_2`.
  */
 class ExportedSchemaTest {
-    @Test
-    fun exportedSchemaExistsWithTheExpectedVersionAndEntities() {
+    private fun schemaFile(version: Int): File {
         val rootDir =
             requireNotNull(System.getProperty("niumi.rootDir")) {
                 "La propriété système niumi.rootDir n'a pas été injectée par le build Gradle."
             }
-        val schemaFile =
-            File(rootDir, "androidApp/core/database/schemas/com.niumi.database.NiumiDatabase/1.json")
+        return File(rootDir, "androidApp/core/database/schemas/com.niumi.database.NiumiDatabase/$version.json")
+    }
 
-        assertThat(schemaFile.exists()).isTrue()
+    private fun database(version: Int) =
+        Json
+            .parseToJsonElement(schemaFile(version).readText())
+            .jsonObject
+            .getValue("database")
+            .jsonObject
 
-        val schema = Json.parseToJsonElement(schemaFile.readText()).jsonObject
-        val database = schema.getValue("database").jsonObject
+    @Test
+    fun everyVersionUpToTheCurrentOneIsCommitted() {
+        (1..CURRENT_VERSION).forEach { version ->
+            assertThat(schemaFile(version).exists()).isTrue()
+            assertThat(database(version).getValue("version").jsonPrimitive.int).isEqualTo(version)
+            assertThat(database(version).getValue("identityHash").jsonPrimitive.content).isNotEmpty()
+        }
+    }
 
-        assertThat(database.getValue("version").jsonPrimitive.int).isEqualTo(1)
-        assertThat(database.getValue("identityHash").jsonPrimitive.content).isNotEmpty()
-
+    @Test
+    fun currentSchemaDeclaresTheExpectedEntities() {
         val tableNames =
-            database.getValue("entities").jsonArray.map {
+            database(CURRENT_VERSION).getValue("entities").jsonArray.map {
                 it.jsonObject
                     .getValue("tableName")
                     .jsonPrimitive.content
             }
+
         assertThat(tableNames).containsExactly(
             "alarm_session",
             "blocked_app",
@@ -51,5 +63,25 @@ class ExportedSchemaTest {
             "session_effect_outbox",
             "active_session_pointer",
         )
+    }
+
+    /** SPEC_ANDROID §17 : chaque événement porte le contexte d'appareil (ajouté en v2, étape 16). */
+    @Test
+    fun technicalEventCarriesTheContextColumnsSinceVersionTwo() {
+        val technicalEvent =
+            database(CURRENT_VERSION)
+                .getValue("entities")
+                .jsonArray
+                .map { it.jsonObject }
+                .single { it.getValue("tableName").jsonPrimitive.content == "technical_event" }
+
+        val fields =
+            technicalEvent.getValue("fields").jsonArray.map {
+                it.jsonObject
+                    .getValue("fieldPath")
+                    .jsonPrimitive.content
+            }
+
+        assertThat(fields).containsAtLeast("deviceModel", "androidVersion", "appVersion")
     }
 }

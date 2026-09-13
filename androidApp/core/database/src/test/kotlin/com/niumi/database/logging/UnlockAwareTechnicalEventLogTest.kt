@@ -22,6 +22,9 @@ import javax.inject.Provider
  * injecte un vrai `CoroutineScope` et attend explicitement la fin de ses enfants.
  */
 class UnlockAwareTechnicalEventLogTest {
+    private val deviceContext =
+        DeviceContext(deviceModel = "Pixel Test", androidVersion = "16 (API 36)", appVersion = "1.0.0 (1)")
+
     private class FakeUnlockState(
         override var isUserUnlocked: Boolean,
     ) : UnlockState
@@ -73,7 +76,7 @@ class UnlockAwareTechnicalEventLogTest {
         val log =
             UnlockAwareTechnicalEventLog(
                 unlockState = FakeUnlockState(isUserUnlocked = false),
-                inMemory = InMemoryTechnicalEventLog(nowEpochMillis = { 1L }),
+                inMemory = InMemoryTechnicalEventLog(deviceContext, nowEpochMillis = { 1L }),
                 roomLog = Provider { error("Room must not be resolved before unlock") },
             )
 
@@ -86,11 +89,11 @@ class UnlockAwareTechnicalEventLogTest {
     @Suppress("InjectDispatcher") // Le test est ici le fournisseur du scope de l'objet sous test.
     fun `after unlock log goes to room`() {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val roomLog = RoomTechnicalEventLog(FakeTechnicalEventDao(), scope, nowEpochMillis = { 2L })
+        val roomLog = RoomTechnicalEventLog(FakeTechnicalEventDao(), scope, deviceContext, nowEpochMillis = { 2L })
         val log =
             UnlockAwareTechnicalEventLog(
                 unlockState = FakeUnlockState(isUserUnlocked = true),
-                inMemory = InMemoryTechnicalEventLog(nowEpochMillis = { 1L }),
+                inMemory = InMemoryTechnicalEventLog(deviceContext, nowEpochMillis = { 1L }),
                 roomLog = Provider { roomLog },
             )
 
@@ -106,8 +109,8 @@ class UnlockAwareTechnicalEventLogTest {
     @Suppress("InjectDispatcher") // Le test est ici le fournisseur du scope de l'objet sous test.
     fun `recent merges both sources sorted by most recent first and bounded to 200`() {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val roomLog = RoomTechnicalEventLog(FakeTechnicalEventDao(), scope, nowEpochMillis = { 100L })
-        val inMemory = InMemoryTechnicalEventLog(nowEpochMillis = { 50L })
+        val roomLog = RoomTechnicalEventLog(FakeTechnicalEventDao(), scope, deviceContext, nowEpochMillis = { 100L })
+        val inMemory = InMemoryTechnicalEventLog(deviceContext, nowEpochMillis = { 50L })
         inMemory.log(TechnicalEventType.ALARM_RECEIVED, sessionId = "before-unlock")
         val log = UnlockAwareTechnicalEventLog(FakeUnlockState(isUserUnlocked = true), inMemory, Provider { roomLog })
 

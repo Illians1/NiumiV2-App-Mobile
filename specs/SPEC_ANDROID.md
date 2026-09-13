@@ -372,6 +372,8 @@ platform: Platform = ANDROID
 
 Le journal conserve au maximum les 200 derniers événements. Il ne doit contenir ni texte d'accessibilité, ni nom de fenêtre, ni saisie utilisateur, ni contenu provenant d'une autre application.
 
+**Version de la base.** La base est en **v2** depuis l'étape 16 : `technical_event` y gagne `deviceModel`, `androidVersion` et `appVersion` (17). `MIGRATION_1_2` est additive et ne touche aucune autre table ; les lignes existantes reçoivent `''`, le journal antérieur est conservé. Chaque schéma reste committé sous `androidApp/core/database/schemas/`, v1 comprise — `MigrationTestHelper` en a besoin pour créer une base v1 avant d'y appliquer la migration. Les trois colonnes sont déclarées `@ColumnInfo(defaultValue = "''")` : SQLite exige une valeur par défaut pour ajouter une colonne `NOT NULL` à une table peuplée, et sans cette annotation le schéma attendu par Room n'en déclarerait aucune, faisant échouer `validateMigration` sur cette seule différence. Aucun `fallbackToDestructiveMigration` : une migration manquante doit faire échouer l'ouverture plutôt qu'effacer une session active et son journal (13, 18).
+
 ### 7.3 Snapshot Direct Boot
 
 Room reste dans le stockage protégé par les identifiants. Un snapshot minimal doit être copié dans le stockage protégé de l'appareil avec `createDeviceProtectedStorageContext()`.
@@ -917,7 +919,11 @@ L'écran n'affiche qu'une action principale à la fois, en commençant par le pr
 | date future valide | L'heure de réveil choisie est déjà passée. Choisis une heure future. |
 | batterie optimisée | Les restrictions de batterie peuvent geler Niumi et désactiver le blocage sans prévenir. Lève-les, puis confirme ici que c'est fait. |
 
-**Recours système (étape 12b).** Les `Intent` de réglages sont construits par l'écran de diagnostic, jamais par `DeviceReadinessChecker` : celui-ci ne décrit que le recours. Trois choix méritent d'être fixés ici.
+**Recours système (étape 12b, précisé à l'étape 16).** Les `Intent` de réglages ne sont jamais construits par `DeviceReadinessChecker` : celui-ci ne décrit que le recours, et la traduction en `Intent` appartient à l'appelant.
+
+La formulation initiale plaçait cette traduction « dans `:feature:setup`, jamais dans `:core:system`, qui reste sans interface ». **Cette justification était fausse et a été corrigée à l'étape 16 :** `:core:system` manipule déjà `AlarmManager`, `NfcAdapter`, `Settings.Secure` et `AudioManager` ; un `Intent` de réglages n'est pas de l'interface, un texte affiché si. `settingsIntentFor` vit donc dans `:core:system` (`readiness/ReadinessSettingsIntents.kt`), à côté de `ReadinessAction` qu'elle traduit, et les deux modules qui en ont besoin y accèdent — l'écran 2 (`:feature:setup`) et l'écran 7 (`:feature:session`, remédiation des incidents, 15). Sans ce déplacement, l'écran 7 aurait exigé une dépendance `feature → feature` que 6 n'autorise pas, ou une seconde table de traduction. Les **textes** restent dans les modules `feature` (`ReadinessMessages`, `explanationFor`).
+
+Trois choix méritent d'être fixés ici.
 
 - **Ne pas déranger.** Le SDK n'expose aucune action publique ouvrant l'interrupteur lui-même ; `Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS` est la plus proche. Niumi amène l'utilisateur devant le réglage et ne le modifie jamais, faute de demander `ACCESS_NOTIFICATION_POLICY`.
 - **Exemption d'énergie.** `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` n'est **jamais** émise : elle exige la permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, restreinte par Google Play, que Niumi ne déclare pas et dont il n'a pas besoin puisque c'est l'utilisateur qui confirme. Tant que la liste blanche AOSP manque, l'écran ouvre `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` (liste système) ; une fois acquise, il ouvre la fiche de l'application, où vit le réglage de la surcouche qui commande réellement le gel.
@@ -961,7 +967,9 @@ Chaque contrôle surveillé porte son propre identifiant de notification : deux 
 
 Le réconciliateur n'interrompt sa passe que pour les deux pertes de permission — accès aux alarmes exactes et service d'accessibilité — parce que poursuivre y serait absurde (reprogrammer une alarme exacte sans y avoir droit). Les quatre autres contrôles sont signalés sans interrompre la réconciliation : le réveil reste programmé, seules son audibilité ou sa présentation sont compromises. La condition porte sur l'état courant du contrôle, pas sur le fait qu'il vienne d'être signalé.
 
-Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic d'incident. Cet écran est livré à l'étape 16 (15, écran 12) ; jusque-là, le tap ramène l'utilisateur dans l'application, jamais vers un `PendingIntent` mort. Le déclencheur « au déclenchement, avant de démarrer la sonnerie » relève d'`AlarmReceiver` et arrive à l'étape 17.
+Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic d'incident (15, écran 12). Depuis l'étape 16 la redirection est effective : le `PendingIntent` porte un extra de destination, lu à `onCreate` **et** à `onNewIntent` — sans ce second point, un deuxième avertissement tapé pendant que l'application est au premier plan n'ouvrirait rien. Une valeur de destination inconnue, qu'un `PendingIntent` créé par une version antérieure peut porter, ramène à l'accueil plutôt que d'échouer.
+
+**`MainActivity` doit être déclarée `android:launchMode="singleTop"`.** Mesuré sur appareil à l'étape 16 : en `launchMode` standard, Android ramène simplement la tâche au premier plan sans jamais appeler `onNewIntent`, et le tap restait alors sans effet dès que Niumi était déjà visible. Aucun test JVM ne peut couvrir ce point — la lecture de l'extra est une fonction pure, le comportement testé est celui du système. Le déclencheur « au déclenchement, avant de démarrer la sonnerie » relève d'`AlarmReceiver` et arrive à l'étape 17.
 
 **Implémentation (étape 15).** Le déclencheur « passage au premier plan » est branché sur le `ON_RESUME` de l'écran de session active, qui est le seul écran affiché pendant qu'une session court (10.4). Il n'avait aucun appelant avant cette étape. Aucun composant distinct ne surveille le service d'accessibilité : `SessionReadinessMonitor` porte déjà le code d'incident et la garde de déduplication, et un second surveillant produirait deux incidents `CRITICAL` pour le même fait.
 
@@ -1040,11 +1048,35 @@ L'écran 7 minimal est livré à l'étape 14 et non à l'étape 15 parce que cel
 
 **Remédiation des incidents sur l'écran 7 (étape 16).** Un incident `CRITICAL` présenté sans recours laisse l'utilisateur devant un constat qu'il ne peut pas lever : pendant une session, l'écran 7 est le seul écran atteignable (10.4), et il n'offre aucun moyen d'agir. L'écran 2 porte déjà la colonne « Action proposée » de 13, adossée à `ReadinessAction` ; l'écran 7 doit proposer la même action pour les incidents remédiables, au minimum « Ouvrir les réglages d'accessibilité » pour `BLOCKING_PERMISSION_REVOKED`.
 
-Cette action n'est pas une exception à 3 : elle ne termine ni ne modifie la session, elle rétablit un sous-système. Le scan du boîtier reste le seul chemin de sortie, et l'écran 7 ne doit gagner aucune autre action.
+Cette action n'est pas une exception à 3 : elle ne termine ni ne modifie la session, elle rétablit un sous-système. Le scan du boîtier reste le seul chemin de sortie, et l'écran 7 ne doit gagner aucune autre action **qui touche à la session**. Deux ajouts de l'étape 16 s'y conforment sans y déroger : le recours d'un incident, et l'accès en **consultation** au diagnostic d'incident (écran 12). Ni l'un ni l'autre ne dispatche d'événement ; le ViewModel de l'écran 7 n'a d'ailleurs ni coordinateur ni façade, et ne le **peut** donc pas.
+
+**L'écran 7 présente l'état, l'écran 12 l'historique.** Un même code d'incident n'apparaît qu'une fois sur l'écran 7, dans sa forme la plus récente. La déduplication de `SessionReadinessMonitor` vit en mémoire (13.1) et ne survit pas à un redémarrage du processus : deux évaluations successives enregistrent alors deux incidents pour le même fait, et l'écran affichait le même texte deux fois **avec deux boutons identiques** (mesuré sur appareil à l'étape 16). L'historique complet reste consultable sur l'écran 12, dont c'est la raison d'être.
+
+Un incident remédiable porte l'action de la colonne « Action proposée » de 13 ; un incident sans recours n'affiche aucun bouton. Les recours que 13 décrit **sans réglage système à ouvrir** — `ShowExactAlarmDiagnostic` au premier chef, Niumi déclarant `USE_EXACT_ALARM` — n'en affichent pas non plus : le libellé de l'incident porte déjà l'explication, et un bouton sans destination serait le « faux état de fiabilité » que 15 interdit.
 
 Le cas visé est d'abord le plus courant : l'utilisateur désactive le service d'accessibilité depuis les réglages Android, ce que l'onboarding annonce comme possible à tout moment (4.3). Une mort du processus de Niumi produit le même état — le service cesse d'être lié et `Settings.Secure.ACCESSIBILITY_ENABLED` retombe à `0`, ce que le diagnostic détecte correctement — mais reste un cas de défaut, non de fonctionnement normal : un service d'accessibilité lié maintient le processus à `PERCEPTIBLE_APP_ADJ`, bien au-dessus du seuil des processus recyclés en routine (mesuré à l'étape 15, voir `ETAPE-15.md`).
 
 Une fois le service réactivé à la main, le blocage reprend de lui-même : le service reconstruit sa projection depuis Room à la reconnexion (12.2). Aucune action de Niumi ne doit tenter de réactiver le service à la place de l'utilisateur (12.2).
+
+**Écran 12 — diagnostic d'incident (étape 16).** Écran de **consultation**. Il ne porte aucune action sur la session : le scan du boîtier reste le seul chemin de sortie (3, 10.2), et les recours vivent sur l'écran 7. Sa seule action est l'export, que 17 exige explicite.
+
+Il présente, dans cet ordre :
+
+- les incidents `CRITICAL` de la session, à part et en tête, ce que SPEC_CORE_KMP 7.3 exige d'un diagnostic visible par l'utilisateur ;
+- l'état et la santé de la session, quand une session existe ;
+- les quatorze contrôles de 13 avec leur résultat, relus à l'ouverture — `DeviceReadinessChecker` est sans état (13.1) et un résultat mis en cache afficherait une fiabilité périmée ;
+- les incidents restants, triés par gravité décroissante puis du plus récent au plus ancien ;
+- les événements techniques, bornés à 200 (17).
+
+L'écran nomme les contrôles ; il ne reprend pas les messages de 13, rédigés comme des consignes d'activation (« Active-le avant de démarrer la session ») qui seraient faux pendant une session déjà armée. L'écran 12 constate, l'écran 7 porte le recours.
+
+Un incident y est nommé **en clair, suivi de son code technique** : `Le service d'accessibilité a été désactivé : le blocage ne s'applique plus. (BLOCKING_PERMISSION_REVOKED)`. SPEC_CORE_KMP 7.3 veut un diagnostic « visible par l'utilisateur », ce que le code seul n'était pas (mesuré sur appareil à l'étape 16) ; 18 veut qu'« une erreur inconnue reçoive un identifiant local consultable dans le diagnostic », ce que le libellé seul retirerait à l'assistance. Les deux écrans partagent une table de libellés unique : ils ne peuvent pas nommer différemment le même fait.
+
+Contrairement à l'écran 7, l'écran 12 **ne déduplique pas** : il liste tous les incidents enregistrés, du plus récent au plus ancien.
+
+Il reste consultable **sans session active** : le journal technique et les contrôles gardent leur intérêt après une session terminée ou échouée. Il est atteignable depuis l'écran 7, depuis l'accueil, et par le tap d'une notification d'avertissement (13.1).
+
+Le bouton d'export est « Exporter le diagnostic ». Il ouvre un `ACTION_SEND` texte, construit par l'écran comme tout `Intent` (13), et n'est jamais émis sans clic.
 
 **Écrans 9 et 11 (étape 15).** L'écran 9 ne porte aucune action en dehors du scan : ni bouton d'annulation, ni confirmation, ni chemin de retour qui libérerait quoi que ce soit (3, 10.2). Son texte est :
 
@@ -1117,7 +1149,11 @@ RELEASE_PARTIAL_FAILURE
 
 Chaque événement contient seulement l'heure, le type, l'identifiant de session, le modèle de l'appareil, la version Android, la version de l'application et un code d'erreur contrôlé. Le nom de package est accepté uniquement pour `BLOCK_APPLIED`. Aucun événement n'est envoyé à distance dans le MVP.
 
+**Contexte porté par événement (étape 16).** Le modèle de l'appareil, la version Android et la version de l'application sont des colonnes de `technical_event`, pas un en-tête d'export mis en facteur. Ces valeurs sont certes constantes pour un processus donné, mais un journal de 200 événements peut enjamber une mise à jour de l'application ou du système : un en-tête unique attribuerait alors la nouvelle version aux événements antérieurs. Elles sont ajoutées par l'implémentation du journal, jamais par l'appelant — la signature de `log()` ne les expose pas, sans quoi seize sites d'appel devraient les tenir à jour. Les lignes écrites avant cette montée valent `''` : une absence, jamais une erreur de lecture.
+
 Ajouter un écran de diagnostic exportable sous forme de texte après action explicite de l'utilisateur. Masquer le token, son hash complet et tout identifiant matériel. L'export ne doit contenir que les 200 événements locaux et les résultats du contrôle de santé.
+
+**Forme de l'export (étape 16).** Le contexte d'appareil ouvre le texte ; une ligne d'événement ne le répète que s'il **diffère** de cet en-tête, ce qui n'arrive qu'après une mise à jour — sinon 200 lignes répéteraient la même constante. Le `boxId` est tronqué à ses huit premiers caractères, assez pour distinguer deux boîtiers dans un échange d'assistance. Le hash du token ne traverse **jamais** le modèle de données de l'export : il n'y est pas transporté, plutôt que transporté puis masqué à l'affichage — on ne divulgue pas ce qu'on ne reçoit pas.
 
 ## 18. Gestion des erreurs
 

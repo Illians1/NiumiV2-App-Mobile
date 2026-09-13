@@ -33,6 +33,7 @@ import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheckId
 import com.niumi.system.readiness.ReadinessOutcome
+import com.niumi.system.readiness.settingsIntentFor
 
 /**
  * Diagnostic avant activation (SPEC_ANDROID §13). Composable pur et sans état.

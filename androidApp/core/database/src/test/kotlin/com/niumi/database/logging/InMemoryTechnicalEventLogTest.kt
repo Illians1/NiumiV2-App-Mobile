@@ -6,10 +6,14 @@ import org.junit.Test
 
 /**
  * SPEC_ANDROID §17 : 200 événements maximum, la plus ancienne supprimée au-delà ; le nom de
- * package n'est accepté que pour `BLOCK_APPLIED` (filtre porté par [TechnicalEventDetails]).
+ * package n'est accepté que pour `BLOCK_APPLIED` (filtre porté par [TechnicalEventDetails]) ;
+ * chaque événement porte le modèle de l'appareil, la version Android et la version de
+ * l'application.
  */
 class InMemoryTechnicalEventLogTest {
-    private val log = InMemoryTechnicalEventLog(nowEpochMillis = { 42L })
+    private val deviceContext =
+        DeviceContext(deviceModel = "Pixel Test", androidVersion = "16 (API 36)", appVersion = "1.0.0 (1)")
+    private val log = InMemoryTechnicalEventLog(deviceContext, nowEpochMillis = { 42L })
 
     @Test
     fun keeps200MostRecentEntriesAndDropsTheOldest() =
@@ -56,5 +60,20 @@ class InMemoryTechnicalEventLogTest {
             log.log(TechnicalEventType.ALARM_RECEIVED, sessionId = "s1")
 
             assertThat(log.recent().single().occurredAtEpochMillis).isEqualTo(42L)
+        }
+
+    // §17 : « Chaque événement contient seulement l'heure, le type, l'identifiant de session, le
+    // modèle de l'appareil, la version Android, la version de l'application et un code d'erreur
+    // contrôlé. » Le contexte est ajouté par l'implémentation, jamais par l'appelant : la
+    // signature de `log()` ne l'expose pas.
+    @Test
+    fun entryCarriesTheDeviceContext() =
+        runTest {
+            log.log(TechnicalEventType.ALARM_RECEIVED, sessionId = "s1")
+
+            val entry = log.recent().single()
+            assertThat(entry.deviceModel).isEqualTo("Pixel Test")
+            assertThat(entry.androidVersion).isEqualTo("16 (API 36)")
+            assertThat(entry.appVersion).isEqualTo("1.0.0 (1)")
         }
 }

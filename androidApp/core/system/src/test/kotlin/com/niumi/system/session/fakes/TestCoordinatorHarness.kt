@@ -98,7 +98,14 @@ class TestCoordinatorHarness {
         SessionReconciler(gateway, effectDispatcher, sources, facade, eventFactory, technicalEventLog)
 
     val coordinator: SessionCoordinator =
-        DefaultSessionCoordinator(recordingReducer, gateway, effectDispatcher, reconciler, eventFactory)
+        DefaultSessionCoordinator(
+            recordingReducer,
+            gateway,
+            effectDispatcher,
+            reconciler,
+            eventFactory,
+            technicalEventLog,
+        )
 
     /**
      * Variante où un seul exécuteur est remplacé (`SessionCoordinatorActivationTest` : force
@@ -113,7 +120,7 @@ class TestCoordinatorHarness {
         val dispatcher = EffectDispatcher(overridden, gateway)
         val recon =
             SessionReconciler(gateway, dispatcher, sources, facade, eventFactory, technicalEventLog)
-        return DefaultSessionCoordinator(recordingReducer, gateway, dispatcher, recon, eventFactory)
+        return DefaultSessionCoordinator(recordingReducer, gateway, dispatcher, recon, eventFactory, technicalEventLog)
     }
 
     /** Variante avec une [SessionPersistenceGateway] de substitution (`SessionCoordinatorMutexTest`). */
@@ -127,6 +134,7 @@ class TestCoordinatorHarness {
             customDispatcher,
             customReconciler,
             eventFactory,
+            technicalEventLog,
         )
     }
 }

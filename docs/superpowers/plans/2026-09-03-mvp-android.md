@@ -883,11 +883,36 @@ proposée »), §15 (écran 7 « Remédiation des incidents », écran 12), §16
 - Modifier `ActiveSessionScreen`/`ActiveSessionViewModel`/`ActiveSessionTexts` (`:feature:session/active/`, étape 15) : chaque incident remédiable porte son action, au minimum « Ouvrir les réglages d'accessibilité » pour `BLOCKING_PERMISSION_REVOKED`. Réutiliser `ReadinessAction` (`:core:system/readiness/`) et le `settingsIntentFor(...)` de `:feature:setup`, plutôt qu'un second mécanisme — quitte à extraire ce dernier dans un module commun s'il n'est pas atteignable depuis `:feature:session`. **Ne pas** ajouter d'autre action à l'écran 7 : le scan du boîtier reste le seul chemin de sortie (§3, §10.2), et cette action rétablit un sous-système sans toucher à la session.
 - Tests : `DiagnosticExporterTest` (aucune occurrence du hash complet, du token ni d'un `boxId` complet ; 200 lignes maximum), `TechnicalEventLogTest` étendu (`packageName` refusé hors `BLOCK_APPLIED`), `IncidentDiagnosticViewModelTest` (`CRITICAL` avant `DEGRADED` avant `WARNING`), `ActiveSessionViewModelTest` étendu (un incident remédiable expose son action, un incident sans recours n'en expose aucune, et **aucune action n'annule ni ne modifie la session**).
 
-- [ ] **Écrire `DiagnosticExporterTest`**, implémenter.
-- [ ] **Étendre `TechnicalEventLogTest`**, brancher les émetteurs.
-- [ ] **Écrire `IncidentDiagnosticViewModelTest`**, implémenter l'écran 12 et sa route depuis l'écran de session et l'accueil.
-- [ ] **Étendre `ActiveSessionViewModelTest`**, donner leur action aux incidents remédiables de l'écran 7 (report de l'étape 15, voir en tête d'étape).
-- [ ] **Vérifier :**
+**Trois arbitrages validés avec l'utilisateur le 2026-09-13**, répercutés dans les specs dans le même
+changement. Détails dans `ETAPE-16.md`.
+
+1. **Champs de contexte : colonnes Room, base en v2** plutôt qu'un en-tête d'export mis en facteur.
+   Fidèle à la lettre de §17, et seule option qui reste juste si l'application est mise à jour
+   pendant la fenêtre des 200 événements.
+2. **`settingsIntentFor` descend dans `:core:system`**, à côté de `ReadinessAction` qu'il traduit.
+   §13 affirmait qu'il devait rester dans `:feature:setup` « jamais dans `:core:system`, qui reste
+   sans interface » : **justification fausse**, ce module manipule déjà `AlarmManager`, `NfcAdapter`
+   et `Settings.Secure`. L'alternative — `:feature:session → :feature:setup` — aurait créé la
+   première arête entre features, que §6 ne prévoit pas. Les textes restent dans les `feature`.
+3. **Le deep link de la notification est traité ici**, §13.1 l'exigeant dès lors que l'écran existe.
+   Non listé par les fichiers du plan : ajout assumé.
+
+**Trois points non prévus par le plan, découverts à l'implémentation.**
+
+- **« Brancher `RecordIncidentExecutor` sur `IncidentDao` » était déjà fait** depuis l'étape 11, via
+  `SessionPersistenceGateway → RoomSessionStore.recordIncident`. Rien à implémenter.
+- **Le schéma v2 généré ne correspondait pas à la migration.** SQLite exige un `DEFAULT` pour ajouter
+  une colonne `NOT NULL` à une table peuplée, mais Room n'en déclarait aucun :
+  `validateMigration` aurait échoué sur cette seule différence. `@ColumnInfo(defaultValue = "''")`
+  aligne les deux.
+- **§17 est une liste fermée** : les cinq exécuteurs sans journal n'ont aucun type correspondant et
+  restent silencieux. Le seul émetteur réellement manquant était `RELEASE_PARTIAL_FAILURE`.
+
+- [x] **Écrire `DiagnosticExporterTest`**, implémenter. *(11 tests. Le hash du token n'entre jamais dans `DiagnosticReport` : on ne divulgue pas ce qu'on ne transporte pas. Le contexte d'appareil est en en-tête et n'est répété sur une ligne que s'il en diffère — sinon 200 lignes répéteraient la même constante.)*
+- [x] **Étendre `TechnicalEventLogTest`**, brancher les émetteurs. *(Contexte porté par `TechnicalEventEntry` et par `technical_event` (base v2, `MIGRATION_1_2`) ; `MAX_ENTRIES`, dupliqué dans trois fichiers, devient `MAX_TECHNICAL_EVENTS` ; `packageName` vérifié refusé sur les 25 autres types plutôt que sur un échantillon ; `RELEASE_PARTIAL_FAILURE` branché sur `DefaultSessionCoordinator`.)*
+- [x] **Écrire `IncidentDiagnosticViewModelTest`**, implémenter l'écran 12 et sa route depuis l'écran de session et l'accueil. *(5 + 11 tests. L'écran 12 n'était spécifié nulle part — §15 ne le listait que dans les étapes de livraison — d'où une nouvelle sous-section. Il nomme les contrôles au lieu de reprendre les messages de §13, rédigés comme des consignes d'activation et faux pendant une session armée. `DiagnosticSources` regroupe ses cinq lectures : `LongParameterList` de detekt, même motif que `ReconcilerSources`.)*
+- [x] **Étendre `ActiveSessionViewModelTest`**, donner leur action aux incidents remédiables de l'écran 7 (report de l'étape 15, voir en tête d'étape). *(+4 tests. `IncidentRemediation` est une table statique, pas une seconde évaluation du checker : l'action d'un code ne dépend pas de l'état du système. Un recours sans `Intent` — `ShowExactAlarmDiagnostic` — n'affiche aucun bouton, le libellé de l'incident portant déjà l'explication.)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :feature:session:testDebugUnitTest :core:database:testDebugUnitTest :core:system:testDebugUnitTest
@@ -895,9 +920,13 @@ proposée »), §15 (écran 7 « Remédiation des incidents », écran 12), §16
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** session armée → désactiver le service d'accessibilité dans les réglages Android → revenir dans Niumi → l'écran 7 montre l'incident `CRITICAL` **et** son action ; appuyer dessus ouvre les réglages d'accessibilité ; réactiver le service → rouvrir une application bloquée, le blocage doit reprendre sans autre geste (reconstruction depuis Room, étape 15).
+*(Faite le 2026-09-13 — **676 tests JVM verts** : `:feature:session` 119 (+19), `:core:system` 177 (+9), `:core:database` 106 (+4), `:app` 17 (+3), non-régression sur `:shared:core` (160), `:feature:setup` (76) et `:feature:ringing` (21) ; `:app:assembleDebug`, ktlint, detekt verts et `:app:lintDebug` sans aucune remontée. `:feature:setup:testDebugUnitTest` et `:app:testDebugUnitTest` s'ajoutent aux trois cibles citées : le déplacement de `settingsIntentFor` et le deep link touchent ces modules. Aucune règle assouplie — `HomeScreen` dépassait `LongParameterList` (6 > 5) d'où `HomeActions`, le ViewModel de l'écran 12 aussi (7 > 6) d'où `DiagnosticSources`, et `NiumiNavHost` dépassait `LongMethod` (61 > 60) d'où `NavGraphBuilder.setupDestinations`. **Les tests instrumentés restent à exécuter : appareil requis** — `:core:database` (migration 1→2), `:core:system` et `:feature:setup` (test des intents scindé).)*
 
-**Terminé quand :** l'export ne contient aucune donnée interdite (test), chaque événement du coordinateur apparaît dans le journal, l'écran 12 est accessible.
+- [x] **Valider sur appareil.** *(**Déroulée essai par essai le 2026-09-13 sur Xiaomi 25080RABDG, Android 16, HyperOS OS3.0** — **115 tests instrumentés verts** (`:core:database` 60, `:feature:setup` 34, `:core:system` 21) et les six essais observés. **Trois défauts trouvés et corrigés, tous invisibles en JVM :** `MainActivity` était en `launchMode` standard, où `onNewIntent` n'est jamais appelé — le tap d'un avertissement restait sans effet dès que Niumi était visible (corrigé par `singleTop`) ; l'écran 7 affichait le même incident deux fois avec deux boutons identiques, la déduplication du monitor ne survivant pas à une mort de processus (l'écran 7 présente désormais l'état, l'écran 12 l'historique) ; l'écran 12 montrait les codes bruts, désormais nommés en clair suivis du code, via `IncidentTexts` partagé par les deux écrans. **La migration 1→2 est prouvée en conditions réelles** : une base v1 conforme au schéma exporté, portant un témoin, installée avant mise à jour — `user_version` passe à 2, le témoin est conservé avec `''`, ce qu'aucun test ne couvrait (le test instrumenté passe la migration explicitement et ne vérifie pas le câblage Hilt). Batterie rejouée : 677 tests JVM verts. Détails et réserves dans `ETAPE-16.md`.)*
+
+**Tests manuels :** session armée → désactiver le service d'accessibilité dans les réglages Android → revenir dans Niumi → l'écran 7 montre l'incident `CRITICAL` **et** son action ; appuyer dessus ouvre les réglages d'accessibilité ; réactiver le service → rouvrir une application bloquée, le blocage doit reprendre sans autre geste (reconstruction depuis Room, étape 15) ; taper la notification d'avertissement → l'écran 12 s'ouvre, puis en taper une seconde sans quitter l'application → il s'ouvre encore (chemin `onNewIntent`, non couvert en JVM) ; écran 12 → « Exporter le diagnostic » → **relire le texte** et vérifier l'absence de hash, de token et de `boxId` complet ; installer par-dessus une v1 existante → la migration passe et le journal antérieur est conservé.
+
+**Terminé quand :** l'export ne contient aucune donnée interdite (test), chaque événement du coordinateur apparaît dans le journal, l'écran 12 est accessible. *(**Atteint le 2026-09-13**, validations matérielles comprises, sous quatre réserves consignées dans `ETAPE-16.md` : le texte intégral de l'export n'a pas été relu sur appareil faute de session associée au moment de l'essai ; `RELEASE_PARTIAL_FAILURE` n'est prouvé qu'en JVM et exige le scan de l'étape 18 ; les deux constats de plateforme de l'étape 15 restent ouverts ; et le doublon d'incidents n'est traité qu'à l'affichage, sa cause — déduplication non persistée — restant dans `SessionReadinessMonitor` (étape 12).)*
 
 ## Phase G — Lot 4 : réveil
 

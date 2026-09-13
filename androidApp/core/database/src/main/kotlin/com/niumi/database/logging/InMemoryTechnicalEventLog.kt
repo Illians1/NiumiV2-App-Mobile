@@ -3,8 +3,6 @@ package com.niumi.database.logging
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-private const val MAX_ENTRIES = 200
-
 /**
  * Implémentation en mémoire de [TechnicalEventLog], conservée après l'introduction de
  * `RoomTechnicalEventLog` (étape 9) comme repli avant déverrouillage (`UserManager
@@ -14,6 +12,7 @@ private const val MAX_ENTRIES = 200
  * valeurs par défaut Kotlin des paramètres de constructeur).
  */
 class InMemoryTechnicalEventLog(
+    private val deviceContext: DeviceContext,
     private val nowEpochMillis: () -> Long = { System.currentTimeMillis() },
 ) : TechnicalEventLog {
     private val lock = ReentrantLock()
@@ -30,10 +29,13 @@ class InMemoryTechnicalEventLog(
                 sessionId = sessionId,
                 detailsJson = TechnicalEventDetails.sanitize(type, detailsJson),
                 occurredAtEpochMillis = nowEpochMillis(),
+                deviceModel = deviceContext.deviceModel,
+                androidVersion = deviceContext.androidVersion,
+                appVersion = deviceContext.appVersion,
             )
         lock.withLock {
             entries.addLast(entry)
-            while (entries.size > MAX_ENTRIES) entries.removeFirst()
+            while (entries.size > MAX_TECHNICAL_EVENTS) entries.removeFirst()
         }
     }
 

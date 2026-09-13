@@ -85,7 +85,19 @@ class ActiveSessionViewModel
                 }
             return SessionDetails(
                 blockedApps = blockedApps,
-                incidents = incidentsReader.incidents(snapshot.sessionId).sortedWith(INCIDENT_ORDER),
+                incidents =
+                    incidentsReader
+                        .incidents(snapshot.sessionId)
+                        .sortedWith(INCIDENT_ORDER)
+                        // L'écran 7 présente l'état, pas l'historique : un code n'y figure qu'une
+                        // fois, dans sa forme la plus récente (le tri l'a mise en tête). La
+                        // déduplication de `SessionReadinessMonitor` vit en mémoire et ne survit
+                        // pas à un redémarrage du processus — deux passages produisent alors deux
+                        // incidents pour le même fait, et l'écran affichait deux boutons
+                        // identiques (mesuré sur appareil, étape 16). L'historique complet reste
+                        // sur l'écran 12.
+                        .distinctBy { it.code }
+                        .map(IncidentPresentation::of),
             )
         }
 
@@ -125,7 +137,7 @@ class ActiveSessionViewModel
          */
         private data class SessionDetails(
             val blockedApps: List<BlockedPackage>? = null,
-            val incidents: List<SessionIncidentDto> = emptyList(),
+            val incidents: List<IncidentPresentation> = emptyList(),
         )
 
         private companion object {

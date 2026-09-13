@@ -25,8 +25,12 @@ import com.niumi.database.entity.TechnicalEventEntity
 
 /**
  * Source persistante canonique après déverrouillage (SPEC_CORE_KMP §13). `exportSchema = true` :
- * le schéma v1 est committé dans `androidApp/core/database/schemas/` (bloc `room {}` du
- * build.gradle.kts), lu par `ExportedSchemaTest` et `MigrationTestHelper`.
+ * chaque schéma est committé dans `androidApp/core/database/schemas/` (bloc `room {}` du
+ * build.gradle.kts), lu par `NiumiDatabaseSchemaTest` et `MigrationTestHelper`.
+ *
+ * v2 (étape 16) ajoute à `technical_event` les trois champs de contexte de SPEC_ANDROID §17
+ * (modèle de l'appareil, version Android, version de l'application). La migration est additive et
+ * ne touche aucune autre table : voir [com.niumi.database.migration.MIGRATION_1_2].
  */
 @Database(
     entities = [
@@ -39,7 +43,7 @@ import com.niumi.database.entity.TechnicalEventEntity
         SessionEffectOutboxEntity::class,
         ActiveSessionPointerEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(SessionEnumConverters::class, EffectEnumConverters::class, IncidentEnumConverters::class)

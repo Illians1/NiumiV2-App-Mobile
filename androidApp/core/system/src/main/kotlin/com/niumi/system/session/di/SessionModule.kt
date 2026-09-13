@@ -114,7 +114,9 @@ object SessionModule {
         effectDispatcher: EffectDispatcher,
         reconciler: SessionReconciler,
         eventFactory: SessionEventFactory,
-    ): SessionCoordinator = DefaultSessionCoordinator(reducer, gateway, effectDispatcher, reconciler, eventFactory)
+        technicalEventLog: TechnicalEventLog,
+    ): SessionCoordinator =
+        DefaultSessionCoordinator(reducer, gateway, effectDispatcher, reconciler, eventFactory, technicalEventLog)
 
     @Provides
     @Singleton

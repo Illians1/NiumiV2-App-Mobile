@@ -11,6 +11,8 @@ import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
 import com.niumi.database.StoredDecision
+import com.niumi.database.logging.TechnicalEventLog
+import com.niumi.database.logging.TechnicalEventType
 import com.niumi.database.mapping.EventFingerprint
 import com.niumi.database.mapping.SessionEffectMapper.toPendingEffects
 import kotlinx.coroutines.sync.Mutex
@@ -29,6 +31,7 @@ class DefaultSessionCoordinator(
     private val effectDispatcher: EffectDispatcher,
     private val reconciler: SessionReconciler,
     private val eventFactory: SessionEventFactory,
+    private val technicalEventLog: TechnicalEventLog,
 ) : SessionCoordinator {
     private val mutex = Mutex()
 
@@ -177,6 +180,12 @@ class DefaultSessionCoordinator(
         }
 
         val satisfied = PhaseCompletion.isSatisfied(event.kind, outcomes)
+        // §18 : « une erreur pendant le nettoyage conserve RELEASING, crée RELEASE_PARTIAL_FAILURE
+        // et déclenche une reprise idempotente ». L'incident métier est porté par l'événement de
+        // suivi construit juste après ; l'événement technique de §17 est journalisé ici.
+        if (!satisfied && event.kind == SessionEventKindDto.VALID_NFC_SCANNED) {
+            technicalEventLog.log(TechnicalEventType.RELEASE_PARTIAL_FAILURE, snapshot.sessionId)
+        }
         val followUpEvent = buildFollowUpEvent(event.kind, snapshot, satisfied, outcomes)
         val followUpResult = dispatchLocked(followUpEvent, null)
         return when (followUpResult) {

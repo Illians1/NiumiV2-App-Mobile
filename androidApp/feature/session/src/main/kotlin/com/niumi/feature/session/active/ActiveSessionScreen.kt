@@ -14,6 +14,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -25,8 +26,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.system.readiness.settingsIntentFor
 
 /**
  * Écran de session active (écran 7, SPEC_ANDROID §15), complet depuis l'étape 15. La seule action
@@ -38,6 +39,8 @@ fun ActiveSessionScreen(
     state: ActiveSessionUiState,
     onModifyOrCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    onRemediate: (IncidentPresentation) -> Unit = {},
+    onOpenDiagnostic: () -> Unit = {},
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -66,14 +69,19 @@ fun ActiveSessionScreen(
                 Text(text = display.sentence, style = MaterialTheme.typography.bodyLarge)
             }
 
-            CriticalIncidents(state.criticalIncidents)
+            CriticalIncidents(state.criticalIncidents, onRemediate)
             HealthSection(state)
             BlockedAppsSection(state)
-            OtherIncidents(state)
+            OtherIncidents(state, onRemediate)
 
             Text(text = ActiveSessionTexts.COMMITMENT_REMINDER, style = MaterialTheme.typography.bodyLarge)
             Button(onClick = onModifyOrCancel, modifier = Modifier.fillMaxWidth()) {
                 Text(text = ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON)
+            }
+            // Consultation seule (écran 12) : ne termine ni ne modifie la session, au même titre
+            // que les recours ci-dessus. Le scan du boîtier reste le seul chemin de sortie (§3).
+            TextButton(onClick = onOpenDiagnostic, modifier = Modifier.fillMaxWidth()) {
+                Text(text = ActiveSessionTexts.OPEN_DIAGNOSTIC_BUTTON)
             }
         }
     }
@@ -84,7 +92,10 @@ fun ActiveSessionScreen(
  * d'un `DEGRADED` simplement consigné. D'où un bloc en tête d'écran, avant même la santé.
  */
 @Composable
-private fun CriticalIncidents(incidents: List<SessionIncidentDto>) {
+private fun CriticalIncidents(
+    incidents: List<IncidentPresentation>,
+    onRemediate: (IncidentPresentation) -> Unit,
+) {
     if (incidents.isEmpty()) return
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -105,8 +116,25 @@ private fun CriticalIncidents(incidents: List<SessionIncidentDto>) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
+                RemediationAction(incident, onRemediate)
             }
         }
+    }
+}
+
+/**
+ * Le recours d'un incident (§15). Il rétablit un sous-système et ne touche jamais à la session :
+ * le scan du boîtier reste le seul chemin de sortie (§3, §10.2). Niumi ne réactive rien à la place
+ * de l'utilisateur (§12.2) — le bouton ouvre le réglage, l'utilisateur décide.
+ */
+@Composable
+private fun RemediationAction(
+    incident: IncidentPresentation,
+    onRemediate: (IncidentPresentation) -> Unit,
+) {
+    val label = incident.actionLabel ?: return
+    TextButton(onClick = { onRemediate(incident) }) {
+        Text(text = label)
     }
 }
 
@@ -133,7 +161,10 @@ private fun BlockedAppsSection(state: ActiveSessionUiState) {
 
 /** Les `CRITICAL` sont déjà en tête : ce bloc porte le reste, consigné sans alarmer. */
 @Composable
-private fun OtherIncidents(state: ActiveSessionUiState) {
+private fun OtherIncidents(
+    state: ActiveSessionUiState,
+    onRemediate: (IncidentPresentation) -> Unit,
+) {
     val others = state.incidents - state.criticalIncidents.toSet()
     if (others.isEmpty()) return
     Text(text = ActiveSessionTexts.INCIDENTS_TITLE, style = MaterialTheme.typography.titleMedium)
@@ -144,6 +175,7 @@ private fun OtherIncidents(state: ActiveSessionUiState) {
                     ActiveSessionTexts.incidentLabel(incident.code),
             style = MaterialTheme.typography.bodyMedium,
         )
+        RemediationAction(incident, onRemediate)
     }
 }
 
@@ -156,6 +188,7 @@ private fun OtherIncidents(state: ActiveSessionUiState) {
 @Composable
 fun ActiveSessionRoute(
     onModifyOrCancel: () -> Unit,
+    onOpenDiagnostic: () -> Unit,
     viewModel: ActiveSessionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -172,7 +205,19 @@ fun ActiveSessionRoute(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    ActiveSessionScreen(state = viewModel.state, onModifyOrCancel = onModifyOrCancel)
+    ActiveSessionScreen(
+        state = viewModel.state,
+        onModifyOrCancel = onModifyOrCancel,
+        onOpenDiagnostic = onOpenDiagnostic,
+        // §13 : les `Intent` de réglages sont construits par l'écran, jamais par le ViewModel ni
+        // par `DeviceReadinessChecker`. Un recours sans `Intent` n'a de toute façon pas de bouton
+        // (`IncidentPresentation`), d'où le `?.let` plutôt qu'un repli silencieux.
+        onRemediate = { incident ->
+            incident.action
+                ?.let { settingsIntentFor(it, context.packageName) }
+                ?.let(context::startActivity)
+        },
+    )
 }
 
 @Preview(showBackground = true)

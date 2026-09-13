@@ -4,8 +4,6 @@ import com.niumi.database.directboot.UnlockState
 import javax.inject.Inject
 import javax.inject.Provider
 
-private const val MAX_ENTRIES = 200
-
 /**
  * Route [log] vers [RoomTechnicalEventLog] une fois l'appareil déverrouillé, vers
  * [InMemoryTechnicalEventLog] avant (SPEC_ANDROID §7.3 : Room y est inaccessible). Un seul
@@ -44,6 +42,6 @@ class UnlockAwareTechnicalEventLog
             val fromRoom = if (unlockState.isUserUnlocked) roomLog.get().recent() else emptyList()
             return (inMemory.recent() + fromRoom)
                 .sortedByDescending { it.occurredAtEpochMillis }
-                .take(MAX_ENTRIES)
+                .take(MAX_TECHNICAL_EVENTS)
         }
     }

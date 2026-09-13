@@ -28,9 +28,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.niumi.designsystem.ui.theme.NiumiTheme
-import com.niumi.feature.setup.readiness.settingsIntentFor
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.readiness.ReadinessAction
+import com.niumi.system.readiness.settingsIntentFor
 
 /**
  * Écran 3 — association du boîtier (SPEC_ANDROID §11.1, §15). Composable pur et sans état, testé

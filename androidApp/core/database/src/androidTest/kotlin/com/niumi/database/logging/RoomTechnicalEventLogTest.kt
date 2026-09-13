@@ -29,6 +29,9 @@ class RoomTechnicalEventLogTest {
     private lateinit var database: NiumiDatabase
     private lateinit var scope: CoroutineScope
 
+    private val deviceContext =
+        DeviceContext(deviceModel = "Pixel Test", androidVersion = "16 (API 36)", appVersion = "1.0.0 (1)")
+
     @Before
     @Suppress("InjectDispatcher") // Le test est ici le fournisseur du scope de l'objet sous test.
     fun setUp() {
@@ -49,7 +52,7 @@ class RoomTechnicalEventLogTest {
     /** Horodatage strictement croissant, comme une vraie horloge entre deux appels. */
     private fun newLog(startAtEpochMillis: Long = 1_700_000_000_000L): RoomTechnicalEventLog {
         var tick = startAtEpochMillis
-        return RoomTechnicalEventLog(database.technicalEventDao(), scope, nowEpochMillis = { tick++ })
+        return RoomTechnicalEventLog(database.technicalEventDao(), scope, deviceContext, nowEpochMillis = { tick++ })
     }
 
     @Test

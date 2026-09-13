@@ -31,8 +31,22 @@ const val PREPARE_BUTTON_LABEL = "Préparer mon réveil"
  * cul-de-sac dès que l'étape 14 rend une session armable.
  */
 const val VIEW_SESSION_BUTTON_LABEL = "Voir ma session"
+
+/** Écran 12 (étape 16) : le journal technique et les contrôles restent consultables hors session. */
+const val DIAGNOSTIC_BUTTON_LABEL = "Voir le diagnostic"
 private const val NO_SESSION_TITLE = "Aucune session"
 private const val ACTIVE_SESSION_TITLE = "Une session est en cours."
+
+/**
+ * Les trois sorties de l'accueil, groupées : l'écran 12 (étape 16) en portait une sixième et
+ * `HomeScreen` dépassait `LongParameterList` de detekt. Les regrouper dit aussi ce qu'elles sont —
+ * la navigation de l'accueil — là où six paramètres plats ne disaient plus rien.
+ */
+data class HomeActions(
+    val onPrepare: () -> Unit,
+    val onOpenDiagnostic: () -> Unit = {},
+    val onEntryPointClick: (String) -> Unit = {},
+)
 
 /**
  * Accueil (SPEC_ANDROID §15, écran 1). En `release`, `entryPoints` est toujours vide : le seul
@@ -46,8 +60,7 @@ private const val ACTIVE_SESSION_TITLE = "Une session est en cours."
 fun HomeScreen(
     state: HomeUiState,
     entryPoints: List<NavEntryPoint>,
-    onPrepare: () -> Unit,
-    onEntryPointClick: (String) -> Unit,
+    actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
@@ -66,13 +79,16 @@ fun HomeScreen(
             )
             val primaryLabel = if (state.hasActiveSession) VIEW_SESSION_BUTTON_LABEL else PREPARE_BUTTON_LABEL
             Button(
-                onClick = onPrepare,
+                onClick = actions.onPrepare,
                 modifier = Modifier.semantics { contentDescription = primaryLabel },
             ) {
                 Text(primaryLabel)
             }
+            TextButton(onClick = actions.onOpenDiagnostic) {
+                Text(DIAGNOSTIC_BUTTON_LABEL)
+            }
             entryPoints.forEach { entryPoint ->
-                TextButton(onClick = { onEntryPointClick(entryPoint.route) }) {
+                TextButton(onClick = { actions.onEntryPointClick(entryPoint.route) }) {
                     Text(entryPoint.label)
                 }
             }
@@ -85,6 +101,7 @@ fun HomeScreen(
 fun HomeRoute(
     entryPoints: List<NavEntryPoint>,
     onNavigate: (NiumiRoute) -> Unit,
+    onOpenDiagnostic: () -> Unit,
     onEntryPointClick: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -102,8 +119,12 @@ fun HomeRoute(
     HomeScreen(
         state = viewModel.state,
         entryPoints = entryPoints,
-        onPrepare = { onNavigate(viewModel.state.destination) },
-        onEntryPointClick = onEntryPointClick,
+        actions =
+            HomeActions(
+                onPrepare = { onNavigate(viewModel.state.destination) },
+                onOpenDiagnostic = onOpenDiagnostic,
+                onEntryPointClick = onEntryPointClick,
+            ),
     )
 }
 
@@ -111,6 +132,6 @@ fun HomeRoute(
 @Composable
 private fun HomeScreenPreview() {
     NiumiTheme {
-        HomeScreen(state = HomeUiState(), entryPoints = emptyList(), onPrepare = {}, onEntryPointClick = {})
+        HomeScreen(state = HomeUiState(), entryPoints = emptyList(), actions = HomeActions(onPrepare = {}))
     }
 }

@@ -5,8 +5,6 @@ import android.app.NotificationManager
 import android.content.Context
 import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
-import com.niumi.system.intent.NiumiComponent
-import com.niumi.system.intent.PendingIntentSpec
 import com.niumi.system.readiness.MonitoredReadinessChecks
 import com.niumi.system.readiness.ReadinessCheckId
 
@@ -24,9 +22,10 @@ interface SessionWarningNotifier {
 }
 
 /**
- * Le tap ouvre `MainActivity`, qui redirige vers le diagnostic d'incident (§13.1). L'écran
- * lui-même est livré à l'étape 16 ; d'ici là, le tap ramène l'utilisateur dans l'application,
- * ce qui reste le comportement attendu — jamais un `PendingIntent` mort.
+ * Le tap ouvre `MainActivity`, qui redirige vers le diagnostic d'incident — écran 12, livré à
+ * l'étape 16 (§13.1). Le `PendingIntentSpec` est construit par
+ * [SessionWarningNotificationSpecs.tap], testable en JVM, plutôt qu'ici : `PendingIntent` et
+ * `Intent` lèvent `Stub!` hors d'un appareil.
  */
 class AndroidSessionWarningNotifier(
     private val context: Context,
@@ -48,7 +47,7 @@ class AndroidSessionWarningNotifier(
                 .setStyle(Notification.BigTextStyle().bigText(spec.text))
                 .setOngoing(spec.ongoing)
                 .setAutoCancel(true)
-                .setContentIntent(pendingIntentFactory.create(tapSpec(id)))
+                .setContentIntent(pendingIntentFactory.create(SessionWarningNotificationSpecs.tap(id)))
                 .build()
         notificationManager.notify(SessionWarningNotificationSpecs.notificationId(id), notification)
         return OperationResult.Success
@@ -69,14 +68,4 @@ class AndroidSessionWarningNotifier(
             OperationResult.AlreadySatisfied
         }
     }
-
-    private fun tapSpec(id: ReadinessCheckId): PendingIntentSpec =
-        PendingIntentSpec(
-            kind = PendingIntentSpec.Kind.ACTIVITY,
-            target = NiumiComponent.MAIN_ACTIVITY,
-            // Un code de requête par contrôle : deux avertissements simultanés ne doivent pas
-            // partager l'identité d'un PendingIntent (même raison qu'à l'étape 11).
-            requestCode = SessionWarningNotificationSpecs.notificationId(id),
-            flags = android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
-        )
 }

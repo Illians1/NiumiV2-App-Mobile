@@ -1,7 +1,12 @@
 package com.niumi.system.notification
 
 import android.app.NotificationManager
+import android.app.PendingIntent
 import com.google.common.truth.Truth.assertThat
+import com.niumi.system.intent.IntentExtraValue
+import com.niumi.system.intent.NiumiComponent
+import com.niumi.system.intent.NiumiDeepLink
+import com.niumi.system.intent.PendingIntentSpec
 import com.niumi.system.readiness.MonitoredReadinessChecks
 import com.niumi.system.readiness.ReadinessCheckId
 import org.junit.Test
@@ -75,5 +80,28 @@ class SessionWarningNotificationSpecsTest {
                 ReadinessCheckId.DND_TOTAL_SILENCE,
                 ReadinessCheckId.ACCESSIBILITY_SERVICE,
             )
+    }
+
+    /**
+     * §13.1 : « Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic
+     * d'incident. » Depuis l'étape 16, l'écran 12 existe et l'extra porte la destination.
+     */
+    @Test
+    fun tappingAWarningCarriesTheIncidentDiagnosticDestination() {
+        val spec = SessionWarningNotificationSpecs.tap(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+        assertThat(spec.kind).isEqualTo(PendingIntentSpec.Kind.ACTIVITY)
+        assertThat(spec.target).isEqualTo(NiumiComponent.MAIN_ACTIVITY)
+        assertThat(spec.extras[NiumiDeepLink.EXTRA_DESTINATION])
+            .isEqualTo(IntentExtraValue.Text(NiumiDeepLink.DESTINATION_INCIDENT_DIAGNOSTIC))
+    }
+
+    /** §16 : `PendingIntent` immuables pour tous les composants internes. */
+    @Test
+    fun everyWarningTapIsImmutableAndKeepsItsOwnRequestCode() {
+        val specs = MonitoredReadinessChecks.incidentCodes.keys.map { SessionWarningNotificationSpecs.tap(it) }
+
+        specs.forEach { assertThat(it.flags and PendingIntent.FLAG_IMMUTABLE).isNotEqualTo(0) }
+        assertThat(specs.map { it.requestCode }.toSet()).hasSize(specs.size)
     }
 }

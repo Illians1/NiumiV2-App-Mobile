@@ -1,14 +1,18 @@
 package com.niumi.database.logging.di
 
+import android.content.Context
 import com.niumi.database.dao.TechnicalEventDao
+import com.niumi.database.logging.DeviceContext
 import com.niumi.database.logging.InMemoryTechnicalEventLog
 import com.niumi.database.logging.RoomTechnicalEventLog
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.UnlockAwareTechnicalEventLog
+import com.niumi.database.logging.readDeviceContext
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,9 +34,21 @@ interface LoggingModule {
     fun bindTechnicalEventLog(impl: UnlockAwareTechnicalEventLog): TechnicalEventLog
 
     companion object {
+        /**
+         * Contexte d'appareil de SPEC_ANDROID §17. Lu une fois par processus : `Build.MODEL` et
+         * `Build.VERSION` sont des constantes du système, et la version de l'application ne change
+         * pas sans redémarrage du processus (`PACKAGE_REPLACED` le tue).
+         */
         @Provides
         @Singleton
-        fun provideInMemoryTechnicalEventLog(): InMemoryTechnicalEventLog = InMemoryTechnicalEventLog()
+        fun provideDeviceContext(
+            @ApplicationContext context: Context,
+        ): DeviceContext = readDeviceContext(context)
+
+        @Provides
+        @Singleton
+        fun provideInMemoryTechnicalEventLog(deviceContext: DeviceContext): InMemoryTechnicalEventLog =
+            InMemoryTechnicalEventLog(deviceContext)
 
         @Provides
         @Singleton
@@ -45,6 +61,7 @@ interface LoggingModule {
         fun provideRoomTechnicalEventLog(
             dao: TechnicalEventDao,
             @TechnicalEventLogScope scope: CoroutineScope,
-        ): RoomTechnicalEventLog = RoomTechnicalEventLog(dao, scope)
+            deviceContext: DeviceContext,
+        ): RoomTechnicalEventLog = RoomTechnicalEventLog(dao, scope, deviceContext)
     }
 }

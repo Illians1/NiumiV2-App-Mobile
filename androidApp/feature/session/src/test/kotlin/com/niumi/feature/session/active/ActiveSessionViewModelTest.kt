@@ -15,6 +15,7 @@ import com.niumi.feature.session.active.fakes.RecordingForegroundReadinessTrigge
 import com.niumi.feature.session.active.fakes.presentSession
 import com.niumi.feature.session.wake.fakes.FakeClock
 import com.niumi.feature.session.wake.fakes.FakeTimeZoneProvider
+import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionSnapshotPublisher
 import kotlinx.coroutines.Dispatchers
@@ -286,6 +287,120 @@ class ActiveSessionViewModelTest {
 
         assertThat(viewModel.state.criticalIncidents.map { it.code })
             .containsExactly("BLOCKING_PERMISSION_REVOKED")
+    }
+
+    /**
+     * SPEC_ANDROID §15, « Remédiation des incidents sur l'écran 7 » : l'action minimale imposée
+     * pour `BLOCKING_PERMISSION_REVOKED`. Report de l'étape 15, où l'incident était présenté sans
+     * aucun recours.
+     */
+    @Test
+    fun aRemediableIncidentCarriesItsRecourse() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents =
+            listOf(incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        val presented = viewModel.state.incidents.single()
+        assertThat(presented.action).isEqualTo(ReadinessAction.OpenAccessibilitySettings)
+        assertThat(presented.actionLabel).isEqualTo("Ouvrir les réglages d'accessibilité")
+    }
+
+    /**
+     * Mesuré sur appareil à l'étape 16 : après deux morts du processus, le même fait produisait
+     * deux incidents `BLOCKING_PERMISSION_REVOKED` en base — la déduplication de
+     * `SessionReadinessMonitor` vit en mémoire (étape 12) et ne survit pas au redémarrage. L'écran 7
+     * affichait alors deux fois le même texte **et deux boutons identiques**.
+     *
+     * L'écran 7 présente l'**état** courant, pas l'historique : un code n'y figure qu'une fois, dans
+     * sa forme la plus récente. L'historique complet reste sur l'écran 12, dont c'est le rôle.
+     */
+    @Test
+    fun theSameIncidentCodeIsPresentedOnlyOnceEvenIfRecordedTwice() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents =
+            listOf(
+                incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL, now - 10_000L),
+                incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL, now),
+                incident("TIME_CHANGED", IncidentSeverityDto.WARNING, now - 5_000L),
+            )
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        assertThat(viewModel.state.incidents.map { it.code })
+            .containsExactly("BLOCKING_PERMISSION_REVOKED", "TIME_CHANGED")
+            .inOrder()
+        assertThat(viewModel.state.criticalIncidents).hasSize(1)
+        // Le plus récent des deux est celui qui reste.
+        assertThat(
+            viewModel.state.incidents
+                .first()
+                .incident.occurredAtEpochMillis,
+        ).isEqualTo(now)
+    }
+
+    /** §15 : « ne jamais afficher un faux état de fiabilité » — donc aucun bouton sans recours. */
+    @Test
+    fun anIncidentWithoutAnyRecourseExposesNoAction() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents = listOf(incident("TIME_CHANGED", IncidentSeverityDto.WARNING))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        val presented = viewModel.state.incidents.single()
+        assertThat(presented.action).isNull()
+        assertThat(presented.actionLabel).isNull()
+    }
+
+    /**
+     * §13 : un accès aux alarmes exactes perdu n'ouvre aucun réglage — Niumi déclare
+     * `USE_EXACT_ALARM`. Le libellé de l'incident porte déjà l'explication ; aucun bouton ne doit
+     * promettre une destination qui n'existe pas.
+     */
+    @Test
+    fun theExactAlarmIncidentShowsNoButtonBecauseNoSettingsScreenApplies() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents =
+            listOf(incident("ALARM_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        assertThat(
+            viewModel.state.incidents
+                .single()
+                .actionLabel,
+        ).isNull()
+    }
+
+    /**
+     * §15 : « Cette action n'est pas une exception à §3 : elle ne termine ni ne modifie la
+     * session. » Le ViewModel n'a ni coordinateur ni façade : il ne **peut** pas dispatcher
+     * d'événement, et `FakeSessionPersistenceGateway` fait échouer toute écriture tentée depuis un
+     * écran. Le test fige cette propriété — la session reste `ARMED` et le snapshot publié est
+     * inchangé après la projection d'un incident remédiable.
+     */
+    @Test
+    fun noRemediationEverCancelsOrModifiesTheSession() {
+        val armed = snapshot()
+        gateway.result = presentSession(armed, blockedApps)
+        incidentsReader.incidents =
+            listOf(incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(armed)
+
+        assertThat(
+            viewModel.state.incidents
+                .single()
+                .action,
+        ).isEqualTo(ReadinessAction.OpenAccessibilitySettings)
+        assertThat(viewModel.state.state).isEqualTo(SessionStateDto.ARMED)
+        assertThat(snapshotPublisher.snapshot.value).isEqualTo(armed)
     }
 
     @Test

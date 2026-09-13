@@ -6,6 +6,7 @@ import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.EffectStatus
+import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.common.OperationResult
 import com.niumi.system.session.fakes.SessionDtoFixtures
 import com.niumi.system.session.fakes.TestCoordinatorHarness
@@ -69,11 +70,27 @@ class SessionCoordinatorReleaseTest {
             assertThat(applied.snapshot?.state).isEqualTo(SessionStateDto.RELEASING)
             assertThat(harness.gateway.incidentsRecorded.map { it.second.code })
                 .contains(IncidentCodes.RELEASE_PARTIAL_FAILURE)
+            // §17 : l'événement technique accompagne l'incident métier. Seul type de la liste
+            // fermée de §17 qui n'avait aucun émetteur avant l'étape 16.
+            assertThat(harness.technicalEventLog.logged).contains(TechnicalEventType.RELEASE_PARTIAL_FAILURE)
             val removeBlockingEffect =
                 harness.gateway
                     .pendingEffects(SessionDtoFixtures.SESSION_ID)
                     .single { it.kind == com.niumi.core.interop.SessionEffectKindDto.REMOVE_BLOCKING }
             assertThat(removeBlockingEffect.status).isEqualTo(EffectStatus.FAILED)
+        }
+
+    /** Une libération qui aboutit ne journalise jamais `RELEASE_PARTIAL_FAILURE`. */
+    @Test
+    fun aSuccessfulReleaseNeverLogsAPartialFailure() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            val armed = armSession(harness)
+
+            harness.coordinator.dispatch(validNfcScanned(harness, armed))
+
+            assertThat(harness.technicalEventLog.logged)
+                .doesNotContain(TechnicalEventType.RELEASE_PARTIAL_FAILURE)
         }
 
     @Test

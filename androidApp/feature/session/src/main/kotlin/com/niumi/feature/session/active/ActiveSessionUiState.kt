@@ -2,7 +2,6 @@ package com.niumi.feature.session.active
 
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.SessionHealthDto
-import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.BlockedPackage
 import com.niumi.feature.session.ui.WakeScheduleDisplay
@@ -18,6 +17,10 @@ import com.niumi.feature.session.ui.WakeScheduleDisplay
  * [blockedApps] porte le `displayNameSnapshot` figé à l'activation, jamais un nom résolu au moment
  * de l'affichage : une application désinstallée ou renommée pendant la session doit rester
  * nommable (§12.2, même raison que l'écart de l'étape 5 sur `BlockingController.apply`).
+ *
+ * [incidents] porte depuis l'étape 16 le recours de chaque incident remédiable
+ * ([IncidentPresentation], §15) : un `CRITICAL` présenté sans moyen d'agir laissait l'utilisateur
+ * devant un constat qu'il ne pouvait pas lever.
  */
 data class ActiveSessionUiState(
     val state: SessionStateDto? = null,
@@ -25,7 +28,7 @@ data class ActiveSessionUiState(
     val displayInCurrentZone: WakeScheduleDisplay? = null,
     val blockedApps: List<BlockedPackage> = emptyList(),
     val health: SessionHealthDto? = null,
-    val incidents: List<SessionIncidentDto> = emptyList(),
+    val incidents: List<IncidentPresentation> = emptyList(),
     val isLoading: Boolean = true,
 ) {
     val hasSession: Boolean get() = state != null
@@ -37,6 +40,6 @@ data class ActiveSessionUiState(
      * diagnostic visible par l'utilisateur », ce qui distingue sa présentation d'un `DEGRADED`
      * simplement consigné.
      */
-    val criticalIncidents: List<SessionIncidentDto>
+    val criticalIncidents: List<IncidentPresentation>
         get() = incidents.filter { it.severity == IncidentSeverityDto.CRITICAL }
 }
