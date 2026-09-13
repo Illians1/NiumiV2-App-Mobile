@@ -12,6 +12,7 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.readiness.fakes.FakeSessionWarningNotifier
 import com.niumi.system.readiness.fakes.ReadinessTestSources
+import com.niumi.system.readiness.fakes.RecordingSessionIncidentsReader
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.SessionEventFactory
 import com.niumi.system.session.fakes.FakeClock
@@ -32,12 +33,14 @@ class SessionReadinessMonitorTest {
     private val sources = ReadinessTestSources()
     private val notifier = FakeSessionWarningNotifier()
     private val technicalEventLog = FakeTechnicalEventLog()
+    private val incidentsReader = RecordingSessionIncidentsReader()
     private val dispatched = mutableListOf<SessionEventDto>()
 
     /**
-     * Fabrique plutôt qu'unique instance : la garde de déduplication vit dans le monitor, donc un
-     * test qui veut repartir d'un état vierge (la même panne observée depuis plusieurs états) a
-     * besoin d'une instance neuve.
+     * Fabrique plutôt qu'unique instance : la garde de déduplication des notifications vit dans le
+     * monitor, donc un test qui veut repartir d'un état vierge — la même panne observée depuis
+     * plusieurs états, ou après une mort de processus — a besoin d'une instance neuve. Les
+     * incidents déjà enregistrés, eux, survivent dans [incidentsReader].
      */
     private fun newMonitor() =
         SessionReadinessMonitor(
@@ -45,12 +48,15 @@ class SessionReadinessMonitorTest {
             warningNotifier = notifier,
             eventFactory = SessionEventFactory(SequentialIdGenerator(), FakeClock(NOW)),
             technicalEventLog = technicalEventLog,
+            incidentsReader = incidentsReader,
         )
 
     private val monitor = newMonitor()
 
+    /** Reflète en « base » ce que le monitor dispatche, comme le ferait `RecordIncidentExecutor`. */
     private val dispatch: suspend (SessionEventDto) -> DispatchResult = { event ->
         dispatched += event
+        event.incident?.let { incidentsReader.record(event.sessionId, it) }
         DispatchResult.Applied(snapshot(), requiredEffectsSucceeded = true)
     }
 
@@ -199,8 +205,16 @@ class SessionReadinessMonitorTest {
             assertThat(dispatched).hasSize(1)
         }
 
+    /**
+     * Changement de comportement de l'étape 16, assumé : un contrôle réparé puis re-cassé
+     * **republie son avertissement** — l'utilisateur doit savoir que c'est de nouveau cassé — mais
+     * n'enregistre **pas** un second incident. Un incident est un fait métier par session ; la
+     * santé est déjà `DEGRADED` et n'en revient jamais (SPEC_CORE_KMP §7.3), si bien qu'un second
+     * exemplaire n'ajouterait qu'un horodatage. Les deux détections restent dans le journal
+     * technique, qui n'est pas dédupliqué.
+     */
     @Test
-    fun aControlThatRecoversClearsItsWarningAndCanBeReportedAgainLater() =
+    fun aControlThatRecoversRepublishesItsWarningButRecordsNoSecondIncident() =
         runTest {
             breakCheck(ReadinessCheckId.DND_TOTAL_SILENCE)
             monitor.evaluate(snapshot(), dispatch)
@@ -212,7 +226,54 @@ class SessionReadinessMonitorTest {
 
             breakCheck(ReadinessCheckId.DND_TOTAL_SILENCE)
             val again = monitor.evaluate(snapshot(), dispatch)
+
             assertThat(again.newlyReported.map { it.checkId }).containsExactly(ReadinessCheckId.DND_TOTAL_SILENCE)
+            assertThat(notifier.presented).hasSize(2)
+            assertThat(again.newlyReported.single().dispatchResult).isNull()
+            assertThat(dispatched).hasSize(1)
+            assertThat(technicalEventLog.logged.count { it == TechnicalEventType.ALARM_MUTED_BY_DND }).isEqualTo(2)
+        }
+
+    /**
+     * Le défaut mesuré sur appareil à l'étape 16 : la déduplication vit en mémoire (§13.1) et ne
+     * survit pas à une mort de processus, si bien qu'un monitor neuf réenregistrait un incident
+     * pour un fait déjà consigné. L'écran 7 affichait alors deux fois le même texte avec deux
+     * boutons identiques.
+     *
+     * Un monitor neuf doit republier l'avertissement — il est encore valable — sans réécrire
+     * l'incident.
+     */
+    @Test
+    fun afterAProcessDeathTheWarningIsRepublishedButTheIncidentIsNotRecordedTwice() =
+        runTest {
+            breakCheck(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            monitor.evaluate(snapshot(), dispatch)
+            assertThat(dispatched).hasSize(1)
+
+            // Processus mort puis relancé : la garde en mémoire repart vide, la base non.
+            val afterRestart = newMonitor().evaluate(snapshot(), dispatch)
+
+            assertThat(afterRestart.newlyReported.map { it.checkId })
+                .containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            assertThat(notifier.presented).hasSize(2)
+            assertThat(dispatched).hasSize(1)
+        }
+
+    /**
+     * Avant déverrouillage, `SessionIncidentsReader` ne peut rien lire (Room est inaccessible,
+     * SPEC_ANDROID §7.3) et renvoie une liste vide. La déduplication est alors impossible : le
+     * monitor enregistre l'incident plutôt que de le taire — même arbitrage qu'ailleurs, on ne
+     * perd jamais une dégradation pour cause de stockage indisponible.
+     */
+    @Test
+    fun beforeUnlockTheIncidentIsRecordedBecauseNothingCanBeReadBack() =
+        runTest {
+            incidentsReader.unreadable = true
+            breakCheck(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            monitor.evaluate(snapshot(), dispatch)
+
+            newMonitor().evaluate(snapshot(), dispatch)
+
             assertThat(dispatched).hasSize(2)
         }
 

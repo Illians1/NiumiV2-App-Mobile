@@ -2,6 +2,7 @@ package com.niumi.system.readiness.di
 
 import android.content.Context
 import android.os.Build
+import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.alarm.AlarmScheduler
@@ -105,8 +106,9 @@ object ReadinessModule {
     ): DeviceReadinessChecker = AndroidDeviceReadinessChecker(sources, clock, Build.VERSION.SDK_INT)
 
     /**
-     * `@Singleton` obligatoire : l'état de déduplication de §13.1 (« une seule fois tant que
-     * l'état ne change pas ») vit dans l'instance.
+     * `@Singleton` obligatoire : la garde de déduplication des **notifications** de §13.1 vit dans
+     * l'instance. Celle des **incidents** est lue en base (`SessionIncidentsReader`) et ne dépend
+     * donc pas de la portée de ce binding — voir [SessionReadinessMonitor].
      */
     @Provides
     @Singleton
@@ -115,8 +117,15 @@ object ReadinessModule {
         warningNotifier: SessionWarningNotifier,
         eventFactory: SessionEventFactory,
         technicalEventLog: TechnicalEventLog,
+        incidentsReader: SessionIncidentsReader,
     ): SessionReadinessMonitor =
-        SessionReadinessMonitor(readinessChecker, warningNotifier, eventFactory, technicalEventLog)
+        SessionReadinessMonitor(
+            readinessChecker,
+            warningNotifier,
+            eventFactory,
+            technicalEventLog,
+            incidentsReader,
+        )
 
     @Provides
     @Singleton

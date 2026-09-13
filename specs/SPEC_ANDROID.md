@@ -961,7 +961,16 @@ Le service d'accessibilité ne doit jamais servir de sentinelle pour cette surve
 
 Notification d'avertissement: créer un canal `niumi_session_warning`, importance haute, sans son ni vibration, sans `fullScreenIntent`, `setOngoing(false)`, au tap ouvrir le diagnostic d'incident. Le texte nomme le réglage en cause et sa conséquence, par exemple: « Ton réveil ne sonnera pas tant que le silence total est activé. » L'événement technique `SESSION_READINESS_DEGRADED` est journalisé (17).
 
-**Implémentation (étape 12).** `SessionReadinessMonitor` (`:core:system.readiness`) rejoue `DeviceReadinessChecker` et n'émet un incident et une notification **qu'au basculement** d'un contrôle : tant qu'un contrôle reste faux, il n'est pas re-signalé ; s'il repasse vrai, son avertissement est retiré et une dégradation ultérieure est de nouveau signalée. L'état de déduplication vit en mémoire et disparaît donc avec le processus, ce qui republie un avertissement encore valable au redémarrage — préférable à le taire.
+**Implémentation (étape 12, corrigée à l'étape 16).** `SessionReadinessMonitor` (`:core:system.readiness`) rejoue `DeviceReadinessChecker` et ne signale un contrôle **qu'au basculement** : tant qu'il reste faux, il n'est pas re-signalé.
+
+**La notification et l'incident n'ont pas le même cycle de vie.** L'étape 12 les traitait ensemble, sous une garde unique vivant en mémoire ; l'argument avancé — republier au redémarrage un avertissement encore valable vaut mieux que le taire — est juste pour la notification, mais avait été étendu à l'incident sans que la différence soit examinée. Un incident est un fait horodaté, pas un état d'affichage : le réécrire à chaque mort de processus consigne un basculement qui n'a pas eu lieu. Mesuré sur appareil à l'étape 16, où l'écran 7 présentait deux fois le même incident avec deux boutons identiques.
+
+Depuis l'étape 16 :
+
+- la **notification** garde sa déduplication en mémoire et est donc republiée après un redémarrage, comportement inchangé ;
+- l'**incident** n'est enregistré qu'une fois par code et par session, la vérification se faisant sur les incidents déjà en base (`SessionIncidentsReader`).
+
+Conséquence assumée : un contrôle réparé puis re-cassé dans la même session republie son avertissement sans produire de second incident. La santé est déjà `DEGRADED` et n'en revient jamais (SPEC_CORE_KMP 7.3) ; le journal technique, non dédupliqué, garde la trace horodatée de chaque détection. Avant déverrouillage, le lecteur d'incidents ne peut rien lire (7.3) : la déduplication est alors impossible et l'incident est enregistré — on ne perd jamais une dégradation pour cause de stockage indisponible.
 
 Chaque contrôle surveillé porte son propre identifiant de notification : deux réglages cassés en même temps produisent deux avertissements distincts, aucun n'écrasant l'autre. La catégorie est `CATEGORY_ERROR` et non `CATEGORY_ALARM` : ces notifications signalent un réglage dégradé, jamais une alarme en cours, et les confondre ferait croire que le réveil sonne.
 
@@ -1050,7 +1059,7 @@ L'écran 7 minimal est livré à l'étape 14 et non à l'étape 15 parce que cel
 
 Cette action n'est pas une exception à 3 : elle ne termine ni ne modifie la session, elle rétablit un sous-système. Le scan du boîtier reste le seul chemin de sortie, et l'écran 7 ne doit gagner aucune autre action **qui touche à la session**. Deux ajouts de l'étape 16 s'y conforment sans y déroger : le recours d'un incident, et l'accès en **consultation** au diagnostic d'incident (écran 12). Ni l'un ni l'autre ne dispatche d'événement ; le ViewModel de l'écran 7 n'a d'ailleurs ni coordinateur ni façade, et ne le **peut** donc pas.
 
-**L'écran 7 présente l'état, l'écran 12 l'historique.** Un même code d'incident n'apparaît qu'une fois sur l'écran 7, dans sa forme la plus récente. La déduplication de `SessionReadinessMonitor` vit en mémoire (13.1) et ne survit pas à un redémarrage du processus : deux évaluations successives enregistrent alors deux incidents pour le même fait, et l'écran affichait le même texte deux fois **avec deux boutons identiques** (mesuré sur appareil à l'étape 16). L'historique complet reste consultable sur l'écran 12, dont c'est la raison d'être.
+**L'écran 7 présente l'état, l'écran 12 l'historique.** Un même code d'incident n'apparaît qu'une fois sur l'écran 7, dans sa forme la plus récente. La cause première des doublons est corrigée en 13.1 depuis l'étape 16 — un incident n'est plus enregistré qu'une fois par code et par session — mais l'écran garde cette règle de présentation : elle ne dépend d'aucune garantie d'écriture, et tient encore si un incident de même code arrive par un autre chemin. L'historique complet reste consultable sur l'écran 12, dont c'est la raison d'être.
 
 Un incident remédiable porte l'action de la colonne « Action proposée » de 13 ; un incident sans recours n'affiche aucun bouton. Les recours que 13 décrit **sans réglage système à ouvrir** — `ShowExactAlarmDiagnostic` au premier chef, Niumi déclarant `USE_EXACT_ALARM` — n'en affichent pas non plus : le libellé de l'incident porte déjà l'explication, et un bouton sans destination serait le « faux état de fiabilité » que 15 interdit.
 

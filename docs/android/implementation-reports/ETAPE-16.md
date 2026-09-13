@@ -198,9 +198,9 @@ detekt et `:app:lintDebug` tous verts.
 - **Les deux constats de plateforme de l'étape 15 restent ouverts et hors périmètre** : Android ne
   relie pas le service d'accessibilité après `am crash` (étape 20), et `ReaderModeNfcReader`
   n'emploie pas `FLAG_READER_NO_PLATFORM_SOUNDS` (étape 18).
-- **Le doublon d'incidents n'est traité qu'à l'affichage.** La cause — déduplication non persistée —
-  reste dans `SessionReadinessMonitor` (étape 12). Persister la déduplication serait un changement
-  de comportement d'émission, hors périmètre de cette étape ; à trancher si le sujet revient.
+- **Le doublon d'incidents : cause corrigée après coup** (décision de l'utilisateur, 2026-09-13).
+  Voir la section dédiée ci-dessous. La règle de présentation de l'écran 7 est conservée : elle ne
+  dépend d'aucune garantie d'écriture.
 
 ### Constat de plateforme découvert, hors périmètre
 
@@ -224,3 +224,50 @@ processus, pertes de permission) ou à l'étape 21 (finalisation release).
 §15, « Étapes de livraison », annonce l'écran 10 (session terminée) livré **à l'étape 15**, alors que
 `NiumiNavHost` ne l'enregistre pas et que le plan le place à l'étape 17. La contradiction est
 antérieure à cette étape et n'a pas été touchée ici : à trancher à l'étape 17, qui livre cet écran.
+
+---
+
+## Correctif complémentaire — la cause des doublons d'incidents (§13.1)
+
+**Décidé avec l'utilisateur le 2026-09-13**, après la clôture de l'étape : corriger maintenant
+plutôt qu'à l'étape 20. Raison retenue : les étapes 17 (réveil, `AlarmReceiver`, service de
+sonnerie) et 19 (Direct Boot, boot) multiplient les morts de processus, et chaque réconciliation
+rappelle le monitor — leurs validations sur appareil se seraient faites sur un journal d'incidents
+pollué, avec le risque de prendre un doublon pour un vrai incident.
+
+**Le diagnostic n'est pas celui que j'avais d'abord écrit.** Ce n'était pas un oubli de l'étape 12 :
+son KDoc assumait explicitement la déduplication en mémoire, au motif qu'un redémarrage « republie
+un avertissement encore valable, ce qui vaut mieux que de le taire ». Cet argument est **juste pour
+la notification**. Mais `report()` faisait trois choses d'un bloc — journaliser, notifier, et
+enregistrer un incident — et l'argument a été étendu à l'incident sans que la différence soit
+examinée. Un incident est un fait horodaté, pas un état d'affichage.
+
+**Correction : dissocier les deux cycles de vie.**
+
+- La notification garde sa garde en mémoire. Comportement inchangé, republication voulue.
+- L'incident n'est enregistré qu'une fois par code et par session, la vérification portant sur les
+  incidents déjà en base via `SessionIncidentsReader` (étape 15).
+- `ReadinessDegradation.dispatchResult` devient nullable : `null` signifie « avertissement republié,
+  incident déjà consigné ». `SessionReconciler` n'ajoute plus `IncidentDispatched` dans ce cas —
+  l'annoncer ferait mentir le compte rendu de réconciliation.
+
+**Perte assumée :** un contrôle réparé puis re-cassé dans la même session ne produit qu'un incident.
+La santé est déjà `DEGRADED` et n'en revient jamais (SPEC_CORE_KMP §7.3) ; le journal technique,
+non dédupliqué, garde chaque détection horodatée. Le test qui codifiait l'ancien comportement
+(`aControlThatRecoversClearsItsWarningAndCanBeReportedAgainLater`) est réécrit plutôt que contourné.
+
+**Avant déverrouillage**, `SessionIncidentsReader` renvoie une liste vide sans pouvoir dire si des
+incidents existent (§7.3) : la déduplication est impossible et l'incident est enregistré. On ne perd
+jamais une dégradation pour cause de stockage indisponible — un test fige ce choix.
+
+**Vérifications :** 679 tests JVM verts (+2), `:app:assembleDebug`, ktlint, detekt et `:app:lintDebug`
+sans remontée. Trois tests ajoutés ou réécrits sur `SessionReadinessMonitorTest`, dont un qui
+reproduit exactement le scénario mesuré sur appareil — monitor neuf, base conservée.
+
+**Non revalidé sur appareil.** Reproduire le scénario demande une session armée, donc le boîtier NFC ;
+la session de test a été supprimée à la demande de l'utilisateur juste avant ce correctif. Le
+comportement est couvert par les tests JVM, qui simulent la mort de processus par une instance
+neuve de monitor face à un lecteur d'incidents inchangé. À reconfirmer sur appareil à la prochaine
+session armée — étape 17.
+
+§13.1 et §15 mises à jour en conséquence.

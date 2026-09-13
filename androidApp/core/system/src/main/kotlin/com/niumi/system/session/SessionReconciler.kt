@@ -127,8 +127,12 @@ class SessionReconciler(
     ) {
         val monitored = sources.readinessMonitor.evaluate(snapshot, dispatch)
         for (degradation in monitored.newlyReported) {
+            // `dispatchResult` nul : l'avertissement a été republié, mais un incident de ce code
+            // était déjà consigné pour la session (étape 16). La passe n'a donc dispatché aucune
+            // décision, et l'annoncer ici ferait mentir le compte rendu de réconciliation.
+            val dispatchResult = degradation.dispatchResult ?: continue
             actions += ReconcileAction.IncidentDispatched(degradation.incidentCode, IncidentSeverityDto.CRITICAL)
-            actions += ReconcileAction.DecisionApplied(degradation.dispatchResult)
+            actions += ReconcileAction.DecisionApplied(dispatchResult)
         }
         if (monitored.failing.any { it in PERMISSION_CHECKS }) return
         reconcileTriggerDelay(snapshot, reason, dispatch, actions)

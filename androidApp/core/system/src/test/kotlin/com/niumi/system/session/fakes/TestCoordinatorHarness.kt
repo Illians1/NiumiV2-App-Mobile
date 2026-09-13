@@ -6,6 +6,7 @@ import com.niumi.system.readiness.AndroidDeviceReadinessChecker
 import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.readiness.fakes.FakeSessionWarningNotifier
 import com.niumi.system.readiness.fakes.ReadinessTestSources
+import com.niumi.system.readiness.fakes.RecordingSessionIncidentsReader
 import com.niumi.system.session.DefaultSessionCoordinator
 import com.niumi.system.session.EffectDispatcher
 import com.niumi.system.session.EffectExecutor
@@ -65,12 +66,14 @@ class TestCoordinatorHarness {
      */
     val readinessSources = ReadinessTestSources(alarmScheduler, accessibilityServiceStatus)
     val warningNotifier = FakeSessionWarningNotifier()
+    val incidentsReader = RecordingSessionIncidentsReader()
     val readinessMonitor =
         SessionReadinessMonitor(
             readinessChecker = AndroidDeviceReadinessChecker(readinessSources.build(), clock, ANDROID_16),
             warningNotifier = warningNotifier,
             eventFactory = eventFactory,
             technicalEventLog = technicalEventLog,
+            incidentsReader = incidentsReader,
         )
 
     private val sources =
