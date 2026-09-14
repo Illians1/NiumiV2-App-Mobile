@@ -671,10 +671,17 @@ Créer un canal `niumi_session_awaiting_scan`:
 - titre: "Ton réveil Niumi est passé";
 - texte: "Scanne ton boîtier pour débloquer tes applications.";
 - `setOngoing(true)`;
+- `setOnlyAlertOnce(true)`: la notification est republiée à chaque réconciliation (voir ci-dessous), et sans cet attribut un canal d'importance haute reproduirait une bannière alors qu'elle n'a jamais disparu;
 - aucune action d'arrêt;
 - au tap, ouvrir `AlarmActivity` en mode scan.
 
 La notification est publiée par l'exécution de `PRESENT_SCAN_REQUEST` et retirée par `CLEAR_SCAN_REQUEST`, tous deux idempotents. Lorsque `TRIGGER_ELAPSED` est produit par le coordinateur Direct Boot avant le premier déverrouillage, la notification est publiée depuis le `DeviceProtectedStorageContext`, au même titre que le snapshot Direct Boot.
+
+**`setOngoing(true)` ne rend plus cette notification non-écartable, et ne doit pas être tenu pour tel.** Mesuré le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0.302.0 (étape 18): l'utilisateur l'a balayée d'un geste, et aucune notification Niumi n'est restée active. Depuis Android 14, `FLAG_ONGOING_EVENT` seul ne suffit plus — la non-écartabilité exige un service de premier plan actif, que cette notification n'a pas et ne doit pas avoir: §10.5 exige précisément qu'elle ne ressemble pas à une alarme active, et l'attente d'un scan peut durer des heures.
+
+L'attribut reste prescrit (il conserve son effet sur les versions antérieures et sur le classement de la notification), mais **le filet réel est la republication**: `SessionReconciler` republie `PRESENT_SCAN_REQUEST` à chaque passe sur une session `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`. La republication n'a lieu qu'à une réconciliation — démarrage de processus, redémarrage, événements système — et non à chaque passage de l'application au premier plan: une fenêtre sans rappel visible subsiste donc entre un balayage et la réconciliation suivante.
+
+Cette fenêtre n'interrompt aucun chemin de sortie: l'overlay de blocage (§12.2) rappelle explicitement le scan au moment où l'utilisateur rencontre une application bloquée, et ouvrir Niumi dans un état de scan mène directement à l'écran de réveil (§10.4). **Sa durée réelle doit être mesurée à l'étape 19**, une fois `SystemEventsReceiver` livré — il multiplie les occasions de réconciliation et devrait la resserrer — avant de décider s'il faut réconcilier au passage au premier plan. Voir `docs/android/implementation-reports/ETAPE-18.md`.
 
 Le comportement de `CATEGORY_ALARM` sans son sous Ne pas déranger varie selon la version Android et les surcouches OEM; ce point fait partie de la matrice de tests physiques.
 

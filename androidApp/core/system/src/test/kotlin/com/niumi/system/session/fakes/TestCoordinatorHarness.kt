@@ -83,6 +83,7 @@ class TestCoordinatorHarness {
             readinessMonitor,
             publisher,
             ringingController,
+            scanRequestNotifier,
         )
 
     private val executors: Map<SessionEffectKindDto, EffectExecutor> =

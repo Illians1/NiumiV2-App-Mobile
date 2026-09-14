@@ -103,6 +103,52 @@ class AndroidScanRequestNotifierInstrumentedTest {
         assertThat(posted.flags and Notification.FLAG_ONGOING_EVENT).isNotEqualTo(0)
     }
 
+    /**
+     * §10.5 : « aucun `setFullScreenIntent()` : cette notification ne doit jamais rallumer l'écran
+     * ni simuler une alarme active ». `ScanRequestNotificationSpecsTest` le prouve sur le spec pur ;
+     * seul l'instrumenté prouve que le `Notification.Builder` n'en pose pas non plus. Le tap, lui,
+     * doit bien mener quelque part — c'est le seul chemin vers l'écran de scan une fois l'écran de
+     * réveil fermé (§11.2).
+     */
+    @Test
+    fun presentHasNoFullScreenIntentButKeepsATapIntent() {
+        notifier.present(sessionId)
+
+        val posted =
+            awaitNotifications(
+                description = "la notification d'attente de scan publiée",
+                read = ::awaitingScanNotification,
+            ) { it != null }
+        assertThat(posted).isNotNull()
+        assertThat(posted!!.fullScreenIntent).isNull()
+        assertThat(posted.contentIntent).isNotNull()
+    }
+
+    /**
+     * `SessionReconciler` republie à chaque passe sur une session en attente de scan (étape 18).
+     * L'idempotence porte sur deux choses : une seule notification reste affichée, et
+     * `FLAG_ONLY_ALERT_ONCE` empêche le canal d'importance haute de reproduire une bannière alors
+     * que la notification n'avait jamais disparu.
+     */
+    @Test
+    fun republishingDoesNotStackNotificationsNorReAlert() {
+        notifier.present(sessionId)
+        awaitNotifications(
+            description = "la première publication",
+            read = ::awaitingScanNotification,
+        ) { it != null }
+
+        notifier.present(sessionId)
+
+        val posted =
+            awaitNotifications(
+                description = "la notification après republication",
+                read = ::awaitingScanNotification,
+            ) { it != null }
+        assertThat(awaitingScanNotificationCount()).isEqualTo(1)
+        assertThat(posted!!.flags and Notification.FLAG_ONLY_ALERT_ONCE).isNotEqualTo(0)
+    }
+
     @Test
     fun presentThenClearRemovesTheNotification() {
         notifier.present(sessionId)
@@ -134,9 +180,13 @@ class AndroidScanRequestNotifierInstrumentedTest {
      * ferait passer pour une notification d'attente de scan ce qui n'en est pas une. Même raison
      * que dans `AndroidSessionWarningNotifierInstrumentedTest`.
      */
-    private fun awaitingScanNotification(): Notification? =
+    private fun awaitingScanNotification(): Notification? = awaitingScanNotifications().firstOrNull()
+
+    private fun awaitingScanNotificationCount(): Int = awaitingScanNotifications().size
+
+    private fun awaitingScanNotifications(): List<Notification> =
         notificationManager.activeNotifications
             .filter { it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
-            .firstOrNull { it.notification.channelId == NiumiNotificationChannels.sessionAwaitingScan.id }
-            ?.notification
+            .filter { it.notification.channelId == NiumiNotificationChannels.sessionAwaitingScan.id }
+            .map { it.notification }
 }

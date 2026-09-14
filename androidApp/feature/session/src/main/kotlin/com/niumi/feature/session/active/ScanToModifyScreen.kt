@@ -88,6 +88,7 @@ private fun outcomeMessage(outcome: ScanOutcome?): String? =
 @Composable
 fun ScanToModifyRoute(
     onCancelled: () -> Unit,
+    onCompleted: () -> Unit,
     viewModel: ScanToModifyViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -97,6 +98,12 @@ fun ScanToModifyRoute(
 
     LaunchedEffect(state.isCancelled) {
         if (state.isCancelled) onCancelled()
+    }
+
+    // §15 : une session terminée relève de l'écran 10, annulée de l'écran 11. Sans cette sortie,
+    // l'écran resterait sur « Scan requis » après un scan qui a pourtant tout nettoyé.
+    LaunchedEffect(state.isCompleted) {
+        if (state.isCompleted) onCompleted()
     }
 
     DisposableEffect(lifecycleOwner, activity) {

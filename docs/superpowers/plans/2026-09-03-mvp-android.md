@@ -998,17 +998,32 @@ même changement. Détails dans `ETAPE-17.md`.
 
 **Specs à lire :** SPEC_CORE_KMP §4, §6, §10 (credential figé), §11.1, §12 ; SPEC_ANDROID §10.5, §11.2, §11.3, §18, §21.
 
+**Trois arbitrages validés avec l'utilisateur le 2026-09-14**, tous sur des points que §10.5 et
+§11.3 laissent libres — aucune spec modifiée. Détails dans `ETAPE-18.md`.
+
+1. **`HandleValidNfcUseCase` vit dans `:core:system`** (`com.niumi.system.nfc`), pas dans
+   `:feature:ringing` : aucune dépendance à la sonnerie, et deux consommateurs dans deux features
+   distinctes (`AlarmActivity`, `ScanToModifyViewModel`). Même raisonnement qu'à l'étape 17 pour
+   `AlarmTriggerHandler`.
+2. **Une seule liaison `NfcScanHandler`**, non qualifiée et non optionnelle : `@BindsOptionalOf` et
+   `@SessionNfcScanHandler` n'existaient que pour départager deux implémentations concurrentes, qui
+   disparaissent toutes les deux ici.
+3. **La reprise ne filtre sur aucune `ReconcileReason`.** La liste du plan (`PROCESS_START`,
+   `USER_UNLOCKED`, `SERVICE_RECREATED`) excluait `BOOT`, sous lequel l'étape 19 réconciliera un
+   redémarrage : un appareil redémarré pendant le nettoyage serait resté bloqué. La reprise est
+   idempotente, comme les branches `PREPARING` et `RINGING` qui ne filtrent déjà rien.
+
 **Fichiers :**
-- Créer dans `androidApp/feature/ringing/src/main/kotlin/com/niumi/feature/ringing/nfc/` : `HandleValidNfcUseCase.kt` (implémente `NfcScanHandler` ; remplace `PendingNfcScanHandler` et `PocNfcScanHandler` dans les liaisons Hilt de production).
+- Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/nfc/` (écart au plan, arbitrage 1) : `HandleValidNfcUseCase.kt` (implémente `NfcScanHandler` ; remplace `PendingNfcScanHandler` et `PocNfcScanHandler`) et `NfcScanEventFactory.kt` (`SessionEventFactory` est au plafond `TooManyFunctions`, et `VALID_NFC_SCANNED` est le seul événement dont l'identité se frappe avant l'événement).
 - Modifier `AndroidScanRequestNotifier` (étape 11) : le tap ouvre `AlarmActivity` avec `extra mode = SCAN` ; `AlarmActivity` en mode scan n'attend aucun audio.
 - Modifier `SessionReconciler` : à `PROCESS_START`, `USER_UNLOCKED` et `SERVICE_RECREATED`, si l'état est `RELEASING`, rejouer uniquement les effets `PENDING`/`FAILED` de l'outbox puis dispatcher `RELEASE_SUCCEEDED` ou laisser `RELEASING` ; si l'état est `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` et la notification absente, rejouer `PRESENT_SCAN_REQUEST`.
 - Tests : `HandleValidNfcUseCaseTest` (fakes + `InMemoryPersistenceGateway`) : état non éligible (`PREPARING`, final, `null`) → `Ignored`, aucun `dispatch` ; `ARMED` avant l'heure → `reconcile(BEFORE_SCAN)` puis `VALID_NFC_SCANNED` → `RELEASING`/`CANCELLED` puis `CANCELLED` ; `ARMED` après l'heure sans alarme observée → `TRIGGER_ELAPSED` puis `VALID_NFC_SCANNED` → `COMPLETED` ; `RINGING` → `COMPLETED` ; scan vérifié contre `boxId`/`boxTokenSha256Hex` de la session : un `PairedBoxStore` modifié depuis l'activation ne change rien, un tag correspondant au nouveau boîtier est refusé → `UnknownBox` ; `MALFORMED_URI` → `Unreadable`, état inchangé, aucun effet ; preuve générée avec `eventId`, `expectedRevision = snapshot.revision`, `occurredAt = clock.now()` ; même `eventId` rejoué → `Duplicate`, aucun effet ; `REMOVE_BLOCKING` en échec → `RELEASE_FAILED`, état `RELEASING`, `Accepted` retourné (le scan est accepté, le nettoyage continue) ; service d'accessibilité déjà désactivé → `AlreadySatisfied`, incident `BLOCKING_PERMISSION_REVOKED`, `RELEASE_SUCCEEDED`. `SessionReconcilerReleasingTest` : reprise partielle sans réappliquer le blocage ; `PRESENT_SCAN_REQUEST` rejoué sans doublon visible. Instrumenté : `ScanRequestNotificationInstrumentedTest` (notification sans son, vibration, full-screen ni action ; retirée après `CLEAR_SCAN_REQUEST`).
 
-- [ ] **Écrire `HandleValidNfcUseCaseTest`** cas par cas, implémenter en suivant les 14 points de SPEC_ANDROID §11.3 (les points 5 à 14 sont réalisés par le coordinateur et ses exécuteurs, le cas d'usage ne fait que 1 à 4 et interprète `DispatchResult`).
-- [ ] **Remplacer les liaisons Hilt** (`PendingNfcScanHandler` supprimé ; `PocNfcScanHandler` retiré de la variante debug, `PocScreen` garde seulement programmation d'alarme et association).
-- [ ] **Écrire `SessionReconcilerReleasingTest`**, compléter le réconciliateur.
-- [ ] **Écrire `ScanRequestNotificationInstrumentedTest`**, compléter le notifier et le mode scan de `AlarmActivity`.
-- [ ] **Vérifier :**
+- [x] **Écrire `HandleValidNfcUseCaseTest`** cas par cas, implémenter en suivant les 14 points de SPEC_ANDROID §11.3 (les points 5 à 14 sont réalisés par le coordinateur et ses exécuteurs, le cas d'usage ne fait que 1 à 4 et interprète `DispatchResult`). *(16 tests. `Duplicate` → `Accepted` : §11.3 dernier alinéa, le scan a bien été pris en compte ; `Rejected` → `Ignored`. Aucun `INVALID_NFC_SCANNED` n'est produit — §11.2 ne prescrit que des effets d'interface pour un tag étranger, et le produire ferait avancer la révision à chaque tag présenté. §11.3 dit « sous le même mutex » : structurellement impossible, ce mutex est privé et non réentrant — même constat qu'à l'étape 17, sans changement de comportement observable.)*
+- [x] **Remplacer les liaisons Hilt** (`PendingNfcScanHandler` supprimé ; `PocNfcScanHandler` retiré de la variante debug, `PocScreen` garde seulement programmation d'alarme et association). *(Arbitrage 2 : liaison unique, `AlarmActivity` injecte `NfcScanHandler` et non plus `Optional`. **Régression assumée de la route debug** : `PocNfcScanHandler` était le seul arrêt de la sonnerie POC, qui n'est donc plus arrêtable que par un arrêt forcé. La rafistoler contredirait le critère de clôture de l'étape 17 ; la route disparaît à l'étape 21.)*
+- [x] **Écrire `SessionReconcilerReleasingTest`**, compléter le réconciliateur. *(10 tests. La demande de scan est republiée **sans condition** plutôt qu'après un test de présence : `present()` est idempotent par identifiant, et `setOnlyAlertOnce(true)` évite la ré-alerte sur un canal `IMPORTANCE_HIGH`. **Défaut antérieur corrigé ici** : le rejeu d'outbox construisait chaque `INCIDENT_REPORTED` sur le snapshot d'entrée, donc le second incident d'une même passe tombait en `STALE_REVISION` — même classe que l'essai 7 de l'étape 17, corrigé alors dans `SessionReadinessMonitor` mais pas ici. Il fallait le corriger maintenant : la branche `RELEASING` dispatche `RELEASE_SUCCEEDED` juste après le rejeu.)*
+- [x] **Écrire `ScanRequestNotificationInstrumentedTest`**, compléter le notifier et le mode scan de `AlarmActivity`. *(`AndroidScanRequestNotifierInstrumentedTest` **étendu** plutôt que dupliqué : il couvrait déjà `CATEGORY_ALARM`, `ongoing`, absence d'action et retrait par `clear()`. Ajoutés : absence de `fullScreenIntent` sur la `Notification` réelle, présence du `contentIntent`, et absence d'empilement avec `FLAG_ONLY_ALERT_ONCE` après republication. **Le mode scan était déjà acquis** : `ScanRequestPendingIntentSpecs.tap()` pose `mode = "scan"` et cible `ALARM_ACTIVITY` depuis l'étape 11, et depuis l'étape 17 `AlarmViewModel` ne prend que la passerelle et le publisher — aucune dépendance audio n'existe. Vérifié et consigné plutôt que réimplémenté. **Non exécuté : appareil requis.**)*
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :feature:ringing:testDebugUnitTest :core:system:testDebugUnitTest
@@ -1016,15 +1031,48 @@ même changement. Détails dans `ETAPE-17.md`.
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
+*(Faite le 2026-09-14 — **776 tests JVM verts** : `:core:system` 246 (+29), `:feature:session` 123 (+2), `:app` 27 (−4, `PocNfcScanHandlerTest` supprimé), non-régression sur `:shared:core` (160), `:core:database` (106), `:feature:setup` (76) et `:feature:ringing` (38). `:app:assembleDebug`, ktlint, detekt verts et `:app:lintDebug` sans aucune remontée. Grep de clôture conforme : `HandleValidNfcUseCase` est la seule implémentation de `NfcScanHandler` du dépôt. **`connectedDebugAndroidTest` : 126 tests instrumentés verts** sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0.302.0, dont les deux ajoutés ici. La première passe avait laissé `:feature:setup` et `:feature:session` à 0 test sur `INSTALL_FAILED_USER_RESTRICTED` — étranglement des installations rapprochées par HyperOS, sans rapport avec le code : la relance des deux modules a donné 36 tests verts. Voir `ETAPE-18.md`.)*
+
+- [x] **Valider sur appareil.** *(**Déroulée le 2026-09-14 sur Xiaomi 25080RABDG, Android 16, HyperOS OS3.0.302.0** — **126 tests instrumentés verts** et **7 essais manuels sur 8 validés**. **Trois défauts trouvés et corrigés, tous invisibles en JVM :** (1) la garde de permission de l'étape 12 coupait aussi le `TRIGGER_ELAPSED` de `BEFORE_SCAN`, si bien qu'un service d'accessibilité désactivé rendait la session **impossible à terminer par un scan**, en silence — violation de §11.3 ; (2) révélé par le correctif précédent, `reconcileArmed` poursuivait sur un snapshot périmé après un `INCIDENT_REPORTED` (`STALE_REVISION`) — **troisième occurrence du même motif** après `SessionReadinessMonitor` à l'étape 17 et le rejeu d'outbox de cette étape ; (3) l'écran 9 ne savait sortir que vers `CANCELLED`, et restait bloqué sur « Scan requis » quand un scan aboutissait à `COMPLETED` — chemin rendu atteignable par le correctif 1. **Essai 5 non reproductible** (fenêtre `RELEASING` < 168 ms) : reporté à l'étape 20, dette de validation consignée. **Deux constats de plateforme :** `setOngoing(true)` n'empêche plus le balayage d'une notification sur Android 14+, ce qui rend la republication nécessaire et ouvre un écart avec §10.5 à trancher ; et un redémarrage entre l'armement et l'heure de réveil **ne fait pas manquer le réveil**, le service d'accessibilité relançant le processus qui reprogramme l'alarme. Détails dans `ETAPE-18.md`.)*
+
 **Tests manuels :** scan du bon tag pendant la sonnerie → arrêt et déblocage en moins d'une seconde, écran « Session terminée » ; scan avant l'heure depuis « Modifier ou annuler » → « Session annulée » ; scan d'un autre tag → vibration courte, sonnerie maintenue ; couper le processus entre `RELEASING` et l'état final (`am kill` juste après le scan) puis relancer → nettoyage repris, aucun blocage réappliqué.
 
-**Terminé quand :** chaque ligne de §11.3 est couverte par un test, `COMPLETED`/`CANCELLED` n'apparaissent qu'après `RELEASE_SUCCEEDED`, la notification d'attente de scan est publiée et retirée de façon idempotente.
+**Terminé quand :** chaque ligne de §11.3 est couverte par un test, `COMPLETED`/`CANCELLED` n'apparaissent qu'après `RELEASE_SUCCEEDED`, la notification d'attente de scan est publiée et retirée de façon idempotente. *(**Atteint le 2026-09-14**, validations matérielles comprises, sous deux réserves consignées dans `ETAPE-18.md` : la reprise de `RELEASING` après une mort de processus n'est prouvée qu'en JVM — la fenêtre réelle est inférieure à 168 ms, donc inattrapable par un polling adb, reporté à l'étape 20 ; et l'écart §10.5 sur `setOngoing(true)`, qui ne protège plus la notification d'attente de scan depuis Android 14, reste à arbitrer avant la porte finale.)*
 
 ## Phase H — Lot 5 : résilience
 
 ### Étape 19 : `SystemEventsReceiver`, coordinateur Direct Boot, politique de retard et fusion après déverrouillage
 
-**Specs à lire :** SPEC_CORE_KMP §8.2, §13 ; SPEC_ANDROID §7.3, §9.3, §10.5 (Direct Boot), §19.1, §20 (scénarios redémarrage), §21.
+**Specs à lire :** SPEC_CORE_KMP §8.2, §13 ; SPEC_ANDROID §7.3, §9.3, §10.5 (Direct Boot **et** dernier alinéa sur `setOngoing`), §19.1, §20 (scénarios redémarrage), §21.
+
+**⚠ Décision en attente, héritée de l'étape 18 — à trancher dans cette étape, pas plus tard.**
+
+`setOngoing(true)` ne rend plus la notification d'attente de scan non-écartable depuis Android 14 :
+mesuré sur appareil le 2026-09-14, l'utilisateur l'a balayée d'un geste. §10.5 a été corrigée pour
+consigner le fait ; le **filet réel est la republication** par `SessionReconciler`, qui n'a lieu qu'à
+une réconciliation — donc **une fenêtre sans rappel visible subsiste** entre un balayage et la
+réconciliation suivante.
+
+Cette étape change les données du problème : `SystemEventsReceiver` ajoute des réconciliations sur
+`BOOT`, `USER_UNLOCKED`, `TIME_CHANGED`, `MY_PACKAGE_REPLACED`, et devrait resserrer la fenêtre
+mécaniquement. **Marche à suivre :**
+
+1. une fois le receiver livré, **rejouer l'essai 7 de `ETAPE-18.md`** (balayer la notification sur
+   une session `TRIGGERED_AWAITING_NFC`) et **mesurer** combien de temps elle reste absente en usage
+   réel ;
+2. trancher **avec ce chiffre**, pas au jugé :
+   - fenêtre négligeable → documenter et clore le sujet ;
+   - fenêtre gênante → réconcilier au passage de l'application au premier plan dans un état de scan
+     (relève alors de l'étape 20, résilience) ;
+   - adosser la notification à un service de premier plan reste **écarté sauf surprise** : l'attente
+     d'un scan peut durer des heures, et §10.5 exige que cette notification ne ressemble pas à une
+     alarme active ;
+3. reporter la décision dans §10.5 et dans `ETAPE-19.md`.
+
+Rappel de proportion : aucun chemin de sortie n'est interrompu par cette fenêtre. L'overlay de
+blocage (§12.2) rappelle le scan au moment où l'utilisateur rencontre une application bloquée, et
+ouvrir Niumi dans un état de scan mène directement à l'écran de réveil (§10.4). Il s'agit d'un
+confort dégradé, pas d'un blocage.
 
 **Fichiers :**
 - Créer dans `androidApp/core/system/src/main/kotlin/com/niumi/system/boot/` : `SystemEventsReceiver.kt` (`directBootAware=true`, `exported=false` avec filtres `LOCKED_BOOT_COMPLETED`, `BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`, `TIME_CHANGED`, `TIMEZONE_CHANGED`, `USER_UNLOCKED` ; `goAsync()` + `reconcile(reason)`), `DirectBootMerger.kt` (à `USER_UNLOCKED` : fusionne reçus et outbox du snapshot Direct Boot dans Room par `eventId`/`effectId`, refuse une `domainRevision` Direct Boot inférieure à Room, réécrit Direct Boot depuis Room ensuite).
@@ -1035,6 +1083,9 @@ même changement. Détails dans `ETAPE-17.md`.
 - [ ] **Écrire `SystemEventsReceiverTest`**, implémenter le receiver.
 - [ ] **Écrire `SessionReconcilerBootTest`**, compléter le réconciliateur et les liaisons `deviceProtected`.
 - [ ] **Écrire `DirectBootMergerTest`**, implémenter et brancher sur `USER_UNLOCKED`.
+- [ ] **Trancher l'écart §10.5 hérité de l'étape 18** : mesurer la fenêtre sans rappel après
+      livraison du receiver, décider, reporter la décision dans §10.5 et `ETAPE-19.md` (voir
+      l'encadré en tête d'étape).
 - [ ] **Vérifier :**
 
 ```bash

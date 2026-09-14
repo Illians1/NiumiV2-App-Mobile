@@ -20,15 +20,15 @@ class AlarmNfcScanCoordinator(
     private var processingScan = false
 
     /**
-     * `null` si un scan est déjà en cours de traitement ou si [scanHandler] est absent
-     * (avant l'étape 18 en release) : dans les deux cas, aucune décision n'est prise et
-     * l'écran ne doit pas changer.
+     * `null` si un scan est déjà en cours de traitement : un tag posé émet plusieurs lectures, et
+     * sans cette garde un même scan serait traité en parallèle. Aucune décision n'est alors prise
+     * et l'écran ne doit pas changer.
      */
     suspend fun handleUri(
-        scanHandler: NfcScanHandler?,
+        scanHandler: NfcScanHandler,
         uri: String,
     ): ScanOutcome? {
-        if (processingScan || scanHandler == null) return null
+        if (processingScan) return null
         processingScan = true
         val outcome =
             try {

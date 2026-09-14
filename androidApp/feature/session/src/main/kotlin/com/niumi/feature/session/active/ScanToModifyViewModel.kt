@@ -14,23 +14,30 @@ import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.nfc.NfcScanHandler
 import com.niumi.system.nfc.ScanOutcome
-import com.niumi.system.nfc.SessionNfcScanHandler
 import com.niumi.system.session.SessionSnapshotPublisher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * État de l'écran 9. [isCancelled] n'est vrai qu'après un état final `CANCELLED` **observé sur le
- * snapshot publié**, jamais sur le seul [ScanOutcome.Accepted] : SPEC_ANDROID §11.3 interdit de
- * présenter la session comme terminée avant `RELEASE_SUCCEEDED`, et §4 rappelle que `RELEASING`
+ * État de l'écran 9. [isCancelled] et [isCompleted] ne sont vrais qu'après un état final **observé
+ * sur le snapshot publié**, jamais sur le seul [ScanOutcome.Accepted] : SPEC_ANDROID §11.3 interdit
+ * de présenter la session comme terminée avant `RELEASE_SUCCEEDED`, et §4 rappelle que `RELEASING`
  * autorise un nettoyage partiel.
+ *
+ * **[isCompleted] ajouté à l'étape 18, sur un défaut mesuré sur appareil.** Un scan depuis cet écran
+ * ne pouvait jusque-là donner que `CANCELLED`, la session étant forcément `ARMED` avant l'heure —
+ * l'écran n'avait donc qu'une sortie. Le correctif de `SessionReconciler` (garde de permission levée
+ * pour `BEFORE_SCAN`) rend atteignable `ARMED` après l'heure → `TRIGGER_ELAPSED` →
+ * `TRIGGERED_AWAITING_NFC` → `COMPLETED`, et l'écran restait alors bloqué sur « Scan requis » alors
+ * que la session était terminée.
  */
 data class ScanToModifyUiState(
     val availability: NfcAvailability = NfcAvailability.ENABLED,
     val lastOutcome: ScanOutcome? = null,
     val isReleasing: Boolean = false,
     val isCancelled: Boolean = false,
+    val isCompleted: Boolean = false,
 )
 
 /**
@@ -38,20 +45,21 @@ data class ScanToModifyUiState(
  * décide jamais de la validité d'un payload — il délègue entièrement à [scanHandler]
  * (SPEC_CORE_KMP §9.3), comme `AlarmActivity` le fait déjà pour la sonnerie.
  *
- * [scanHandler] est la liaison qualifiée [SessionNfcScanHandler] : à cette étape,
- * `PendingNfcScanHandler` retourne `Ignored` et rien ne change ; à l'étape 18,
- * `HandleValidNfcUseCase` prend sa place sans qu'une ligne d'ici bouge.
+ * [scanHandler] est `HandleValidNfcUseCase` depuis l'étape 18, seule liaison de [NfcScanHandler] :
+ * le qualificatif qui protégeait cet écran du handler POC n'a plus lieu d'être, les deux
+ * implémentations concurrentes ayant disparu.
  *
- * Aucune écriture : ni `AppSelectionStore`, ni `PairedBoxStore`, ni `SessionCoordinator` ne sont
- * touchés. Une modification de sélection ou de boîtier pendant une session est interdite en amont
- * (SPEC_CORE_KMP §2 point 11, §4), et seule la libération — étape 18 — écrira quoi que ce soit.
+ * Aucune écriture directe : ni `AppSelectionStore`, ni `PairedBoxStore`, ni `SessionCoordinator`
+ * ne sont touchés ici. Une modification de sélection ou de boîtier pendant une session est
+ * interdite en amont (SPEC_CORE_KMP §2 point 11, §4) ; seule la libération écrit, et elle passe
+ * entièrement par [scanHandler].
  */
 @HiltViewModel
 class ScanToModifyViewModel
     @Inject
     constructor(
         private val nfcReader: NfcReader,
-        @SessionNfcScanHandler private val scanHandler: NfcScanHandler,
+        private val scanHandler: NfcScanHandler,
         private val vibrationController: VibrationController,
         private val technicalEventLog: TechnicalEventLog,
         private val snapshotPublisher: SessionSnapshotPublisher,
@@ -73,6 +81,7 @@ class ScanToModifyViewModel
                         state.copy(
                             isReleasing = snapshot?.state == SessionStateDto.RELEASING,
                             isCancelled = snapshot?.state == SessionStateDto.CANCELLED,
+                            isCompleted = snapshot?.state == SessionStateDto.COMPLETED,
                         )
                 }
             }
@@ -145,8 +154,9 @@ class ScanToModifyViewModel
                 }
 
                 ScanOutcome.Ignored -> {
-                    // Aucun scan reconnu : rien à journaliser ici. `PendingNfcScanHandler` a déjà
-                    // consigné la lecture, et l'écran n'a rien à annoncer à l'utilisateur.
+                    // La session n'est pas dans un état qui accepte un scan, ou le moteur a refusé
+                    // la transition : rien n'a bougé et il n'y a rien à annoncer — ce n'est pas un
+                    // mauvais boîtier, donc surtout pas de vibration d'erreur.
                 }
             }
             state = state.copy(lastOutcome = outcome.takeIf { it != ScanOutcome.Ignored })

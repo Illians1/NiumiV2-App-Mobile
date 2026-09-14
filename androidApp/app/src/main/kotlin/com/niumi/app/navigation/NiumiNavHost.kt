@@ -133,6 +133,7 @@ private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostCont
     composable<NiumiRoute.ScanToModify> {
         ScanToModifyRoute(
             onCancelled = { navController.navigateToCancelled() },
+            onCompleted = { navController.navigateToCompleted() },
         )
     }
     composable<NiumiRoute.Cancelled> {
@@ -169,6 +170,14 @@ private fun NavController.navigateToActiveSession() {
  */
 private fun NavController.navigateToCancelled() {
     navigate(NiumiRoute.Cancelled) {
+        popUpTo(NiumiRoute.Home) { inclusive = false }
+        launchSingleTop = true
+    }
+}
+
+/** Même sortie que [navigateToCancelled], vers l'écran 10 : la session s'est terminée, pas annulée. */
+private fun NavController.navigateToCompleted() {
+    navigate(NiumiRoute.Completed) {
         popUpTo(NiumiRoute.Home) { inclusive = false }
         launchSingleTop = true
     }

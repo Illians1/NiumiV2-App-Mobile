@@ -29,6 +29,19 @@ sealed interface ReconcileAction {
     /** Sonnerie relancée sur une session `RINGING` dont le service avait disparu (§10.2). */
     data object RingingResumed : ReconcileAction
 
+    /**
+     * Nettoyage encore incomplet après le rejeu : [effectCount] effets **requis** de la libération
+     * restent `PENDING`/`FAILED`, la session demeure donc `RELEASING` (SPEC_ANDROID §11.3 : « la
+     * session n'est pas présentée comme terminée avant `RELEASE_SUCCEEDED` »). Aucun
+     * `RELEASE_FAILED` n'est redispatché : le coordinateur l'a déjà fait au moment de l'échec.
+     */
+    data class ReleaseStillPending(
+        val effectCount: Int,
+    ) : ReconcileAction
+
+    /** Demande de scan republiée sur une session en attente de scan (§10.5). */
+    data object ScanRequestRepublished : ReconcileAction
+
     data object SnapshotCorrupted : ReconcileAction
 
     data object PointerCleared : ReconcileAction

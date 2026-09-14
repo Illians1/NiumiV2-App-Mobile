@@ -35,6 +35,11 @@ class AndroidScanRequestNotifier(
                 .setContentTitle(spec.title)
                 .setContentText(spec.text)
                 .setOngoing(spec.ongoing)
+                // `SessionReconciler` republie cette notification à chaque passe sur une session
+                // en attente de scan (§10.5, étape 18) : sans cela, un canal d'importance haute
+                // reproduirait une bannière à chaque réconciliation, alors que la notification
+                // n'a jamais disparu. `notify()` avec le même identifiant remplace en place.
+                .setOnlyAlertOnce(true)
                 .setContentIntent(tapPendingIntent)
                 .build()
         notificationManager.notify(SCAN_REQUEST_NOTIFICATION_ID, notification)

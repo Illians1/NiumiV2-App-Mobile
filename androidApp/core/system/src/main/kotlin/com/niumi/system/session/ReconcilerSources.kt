@@ -2,6 +2,7 @@ package com.niumi.system.session
 
 import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.blocking.BlockedPackagesProjection
+import com.niumi.system.notification.ScanRequestNotifier
 import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.ringing.RingingController
 
@@ -21,6 +22,10 @@ import com.niumi.system.ringing.RingingController
  * [snapshotPublisher] rejoint le groupe à l'étape 14 : la réconciliation est le seul chemin qui
  * relit la persistance après un redémarrage du processus, c'est donc à elle de réamorcer le flux
  * que l'interface observe (défaut mesuré sur appareil, voir `ETAPE-14.md`).
+ *
+ * [scanRequestNotifier] rejoint le groupe à l'étape 18 : une session en attente de scan dont la
+ * notification a disparu avec le processus n'a plus aucun rappel visible, l'écran de réveil étant
+ * fermé (§10.5).
  */
 data class ReconcilerSources(
     val alarmScheduler: AlarmScheduler,
@@ -28,4 +33,5 @@ data class ReconcilerSources(
     val readinessMonitor: SessionReadinessMonitor,
     val snapshotPublisher: SessionSnapshotPublisher,
     val ringingController: RingingController,
+    val scanRequestNotifier: ScanRequestNotifier,
 )

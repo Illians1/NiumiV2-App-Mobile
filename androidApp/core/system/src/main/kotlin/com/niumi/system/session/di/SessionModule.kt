@@ -15,6 +15,7 @@ import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.IdGenerator
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.notification.NotificationAvailability
+import com.niumi.system.notification.ScanRequestNotifier
 import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.ringing.RingingController
 import com.niumi.system.session.DefaultSessionCoordinator
@@ -94,6 +95,7 @@ object SessionModule {
         readinessMonitor: SessionReadinessMonitor,
         snapshotPublisher: SessionSnapshotPublisher,
         ringingController: RingingController,
+        scanRequestNotifier: ScanRequestNotifier,
     ): ReconcilerSources =
         ReconcilerSources(
             alarmScheduler,
@@ -101,6 +103,7 @@ object SessionModule {
             readinessMonitor,
             snapshotPublisher,
             ringingController,
+            scanRequestNotifier,
         )
 
     @Provides

@@ -35,8 +35,10 @@ import org.junit.Test
  * - **`Accepted` ne suffit pas** à présenter la session comme annulée : §11.3 interdit de le faire
  *   avant `RELEASE_SUCCEEDED`, seul l'état final publié y autorise.
  *
- * À cette étape, la liaison de production est `PendingNfcScanHandler` et rend `Ignored` :
- * `HandleValidNfcUseCase` arrive à l'étape 18, sans toucher à cette classe.
+ * La liaison de production est `HandleValidNfcUseCase` (`:core:system`) depuis l'étape 18 ; ce test
+ * la remplace par un handler scripté, le comportement du cas d'usage étant prouvé chez lui
+ * (`HandleValidNfcUseCaseTest`). Ce qui se vérifie ici est la réaction de l'écran à chacun des
+ * quatre [com.niumi.system.nfc.ScanOutcome] possibles.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScanToModifyViewModelTest {
@@ -173,7 +175,7 @@ class ScanToModifyViewModelTest {
         assertThat(viewModel.state.isReleasing).isFalse()
     }
 
-    /** Une session terminée au réveil relève de l'écran 10 (étape 17), pas de l'écran 11. */
+    /** Une session terminée relève de l'écran 10, pas de l'écran 11. */
     @Test
     fun aCompletedSessionDoesNotLeadToTheCancelledScreen() {
         val viewModel = viewModel()
@@ -181,6 +183,34 @@ class ScanToModifyViewModelTest {
         snapshotPublisher.publish(snapshot(SessionStateDto.COMPLETED))
 
         assertThat(viewModel.state.isCancelled).isFalse()
+    }
+
+    /**
+     * **Défaut mesuré sur appareil le 2026-09-14 (étape 18).** L'écran 9 ne savait sortir que vers
+     * `CANCELLED`. Ce n'était pas un oubli à l'étape 15 : un scan depuis cet écran ne pouvait alors
+     * donner que `CANCELLED`, la session étant forcément `ARMED` avant l'heure. Le correctif de
+     * `SessionReconciler` (garde de permission levée pour `BEFORE_SCAN`) rend désormais atteignable
+     * le chemin `ARMED` après l'heure → `TRIGGER_ELAPSED` → `TRIGGERED_AWAITING_NFC` → `COMPLETED`.
+     * Sans cette sortie, l'écran restait bloqué sur « Scan requis » **alors que la session était
+     * terminée**, et rescanner ne faisait plus rien (état final → `Ignored`).
+     */
+    @Test
+    fun aCompletedSessionLeadsToTheCompletedScreen() {
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot(SessionStateDto.COMPLETED))
+
+        assertThat(viewModel.state.isCompleted).isTrue()
+        assertThat(viewModel.state.isReleasing).isFalse()
+    }
+
+    @Test
+    fun aCancelledSessionNeverLeadsToTheCompletedScreen() {
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot(SessionStateDto.CANCELLED))
+
+        assertThat(viewModel.state.isCompleted).isFalse()
     }
 
     /**

@@ -216,6 +216,48 @@ class SessionReconcilerTest {
             assertThat(harness.technicalEventLog.logged).contains(TechnicalEventType.ACCESSIBILITY_DISABLED)
         }
 
+    /**
+     * **Défaut mesuré sur appareil le 2026-09-14 (étape 18).** La garde de permission coupait aussi
+     * la passe `BEFORE_SCAN`, donc le `TRIGGER_ELAPSED` que SPEC_ANDROID §11.3 exige avant un scan
+     * sur une session `ARMED` dont l'heure est atteinte. Conséquence observée : le moteur refusait
+     * ensuite le scan (`TRIGGER_ALREADY_ELAPSED`) et l'utilisateur **ne pouvait plus terminer sa
+     * session** — le seul chemin de sortie du produit (§11.2) devenait inopérant, en silence.
+     *
+     * `BEFORE_SCAN` n'arme rien : il convertit un état périmé pour permettre la sortie. La garde ne
+     * doit donc pas s'y appliquer.
+     */
+    @Test
+    fun beforeScanStillProducesTriggerElapsedWhenAPermissionIsLost() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.clock.now = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS + 60_000L
+            harness.accessibilityServiceStatus.enabled = false
+            seed(harness, armedSnapshot())
+
+            harness.coordinator.reconcile(ReconcileReason.BEFORE_SCAN)
+
+            val loaded = harness.gateway.load() as LoadResult.Present
+            assertThat(loaded.snapshot.state).isEqualTo(SessionStateDto.TRIGGERED_AWAITING_NFC)
+        }
+
+    /**
+     * La garde reste entière hors `BEFORE_SCAN` : une permission perdue interrompt toujours la passe
+     * avant toute reprogrammation d'alarme (décision de l'étape 12).
+     */
+    @Test
+    fun aLostPermissionStillHaltsThePassOutsideBeforeScan() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.clock.now = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS + 60_000L
+            harness.accessibilityServiceStatus.enabled = false
+            seed(harness, armedSnapshot())
+
+            harness.coordinator.reconcile(ReconcileReason.PROCESS_START)
+
+            val loaded = harness.gateway.load() as LoadResult.Present
+            assertThat(loaded.snapshot.state).isEqualTo(SessionStateDto.ARMED)
+        }
+
     @Test
     fun armedWithADegradedAndroidControlStillEvaluatesTheTriggerDelay() =
         runTest {

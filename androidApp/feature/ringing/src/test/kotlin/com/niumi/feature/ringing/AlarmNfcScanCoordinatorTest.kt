@@ -48,13 +48,21 @@ class AlarmNfcScanCoordinatorTest {
     private val technicalEventLog = FakeTechnicalEventLog()
     private val coordinator = AlarmNfcScanCoordinator(vibrationController, technicalEventLog)
 
+    /**
+     * `Ignored` ne laisse aucune trace : le cas d'usage le renvoie quand la session n'est pas dans
+     * un état qui accepte un scan (§11.3 point 1). Rien n'a été reconnu ni refusé — ni journal, ni
+     * vibration, qui feraient croire à un mauvais boîtier.
+     */
     @Test
-    fun nullHandlerReturnsNullWithoutLogging() =
+    fun anIgnoredOutcomeNeitherLogsNorVibrates() =
         runTest {
-            val outcome = coordinator.handleUri(scanHandler = null, uri = "niumi://box/v1/x?token=y")
+            val handler = NfcScanHandler { ScanOutcome.Ignored }
 
-            assertThat(outcome).isNull()
+            val outcome = coordinator.handleUri(handler, uri = "niumi://box/v1/x?token=y")
+
+            assertThat(outcome).isEqualTo(ScanOutcome.Ignored)
             assertThat(technicalEventLog.loggedTypes).isEmpty()
+            assertThat(vibrationController.errorCallCount).isEqualTo(0)
         }
 
     @Test

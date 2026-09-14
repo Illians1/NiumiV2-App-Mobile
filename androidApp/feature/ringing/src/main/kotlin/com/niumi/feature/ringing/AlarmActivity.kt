@@ -36,7 +36,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.Optional
 import javax.inject.Inject
 
 // SPEC_ANDROID §11.2 : un résultat de scan transitoire (illisible, boîtier inconnu) ne doit
@@ -53,10 +52,9 @@ private const val TRANSIENT_OUTCOME_DISPLAY_MS = 3_000L
  * (`launchMode="singleTask"`), hors du `NavHost`, et rouvre donc `MainActivity` par un extra de
  * destination plutôt que de naviguer.
  *
- * [scanHandler] est absent avant l'étape 18 en release (`@BindsOptionalOf`, `:core:system`) :
- * seule la route POC (`src/debug` de `:app`) le fournit avant cette étape. Un scan reçu sans
- * handler est silencieusement ignoré (voir [AlarmNfcScanCoordinator]) — il n'existe alors
- * aucune décision à prendre.
+ * [scanHandler] est `HandleValidNfcUseCase` (`:core:system`) depuis l'étape 18, liaison unique et
+ * non optionnelle : c'est lui qui termine la session, et l'écran ne fait que suivre le snapshot
+ * qu'il produit.
  */
 @AndroidEntryPoint
 class AlarmActivity : ComponentActivity() {
@@ -64,7 +62,7 @@ class AlarmActivity : ComponentActivity() {
     lateinit var nfcReader: NfcReader
 
     @Inject
-    lateinit var scanHandler: Optional<NfcScanHandler>
+    lateinit var scanHandler: NfcScanHandler
 
     @Inject
     lateinit var vibrationController: VibrationController
@@ -183,7 +181,7 @@ class AlarmActivity : ComponentActivity() {
             activity = this,
             onUri = { uri ->
                 lifecycleScope.launch(Dispatchers.Main.immediate) {
-                    when (val outcome = scanCoordinator.handleUri(scanHandler.orElse(null), uri)) {
+                    when (val outcome = scanCoordinator.handleUri(scanHandler, uri)) {
                         // Un scan accepté fait avancer la session : l'écran suit le snapshot
                         // publié (RELEASING puis état final) au lieu de se fermer lui-même.
                         ScanOutcome.Accepted, null -> Unit

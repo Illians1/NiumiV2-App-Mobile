@@ -4,6 +4,7 @@ import com.niumi.core.domain.IncidentCodes
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.SessionEventDto
+import com.niumi.core.interop.SessionEventKindDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.TriggerDelayInputDto
@@ -11,6 +12,7 @@ import com.niumi.core.interop.TriggerDelayOutcomeDto
 import com.niumi.database.blocking.BlockedPackagesState
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.system.common.OperationResult
 import com.niumi.system.readiness.ReadinessCheckId
 
 /**
@@ -44,8 +46,7 @@ class SessionReconciler(
         }
         val present = loaded as? LoadResult.Present ?: return ReconcileResult(sessionId = null, actions = emptyList())
 
-        val snapshot = present.snapshot
-        val sessionId = snapshot.sessionId
+        val sessionId = present.snapshot.sessionId
         val actions = mutableListOf<ReconcileAction>()
 
         // Réamorce le flux observé par l'interface avant toute décision. `SessionSnapshotPublisher`
@@ -54,19 +55,9 @@ class SessionReconciler(
         // l'accueil afficherait « Aucune session » alors que l'alarme est programmée (défaut mesuré
         // sur appareil à l'étape 14). Republier une valeur identique est sans effet : `StateFlow`
         // n'émet que sur changement.
-        sources.snapshotPublisher.publish(snapshot)
+        sources.snapshotPublisher.publish(present.snapshot)
 
-        val replayable = gateway.pendingEffects(sessionId)
-        if (replayable.isNotEmpty()) {
-            val execution = effectDispatcher.execute(replayable, snapshot, present.extras)
-            actions += ReconcileAction.OutboxReplayed(replayable.size)
-            for (incident in execution.incidents) {
-                if (snapshot.state !in SESSION_FINAL_STATES) {
-                    actions +=
-                        ReconcileAction.DecisionApplied(dispatch(eventFactory.incidentReported(snapshot, incident)))
-                }
-            }
-        }
+        val snapshot = replayOutbox(present, dispatch, actions)
 
         when (snapshot.state) {
             SessionStateDto.PREPARING -> {
@@ -83,11 +74,12 @@ class SessionReconciler(
 
             SessionStateDto.AWAITING_NFC,
             SessionStateDto.TRIGGERED_AWAITING_NFC,
-            SessionStateDto.RELEASING,
             -> {
-                // Rejeu de l'outbox déjà effectué ci-dessus. Ces trois états relèvent de
-                // l'étape 18, qui apporte la reprise de `RELEASING` et le rejeu de la demande
-                // de scan.
+                republishScanRequest(snapshot, actions)
+            }
+
+            SessionStateDto.RELEASING -> {
+                resumeRelease(snapshot, dispatch, actions)
             }
 
             SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED -> {
@@ -97,6 +89,91 @@ class SessionReconciler(
         }
 
         return ReconcileResult(sessionId, actions)
+    }
+
+    /**
+     * Rejeu des effets `PENDING`/`FAILED` (SPEC_CORE_KMP §6.1), puis dispatch d'un
+     * `INCIDENT_REPORTED` par incident collecté. Renvoie le snapshot à jour : chaque incident
+     * incrémente la révision, et la suite de la passe doit travailler sur la dernière connue.
+     *
+     * **Le snapshot est enchaîné d'un incident au suivant.** La boucle partait auparavant du
+     * snapshot d'entrée pour chacun : deux incidents dans la même passe faisaient tomber le second
+     * en `STALE_REVISION`, `SessionEventValidation` exigeant l'égalité stricte de
+     * `expectedRevision`. Même classe de défaut que celui mesuré sur appareil à l'étape 17 (essai
+     * 7), corrigé alors dans `SessionReadinessMonitor` mais pas ici. Même patron que
+     * [DefaultSessionCoordinator.dispatchCollectedIncidents].
+     */
+    private suspend fun replayOutbox(
+        present: LoadResult.Present,
+        dispatch: suspend (SessionEventDto) -> DispatchResult,
+        actions: MutableList<ReconcileAction>,
+    ): SessionSnapshotDto {
+        val replayable = gateway.pendingEffects(present.snapshot.sessionId)
+        if (replayable.isEmpty()) return present.snapshot
+
+        val execution = effectDispatcher.execute(replayable, present.snapshot, present.extras)
+        actions += ReconcileAction.OutboxReplayed(replayable.size)
+
+        var current = present.snapshot
+        for (incident in execution.incidents) {
+            if (current.state in SESSION_FINAL_STATES) break
+            val result = dispatch(eventFactory.incidentReported(current, incident))
+            actions += ReconcileAction.DecisionApplied(result)
+            if (result is DispatchResult.Applied && result.snapshot != null) current = result.snapshot
+        }
+        return current
+    }
+
+    /**
+     * §11.3, dernier alinéa : « `SessionReconciler` compare l'état natif au snapshot et reprend
+     * uniquement les effets manquants, sans réappliquer un blocage déjà retiré ». Le rejeu a déjà
+     * eu lieu ([replayOutbox]) ; il ne reste qu'à décider si la phase peut se refermer.
+     *
+     * Seuls les trois effets **requis** de la libération retiennent `RELEASING` (SPEC_CORE_KMP §6,
+     * dernier alinéa) : une notification non retirée ou un service non arrêté sont best-effort et
+     * ne doivent jamais laisser une session éternellement en nettoyage.
+     *
+     * Une outbox vide referme la phase : c'est le cas du processus mort entre la persistance de la
+     * décision et l'envoi de `RELEASE_SUCCEEDED`, où tous les effets ont réussi sans que personne
+     * ne l'ait conclu.
+     *
+     * Aucun `RELEASE_FAILED` n'est redispatché quand des effets manquent encore, et aucun
+     * `RELEASE_PARTIAL_FAILURE` n'est rejournalisé : le coordinateur l'a fait au moment de l'échec
+     * (`DefaultSessionCoordinator.completePhase`), et le répéter à chaque passe recréerait les
+     * doublons d'incidents corrigés à l'étape 16.
+     */
+    private suspend fun resumeRelease(
+        snapshot: SessionSnapshotDto,
+        dispatch: suspend (SessionEventDto) -> DispatchResult,
+        actions: MutableList<ReconcileAction>,
+    ) {
+        val requiredKinds = PhaseCompletion.requiredKindsFor(SessionEventKindDto.VALID_NFC_SCANNED)
+        val missing = gateway.pendingEffects(snapshot.sessionId).filter { it.kind in requiredKinds }
+        if (missing.isEmpty()) {
+            actions += ReconcileAction.DecisionApplied(dispatch(eventFactory.releaseSucceeded(snapshot)))
+        } else {
+            actions += ReconcileAction.ReleaseStillPending(missing.size)
+        }
+    }
+
+    /**
+     * §10.5 : la notification d'attente de scan est le seul rappel visible une fois l'écran de
+     * réveil fermé, et le scan reste la seule sortie de session (§11.2). Si elle a disparu avec le
+     * processus, plus rien n'indique à l'utilisateur ce qu'il doit faire.
+     *
+     * Republiée **sans condition** plutôt qu'après un test de présence : `present()` est idempotent
+     * par identifiant de notification — republier remplace en place — et interroger
+     * `activeNotifications` ajouterait une méthode à l'interface pour un résultat identique.
+     * `AndroidScanRequestNotifier` pose `setOnlyAlertOnce(true)` pour qu'aucune ré-alerte ne soit
+     * visible sur ce canal d'importance haute.
+     */
+    private fun republishScanRequest(
+        snapshot: SessionSnapshotDto,
+        actions: MutableList<ReconcileAction>,
+    ) {
+        if (sources.scanRequestNotifier.present(snapshot.sessionId) !is OperationResult.Failure) {
+            actions += ReconcileAction.ScanRequestRepublished
+        }
     }
 
     /**
@@ -148,6 +225,16 @@ class SessionReconciler(
      * perdue interrompt la passe avant toute reprogrammation d'alarme. La condition porte sur
      * `failing`, l'état courant, et non sur `newlyReported` : un contrôle cassé depuis la passe
      * précédente n'est plus signalé mais reste cassé.
+     *
+     * **`BEFORE_SCAN` échappe à cette garde depuis l'étape 18**, sur un défaut mesuré sur appareil.
+     * La garde protège une reprogrammation d'alarme ; `BEFORE_SCAN` n'arme rien, il convertit un
+     * `ARMED` dont l'heure est atteinte en `TRIGGERED_AWAITING_NFC` pour que le scan puisse aboutir
+     * (SPEC_ANDROID §11.3 : « si la session est encore `ARMED` après l'heure sans alarme observée,
+     * il envoie d'abord `TRIGGER_ELAPSED` »). L'interrompre ici laissait la session `ARMED` après
+     * l'heure, état où `NfcReducer` refuse le scan (`TRIGGER_ALREADY_ELAPSED`) : l'utilisateur
+     * **ne pouvait plus terminer sa session**, le seul chemin de sortie du produit (§11.2) devenant
+     * inopérant sans le moindre message. Mesuré le 2026-09-14 sur Xiaomi 25080RABDG, service
+     * d'accessibilité coupé et heure dépassée de 18 minutes ; voir `ETAPE-18.md`.
      */
     private suspend fun reconcileArmed(
         snapshot: SessionSnapshotDto,
@@ -164,8 +251,16 @@ class SessionReconciler(
             actions += ReconcileAction.IncidentDispatched(degradation.incidentCode, IncidentSeverityDto.CRITICAL)
             actions += ReconcileAction.DecisionApplied(dispatchResult)
         }
-        if (monitored.failing.any { it in PERMISSION_CHECKS }) return
-        reconcileTriggerDelay(snapshot, reason, dispatch, actions)
+        if (reason != ReconcileReason.BEFORE_SCAN && monitored.failing.any { it in PERMISSION_CHECKS }) return
+
+        // Le moniteur vient peut-être de dispatcher un `INCIDENT_REPORTED`, qui incrémente la
+        // révision : poursuivre sur le snapshot d'entrée produirait `STALE_REVISION` et le
+        // `TRIGGER_ELAPSED` serait perdu. Même relecture qu'`AlarmTriggerHandler` après la même
+        // surveillance (étape 17). Un état devenu non-`ARMED` entre-temps ne relève plus d'ici.
+        val refreshed = (gateway.load() as? LoadResult.Present)?.snapshot
+        if (refreshed != null && refreshed.state == SessionStateDto.ARMED) {
+            reconcileTriggerDelay(refreshed, reason, dispatch, actions)
+        }
     }
 
     private suspend fun reconcileTriggerDelay(
