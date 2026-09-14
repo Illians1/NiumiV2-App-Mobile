@@ -2,6 +2,7 @@ package com.niumi.system.readiness.di
 
 import android.content.Context
 import android.os.Build
+import com.niumi.database.directboot.UnlockState
 import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.pairing.PairedBoxStore
@@ -33,6 +34,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import javax.inject.Provider
 import javax.inject.Singleton
 
 /** Bindings du diagnostic avant activation et de sa surveillance (SPEC_ANDROID §13, §13.1). */
@@ -66,10 +68,11 @@ object ReadinessModule {
     @Provides
     @Singleton
     fun provideSetupPreferences(
-        @ApplicationContext context: Context,
+        @ApplicationContext contextProvider: Provider<Context>,
+        unlockState: UnlockState,
     ): SetupPreferences =
         com.niumi.system.setup
-            .DataStoreSetupPreferences(context)
+            .DataStoreSetupPreferences(contextProvider, unlockState)
 
     @Provides
     fun provideReadinessSources(
@@ -84,6 +87,7 @@ object ReadinessModule {
         accessibilityServiceStatus: AccessibilityServiceStatus,
         batteryOptimizationStatus: BatteryOptimizationStatus,
         setupPreferences: SetupPreferences,
+        unlockState: UnlockState,
     ): ReadinessSources =
         ReadinessSources(
             nfcReader = nfcReader,
@@ -97,6 +101,7 @@ object ReadinessModule {
             accessibilityServiceStatus = accessibilityServiceStatus,
             batteryOptimizationStatus = batteryOptimizationStatus,
             setupPreferences = setupPreferences,
+            unlockState = unlockState,
         )
 
     @Provides

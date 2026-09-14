@@ -1,6 +1,7 @@
 package com.niumi.app
 
 import android.app.Application
+import com.niumi.system.boot.SystemEventsRegistrar
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
 import com.niumi.system.readiness.SessionReadinessWatcher
 import com.niumi.system.session.SessionStartupReconciler
@@ -18,6 +19,9 @@ class NiumiApplication : Application() {
     @Inject
     lateinit var sessionStartupReconciler: SessionStartupReconciler
 
+    @Inject
+    lateinit var systemEventsRegistrar: SystemEventsRegistrar
+
     override fun onCreate() {
         super.onCreate()
         // Les canaux doivent exister avant toute notification : poster sur un canal inconnu
@@ -29,6 +33,11 @@ class NiumiApplication : Application() {
         // publiquement. Le receveur est enregistré à chaud et meurt avec le processus, ce que
         // §13.1 assume explicitement — aucune surveillance continue n'est promise.
         sessionReadinessWatcher.registerInterruptionFilterReceiver(this)
+        // SPEC_ANDROID §9.3 : `USER_UNLOCKED` n'est délivré qu'aux receveurs enregistrés à chaud,
+        // jamais à un receveur de manifeste — les cinq autres événements système passent, eux, par
+        // `SystemEventsReceiver`. Enregistré ici parce que c'est le seul point qui tourne dans un
+        // processus réveillé avant le premier déverrouillage par un composant `directBootAware`.
+        systemEventsRegistrar.registerUserUnlockedReceiver(this)
         // SPEC_ANDROID §9.2 (dernier alinéa) et §13.1 : au démarrage du processus, la
         // réconciliation reprend toute transaction restée incomplète et republie la session
         // persistée vers l'interface — `SessionSnapshotPublisher` vit en mémoire et repart à

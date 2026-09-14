@@ -3,6 +3,8 @@ package com.niumi.database.di
 import com.niumi.database.NiumiDatabase
 import com.niumi.database.RoomSessionStore
 import com.niumi.database.SessionStore
+import com.niumi.database.directboot.DirectBootRoomMerge
+import com.niumi.database.directboot.RoomDirectBootMerge
 import com.niumi.database.directboot.UnlockState
 import dagger.Module
 import dagger.Provides
@@ -27,4 +29,17 @@ object SessionStoreModule {
         databaseProvider: Provider<NiumiDatabase>,
         unlockState: UnlockState,
     ): SessionStore = RoomSessionStore(databaseProvider, unlockState)
+
+    /**
+     * Fusion Direct Boot → Room au déverrouillage (SPEC_ANDROID §9.3, étape 19). Mêmes contraintes
+     * de construction que [provideSessionStore] : `Provider<NiumiDatabase>` pour ne jamais faire
+     * résoudre la base avant déverrouillage, et `@Provides` parce que l'horloge a une valeur par
+     * défaut que Dagger ne voit pas.
+     */
+    @Provides
+    @Singleton
+    fun provideDirectBootRoomMerge(
+        databaseProvider: Provider<NiumiDatabase>,
+        unlockState: UnlockState,
+    ): DirectBootRoomMerge = RoomDirectBootMerge(unlockState, databaseProvider)
 }

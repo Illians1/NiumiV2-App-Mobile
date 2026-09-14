@@ -4,11 +4,11 @@ import android.content.Context
 import com.niumi.feature.ringing.AndroidRingingController
 import com.niumi.feature.ringing.R
 import com.niumi.system.audio.RingtoneResourceResolver
+import com.niumi.system.common.DeviceProtected
 import com.niumi.system.ringing.RingingController
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -30,6 +30,6 @@ object RingingModule {
     @Provides
     @Singleton
     fun provideRingingController(
-        @ApplicationContext context: Context,
+        @DeviceProtected context: Context,
     ): RingingController = AndroidRingingController(context)
 }

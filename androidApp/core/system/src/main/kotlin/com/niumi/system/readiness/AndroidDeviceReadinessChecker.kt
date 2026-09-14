@@ -175,12 +175,34 @@ class AndroidDeviceReadinessChecker(
         nowEpochMillis: Long,
     ): List<ReadinessCheck> =
         listOf(
-            check(
-                ReadinessCheckId.ACCESSIBILITY_SERVICE,
-                ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
-                passed = sources.accessibilityServiceStatus.isEnabled(),
-                action = ReadinessAction.OpenAccessibilitySettings,
-            ),
+            // Avant le premier déverrouillage, ce contrôle ne peut rien dire de vrai : Android
+            // refuse de lier un service d'accessibilité non `directBootAware` (« Ignoring
+            // non-encryption-aware service ») et remet `accessibility_enabled` à 0 tant qu'aucun
+            // service ne tourne — alors que le réglage de l'utilisateur, lui, n'a pas bougé.
+            //
+            // `FAILED` y était doublement faux, mesuré sur appareil le 2026-09-14 (étape 19) : un
+            // incident `BLOCKING_PERMISSION_REVOKED` `CRITICAL` mensonger était consigné avec sa
+            // notification (« Tes applications ne sont plus bloquées »), et surtout la garde de
+            // `SessionReconciler.reconcileArmed` interrompait la passe **avant la reprogrammation
+            // de l'alarme** — le réveil était perdu par le redémarrage même que §9.3 doit rattraper.
+            //
+            // `NOT_APPLICABLE` est la réponse honnête, et elle suffit : le moniteur de §13.1 ne
+            // signale que les contrôles `FAILED`. L'écran de diagnostic n'est atteignable
+            // qu'appareil déverrouillé, il ne voit donc jamais ce cas.
+            if (!sources.unlockState.isUserUnlocked) {
+                notApplicable(
+                    ReadinessCheckId.ACCESSIBILITY_SERVICE,
+                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+                    ReadinessAction.OpenAccessibilitySettings,
+                )
+            } else {
+                check(
+                    ReadinessCheckId.ACCESSIBILITY_SERVICE,
+                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+                    passed = sources.accessibilityServiceStatus.isEnabled(),
+                    action = ReadinessAction.OpenAccessibilitySettings,
+                )
+            },
             if (candidateTriggerAtEpochMillis == null) {
                 // L'écran de diagnostic précède le choix de l'heure : rien à contrôler encore.
                 notApplicable(

@@ -105,6 +105,16 @@ L'application ne peut pas garantir la sonnerie dans les cas suivants:
 - panne du système, du haut-parleur ou du matériel NFC;
 - comportement OEM incompatible non détecté.
 
+**Restriction OEM de démarrage automatique (mesurée à l'étape 19, MIUI/HyperOS).** Sur ces surcouches, une permission par application — « Démarrage automatique en arrière-plan », gérée par le Security Center de Xiaomi et refusée par défaut — décide si un broadcast a le droit de **démarrer le processus** de l'application. Elle ne bloque pas la réception d'un broadcast par un processus déjà vivant.
+
+Portée mesurée le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0, par comparaison contrôlée avec et sans la permission:
+
+- `LOCKED_BOOT_COMPLETED` et `BOOT_COMPLETED` en sont **exemptés**: permission refusée, le processus a été démarré et l'alarme reprogrammée à trois reprises. **La reprogrammation après redémarrage de §9.3 ne dépend donc pas de ce réglage** — c'est le point qui compte pour la promesse du produit.
+- `MY_PACKAGE_REPLACED` y est **soumis**: refusée, le système journalise `process is not permitted to auto start` et le receveur ne tourne pas; accordée, le processus est démarré pour `SystemEventsReceiver`. Sans lui, l'alarme survit tout de même à une mise à jour, Android préservant le `PendingIntent`.
+- `TIME_CHANGED` et `TIMEZONE_CHANGED` suivent vraisemblablement la même règle quand le processus est mort — non mesuré, les deux n'ayant été testés qu'avec un processus vivant. La conséquence y serait limitée à l'incident non consigné: l'instant du réveil est un `RTC_WAKEUP` absolu qu'Android préserve lui-même à travers un changement d'horloge, et le réenregistrement de §9.3 est une sécurité supplémentaire, pas le mécanisme principal.
+
+Aucun contrôle de diagnostic n'est ajouté pour ce réglage: ce qu'il conditionne est une sécurité supplémentaire, jamais le déclenchement du réveil. L'ajouter au tableau de §13 ferait refuser une activation sur un motif qui ne compromet pas la promesse. Il est en revanche nommé dans l'aide (§21, `LIMITES.md`) et dans la matrice de tests physiques, au même titre que l'arrêt forcé.
+
 Depuis Android 15, un arrêt forcé annule les `PendingIntent` de l'application. Il supprime donc aussi l'alarme programmée. L'application doit signaler clairement cette limite dans l'aide et dans le plan de test. Elle ne doit pas tenter de bloquer les réglages, la désinstallation ou l'arrêt du service d'accessibilité.
 
 ### 4.3 Limite du blocage d'applications
@@ -417,6 +427,16 @@ Ce snapshot est une projection partielle de Room, mais son enveloppe de session 
 
 Les composants `directBootAware` ne doivent pas créer Room ou un dépôt qui ouvre Room avant `UserManager.isUserUnlocked == true`. Utiliser des dépendances différées et le snapshot comme unique source avant le déverrouillage.
 
+**Ce que garantit réellement le contexte protégé par appareil (précision de l'étape 19).** La sûreté avant déverrouillage tient à deux choses: le composant est `directBootAware`, et aucun code de son chemin n'accède au stockage chiffré par les identifiants. Elle ne tient pas au `Context` porté par les adaptateurs: `AlarmManager`, `NotificationManager` et `startForegroundService` se comportent à l'identique avec l'un ou l'autre contexte, puisque seuls les appels de stockage changent de racine. Un `createDeviceProtectedStorageContext()` est donc utilisé **en permanence**, et non aiguillé selon l'état de déverrouillage, par `AlarmScheduler`, `AndroidPendingIntentFactory`, `ScanRequestNotifier`, le registrar de canaux de notification, le notificateur d'avertissement de §13.1 et `RingingController` — un seul jeu de liaisons, ce que §9.3 et §10.5 exigent sans ambiguïté et sans graphe parallèle. Les dépôts dont les données appartiennent légitimement au stockage chiffré par les identifiants (Room, `SetupPreferences`, `AppSelectionStore`) gardent le contexte d'application.
+
+**Garde de déverrouillage des `DataStore` (étape 19, mesuré sur appareil).** La règle ci-dessus ne vaut pas que pour Room: elle vaut pour **tout** dépôt en stockage chiffré par les identifiants. `AppSelectionStore` et `SetupPreferences` sont deux `DataStore` de ce type, et le diagnostic de §13 les lit — or ce diagnostic est rejoué par la réconciliation `LOCKED_BOOT` (§13.1), donc avant le premier déverrouillage.
+
+Le dégât mesuré le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0 dépasse largement la lecture d'une valeur fausse: l'instance de `DataStore` créée dans cette fenêtre — où le répertoire n'existe pas encore (`Failed to ensure /data/user/0/… : mkdir failed: errno 126`) — **continue de servir un état vide après le déverrouillage, pour toute la durée de vie du processus**. La sélection d'applications de l'utilisateur devenait invisible et aucune nouvelle session ne pouvait être préparée tant que le processus n'était pas recréé. C'est une régression introduite par `SystemEventsReceiver` lui-même: avant lui, aucun composant Niumi ne tournait avant déverrouillage hors de la chaîne d'alarme.
+
+Les deux dépôts portent donc une garde construite sur le même patron que `RoomSessionStore`: le `Context` leur est fourni par un `Provider` qui n'est **jamais résolu** avant déverrouillage — la garde empêche l'instance de naître, elle ne se contente pas d'ignorer son résultat. Lectures neutres (sélection vide, préférences à leur valeur par défaut), écritures refusées (`DATASTORE_BEFORE_UNLOCK`). Aucune écriture n'a lieu avant déverrouillage en pratique: ces préférences ne changent que depuis l'interface.
+
+Une sélection vide avant déverrouillage est sans conséquence: `APP_SELECTION` et `BATTERY_OPTIMIZATION` ne font pas partie des six contrôles surveillés pendant `ARMED` (§13.1), et les applications bloquées d'une session active sont figées dans Room et dans la projection Direct Boot (§7.2, §7.3), jamais relues dans ces dépôts.
+
 **Exception documentée — `RoomPairedBoxStore.current()` (étape 13).** Tous les dépôts Room refusent l'accès avant déverrouillage en levant (`ROOM_BEFORE_UNLOCK`), sauf la lecture du boîtier associé, qui renvoie « aucun boîtier » sans jamais ouvrir la base. Raison : le diagnostic de §13 est rejoué pendant la réconciliation Direct Boot (raison `LOCKED_BOOT`, §13.1), et une levée y interromprait la reprogrammation de l'alarme. L'exception est sans effet sur la sûreté : le contrôle `PAIRED_BOX` ne fait pas partie des six contrôles surveillés pendant `ARMED` (§13.1), donc aucun incident faux n'est produit, et le contrat commun impose déjà que la vérification NFC d'une session armée utilise le credential figé à l'activation (SPEC_CORE_KMP §10), jamais le dépôt courant. L'écriture (`replace`, `clear`) conserve le refus strict : une association n'a lieu qu'à l'écran dédié, hors session, donc toujours après déverrouillage.
 
 ## 8. Calcul de l'heure de déclenchement
@@ -483,16 +503,25 @@ Au démarrage du processus, `SessionReconciler` traite tout état `PREPARING` re
 
 ### 9.3 Reprogrammation
 
-Créer un `SystemEventsReceiver` pour:
+Créer un `SystemEventsReceiver`, déclaré dans le manifeste pour:
 
 - `LOCKED_BOOT_COMPLETED`;
 - `BOOT_COMPLETED`;
 - `MY_PACKAGE_REPLACED`;
-- `TIME_CHANGED`;
-- `TIMEZONE_CHANGED`;
-- `USER_UNLOCKED`.
+- `TIME_CHANGED` (action `android.intent.action.TIME_SET`);
+- `TIMEZONE_CHANGED`.
 
-Le receiver est `directBootAware`. Il lit le snapshot et rappelle le programmateur avec le même `triggerAtEpochMillis`. Il ne recalcule pas l'instant depuis l'heure locale. Si la session est `ARMED` et l'instant est dépassé, il applique la politique de retard dans le coordinateur Direct Boot sous mutex: jusqu'à 15 minutes, il reprogramme une alarme immédiate dont `AlarmReceiver` produira `ALARM_FIRED`; au-delà, il applique `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW` dans le snapshot, le registre et l'outbox, exécute `PRESENT_SCAN_REQUEST` et publie la notification décrite en 10.5 depuis le contexte protégé par appareil, sans démarrer le service de sonnerie. À `USER_UNLOCKED`, le réconciliateur fusionne de façon idempotente le registre et l'outbox Direct Boot dans Room.
+**`USER_UNLOCKED` ne peut pas être déclaré dans le manifeste (constat de l'étape 19).** Android ne délivre `ACTION_USER_UNLOCKED` qu'aux receivers enregistrés à chaud; la documentation Direct Boot demande d'« enregistrer un `BroadcastReceiver` depuis un composant qui tourne ». Déclaré dans le manifeste, le filtre serait mort et la fusion Direct Boot vers Room n'aurait jamais lieu par ce chemin. Il est donc enregistré au démarrage du processus par `SystemEventsRegistrar`, avec `RECEIVER_NOT_EXPORTED`, au même titre que le receveur de filtre d'interruption de §13.1. Les cinq actions du manifeste sont, elles, bien délivrées à un receveur déclaré: quatre figurent dans la liste officielle des exceptions aux restrictions de broadcasts implicites, et `MY_PACKAGE_REPLACED` est explicitement adressé au paquet lui-même.
+
+Le receiver est `directBootAware`. Il lit le snapshot et rappelle le programmateur avec le même `triggerAtEpochMillis`. Il ne recalcule pas l'instant depuis l'heure locale. Si la session est `ARMED` et l'instant est dépassé, il applique la politique de retard dans le coordinateur Direct Boot sous mutex: jusqu'à 15 minutes, il reprogramme une alarme immédiate dont `AlarmReceiver` produira `ALARM_FIRED`; au-delà, il applique `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW` dans le snapshot, le registre et l'outbox, exécute `PRESENT_SCAN_REQUEST` et publie la notification décrite en 10.5 depuis le contexte protégé par appareil, sans démarrer le service de sonnerie.
+
+Sur `TIME_CHANGED` et `TIMEZONE_CHANGED`, l'alarme est réenregistrée **sans condition** au même instant, et un incident de gravité `WARNING` est consigné. Le réenregistrement est inconditionnel parce qu'un `PendingIntent` encore présent ne prouve pas que le système l'a conservé au bon instant après avoir déplacé son horloge; il est idempotent (`FLAG_UPDATE_CURRENT`).
+
+**L'incident, lui, est consigné une seule fois par code et par session (décision de l'étape 19).** `android.intent.action.TIME_SET` n'est pas émis seulement quand l'utilisateur change l'heure: chaque correction d'horloge par le réseau le produit aussi, plusieurs fois par nuit sur certains appareils. Sans cette garde, une seule session accumulerait des dizaines d'incidents identiques sur l'écran de diagnostic — le défaut mesuré et corrigé à l'étape 16. La garde se lit en base, comme celle de §13.1 le fait pour ses propres incidents, et non en mémoire: ces deux raisons n'arrivent que par broadcast, donc parfois dans un processus qui vient de naître. Conséquence assumée: deux changements de fuseau dans la même session ne laissent qu'un incident. Le journal technique, lui, n'est pas dédupliqué.
+
+Au déverrouillage, le réconciliateur fusionne de façon idempotente le registre et l'outbox Direct Boot dans Room, puis réécrit la projection depuis Room (§9.2). La fusion refuse une `domainRevision` inférieure à celle de Room pour la même session (§7.3), n'insère que les reçus et les effets absents, et ne fait jamais redevenir rejouable un effet déjà terminal. Elle s'exécute avant la lecture de Room par la passe, sous le mutex du coordinateur, sans quoi la réconciliation déciderait sur un état amputé de ce qui a été fait avant le déverrouillage.
+
+**Elle est tentée sur trois raisons et non sur la seule `USER_UNLOCKED`:** ce signal n'atteint le processus que s'il était vivant à l'instant du déverrouillage, ce qui est le cas qui compte — un composant `directBootAware` a réveillé Niumi parce que le réveil est passé — mais pas le seul possible. `BOOT_COMPLETED`, délivré après le déverrouillage, et le démarrage du processus servent de filet. La fusion étant idempotente et bornée à la lecture d'un fichier quand il n'y a rien à absorber, la tenter trois fois ne coûte rien.
 
 ## 10. Déclenchement et service de sonnerie
 
@@ -681,7 +710,15 @@ La notification est publiée par l'exécution de `PRESENT_SCAN_REQUEST` et retir
 
 L'attribut reste prescrit (il conserve son effet sur les versions antérieures et sur le classement de la notification), mais **le filet réel est la republication**: `SessionReconciler` republie `PRESENT_SCAN_REQUEST` à chaque passe sur une session `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`. La republication n'a lieu qu'à une réconciliation — démarrage de processus, redémarrage, événements système — et non à chaque passage de l'application au premier plan: une fenêtre sans rappel visible subsiste donc entre un balayage et la réconciliation suivante.
 
-Cette fenêtre n'interrompt aucun chemin de sortie: l'overlay de blocage (§12.2) rappelle explicitement le scan au moment où l'utilisateur rencontre une application bloquée, et ouvrir Niumi dans un état de scan mène directement à l'écran de réveil (§10.4). **Sa durée réelle doit être mesurée à l'étape 19**, une fois `SystemEventsReceiver` livré — il multiplie les occasions de réconciliation et devrait la resserrer — avant de décider s'il faut réconcilier au passage au premier plan. Voir `docs/android/implementation-reports/ETAPE-18.md`.
+Cette fenêtre n'interrompt aucun chemin de sortie: l'overlay de blocage (§12.2) rappelle explicitement le scan au moment où l'utilisateur rencontre une application bloquée, et ouvrir Niumi dans un état de scan mène directement à l'écran de réveil (§10.4) — les deux vérifiés sur appareil.
+
+**Sa durée a été mesurée à l'étape 19, et elle est illimitée en usage ordinaire.** Le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0: après un balayage, la notification est restée absente 523 s sans revenir, et rien ne la ramenait. Ni le passage de l'application au premier plan, ni un verrouillage puis déverrouillage d'écran — `ACTION_USER_UNLOCKED` n'est émis qu'au **premier** déverrouillage après un démarrage. Seuls un démarrage de processus, un redémarrage de l'appareil ou un changement d'horloge republiaient. Le pari de l'étape 18 — « `SystemEventsReceiver` multiplie les occasions de réconciliation et devrait resserrer la fenêtre » — est donc démenti par la mesure: les occasions qu'il ajoute sont toutes liées au démarrage ou à l'horloge, et aucune ne survient pendant qu'on se sert du téléphone.
+
+**Décision prise sur cette mesure (étape 19): la réconciliation est déclenchée au passage de l'application au premier plan quand la session attend un scan** (`ReconcileReason.FOREGROUND_AWAITING_SCAN`). La republication redevient ainsi liée au seul geste que l'utilisateur fait forcément pour sortir de sa session. Mesurée à 1 s après réouverture.
+
+Le déclencheur est posé sur **`MainActivity` et `AlarmActivity`**, et non sur la seule `MainActivity`. Dans un état de scan, rouvrir Niumi ramène le task au premier plan avec l'écran de réveil au sommet (`launchMode="singleTask"`): `MainActivity.onResume` n'est alors jamais rejoué. Mesuré: posé sur la seule `MainActivity`, le correctif ne se déclenchait pas.
+
+L'option d'adosser la notification à un service de premier plan reste **écartée**: l'attente d'un scan peut durer des heures, et §10.5 exige que cette notification ne ressemble pas à une alarme active.
 
 Le comportement de `CATEGORY_ALARM` sans son sous Ne pas déranger varie selon la version Android et les surcouches OEM; ce point fait partie de la matrice de tests physiques.
 
@@ -1006,6 +1043,10 @@ Contrôles surveillés, avec le code d'incident associé:
 | Plein écran révoqué | `ANDROID_FULL_SCREEN_REVOKED` | `CRITICAL` | `ARMED` |
 | Service d'accessibilité désactivé | `BLOCKING_PERMISSION_REVOKED` (code commun) | `CRITICAL` | tous les états non finaux |
 | Accès aux alarmes exactes perdu | `ALARM_PERMISSION_REVOKED` (code commun) | `CRITICAL` | `ARMED` |
+
+**Le contrôle du service d'accessibilité est neutralisé avant le premier déverrouillage (étape 19, mesuré sur appareil).** Android refuse de lier un service d'accessibilité qui n'est pas `directBootAware` (`Ignoring non-encryption-aware service`) et remet `accessibility_enabled` à 0 tant qu'aucun service ne tourne, alors même que le réglage choisi par l'utilisateur (`enabled_accessibility_services`) n'a pas bougé. Évalué tel quel pendant la réconciliation `LOCKED_BOOT`, le contrôle était doublement faux: il consignait un incident `BLOCKING_PERMISSION_REVOKED` `CRITICAL` mensonger avec sa notification (« Tes applications ne sont plus bloquées »), et surtout la garde de permission du réconciliateur interrompait la passe **avant la reprogrammation de l'alarme** — le réveil était perdu par le redémarrage même que §9.3 doit rattraper. Mesuré le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0.
+
+Le contrôle est donc `NOT_APPLICABLE` tant que `UserManager.isUserUnlocked` est faux, et redevient évalué dès le déverrouillage. C'est la réponse honnête: le blocage n'a de toute façon aucun objet avant le déverrouillage, l'utilisateur ne pouvant atteindre aucune application. L'écran de diagnostic n'est atteignable qu'appareil déverrouillé et ne voit donc jamais ce cas.
 
 Quand la surveillance s'exécute:
 
@@ -1373,6 +1414,7 @@ Scénarios à exécuter:
 | écouteurs USB-C ou casque filaire connecté | sortie audio conforme à la stratégie documentée |
 | route audio modifiée pendant `RINGING` | lecture maintenue ou reprise, incident consigné en cas d'échec |
 | redémarrage puis aucun déverrouillage | alarme reprogrammée depuis Direct Boot |
+| redémarrage, permission OEM de démarrage automatique **refusée** | alarme reprogrammée depuis Direct Boot ; si la surcouche bloque le démarrage du processus, le consigner et évaluer un contrôle de diagnostic ciblé sur ces appareils (§4.2) |
 | redémarrage 2 minutes avant le réveil | alarme reprogrammée et déclenchée à l'heure |
 | redémarrage après l'heure, retard inférieur ou égal à 15 minutes | sonnerie immédiate |
 | redémarrage après l'heure, retard supérieur à 15 minutes | session `TRIGGERED_AWAITING_NFC`, santé `DEGRADED`, incident `MISSED_TRIGGER_WINDOW`, blocage maintenu, notification d'attente de scan visible avant tout déverrouillage, sans son ni vibration |
@@ -1401,6 +1443,8 @@ Scénarios à exécuter:
 | arrêt forcé de Niumi | alarme annulée par le système, limite connue consignée |
 
 Pour chaque essai, consigner le fabricant, le modèle, la version Android, la version du firmware, les permissions, le résultat, le retard mesuré et les logs locaux.
+
+**Consigner en plus l'état de la permission OEM de démarrage automatique** quand le fabricant en propose une (§4.2). Mesuré à l'étape 19: HyperOS exempte `LOCKED_BOOT_COMPLETED` et `BOOT_COMPLETED` de cette restriction, donc la reprogrammation après redémarrage tient sans elle. Rien ne permet de généraliser à Oppo, Realme, Vivo ou Honor, réputés plus agressifs. C'est la question à trancher fabricant par fabricant: **si une surcouche empêche le démarrage du processus au boot sans cette permission, le réveil après redémarrage y est perdu**, et un contrôle de diagnostic ciblé devient nécessaire sur ces appareils. Un essai mené avec la permission accordée ne prouve rien pour l'utilisateur ordinaire, qui ne l'a pas: la mesurer dans l'état par défaut.
 
 ## 21. Critères d'acceptation du MVP
 

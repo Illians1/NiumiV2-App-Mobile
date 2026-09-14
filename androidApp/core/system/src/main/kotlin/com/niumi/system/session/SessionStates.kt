@@ -16,6 +16,14 @@ val SESSION_FINAL_STATES: Set<SessionStateDto> =
     setOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED)
 
 /**
+ * Les deux états où le scan du boîtier est la seule issue et où la notification de §10.5 doit être
+ * visible. Introduit à l'étape 19 : `SessionReconciler` les traitait déjà ensemble, et le
+ * déclencheur de premier plan a besoin de la même règle.
+ */
+val SESSION_SCAN_STATES: Set<SessionStateDto> =
+    setOf(SessionStateDto.AWAITING_NFC, SessionStateDto.TRIGGERED_AWAITING_NFC)
+
+/**
  * Une session dans un état non final tient encore l'appareil : alarme programmée ou blocage
  * appliqué. `null` (aucune session) n'est pas un état en cours.
  */

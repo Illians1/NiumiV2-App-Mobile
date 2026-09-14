@@ -1,6 +1,7 @@
 package com.niumi.system.apps.di
 
 import android.content.Context
+import com.niumi.database.directboot.UnlockState
 import com.niumi.system.apps.AppSelectionSource
 import com.niumi.system.apps.AppSelectionStore
 import com.niumi.system.apps.DataStoreAppSelectionStore
@@ -15,6 +16,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import javax.inject.Provider
 import javax.inject.Singleton
 
 /**
@@ -42,8 +44,9 @@ object AppsModule {
     @Provides
     @Singleton
     fun provideAppSelectionStore(
-        @ApplicationContext context: Context,
-    ): AppSelectionStore = DataStoreAppSelectionStore(context)
+        @ApplicationContext contextProvider: Provider<Context>,
+        unlockState: UnlockState,
+    ): AppSelectionStore = DataStoreAppSelectionStore(contextProvider, unlockState)
 
     /**
      * Le diagnostic de §13 ne compte que la sélection : il reçoit la vue étroite, servie par le

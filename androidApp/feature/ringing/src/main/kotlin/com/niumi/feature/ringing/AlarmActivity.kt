@@ -30,6 +30,7 @@ import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.nfc.NfcScanHandler
 import com.niumi.system.nfc.ScanOutcome
+import com.niumi.system.readiness.ForegroundReadinessTrigger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -72,6 +73,16 @@ class AlarmActivity : ComponentActivity() {
 
     @Inject
     lateinit var componentResolver: NiumiComponentResolver
+
+    /**
+     * §10.5, décision de l'étape 19. Dans un état de scan, l'utilisateur qui rouvre Niumi atterrit
+     * **ici** et non sur `MainActivity` : le task est ramené au premier plan avec cet écran au
+     * sommet (`launchMode="singleTask"`), et `MainActivity.onResume` n'est jamais rejoué — mesuré
+     * sur appareil le 2026-09-14. Le déclencheur doit donc être posé sur les deux écrans, sans quoi
+     * la notification d'attente de scan balayée ne revient qu'au prochain démarrage de processus.
+     */
+    @Inject
+    lateinit var foregroundReadinessTrigger: ForegroundReadinessTrigger
 
     private val viewModel: AlarmViewModel by viewModels()
 
@@ -170,6 +181,7 @@ class AlarmActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        foregroundReadinessTrigger.evaluateAsync()
         publishDeviceLockState()
         viewModel.onNfcAvailabilityChanged(nfcReader.availability)
         if (nfcReader.availability == NfcAvailability.DISABLED) {

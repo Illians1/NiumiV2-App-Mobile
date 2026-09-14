@@ -19,6 +19,34 @@
 - Les portes de validation (0a après l'étape 6, 0b et finale après l'étape 21 — porte 0 scindée en deux le 2026-09-07, voir étape 6 et `LOT-0.md`) sont manuelles, sur appareils réels ou sur décision Play. Ne pas franchir une porte sans validation humaine explicite.
 - Les versions de bibliothèques ci-dessous ont été vérifiées le 3 septembre 2026. Les reconfirmer à l'étape 1 avec Context7 ou les sources officielles avant de les figer.
 
+## Particularités de l'appareil de test (mesurées à l'étape 19)
+
+Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0, l'appareil des étapes 17 à 19. À lire avant toute
+campagne sur appareil : chacun de ces points a coûté du temps ou faussé un résultat.
+
+- **`connectedDebugAndroidTest` désinstalle les APK en fin de passe** — l'application *et toutes ses
+  données* (boîtier associé, sélection d'applications, journal). Toujours lancer les tests
+  instrumentés **avant** le protocole manuel, jamais entre deux essais. Constat de l'étape 18,
+  reconfirmé à l'étape 19.
+- **HyperOS bloque par intermittence l'installation multi-APK d'AGP**
+  (`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`), ce qui fait échouer
+  `connectedDebugAndroidTest` sans aucun rapport avec le code, et sur un module différent à chaque
+  fois. Remède : `adb install -r` manuel de l'APK concerné, puis relancer la tâche Gradle.
+- **`am force-stop` désactive le service d'accessibilité** (`enabled_accessibility_services` repasse
+  à `null`) et met le paquet à l'état *stopped*, où il ne reçoit plus aucun broadcast jusqu'à un
+  lancement manuel. **`am kill` ne suffit pas** à tuer le processus quand le service d'accessibilité
+  est lié. Pour forcer une réconciliation de démarrage sans casser l'accessibilité : redémarrer
+  l'appareil.
+- **Le diagnostic NFC est brièvement faux après un redémarrage** : la pile NFC du système finit son
+  initialisation après le boot. Le contrôle se corrige seul au retour au premier plan
+  (`ForegroundReadinessTrigger`). Ne pas conclure à un défaut sans réessayer.
+- **La permission OEM « Démarrage automatique en arrière-plan » a été laissée activée** à l'issue de
+  l'étape 19, alors qu'elle est refusée par défaut. **La remettre à « refusé »** avant toute mesure
+  qui en dépend, sans quoi le résultat ne vaut pas pour un utilisateur ordinaire.
+- **Les horaires se vérifient, ils ne se devinent pas.** Plusieurs essais de l'étape 19 ont été
+  lancés trop tôt faute d'avoir relu l'horloge. Comparer les epochs (`date +%s` sur les deux
+  machines) plutôt que des chaînes, et attendre sur une cible d'epoch calculée.
+
 ## Contraintes globales
 
 Valeurs copiées des specs ; chaque étape les respecte implicitement.
@@ -108,6 +136,8 @@ Signalés ici pour que l'exécutant ne les découvre pas en cours de route.
 7. **`AWAITING_NFC` sur Android.** Inatteignable en parcours normal (§7.1). L'écran et la notification restent implémentés de façon défensive, testés par injection d'événement.
 8. **Acceptation Google Play de l'AccessibilityService.** Risque produit bloquant (SPEC_ANDROID §12.3, §23). Traité à la porte 0, jamais présumé acquis.
 9. **`kotlinx-datetime` 0.8.** Les types `Instant` et `Clock` sont dans `kotlin.time` ; les tests reçoivent `nowEpochMillis` explicitement (SPEC_CORE_KMP §8.2).
+10. **Tout dépôt en stockage chiffré par les identifiants porte une garde de déverrouillage (étape 19).** La règle de SPEC_ANDROID §7.3 ne vaut pas que pour Room. Mesuré sur appareil : une instance de `DataStore` créée avant le premier déverrouillage continue de servir un état vide **après** celui-ci, pour toute la durée de vie du processus — la sélection d'applications de l'utilisateur devenait invisible. La garde doit empêcher l'instance de **naître** (`Provider<Context>` jamais résolu), pas seulement ignorer son résultat. Tout nouveau dépôt de ce type ajouté aux étapes suivantes doit suivre ce patron : `RoomSessionStore`, `DataStoreAppSelectionStore`, `DataStoreSetupPreferences`.
+11. **Un contrôle de diagnostic ne peut pas être évalué à l'aveugle avant déverrouillage (étape 19).** Le contrôle `ACCESSIBILITY_SERVICE` tombait en échec parce qu'Android remet `accessibility_enabled` à 0 tant qu'aucun service n'est lié — il refuse de lier un service non `directBootAware`. Le résultat : un incident `CRITICAL` mensonger, et surtout la garde de permission du réconciliateur interrompait la passe **avant la reprogrammation de l'alarme**. Avant d'ajouter ou de modifier un contrôle de §13, se demander ce qu'il peut honnêtement dire quand l'appareil est verrouillé : `NOT_APPLICABLE` est une réponse valide.
 
 ## Interfaces transverses
 
@@ -1080,13 +1110,16 @@ confort dégradé, pas d'un blocage.
 - Manifeste `:core:system` : `SystemEventsReceiver` déclaré.
 - Tests : `SystemEventsReceiverTest` (chaque action → bonne `ReconcileReason`), `DirectBootMergerTest` (reçus dédoublonnés ; effet `SUCCEEDED` en Direct Boot et `PENDING` en Room → `SUCCEEDED` ; révision inférieure refusée ; Room réécrit dans Direct Boot), `SessionReconcilerBootTest` (`LOCKED_BOOT` + `ARMED` futur → reprogrammation ; + retard 10 min → alarme immédiate ; + retard 20 min → `TRIGGER_ELAPSED` + `MISSED_TRIGGER_WINDOW`, `TRIGGERED_AWAITING_NFC`, `DEGRADED`, notification publiée depuis le contexte protégé, aucun service de sonnerie ; `TIMEZONE_CHANGED` → même instant, incident `WARNING`), instrumenté `DirectBootInstrumentedTest` (écriture Direct Boot puis lecture par un contexte protégé).
 
-- [ ] **Écrire `SystemEventsReceiverTest`**, implémenter le receiver.
-- [ ] **Écrire `SessionReconcilerBootTest`**, compléter le réconciliateur et les liaisons `deviceProtected`.
-- [ ] **Écrire `DirectBootMergerTest`**, implémenter et brancher sur `USER_UNLOCKED`.
-- [ ] **Trancher l'écart §10.5 hérité de l'étape 18** : mesurer la fenêtre sans rappel après
-      livraison du receiver, décider, reporter la décision dans §10.5 et `ETAPE-19.md` (voir
-      l'encadré en tête d'étape).
-- [ ] **Vérifier :**
+- [x] **Écrire `SystemEventsReceiverTest`**, implémenter le receiver. *(Livré sous le nom `SystemEventReasonsTest` : la table action → raison est la seule partie décidable en JVM, le receveur n'étant pas instanciable sans Robolectric. Cinq actions au manifeste ; `USER_UNLOCKED` enregistré à chaud — voir `ETAPE-19.md`, arbitrage 1.)*
+- [x] **Écrire `SessionReconcilerBootTest`**, compléter le réconciliateur et les liaisons `deviceProtected`. *(Un seul qualificatif `@DeviceProtected` utilisé en permanence au lieu d'un double graphe — arbitrage 2.)*
+- [x] **Écrire `DirectBootMergerTest`**, implémenter et brancher sur `USER_UNLOCKED`. *(Plus `RoomDirectBootMergeTest`, instrumenté, pour la transaction elle-même. Fusion placée dans `SessionReconciler`, ce que §9.3 dit littéralement.)*
+- [x] **Trancher l'écart §10.5 hérité de l'étape 18** : mesuré le 2026-09-14 — **523 s sans retour**,
+      et rien ne republiait en usage ordinaire (ni le premier plan, ni un déverrouillage d'écran).
+      Le pari de l'étape 18 est démenti : les occasions ajoutées par le receveur sont toutes liées
+      au démarrage ou à l'horloge. **Option 2 retenue et appliquée ici** (réconciliation au premier
+      plan dans un état de scan), sur décision de l'utilisateur, plutôt que reportée à l'étape 20.
+      §10.5 corrigée et refermée ; détail dans `ETAPE-19.md`.
+- [x] **Vérifier :** *(2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0 — 786 tests JVM et 136 instrumentés verts, ktlint, detekt et lint verts, protocole manuel déroulé en entier. **Deux défauts trouvés sur appareil et corrigés** : le contrôle d'accessibilité faisait perdre le réveil au redémarrage, et un `DataStore` né en Direct Boot restait cassé pour la vie du processus. Voir `ETAPE-19.md`.)*
 
 ```bash
 ./gradlew :core:system:testDebugUnitTest :core:database:testDebugUnitTest
@@ -1096,7 +1129,7 @@ confort dégradé, pas d'un blocage.
 
 **Tests manuels :** session à +10 min, redémarrage sans déverrouillage → alarme sonne à l'heure ; redémarrage à +5 min après l'heure → sonnerie immédiate ; redémarrage à +20 min → notification d'attente de scan visible avant déverrouillage, sans son ; changement manuel d'heure et de fuseau → `dumpsys alarm` montre le même instant ; mise à jour de l'APK (`adb install -r`) → alarme conservée.
 
-**Terminé quand :** les six broadcasts sont traités, Direct Boot et Room convergent après déverrouillage (test), la fenêtre de 15 minutes est prouvée aux bornes.
+**Terminé quand :** les six broadcasts sont traités, Direct Boot et Room convergent après déverrouillage (test), la fenêtre de 15 minutes est prouvée aux bornes. *(**Atteint le 2026-09-14**, validations matérielles comprises. Cinq broadcasts au manifeste et `USER_UNLOCKED` enregistré à chaud — contrainte de plateforme, §9.3 corrigée. Les trois bornes de la fenêtre de grâce sont mesurées sur appareil, notification d'attente de scan visible avant tout déverrouillage comprise. L'écart §10.5 hérité de l'étape 18 est tranché sur mesure et refermé. Restent ouverts, tous signalés dans `ETAPE-19.md` : le journal technique d'avant déverrouillage ne rejoint pas Room (limite de l'étape 10), `MY_PACKAGE_REPLACED` est bloqué par l'autostart HyperOS, et la matrice §20 reste à couvrir sur d'autres fabricants.)*
 
 ### Étape 20 : mort du processus, pertes de permission, snapshot corrompu
 
@@ -1114,6 +1147,33 @@ exactes. Voir `ETAPE-17.md`, section « Réserves subsistantes ».
 
 **Specs à lire :** SPEC_ANDROID §4.2, §7.1 (incidents), §9.2 (dernier paragraphe), §18, §20 (scénarios processus et permissions).
 
+**Trois héritages de l'étape 19 à traiter ici.**
+
+1. **Le plan de cette étape est partiellement périmé sur `AppStartReconciler`.** Il demande de créer
+   `Application.onCreate → reconcile(PROCESS_START)` : c'est livré depuis l'étape 11
+   (`SessionStartupReconciler`). Il demande aussi un déclencheur `ON_START` via
+   `ProcessLifecycleOwner` : l'étape 19 a livré l'équivalent ciblé — `SessionReadinessWatcher`
+   réconcilie au premier plan quand la session attend un scan (`FOREGROUND_AWAITING_SCAN`), posé sur
+   `MainActivity` **et** `AlarmActivity`. **Commencer par vérifier ce qui manque réellement** plutôt
+   que de créer une classe redondante, et décider si un déclencheur de premier plan *général* (tous
+   états) apporte quelque chose au-delà du cas de scan déjà couvert. Si oui, `ProcessLifecycleOwner`
+   exige une nouvelle dépendance (`androidx.lifecycle:lifecycle-process`), donc un accord explicite.
+2. **Le chemin `Corrupted` a déjà un premier maillon.** `DirectBootMerger` (étape 19) renvoie
+   `DirectBootMergeOutcome.Corrupted` sans rien fusionner ni effacer, et laisse `SessionReconciler`
+   produire `SnapshotCorrupted`. Le travail restant est la journalisation `SNAPSHOT_CORRUPTED`
+   `CRITICAL` et le cas « Room *aussi* illisible ». Couvert côté orchestration par
+   `aCorruptedProjectionIsReportedWithoutMergingOrErasingAnything`.
+3. **Arbitrage ouvert — le journal technique écrit avant déverrouillage ne rejoint jamais Room.**
+   `UnlockAwareTechnicalEventLog` (étape 10) route vers `InMemoryTechnicalEventLog` tant que
+   l'appareil est verrouillé, et `recent()` fusionne les deux sources : l'utilisateur **voit** donc
+   le `MISSED_TRIGGER_WINDOW` produit en Direct Boot, tant que le processus vit. Il est perdu si le
+   processus meurt entre-temps — précisément le sujet de cette étape. La fusion de §9.3 ne couvre pas
+   ce cas, son contrat ne portant que sur « le registre et l'outbox ». **Deux issues, à trancher avec
+   l'utilisateur :** verser le journal mémoire dans Room au déverrouillage (au même endroit que
+   `DirectBootMerger`, petit), ou l'assumer comme limite documentée dans §17 et `LIMITES.md`. Ne pas
+   laisser ce point implicite : il est signalé dans `ETAPE-19.md` et n'a aujourd'hui aucun
+   propriétaire.
+
 **Fichiers :**
 - Créer dans `androidApp/app/src/main/kotlin/com/niumi/app/` : `AppStartReconciler.kt` (`Application.onCreate` → `reconcile(PROCESS_START)` hors du thread principal, puis à chaque `ON_START` de l'application via `ProcessLifecycleOwner`).
 - Modifier `SessionRuntimeStatusProbe` : `alarmScheduled`, `accessibilityReady`, `notificationReady`, `fullScreenReady`, `nfcReady`, `audioReady` alimentent le réconciliateur ; chaque perte après `ARMED` produit une seule fois par session l'incident correspondant (`ALARM_PERMISSION_REVOKED`, `BLOCKING_PERMISSION_REVOKED`, `ANDROID_FULL_SCREEN_REVOKED`, `NFC_DISABLED`), sans changer l'état.
@@ -1123,6 +1183,9 @@ exactes. Voir `ETAPE-17.md`, section « Réserves subsistantes ».
 - [ ] **Écrire `AppStartReconcilerTest`**, implémenter.
 - [ ] **Écrire `SessionRuntimeStatusProbeTest`**, compléter la sonde et le réconciliateur.
 - [ ] **Écrire `SessionReconcilerCorruptionTest`**, implémenter le traitement explicite de la corruption.
+- [ ] **Trancher le sort du journal technique écrit avant déverrouillage** (héritage 3 ci-dessus) :
+      correctif ou limite assumée. Dans les deux cas, documenter la décision dans §17 et le rapport ;
+      si c'est une limite, la reprendre dans `LIMITES.md` à l'étape 21.
 - [ ] **Écrire `ProcessDeathInstrumentedTest`**.
 - [ ] **Vérifier :**
 
@@ -1132,7 +1195,7 @@ exactes. Voir `ETAPE-17.md`, section « Réserves subsistantes ».
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** `am kill` après armement → alarme conservée, état réconcilié à la relance ; désactiver l'accessibilité pendant `ARMED` → incident `CRITICAL`, session conservée ; corrompre `niumi_session.json` à la main (`adb shell run-as` impossible en release : tester en debug) → incident, blocage conservé.
+**Tests manuels :** (lire « Particularités de l'appareil de test » avant : `am kill` ne tue pas le processus quand le service d'accessibilité est lié, et `am force-stop` coupe l'accessibilité **et** met le paquet à l'état *stopped*, où il ne reçoit plus aucun broadcast) `am kill` après armement → alarme conservée, état réconcilié à la relance ; désactiver l'accessibilité pendant `ARMED` → incident `CRITICAL`, session conservée ; corrompre `niumi_session.json` à la main (`adb shell run-as` impossible en release : tester en debug) → incident, blocage conservé.
 
 **Terminé quand :** aucune session armée ne passe à `FAILED` dans ces scénarios (tests), la corruption est explicite et non destructive, chaque perte de permission produit un incident unique.
 
@@ -1147,7 +1210,7 @@ maintenant que le POC est supprimé et que le parcours utilisateur réel existe.
 **Fichiers :**
 - Supprimer `androidApp/app/src/debug/kotlin/com/niumi/app/poc/` entièrement, `tools/` conservé.
 - Créer `androidApp/app/proguard-rules.pro` (règles Room, Hilt, kotlinx-serialization, `NiumiCore` DTO conservés), `.github/workflows/mobile.yml` (runner macOS : `jvmTest`, `linkDebugFrameworkIosSimulatorArm64`, `testDebugUnitTest`, `assembleRelease`, `ktlintCheck detekt lintRelease`).
-- Créer `docs/android/QA_MATRIX.md` (tableau §20 complet, colonnes fabricant/modèle/Android/firmware/permissions/résultat/retard/logs), `docs/android/RELEASE_REPORT.md` (critères §21 cochés un par un avec preuve), `docs/android/LIMITES.md` (texte de l'aide intégrée : arrêt forcé, FGS, NFC verrouillé, absence de secours logiciel).
+- Créer `docs/android/QA_MATRIX.md` (tableau §20 complet, colonnes fabricant/modèle/Android/firmware/permissions/résultat/retard/logs), `docs/android/RELEASE_REPORT.md` (critères §21 cochés un par un avec preuve), `docs/android/LIMITES.md` (texte de l'aide intégrée : arrêt forcé, FGS, NFC verrouillé, absence de secours logiciel, **plus les constats de l'étape 19** : la restriction OEM de démarrage automatique et sa portée réelle (§4.2), la notification d'attente de scan qui reste écartable depuis Android 14 (§10.5), et le diagnostic NFC brièvement faux après un redémarrage).
 - Ajouter dans `:app` un écran « Aide et limites » accessible depuis l'accueil, reprenant `LIMITES.md`.
 - Configurer la signature release (keystore d'upload créé par l'utilisateur, hors dépôt) pour produire un AAB.
 - Tests : `ReleaseHygieneTest` (`:app` unitaire : le manifeste fusionné release ne contient ni `INTERNET`, ni `SCHEDULE_EXACT_ALARM`, ni `QUERY_ALL_PACKAGES` ; aucune classe `*Poc*`, `*Fake*`, `*Debug*Store` dans le classpath release ; grep du code source `main` sans `TODO`, `FIXME`, `STOP_RINGING_ACTION`).
@@ -1168,8 +1231,16 @@ maintenant que le POC est supprimé et que le parcours utilisateur réel existe.
 ./gradlew :app:assembleRelease
 ```
 
-- [ ] **Remplir `QA_MATRIX.md`** sur la matrice P0 (§20) : au minimum Pixel, Samsung, Xiaomi, sur Android 14, 15, 16 et 17 si disponibles.
-- [ ] **Remplir `RELEASE_REPORT.md`** : chaque critère §21 avec la preuve (test, log ou vidéo).
+- [ ] **Remplir `QA_MATRIX.md`** sur la matrice P0 (§20) : au minimum Pixel, Samsung, Xiaomi, sur Android 14, 15, 16 et 17 si disponibles. **Y trancher la question ouverte par l'étape 19** : la permission OEM de démarrage automatique, **laissée dans son état par défaut**, empêche-t-elle le processus de démarrer au boot ? HyperOS l'exempte (mesuré), les autres surcouches sont inconnues ; une qui la bloquerait ferait perdre le réveil après redémarrage et imposerait un contrôle de diagnostic ciblé (§4.2, §20).
+- [ ] **Remplir `RELEASE_REPORT.md`** : chaque critère §21 avec la preuve (test, log ou vidéo). Deux
+      critères ont déjà leur preuve mesurée à l'étape 19, à reprendre plutôt qu'à refaire : « un
+      redémarrage restaure l'alarme avant le premier déverrouillage » et « `AWAITING_NFC` et
+      `TRIGGERED_AWAITING_NFC` affichent toujours une notification demandant le scan, sans son ni
+      vibration ni full-screen intent, y compris avant le premier déverrouillage ».
+- [ ] **Reprendre les écarts encore ouverts dans `RELEASE_REPORT.md`** plutôt que de les coucher
+      comme acquis : la matrice §20 hors Xiaomi, le sort du journal technique d'avant déverrouillage
+      s'il a été assumé comme limite à l'étape 20, et la dépendance de `MY_PACKAGE_REPLACED` à la
+      permission OEM de démarrage automatique.
 - [ ] **Compléter les préconditions de soumission** listées en `LOT-0.md` (identité éditeur, contact, URL de `PRIVACY_POLICY.md` publiée, compte Play vérifié).
 - [ ] **Tourner la vidéo de revue** selon `REVIEW_VIDEO_SCRIPT.md`, sur l'application complète.
 - [ ] **Soumettre sur piste interne ou fermée** dès que le compte Play le permet (action humaine) ; consigner la date et la réponse de Google dans `LOT-0.md`.

@@ -2,6 +2,11 @@ package com.niumi.system.session.fakes
 
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.SessionEffectKindDto
+import com.niumi.system.boot.DirectBootMerger
+import com.niumi.system.boot.fakes.FakeUnlockState
+import com.niumi.system.boot.fakes.InMemoryDirectBootStore
+import com.niumi.system.boot.fakes.InMemorySessionStore
+import com.niumi.system.boot.fakes.RecordingDirectBootRoomMerge
 import com.niumi.system.readiness.AndroidDeviceReadinessChecker
 import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.readiness.fakes.FakeSessionWarningNotifier
@@ -76,6 +81,24 @@ class TestCoordinatorHarness {
             incidentsReader = incidentsReader,
         )
 
+    /**
+     * Le lecteur d'incidents du réconciliateur est branché sur la passerelle, pas alimenté à la
+     * main : la déduplication des incidents de changement d'heure doit se juger sur ce qui a
+     * réellement été écrit.
+     */
+    val reconcilerIncidentsReader = GatewayIncidentsReader(gateway)
+
+    /**
+     * Fusion Direct Boot → Room inerte par défaut : [unlockState] est verrouillé, donc
+     * `DirectBootMerger.merge()` sort avant de toucher quoi que ce soit. Les scénarios qui la
+     * veulent active passent par `DirectBootMergerTest`, qui monte ses propres doubles.
+     */
+    val unlockState = FakeUnlockState(isUserUnlocked = false)
+    val directBootStore = InMemoryDirectBootStore()
+    val roomSessionStore = InMemorySessionStore()
+    val roomMerge = RecordingDirectBootRoomMerge()
+    val directBootMerger = DirectBootMerger(unlockState, directBootStore, roomSessionStore, roomMerge)
+
     private val sources =
         ReconcilerSources(
             alarmScheduler,
@@ -84,6 +107,8 @@ class TestCoordinatorHarness {
             publisher,
             ringingController,
             scanRequestNotifier,
+            directBootMerger,
+            reconcilerIncidentsReader,
         )
 
     private val executors: Map<SessionEffectKindDto, EffectExecutor> =
@@ -104,8 +129,7 @@ class TestCoordinatorHarness {
 
     val effectDispatcher = EffectDispatcher(executors, gateway)
 
-    val reconciler =
-        SessionReconciler(gateway, effectDispatcher, sources, facade, eventFactory, technicalEventLog)
+    val reconciler = newReconciler(gateway, effectDispatcher)
 
     val coordinator: SessionCoordinator =
         DefaultSessionCoordinator(
@@ -128,16 +152,21 @@ class TestCoordinatorHarness {
     ): SessionCoordinator {
         val overridden = executors + (kind to executor)
         val dispatcher = EffectDispatcher(overridden, gateway)
-        val recon =
-            SessionReconciler(gateway, dispatcher, sources, facade, eventFactory, technicalEventLog)
-        return DefaultSessionCoordinator(recordingReducer, gateway, dispatcher, recon, eventFactory, technicalEventLog)
+        val recon = newReconciler(gateway, dispatcher)
+        return DefaultSessionCoordinator(
+            recordingReducer,
+            gateway,
+            dispatcher,
+            recon,
+            eventFactory,
+            technicalEventLog,
+        )
     }
 
     /** Variante avec une [SessionPersistenceGateway] de substitution (`SessionCoordinatorMutexTest`). */
     fun coordinatorWith(customGateway: SessionPersistenceGateway): SessionCoordinator {
         val customDispatcher = EffectDispatcher(executors, customGateway)
-        val customReconciler =
-            SessionReconciler(customGateway, customDispatcher, sources, facade, eventFactory, technicalEventLog)
+        val customReconciler = newReconciler(customGateway, customDispatcher)
         return DefaultSessionCoordinator(
             recordingReducer,
             customGateway,
@@ -147,4 +176,9 @@ class TestCoordinatorHarness {
             technicalEventLog,
         )
     }
+
+    private fun newReconciler(
+        gateway: SessionPersistenceGateway,
+        dispatcher: EffectDispatcher,
+    ): SessionReconciler = SessionReconciler(gateway, dispatcher, sources, facade, eventFactory, technicalEventLog)
 }

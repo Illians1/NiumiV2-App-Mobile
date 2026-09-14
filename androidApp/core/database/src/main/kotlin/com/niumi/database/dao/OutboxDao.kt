@@ -37,6 +37,13 @@ interface OutboxDao {
         kind: SessionEffectKindDto,
     ): List<SessionEffectOutboxEntity>
 
+    // Étape 19 : la fusion Direct Boot → Room doit comparer les statuts de *tous* les effets d'une
+    // session, quel que soit leur `kind` et sans exclure les statuts terminaux — ce que ni
+    // `replayable` ni `forSessionAndKind` ne permettent. Même ordre que `replayable`, pour que la
+    // projection réécrite ensuite reste stable.
+    @Query("SELECT * FROM session_effect_outbox WHERE sessionId = :sessionId ORDER BY revision ASC, ordinal ASC")
+    suspend fun forSession(sessionId: String): List<SessionEffectOutboxEntity>
+
     @Query(
         "UPDATE session_effect_outbox SET status = :status, lastError = :error, " +
             "updatedAtEpochMillis = :updatedAtEpochMillis WHERE effectId = :effectId",

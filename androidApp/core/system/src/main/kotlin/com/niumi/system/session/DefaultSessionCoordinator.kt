@@ -23,7 +23,9 @@ private const val MISSING_EXTRAS_CODE = "MISSING_ANDROID_EXTRAS"
 /**
  * Implémentation unique de [SessionCoordinator] (SPEC_CORE_KMP §6, §6.1, §10, §12 ; SPEC_ANDROID
  * §7.1, §9.2, §11.3). [dispatch] et [reconcile] partagent un seul [Mutex] — non réentrant : tout le
- * corps s'exécute dans [dispatchLocked]/`reconcileLocked`, jamais en rappelant [dispatch].
+ * corps s'exécute dans [dispatchLocked]/`reconcileLocked`, jamais en rappelant [dispatch]. La fusion
+ * Direct Boot → Room de §9.3 se fait donc elle aussi sous ce verrou, au premier geste de
+ * [SessionReconciler.reconcile].
  */
 class DefaultSessionCoordinator(
     private val reducer: SessionReducer,

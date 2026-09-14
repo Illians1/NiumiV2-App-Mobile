@@ -13,6 +13,14 @@ interface ReceiptDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(entity: SessionEventReceiptEntity)
 
+    // IGNORE, réservé à la fusion Direct Boot → Room (SPEC_ANDROID §9.3, étape 19). Un reçu déjà
+    // présent y est la situation normale et non un conflit : la projection Direct Boot est réécrite
+    // depuis Room après chaque décision prise déverrouillé, donc elle reporte des reçus que Room
+    // possède déjà. Seuls les reçus produits pendant la fenêtre Direct Boot sont réellement
+    // nouveaux. `insert` garde son ABORT, qui reste le signal `EVENT_ID_CONFLICT` du coordinateur.
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllIgnoringDuplicates(entities: List<SessionEventReceiptEntity>)
+
     @Query("SELECT * FROM session_event_receipt WHERE eventId = :eventId")
     suspend fun findByEventId(eventId: String): SessionEventReceiptEntity?
 

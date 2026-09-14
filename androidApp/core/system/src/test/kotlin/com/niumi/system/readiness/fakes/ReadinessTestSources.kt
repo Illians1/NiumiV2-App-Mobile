@@ -6,6 +6,7 @@ import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.apps.AppSelectionSource
 import com.niumi.system.audio.AlarmVolumeSource
+import com.niumi.system.boot.fakes.FakeUnlockState
 import com.niumi.system.common.OperationResult
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
@@ -136,6 +137,12 @@ class ReadinessTestSources(
     val batteryOptimizationStatus = FakeBatteryOptimizationStatus()
     val setupPreferences = FakeSetupPreferences()
 
+    /**
+     * Déverrouillé par défaut : c'est l'état de tous les scénarios sauf ceux qui visent
+     * explicitement la fenêtre Direct Boot (étape 19).
+     */
+    val unlockState = FakeUnlockState(isUserUnlocked = true)
+
     fun build(): ReadinessSources =
         ReadinessSources(
             nfcReader = nfcReader,
@@ -149,5 +156,6 @@ class ReadinessTestSources(
             accessibilityServiceStatus = accessibilityServiceStatus,
             batteryOptimizationStatus = batteryOptimizationStatus,
             setupPreferences = setupPreferences,
+            unlockState = unlockState,
         )
 }

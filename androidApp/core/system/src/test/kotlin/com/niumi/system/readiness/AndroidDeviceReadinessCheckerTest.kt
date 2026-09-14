@@ -251,6 +251,39 @@ class AndroidDeviceReadinessCheckerTest {
             assertThat(check.action).isEqualTo(ReadinessAction.OpenAccessibilitySettings)
         }
 
+    /**
+     * Défaut mesuré sur appareil le 2026-09-14 (étape 19, essai 1). Avant le premier déverrouillage,
+     * Android refuse de lier un service d'accessibilité non `directBootAware` et remet
+     * `accessibility_enabled` à 0, alors que le réglage de l'utilisateur n'a pas bougé. Le contrôle
+     * tombait en `FAILED` : un incident `CRITICAL` mensonger était consigné, et la garde de
+     * `SessionReconciler.reconcileArmed` interrompait la passe **avant la reprogrammation de
+     * l'alarme** — le réveil était perdu par le redémarrage même que §9.3 doit rattraper.
+     */
+    @Test
+    fun theAccessibilityCheckIsNotApplicableBeforeTheFirstUnlock() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.unlockState.isUserUnlocked = false
+            sources.accessibilityServiceStatus.enabled = false
+
+            val check = report(sources).check(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            assertThat(check.outcome).isEqualTo(ReadinessOutcome.NOT_APPLICABLE)
+        }
+
+    /** Le réglage réel reprend la main dès que l'utilisateur a déverrouillé. */
+    @Test
+    fun theAccessibilityCheckIsEvaluatedAgainAfterUnlock() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.unlockState.isUserUnlocked = true
+            sources.accessibilityServiceStatus.enabled = false
+
+            val check = report(sources).check(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
+        }
+
     @Test
     fun theTriggerInstantIsCheckedOnlyOnceAWakeTimeHasBeenChosen() =
         runTest {

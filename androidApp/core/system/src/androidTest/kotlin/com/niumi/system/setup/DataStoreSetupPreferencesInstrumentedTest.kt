@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.niumi.database.directboot.UnlockState
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.inject.Provider
 
 /**
  * Complément instrumenté de `DataStoreSetupPreferences` : DataStore écrit et relit réellement.
@@ -21,7 +23,8 @@ class DataStoreSetupPreferencesInstrumentedTest {
 
     @Before
     fun setUp() {
-        preferences = DataStoreSetupPreferences(ApplicationProvider.getApplicationContext<Context>())
+        preferences =
+            DataStoreSetupPreferences(Provider { ApplicationProvider.getApplicationContext<Context>() }, AlwaysUnlocked)
     }
 
     @Test
@@ -47,4 +50,9 @@ class DataStoreSetupPreferencesInstrumentedTest {
 
             assertThat(preferences.lastWakeTimeIso()).isEqualTo("06:30")
         }
+}
+
+/** Ces tests portent sur le `DataStore`, pas sur la garde de déverrouillage (étape 19). */
+private object AlwaysUnlocked : UnlockState {
+    override val isUserUnlocked: Boolean = true
 }

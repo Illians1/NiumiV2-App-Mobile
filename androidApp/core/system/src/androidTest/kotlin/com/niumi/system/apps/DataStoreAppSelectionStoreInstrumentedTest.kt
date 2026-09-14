@@ -5,10 +5,12 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.niumi.database.BlockedPackage
+import com.niumi.database.directboot.UnlockState
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.inject.Provider
 
 /**
  * SPEC_ANDROID §12.1 : la sélection courante survit au processus. Complément instrumenté de
@@ -22,7 +24,11 @@ class DataStoreAppSelectionStoreInstrumentedTest {
     @Before
     fun setUp() =
         runTest {
-            store = DataStoreAppSelectionStore(ApplicationProvider.getApplicationContext<Context>())
+            store =
+                DataStoreAppSelectionStore(
+                    Provider { ApplicationProvider.getApplicationContext<Context>() },
+                    AlwaysUnlocked,
+                )
             // Le DataStore est partagé par le processus de test : repartir d'une sélection vide.
             store.replace(emptyList())
         }
@@ -58,4 +64,9 @@ class DataStoreAppSelectionStoreInstrumentedTest {
 
             assertThat(store.selection()).containsExactly(BlockedPackage("com.example.second", "Seconde"))
         }
+}
+
+/** Ces tests portent sur le `DataStore`, pas sur la garde de déverrouillage (étape 19). */
+private object AlwaysUnlocked : UnlockState {
+    override val isUserUnlocked: Boolean = true
 }

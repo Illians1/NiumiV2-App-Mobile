@@ -40,6 +40,12 @@ class SessionReconciler(
         reason: ReconcileReason,
         dispatch: suspend (SessionEventDto) -> DispatchResult,
     ): ReconcileResult {
+        // SPEC_ANDROID §9.3, dernier alinéa : « À `USER_UNLOCKED`, le réconciliateur fusionne de
+        // façon idempotente le registre et l'outbox Direct Boot dans Room. » Avant `gateway.load()`,
+        // sans quoi la passe déciderait sur un Room amputé de ce qui a été fait avant le
+        // déverrouillage. Sous le mutex du coordinateur, qui le tient pendant tout cet appel.
+        if (reason in MERGING_REASONS) sources.directBootMerger.merge()
+
         val loaded = gateway.load()
         if (loaded is LoadResult.Unreadable) {
             return ReconcileResult(sessionId = null, actions = listOf(ReconcileAction.SnapshotCorrupted))
@@ -57,7 +63,8 @@ class SessionReconciler(
         // n'émet que sur changement.
         sources.snapshotPublisher.publish(present.snapshot)
 
-        val snapshot = replayOutbox(present, dispatch, actions)
+        val replayed = replayOutbox(present, dispatch, actions)
+        val snapshot = reportClockChange(replayed, reason, dispatch, actions)
 
         when (snapshot.state) {
             SessionStateDto.PREPARING -> {
@@ -122,6 +129,50 @@ class SessionReconciler(
             if (result is DispatchResult.Applied && result.snapshot != null) current = result.snapshot
         }
         return current
+    }
+
+    /**
+     * SPEC_ANDROID §9.3 : un changement manuel d'heure ou de fuseau consigne un incident `WARNING`.
+     * `WARNING` ne dégrade pas la santé (SPEC_CORE_KMP §7.3) — c'est une trace, pas une alerte : le
+     * réveil, lui, garde exactement le même instant, réenregistré par [reconcileTriggerDelay].
+     *
+     * **Un incident par code et par session.** `android.intent.action.TIME_SET` n'est pas émis
+     * seulement quand l'utilisateur change l'heure : chaque correction d'horloge par le réseau le
+     * produit aussi, plusieurs fois par nuit sur certains appareils. Sans cette garde, une seule
+     * session accumulerait des dizaines d'incidents identiques sur l'écran 7 — exactement le défaut
+     * mesuré et corrigé à l'étape 16. Même convention et même sonde que
+     * [com.niumi.system.readiness.SessionReadinessMonitor], à ceci près que la garde est ici lue en
+     * base et non gardée en mémoire : ces deux raisons n'arrivent que par broadcast, donc parfois
+     * dans un processus qui vient de naître.
+     *
+     * Avant déverrouillage, [ReconcilerSources.incidentsReader] renvoie une liste vide sans pouvoir dire si des
+     * incidents existent (§7.3) : l'incident est alors enregistré. On ne perd jamais une trace pour
+     * cause de stockage indisponible.
+     *
+     * Renvoie le snapshot à jour : un incident accepté incrémente la révision, et la suite de la
+     * passe doit travailler sur la dernière connue — même enchaînement que [replayOutbox].
+     */
+    private suspend fun reportClockChange(
+        snapshot: SessionSnapshotDto,
+        reason: ReconcileReason,
+        dispatch: suspend (SessionEventDto) -> DispatchResult,
+        actions: MutableList<ReconcileAction>,
+    ): SessionSnapshotDto {
+        // Les trois gardes en une seule expression court-circuitée : la lecture en base n'a lieu
+        // que si la raison décrit bien un déplacement d'horloge sur une session encore vivante.
+        val code = CLOCK_CHANGE_INCIDENT_CODES[reason]
+        if (code == null ||
+            snapshot.state in SESSION_FINAL_STATES ||
+            sources.incidentsReader.incidents(snapshot.sessionId).any { it.code == code }
+        ) {
+            return snapshot
+        }
+
+        val incident = eventFactory.buildIncident(code, IncidentSeverityDto.WARNING)
+        val result = dispatch(eventFactory.incidentReported(snapshot, incident))
+        actions += ReconcileAction.IncidentDispatched(code, IncidentSeverityDto.WARNING)
+        actions += ReconcileAction.DecisionApplied(result)
+        return (result as? DispatchResult.Applied)?.snapshot ?: snapshot
     }
 
     /**
@@ -273,7 +324,14 @@ class SessionReconciler(
         val now = eventFactory.nowEpochMillis()
         when (facade.evaluateTriggerDelay(TriggerDelayInputDto(triggerAt, now)).outcome) {
             TriggerDelayOutcomeDto.NOT_REACHED -> {
-                if (!sources.alarmScheduler.isScheduled(snapshot.sessionId)) {
+                // §9.3 : « Il lit le snapshot et rappelle le programmateur avec le même
+                // `triggerAtEpochMillis`. Il ne recalcule pas l'instant depuis l'heure locale. »
+                // Sur un changement d'heure ou de fuseau, le rappel est inconditionnel : le test
+                // `isScheduled` ne prouve que l'existence d'un `PendingIntent`, jamais que le
+                // système l'a conservé au bon instant après avoir bougé son horloge. Réenregistrer
+                // est idempotent (`FLAG_UPDATE_CURRENT`) et coûte un appel.
+                val clockMoved = reason in CLOCK_CHANGE_INCIDENT_CODES
+                if (clockMoved || !sources.alarmScheduler.isScheduled(snapshot.sessionId)) {
                     rescheduleAlarm(snapshot, triggerAt, actions)
                 }
             }
@@ -321,5 +379,33 @@ class SessionReconciler(
          */
         val PERMISSION_CHECKS =
             setOf(ReadinessCheckId.EXACT_ALARM, ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+        /**
+         * Les trois raisons qui ouvrent la passe par une fusion Direct Boot → Room. Les autres ne
+         * peuvent pas suivre une fenêtre Direct Boot : `BEFORE_SCAN` et `SERVICE_RECREATED`
+         * arrivent appareil allumé et déjà réconcilié, `LOCKED_BOOT` précède le déverrouillage, et
+         * `PACKAGE_REPLACED`, `TIME_CHANGED` et `TIMEZONE_CHANGED` n'ont aucun rapport avec un
+         * démarrage. Les y ajouter ferait lire le fichier de projection à chaque correction
+         * d'horloge pour n'y trouver jamais rien.
+         *
+         * `USER_UNLOCKED` est le signal de §9.3 ; Android ne le délivrant qu'à un receveur
+         * enregistré à chaud, il n'arrive que si le processus était vivant à cet instant. `BOOT` et
+         * `PROCESS_START` sont le filet pour le cas contraire. La fusion est idempotente et sort
+         * immédiatement quand il n'y a rien à absorber.
+         */
+        val MERGING_REASONS =
+            setOf(ReconcileReason.USER_UNLOCKED, ReconcileReason.BOOT, ReconcileReason.PROCESS_START)
+
+        /**
+         * Les deux raisons qui décrivent un déplacement de l'horloge système, et le code d'incident
+         * de chacune (SPEC_ANDROID §9.3). Codes communs et non préfixés `ANDROID_` : le fait est
+         * comparable entre plateformes (SPEC_CORE_KMP §7.3). Leur gravité par défaut dans
+         * `IncidentCodes.defaultSeverityOf` est bien `WARNING`.
+         */
+        val CLOCK_CHANGE_INCIDENT_CODES =
+            mapOf(
+                ReconcileReason.TIME_CHANGED to IncidentCodes.TIME_CHANGED,
+                ReconcileReason.TIMEZONE_CHANGED to IncidentCodes.TIMEZONE_CHANGED,
+            )
     }
 }

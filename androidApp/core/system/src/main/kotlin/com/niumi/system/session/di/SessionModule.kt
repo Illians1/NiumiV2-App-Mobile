@@ -5,11 +5,13 @@ import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.database.SessionStore
 import com.niumi.database.directboot.DirectBootStore
 import com.niumi.database.directboot.UnlockState
+import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.blocking.AccessibilityServiceStatus
 import com.niumi.system.blocking.BlockedPackagesProjection
+import com.niumi.system.boot.DirectBootMerger
 import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.IdGenerator
@@ -96,6 +98,8 @@ object SessionModule {
         snapshotPublisher: SessionSnapshotPublisher,
         ringingController: RingingController,
         scanRequestNotifier: ScanRequestNotifier,
+        directBootMerger: DirectBootMerger,
+        incidentsReader: SessionIncidentsReader,
     ): ReconcilerSources =
         ReconcilerSources(
             alarmScheduler,
@@ -104,6 +108,8 @@ object SessionModule {
             snapshotPublisher,
             ringingController,
             scanRequestNotifier,
+            directBootMerger,
+            incidentsReader,
         )
 
     @Provides

@@ -5,6 +5,7 @@ import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.alarm.AndroidAlarmScheduler
 import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
+import com.niumi.system.common.DeviceProtected
 import com.niumi.system.common.IdGenerator
 import com.niumi.system.common.IoDispatcher
 import com.niumi.system.common.SystemClock
@@ -56,17 +57,29 @@ object SystemModule {
     @Suppress("InjectDispatcher") // Seul endroit légitime : c'est le point d'injection lui-même.
     fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
 
+    /**
+     * Contexte protégé par appareil (SPEC_ANDROID §7.3, §9.3), utilisé en permanence — voir
+     * [DeviceProtected]. `createDeviceProtectedStorageContext()` est déjà idempotent côté Android :
+     * l'appeler sur un contexte déjà protégé renvoie le même contexte.
+     */
+    @Provides
+    @Singleton
+    @DeviceProtected
+    fun provideDeviceProtectedContext(
+        @ApplicationContext context: Context,
+    ): Context = context.createDeviceProtectedStorageContext()
+
     @Provides
     @Singleton
     fun providePendingIntentFactory(
-        @ApplicationContext context: Context,
+        @DeviceProtected context: Context,
         resolver: NiumiComponentResolver,
     ): AndroidPendingIntentFactory = AndroidPendingIntentFactory(context, resolver)
 
     @Provides
     @Singleton
     fun provideAlarmScheduler(
-        @ApplicationContext context: Context,
+        @DeviceProtected context: Context,
         resolver: NiumiComponentResolver,
         pendingIntentFactory: AndroidPendingIntentFactory,
     ): AlarmScheduler = AndroidAlarmScheduler(context, resolver, pendingIntentFactory)

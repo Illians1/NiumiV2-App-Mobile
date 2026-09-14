@@ -1,5 +1,6 @@
 package com.niumi.system.readiness
 
+import com.niumi.database.directboot.UnlockState
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.apps.AppSelectionSource
@@ -23,6 +24,10 @@ import com.niumi.system.setup.SetupPreferences
  * [pairedBoxStore] est obligatoire depuis l'étape 13 : `RoomPairedBoxStore` (`:core:database`)
  * est désormais lié en production, la variante optionnelle (`DebugPairedBoxStore`) ne servant
  * plus que le POC de debug.
+ *
+ * [unlockState] rejoint le groupe à l'étape 19 : avant le premier déverrouillage, le contrôle du
+ * service d'accessibilité ne peut rien dire de vrai et doit être neutralisé — voir
+ * [AndroidDeviceReadinessChecker.sessionChecks].
  */
 data class ReadinessSources(
     val nfcReader: NfcReader,
@@ -36,4 +41,5 @@ data class ReadinessSources(
     val accessibilityServiceStatus: AccessibilityServiceStatus,
     val batteryOptimizationStatus: BatteryOptimizationStatus,
     val setupPreferences: SetupPreferences,
+    val unlockState: UnlockState,
 )

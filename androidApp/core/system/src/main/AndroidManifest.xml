@@ -20,4 +20,33 @@
         </intent>
     </queries>
 
+    <application>
+        <!--
+            Reprogrammation et réconciliation sur événement système (SPEC_ANDROID §9.3).
+            directBootAware : le receveur doit tourner avant le premier déverrouillage, sur
+            LOCKED_BOOT_COMPLETED, et lire le snapshot Direct Boot comme unique source (§7.3).
+            exported=false : les six actions sont des broadcasts protégés du système, aucune
+            application tierce n'a à les simuler.
+
+            USER_UNLOCKED est absent de cette liste, et ce n'est pas un oubli : Android ne le
+            délivre qu'aux receveurs enregistrés à chaud, jamais à un receveur de manifeste.
+            SystemEventsRegistrar l'enregistre depuis NiumiApplication. Les cinq actions
+            ci-dessous sont, elles, bien délivrées à un receveur de manifeste : quatre figurent
+            dans la liste officielle des exceptions aux restrictions de broadcasts implicites, et
+            MY_PACKAGE_REPLACED est explicitement adressé au paquet lui-même.
+        -->
+        <receiver
+            android:name="com.niumi.system.boot.SystemEventsReceiver"
+            android:exported="false"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+
 </manifest>

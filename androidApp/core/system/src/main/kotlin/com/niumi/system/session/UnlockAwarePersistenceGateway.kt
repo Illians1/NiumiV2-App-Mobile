@@ -10,6 +10,7 @@ import com.niumi.database.directboot.DirectBootMapper
 import com.niumi.database.directboot.DirectBootSnapshot
 import com.niumi.database.directboot.DirectBootStore
 import com.niumi.database.directboot.UnlockState
+import com.niumi.database.directboot.mirrorActiveSessionToDirectBoot
 import com.niumi.database.directboot.toExtras
 import com.niumi.database.directboot.toPendingEffects
 import com.niumi.database.directboot.toReceipts
@@ -22,9 +23,10 @@ private const val INCIDENT_DEFERRED_CODE = "INCIDENT_DEFERRED_UNTIL_UNLOCK"
 /**
  * Room après déverrouillage, Direct Boot avant (SPEC_CORE_KMP §13, SPEC_ANDROID §7.3, §9.2). Après
  * chaque écriture Room, la même session est reprojetée dans Direct Boot ; l'inverse (Room ← Direct
- * Boot) est la fusion à `USER_UNLOCKED`, hors périmètre de cette étape (étape 19). Un `write()`
- * refusé côté Direct Boot (`StaleRevision`, `Failed`) est ignoré ici sans propager d'erreur : §9.2
- * dit explicitement que Room fait foi et que `SessionReconciler` réécrit la projection.
+ * Boot) est la fusion au déverrouillage, livrée à l'étape 19 par
+ * [com.niumi.system.boot.DirectBootMerger]. Un `write()` refusé côté Direct Boot (`StaleRevision`,
+ * `Failed`) est ignoré ici sans propager d'erreur : §9.2 dit explicitement que Room fait foi et que
+ * `SessionReconciler` réécrit la projection.
  */
 class UnlockAwarePersistenceGateway(
     private val sessionStore: SessionStore,
@@ -114,15 +116,7 @@ class UnlockAwarePersistenceGateway(
         directBootStore.read() as? DirectBootSnapshot.Active
 
     private suspend fun mirrorActiveSession() {
-        val stored = sessionStore.activeSession() ?: return
-        directBootStore.write(
-            DirectBootMapper.projectionOf(
-                snapshot = stored.snapshot,
-                extras = stored.extras,
-                receipts = sessionStore.receipts(stored.snapshot.sessionId),
-                effects = sessionStore.pendingEffects(stored.snapshot.sessionId),
-            ),
-        )
+        mirrorActiveSessionToDirectBoot(sessionStore, directBootStore)
     }
 
     private fun writeDirectBoot(decision: StoredDecision) {
