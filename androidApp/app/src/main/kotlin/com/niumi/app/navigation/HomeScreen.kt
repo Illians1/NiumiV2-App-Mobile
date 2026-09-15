@@ -36,6 +36,13 @@ const val VIEW_SESSION_BUTTON_LABEL = "Voir ma session"
 
 /** Écran 12 (étape 16) : le journal technique et les contrôles restent consultables hors session. */
 const val DIAGNOSTIC_BUTTON_LABEL = "Voir le diagnostic"
+
+/**
+ * Écran 13 (étape 21). Le libellé est engagé au-delà de l'application : `PRIVACY_POLICY.md`
+ * renvoie le lecteur de la fiche Play à « l'écran Aide et limites ». Le changer ici sans l'y
+ * changer ferait mentir un document Play.
+ */
+const val HELP_BUTTON_LABEL = "Aide et limites"
 private const val NO_SESSION_TITLE = "Aucune session"
 private const val ACTIVE_SESSION_TITLE = "Une session est en cours."
 
@@ -72,19 +79,18 @@ fun primaryLabelFor(state: HomeUiState): String =
     }
 
 /**
- * Les trois sorties de l'accueil, groupées : l'écran 12 (étape 16) en portait une sixième et
+ * Les sorties de l'accueil, groupées : l'écran 12 (étape 16) en portait une sixième et
  * `HomeScreen` dépassait `LongParameterList` de detekt. Les regrouper dit aussi ce qu'elles sont —
- * la navigation de l'accueil — là où six paramètres plats ne disaient plus rien.
+ * la navigation de l'accueil — là où des paramètres plats ne disaient plus rien.
  */
 data class HomeActions(
     val onPrepare: () -> Unit,
     val onOpenDiagnostic: () -> Unit = {},
-    val onEntryPointClick: (String) -> Unit = {},
+    val onOpenHelp: () -> Unit = {},
 )
 
 /**
- * Accueil (SPEC_ANDROID §15, écran 1). En `release`, `entryPoints` est toujours vide : le seul
- * `NavGraphContributor` vit dans `src/debug` et disparaît à l'étape 21.
+ * Accueil (SPEC_ANDROID §15, écran 1).
  *
  * Quand une session non finale existe, l'accueil ne propose pas de préparer un réveil : son bouton
  * mène à l'écran de session active (§10.4, seconde garantie d'accès au scan). La destination est
@@ -93,7 +99,6 @@ data class HomeActions(
 @Composable
 fun HomeScreen(
     state: HomeUiState,
-    entryPoints: List<NavEntryPoint>,
     actions: HomeActions,
     modifier: Modifier = Modifier,
 ) {
@@ -128,10 +133,10 @@ fun HomeScreen(
                     Text(DIAGNOSTIC_BUTTON_LABEL)
                 }
             }
-            entryPoints.forEach { entryPoint ->
-                TextButton(onClick = { actions.onEntryPointClick(entryPoint.route) }) {
-                    Text(entryPoint.label)
-                }
+            // Affichée même sur un état illisible : c'est justement le moment où l'utilisateur a
+            // besoin de lire que le blocage tient et que le scan reste la seule sortie.
+            TextButton(onClick = actions.onOpenHelp) {
+                Text(HELP_BUTTON_LABEL)
             }
         }
     }
@@ -144,10 +149,9 @@ fun HomeScreen(
  */
 @Composable
 fun HomeRoute(
-    entryPoints: List<NavEntryPoint>,
     onNavigate: (NiumiRoute) -> Unit,
     onOpenDiagnostic: () -> Unit,
-    onEntryPointClick: (String) -> Unit,
+    onOpenHelp: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -164,7 +168,6 @@ fun HomeRoute(
 
     HomeScreen(
         state = viewModel.state,
-        entryPoints = entryPoints,
         actions =
             HomeActions(
                 // §10.4 : tant que la session attend un scan, le bouton principal mène à
@@ -177,7 +180,7 @@ fun HomeRoute(
                     }
                 },
                 onOpenDiagnostic = onOpenDiagnostic,
-                onEntryPointClick = onEntryPointClick,
+                onOpenHelp = onOpenHelp,
             ),
     )
 }
@@ -186,6 +189,6 @@ fun HomeRoute(
 @Composable
 private fun HomeScreenPreview() {
     NiumiTheme {
-        HomeScreen(state = HomeUiState(), entryPoints = emptyList(), actions = HomeActions(onPrepare = {}))
+        HomeScreen(state = HomeUiState(), actions = HomeActions(onPrepare = {}))
     }
 }

@@ -1,0 +1,94 @@
+# Vérification continue du monorepo Niumi (SPEC_CORE_KMP §19, plan MVP étape 21).
+#
+# Runner macOS : §19 impose un runner macOS parce que la compilation du framework iOS de
+# `:shared:core` exige Xcode, et que la parité KMP est le point que cette chaîne doit protéger.
+#
+# « Tests et build iOS » de §19 n'a pas d'étape ici : le plan MVP ne développe pas l'application
+# iOS. Le `link` du framework reste la garantie d'interopérabilité livrée à l'étape 2 — il échoue
+# si une signature commune devient inexprimable en Objective-C.
+name: Mobile
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verification:
+    name: KMP, Android, analyse statique
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - name: Sources
+        uses: actions/checkout@v4
+
+      - name: JDK 17 et cache Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      # Kotlin/Native télécharge son compilateur et ses dépendances (LLVM, libffi) au premier
+      # link : plusieurs minutes que le cache évite. La clé suit le catalogue de versions, qui
+      # porte la version de Kotlin.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Tests JVM du moteur commun
+        run: ./gradlew :shared:core:jvmTest
+
+      - name: Framework iOS (simulateur arm64)
+        run: ./gradlew :shared:core:linkDebugFrameworkIosSimulatorArm64
+
+      - name: Tests unitaires Android
+        run: ./gradlew testDebugUnitTest
+
+      # Hygiène du build de publication : permissions du manifeste fusionné, absence de classe de
+      # debug sur le classpath release, API de réveil. Ne peut pas tourner sur la variante debug.
+      - name: Hygiène release
+        run: ./gradlew :app:testReleaseUnitTest
+
+      - name: Analyse statique
+        run: ./gradlew ktlintCheck detekt :app:lintRelease
+
+      # Sans `keystore.properties` — absent du dépôt — la variante release sort non signée : la CI
+      # prouve que R8 et la suppression de ressources passent, pas que la clé d'upload fonctionne.
+      - name: Build de publication
+        run: ./gradlew :app:assembleRelease
+
+      - name: Rapports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapports
+          if-no-files-found: ignore
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+            **/build/reports/detekt/
+            androidApp/app/build/reports/lint-results-release.*
+
+      - name: APK release non signé
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-unsigned
+          if-no-files-found: error
+          path: androidApp/app/build/outputs/apk/release/app-release-unsigned.apk
+
+      # Libère les verrous du daemon avant que `setup-java` n'enregistre le cache Gradle.
+      - name: Arrêt du daemon Gradle
+        if: always()
+        run: ./gradlew --stop

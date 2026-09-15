@@ -4,9 +4,14 @@
 #
 # §20 impose de consigner pour chaque essai le résultat ET le retard mesuré. Ce script produit
 # ces deux colonnes objectivement, plutôt que de s'en remettre au chronomètre de l'opérateur :
-# il programme l'alarme depuis la route POC de debug, lit l'instant cible dans `dumpsys alarm`,
-# détecte le démarrage de `AlarmRingingService` par sondage, puis relève l'état du service, du
-# lecteur audio, de la notification et de l'activité au premier plan.
+# il lit l'instant cible réel dans `dumpsys alarm`, détecte le démarrage de `AlarmRingingService`
+# par sondage, puis relève l'état du service, du lecteur audio, de la notification et de
+# l'activité au premier plan.
+#
+# L'armement se fait à la main dans l'application (étape 21 : la route POC de debug, que ce
+# script pilotait par `input tap`, a été supprimée avec le reste du Lot 0). Il n'existe aucun
+# autre moyen d'armer une session : §9.2 impose l'activation en deux phases par le parcours
+# utilisateur réel, et aucun raccourci de debug ne doit exister en dehors des tests (CLAUDE.md).
 #
 # Ce qu'il ne vérifie PAS : l'audibilité réelle du son. `dumpsys` prouve qu'un lecteur en
 # USAGE_ALARM est démarré et que le flux d'alarme n'est pas muté, pas qu'un son sort du
@@ -15,17 +20,17 @@
 #
 # Préconditions (vérifiées, le script s'arrête sinon) :
 #   1. un seul appareil branché, débogage USB activé ;
-#   2. Niumi debug installé (`./gradlew :app:installDebug`) ;
-#   3. la route POC ouverte à l'écran, ou l'application lançable (le script l'ouvre).
+#   2. Niumi installé (`./gradlew :app:installDebug`, ou APK release) ;
+#   3. une session armée dans l'application, dont l'alarme est visible dans `dumpsys alarm`.
 #
 # L'arrêt de la sonnerie n'est pas scriptable : le produit n'expose aucune action d'arrêt
 # (SPEC_ANDROID §3, §10.2). Elle se termine par un scan du boîtier associé, à faire à la main.
 #
-# Usage : tools/validate_alarm.sh [délai_secondes]   (défaut : 30)
+# Usage : tools/validate_alarm.sh [attente_max_secondes]   (défaut : 900)
 
 set -u
 
-DELAY="${1:-30}"
+MAX_WAIT="${1:-900}"
 PACKAGE="com.niumi.app"
 ADB="${ADB:-adb}"
 
@@ -49,63 +54,39 @@ if ! "$ADB" shell pm list packages | tr -d '\r' | grep -qx "package:$PACKAGE"; t
     exit 1
 fi
 
-ui_dump() {
-    "$ADB" shell uiautomator dump /sdcard/niumi_ui.xml >/dev/null 2>&1
-    "$ADB" shell cat /sdcard/niumi_ui.xml | tr -d '\r'
+# Bloc `dumpsys alarm` de l'alarme de réveil de Niumi. Le watchdog de `RINGING` (§9.1, étape 20)
+# vise `RingingWatchdogReceiver` et ne doit jamais être confondu avec le réveil : on ne retient
+# que les entrées `RTC_WAKEUP` qui portent `AlarmReceiver`.
+alarm_block() {
+    "$ADB" shell dumpsys alarm 2>/dev/null | tr -d '\r' |
+        grep -B4 "$PACKAGE/com.niumi.system.alarm.AlarmReceiver" |
+        grep -m1 "when="
 }
 
-# Centre du premier nœud dont le texte vaut exactement $1, au format "x y" ; vide si absent.
-node_center() {
-    ui_dump | tr '<' '\n' | grep "text=\"$1\"" | head -1 | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\].*/\1 \2 \3 \4/p' \
-        | awk '{ if (NF==4) print int(($1+$3)/2), int(($2+$4)/2) }'
-}
+echo "== Précondition : session armée =="
+echo "  Armer une session dans Niumi (parcours complet : diagnostic, boîtier, applications,"
+echo "  heure de réveil la plus proche possible, activation), puis revenir ici."
+printf '  Appuyer sur Entrée une fois la session armée... '
+read -r _
 
-echo "== Ouverture de la route POC =="
-"$ADB" shell am start -n "$PACKAGE/.MainActivity" >/dev/null 2>&1
-sleep 2
-poc=$(node_center "POC alarme (debug)")
-if [ -n "$poc" ]; then
-    # Sur l'accueil, ce libellé est celui du bouton ; sur l'écran POC, celui du titre.
-    if [ -z "$(node_center 'Programmer')" ]; then
-        # shellcheck disable=SC2086
-        "$ADB" shell input tap $poc >/dev/null 2>&1
-        sleep 2
-    fi
-fi
-
-programmer=$(node_center "Programmer")
-if [ -z "$programmer" ]; then
-    echo "Écran POC introuvable : le bouton « Programmer » n'est pas affiché." >&2
+target_line=$(alarm_block)
+if [ -z "$target_line" ]; then
+    echo "Aucune alarme de réveil Niumi trouvée dans dumpsys alarm : la session n'est pas armée." >&2
     exit 1
 fi
+echo "Alarme programmée : $target_line"
 
-echo "== Saisie du délai : ${DELAY} s =="
-champ=$(ui_dump | tr '<' '\n' | grep 'class="android.widget.EditText"' | head -1 \
-    | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\].*/\1 \2 \3 \4/p' \
-    | awk '{ print int(($1+$3)/2), int(($2+$4)/2) }')
-if [ -n "$champ" ]; then
-    # shellcheck disable=SC2086
-    "$ADB" shell input tap $champ >/dev/null 2>&1
-    sleep 1
-    "$ADB" shell input keyevent KEYCODE_MOVE_END >/dev/null 2>&1
-    for _ in 1 2 3 4 5; do "$ADB" shell input keyevent KEYCODE_DEL >/dev/null 2>&1; done
-    "$ADB" shell input text "$DELAY" >/dev/null 2>&1
-    "$ADB" shell input keyevent KEYCODE_BACK >/dev/null 2>&1   # referme le clavier
-    sleep 1
+# `when=` donne l'instant cible en millisecondes depuis l'epoch : c'est la référence du retard,
+# et elle vient du système plutôt que d'un délai saisi par l'opérateur.
+target_ms=$(printf '%s\n' "$target_line" | sed -n 's/.*when=\([0-9]\{10,\}\).*/\1/p')
+if [ -z "$target_ms" ]; then
+    echo "Instant cible illisible dans dumpsys alarm ; le retard ne pourra pas être mesuré." >&2
 fi
 
-echo "== Programmation =="
-programmer=$(node_center "Programmer")
-# shellcheck disable=SC2086
-"$ADB" shell input tap $programmer >/dev/null 2>&1
-sleep 2
-
-target_line=$("$ADB" shell dumpsys alarm | tr -d '\r' | grep -A3 "$PACKAGE" | grep -m1 "when=")
-echo "Alarme programmée : ${target_line:-non trouvée dans dumpsys alarm}"
 started_at_ms=$("$ADB" shell date +%s%3N | tr -d '\r')
-deadline_ms=$((started_at_ms + (DELAY + 120) * 1000))
+deadline_ms=$((started_at_ms + MAX_WAIT * 1000))
 
-echo "== Attente du déclenchement (limite : délai + 120 s) =="
+echo "== Attente du déclenchement (limite : ${MAX_WAIT} s) =="
 fired_ms=""
 while :; do
     now_ms=$("$ADB" shell date +%s%3N | tr -d '\r')
@@ -123,10 +104,12 @@ done
 echo
 echo "## Résultat"
 echo
-if [ -n "$fired_ms" ]; then
-    elapsed=$(( (fired_ms - started_at_ms) / 1000 ))
+if [ -n "$fired_ms" ] && [ -n "$target_ms" ]; then
     # Le sondage a un pas de 2 s : le retard mesuré est donc précis à ± 2 s près.
-    echo "- Service détecté au premier plan après ${elapsed} s (délai demandé : ${DELAY} s, sondage à ± 2 s)."
+    delay=$(( (fired_ms - target_ms) / 1000 ))
+    echo "- Service détecté au premier plan ${delay} s après l'instant cible (sondage à ± 2 s)."
+elif [ -n "$fired_ms" ]; then
+    echo "- Service détecté au premier plan, retard non mesurable (instant cible illisible)."
 else
     echo "- Service jamais détecté."
 fi

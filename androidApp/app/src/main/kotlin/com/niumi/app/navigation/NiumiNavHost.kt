@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.niumi.app.help.HelpScreen
 import com.niumi.feature.session.active.ActiveSessionRoute
 import com.niumi.feature.session.active.CancelledScreen
 import com.niumi.feature.session.active.CompletedScreen
@@ -23,24 +24,18 @@ import com.niumi.feature.setup.pairing.PairingRoute
 import com.niumi.feature.setup.readiness.ReadinessRoute
 
 /**
- * Graphe de navigation de l'application. Les destinations de production sont typées
- * ([NiumiRoute]) ; les routes en chaînes des [NavGraphContributor] cohabitent dans le même
- * `NavHost` pour le seul point d'entrée du POC de debug, supprimé à l'étape 21.
+ * Graphe de navigation de l'application. Toutes les destinations sont typées ([NiumiRoute]) : le
+ * point d'extension en chaînes qui servait la route POC de debug a disparu avec elle à l'étape 21.
  *
- * Seules les destinations dont l'écran existe sont enregistrées. Depuis l'étape 17, les treize le
- * sont (voir [NiumiRoute]).
+ * Toutes les destinations déclarées sont enregistrées (voir [NiumiRoute]).
  *
  * [deepLinkDestination] vient du tap d'une notification d'avertissement (§13.1). Elle est empilée
  * **au-dessus** de l'accueil plutôt que substituée à lui comme destination de départ : le bouton
  * Retour doit ramener à l'application, pas la quitter.
  */
 @Composable
-fun NiumiNavHost(
-    contributors: Set<@JvmSuppressWildcards NavGraphContributor>,
-    deepLinkDestination: NiumiRoute? = null,
-) {
+fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
     val navController = rememberNavController()
-    val entryPoints = contributors.flatMap { it.entryPoints }
 
     LaunchedEffect(deepLinkDestination) {
         deepLinkDestination?.let { navController.navigate(it) { launchSingleTop = true } }
@@ -49,10 +44,9 @@ fun NiumiNavHost(
     NavHost(navController = navController, startDestination = NiumiRoute.Home) {
         composable<NiumiRoute.Home> {
             HomeRoute(
-                entryPoints = entryPoints,
                 onNavigate = { route -> navController.navigate(route) },
-                onEntryPointClick = { route -> navController.navigate(route) },
                 onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
+                onOpenHelp = { navController.navigate(NiumiRoute.Help) },
             )
         }
         setupDestinations(navController)
@@ -71,7 +65,6 @@ fun NiumiNavHost(
             )
         }
         activeSessionDestinations(navController)
-        contributors.forEach { it.register(this, navController) }
     }
 }
 
@@ -147,6 +140,7 @@ private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostCont
         )
     }
     composable<NiumiRoute.IncidentDiagnostic> { IncidentDiagnosticRoute() }
+    composable<NiumiRoute.Help> { HelpScreen() }
 }
 
 /**

@@ -1,19 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Variante `debug` de `:app` : **outillage de test uniquement, aucun code**. Le dossier
+    `src/debug` avait porté la route POC du Lot 0 jusqu'à sa suppression à l'étape 21 ; il ne
+    contient plus que ce fichier, absent de la variante `release` comme l'était le POC.
+
+    Activité hôte de `createComposeRule()`, qui lance une activité vide et y monte le composable
+    sous test. Elle est déclarée ici, dans l'application sous test, et **non** dans le manifeste
+    `androidTest` comme le font `:feature:setup` et `:feature:ringing` : c'est une différence de
+    nature entre un module `library` et un module `application`, mesurée sur appareil à l'étape 21.
+
+      - module `library` : l'APK de test s'instrumente lui-même, l'activité hôte de son propre
+        manifeste vit dans le processus du test ;
+      - module `application` : l'instrumentation s'exécute dans le processus de l'application
+        testée (`com.niumi.app`). Une activité déclarée dans l'APK de test appartient à un autre
+        processus (`com.niumi.app.test`), et `startActivitySync` la refuse : « Intent in process
+        com.niumi.app resolved to different process com.niumi.app.test ».
+
+    C'est exactement ce que fait l'artefact `androidx.compose.ui:ui-test-manifest` de Google, qui
+    s'ajoute en `debugImplementation` et non en `androidTestImplementation` pour cette raison
+    précise. Trois lignes de manifeste évitent ici une dépendance externe de plus.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!--
-        Route POC uniquement (SPEC_ANDROID §22 Lot 0, CLAUDE.md : pas de faux comportement de
-        production). Ce fichier entier est absent de la variante release et supprimé avec le
-        reste de la route POC à l'étape 21.
-
-        La section <queries> qui vivait ici jusqu'à l'étape 13 a été déplacée dans le manifeste de
-        `:core:system`, avec le code qui en dépend (`PackageManagerPackageQuery`). Le manifeste
-        fusionné la porte dans tous les variants : `PocViewModel.resolveLabel` continue de
-        résoudre les libellés des applications tierces.
-    -->
     <application>
         <activity
-            android:name=".poc.PocPairingActivity"
+            android:name="androidx.activity.ComponentActivity"
             android:exported="false"
             android:theme="@style/Theme.Niumi" />
     </application>

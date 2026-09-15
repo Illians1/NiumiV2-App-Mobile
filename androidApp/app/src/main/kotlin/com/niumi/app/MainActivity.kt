@@ -13,7 +13,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.niumi.app.navigation.NavGraphContributor
 import com.niumi.app.navigation.NiumiNavHost
 import com.niumi.app.navigation.NiumiRoute
 import com.niumi.app.navigation.deepLinkDestinationFor
@@ -31,9 +30,6 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject
-    lateinit var navGraphContributors: Set<@JvmSuppressWildcards NavGraphContributor>
-
     @Inject
     lateinit var sessionReadinessWatcher: SessionReadinessWatcher
 
@@ -68,10 +64,7 @@ class MainActivity : ComponentActivity() {
         openAlarmScreenWhileSessionAwaitsScan()
         setContent {
             NiumiTheme {
-                NiumiNavHost(
-                    contributors = navGraphContributors,
-                    deepLinkDestination = deepLinkDestination,
-                )
+                NiumiNavHost(deepLinkDestination = deepLinkDestination)
             }
         }
     }

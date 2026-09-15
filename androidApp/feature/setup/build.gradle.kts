@@ -36,7 +36,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.lifecycle.viewmodel.compose)
     // LocalLifecycleOwner : AccessibilityConsentRoute recalcule l'état sur ON_RESUME
-    // (SPEC_ANDROID §13), même motif que PocScreen dans :app.
+    // (SPEC_ANDROID §13), même motif que l'accueil dans :app.
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.hilt.navigation.compose)
     // `rememberLauncherForActivityResult` : ReadinessScreen demande POST_NOTIFICATIONS

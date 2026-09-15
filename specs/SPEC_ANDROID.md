@@ -1172,13 +1172,18 @@ Tous les composants non destinés à des applications externes restent `exported
 9. scan requis pour modifier ou annuler;
 10. session terminée;
 11. session annulée;
-12. diagnostic d'incident.
+12. diagnostic d'incident;
+13. aide et limites.
+
+**Écran 13 — aide et limites (étape 21).** Écran de **consultation**, atteignable depuis l'accueil, en session comme hors session. Il ne porte aucune action: le scan du boîtier reste la seule sortie (3, 10.2), et un bouton y serait précisément le recours logiciel que 4.5 exclut. Son contenu est celui de `docs/android/LIMITES.md`, mot pour mot — le document est la version lisible hors de l'application, à laquelle renvoie la politique de confidentialité publiée sur la fiche Play, et l'écran en est la restitution, jamais une reformulation. Un test compare les deux à chaque build.
+
+Il n'existait pas avant l'étape 21, alors que 4.2 exige depuis l'origine que l'arrêt forcé soit « signalé clairement dans l'aide » et que 21 en fasse un critère d'acceptation: jusque-là, seul l'onboarding portait ces limites, et il n'est présenté qu'une fois, avant la première session. L'aide reprend ses six limites **à l'identique** et y ajoute celles qui ne pouvaient pas être connues avant d'avoir été mesurées: le silence total (étape 6), la restriction OEM de démarrage automatique et sa portée réelle (4.2, étape 19), la notification d'attente de scan écartable depuis Android 14 (10.5, étape 19), le diagnostic NFC brièvement faux après un redémarrage (étape 19), et la perte possible du journal technique écrit avant le premier déverrouillage (17, étape 20).
 
 **Étapes de livraison.** Les écrans n'arrivent pas tous en même temps et l'ordre d'implémentation (22) ne le disait pas explicitement : accueil (1) et diagnostic-onboarding (2) à l'étape 12b ; association (3) et sélection (4) à l'étape 13 ; choix de l'heure (5), récapitulatif (6) et une **version minimale** de la session active (7) à l'étape 14 ; session active complète (7), scan requis (9) et annulée (11) à l'étape 15 ; écran de réveil (8) livré dès l'étape 7 et branché sur l'état réel du moteur à l'étape 17 ; diagnostic d'incident (12) à l'étape 16 ; **session terminée (10) à l'étape 17**.
 
 Cette liste annonçait l'écran 10 à l'étape 15 ; c'était faux, et la contradiction avec le plan avait été relevée à l'étape 16 sans être corrigée. Corrigé ici : l'écran 10 n'est atteint qu'après `COMPLETED`, donc après le scan de libération, et il est livré avec la chaîne du réveil. Comme l'écran 11 à l'étape 15, il est **livré et enregistré mais atteignable seulement à partir de l'étape 18**, qui apporte `HandleValidNfcUseCase` — le livrer maintenant n'annonce donc aucun faux succès.
 
-Les écrans 10 et 11 vivent tous deux dans `:feature:session` : ils sont jumeaux, 15 les traite ensemble, et l'écran 10 n'a ni audio, ni NFC, ni service. Ils sont atteints depuis `AlarmActivity` par le mécanisme de destination de 13.1, l'écran de réveil vivant hors du `NavHost`. L'étape 12b déclare les treize destinations de navigation en une fois mais n'enregistre que celles dont l'écran existe : naviguer vers une route non enregistrée lève, ce qui vaut mieux qu'un écran vide donnant l'illusion d'une fonctionnalité livrée.
+Les écrans 10 et 11 vivent tous deux dans `:feature:session` : ils sont jumeaux, 15 les traite ensemble, et l'écran 10 n'a ni audio, ni NFC, ni service. Ils sont atteints depuis `AlarmActivity` par le mécanisme de destination de 13.1, l'écran de réveil vivant hors du `NavHost`. L'étape 12b déclare les destinations de navigation en une fois mais n'enregistre que celles dont l'écran existe : naviguer vers une route non enregistrée lève, ce qui vaut mieux qu'un écran vide donnant l'illusion d'une fonctionnalité livrée. Depuis l'étape 21, les quatorze destinations sont toutes enregistrées. Quatorze pour treize écrans : l'écran 2 en occupe deux (onboarding puis diagnostic), le consentement d'accessibilité de 12.3 en est une de plus, et l'écran de réveil vit hors du `NavHost`.
 
 L'écran 7 minimal est livré à l'étape 14 et non à l'étape 15 parce que celle-ci est la première à rendre une session armable : sans lui, l'accueil deviendrait un cul-de-sac dès qu'une session existe, alors que 10.4 en fait la seconde garantie d'accès au scan, indépendante de la notification. Sa version minimale affiche l'état, la date, l'heure et le fuseau d'activation, plus l'heure recalculée dans le fuseau courant s'il diffère (8).
 
@@ -1228,6 +1233,8 @@ Le bouton d'export est « Exporter le diagnostic ». Il ouvre un `ACTION_SEND` t
 Un boîtier inconnu et un tag illisible ont chacun leur message et ne changent aucun état (11.2, SPEC_CORE_KMP 4). L'écran 11 n'est atteint qu'après un état final `CANCELLED`, donc après `RELEASE_SUCCEEDED` (11.3) : il peut affirmer que les applications sont débloquées sans mentir. Ses libellés sont « Session annulée » et « Préparer un nouveau réveil », ce dernier ramenant au diagnostic, entrée du parcours de préparation.
 
 L'annulation par scan n'est pas fonctionnelle à l'étape 15 : `HandleValidNfcUseCase` arrive à l'étape 18. Jusque-là l'écran 9 délègue à un handler qui ignore tout scan, ce qui est le comportement attendu d'un scan non validé (SPEC_CORE_KMP 4) et n'annonce aucun succès.
+
+L'écran 13 vit dans `:app` et non dans un module `feature` : il n'appartient à aucun parcours, il est atteint depuis l'accueil, et son seul contenu est un texte constant. Un neuvième module Gradle serait contraire à 6, et le placer dans `:feature:setup` le rendrait inatteignable depuis une session active sans créer une dépendance que 6 interdit.
 
 Règles UI:
 

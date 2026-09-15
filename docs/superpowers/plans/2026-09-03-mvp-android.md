@@ -1249,58 +1249,111 @@ maintenant que le POC est supprimé et que le parcours utilisateur réel existe.
 - Configurer la signature release (keystore d'upload créé par l'utilisateur, hors dépôt) pour produire un AAB.
 - Tests : `ReleaseHygieneTest` (`:app` unitaire : le manifeste fusionné release ne contient ni `INTERNET`, ni `SCHEDULE_EXACT_ALARM`, ni `QUERY_ALL_PACKAGES` ; aucune classe `*Poc*`, `*Fake*`, `*Debug*Store` dans le classpath release ; grep du code source `main` sans `TODO`, `FIXME`, `STOP_RINGING_ACTION`).
 
-- [ ] **Supprimer le POC** et vérifier que `:app:assembleDebug` compile encore.
-- [ ] **Écrire `ReleaseHygieneTest`**, corriger tout écart.
-- [ ] **Configurer R8 et la signature release** et vérifier qu'une session complète fonctionne sur un APK/AAB release signé avec une clé locale non versionnée.
-- [ ] **Ajouter l'écran d'aide** et `LIMITES.md`.
-- [ ] **Écrire le workflow CI** ; l'exécuter localement commande par commande.
-- [ ] **Vérifier :**
+- [x] **Supprimer le POC** et vérifier que `:app:assembleDebug` compile encore. *(11 fichiers.
+      Le point d'extension de navigation, dont le POC était le seul implémenteur, est retiré avec
+      lui : `NavGraphContributor`, `NavigationModule`, `entryPoints`. Les deux scripts de `tools/`
+      qui pilotaient l'écran POC sont rebranchés sur le parcours réel — écart au plan, qui les
+      disait seulement conservés.)*
+- [x] **Écrire `ReleaseHygieneTest`**, corriger tout écart. *(5 tests, dans `src/testRelease` :
+      le classpath debug contient `src/debug` et rendrait le contrôle vide de sens. Aucun écart à
+      corriger, le dépôt était déjà propre — d'où la vérification inverse : quatre violations
+      injectées font bien échouer les cinq tests, et une permission interdite citée dans un
+      commentaire XML ne produit pas de faux positif. **Deux écarts au plan** : la liste de
+      commandes gagne `:app:testReleaseUnitTest`, et le grep vise `STOP_RINGING_ACTION` exactement,
+      `STOP_RINGING` étant un effet métier légitime présent dans huit fichiers de production.)*
+- [x] **Configurer R8 et la signature release.** *(`proguard-rules.pro` reste vide : mesuré, le
+      premier `assembleRelease` du dépôt passe sans aucune règle et R8 ne réclame rien — les règles
+      consommateur de Hilt, Room et kotlinx-serialization sont appliquées, vérifié dans
+      `configuration.txt`. APK 3,4 Mo, AAB 4,0 Mo, non signés ; `keystore.properties` absent laisse
+      la variante release non signée sans faire échouer le build. `:app:lintRelease`, jamais
+      exécuté jusqu'ici, passe du premier coup.)*
+      **Reste à faire, sur appareil :** la session complète sur un APK release **signé** exige le
+      keystore d'upload, que l'utilisateur crée hors dépôt.
+- [x] **Ajouter l'écran d'aide** et `LIMITES.md`. *(Écran 13, quatre sections, seize limites.
+      `HelpTextsTest` verrouille la correspondance entre le document et l'écran, mot pour mot :
+      `PRIVACY_POLICY.md` renvoie le lecteur de la fiche Play à cet écran, les deux ne peuvent pas
+      diverger. Les six limites de l'onboarding y sont reprises à l'identique. Aucune action sur
+      l'écran, vérifié par `HelpScreenTest`. SPEC_ANDROID §15 mise à jour : elle ne listait que
+      douze écrans.)*
+- [x] **Écrire le workflow CI** ; l'exécuter localement commande par commande. *(`macos-26`,
+      actions GitHub uniquement, cache `~/.konan`. Les six commandes exécutées localement dans
+      l'ordre, toutes vertes. La CI distante ne peut pas être observée sans push.)*
+- [x] **Vérifier :** *(2026-09-15 — tout ce qui ne demande pas de matériel est vert :
+      **916 exécutions de tests JVM**, 878 distincts, 0 échec ; framework iOS, ktlint, detekt,
+      `:app:lintRelease`, `:app:assembleRelease` et `:app:bundleRelease`.
+      **`connectedDebugAndroidTest` n'a pas été exécuté**, aucun appareil branché pendant la
+      session ; `HelpScreenTest` compile mais n'a jamais tourné.)*
 
 ```bash
 ./gradlew :shared:core:jvmTest
 ./gradlew :shared:core:linkDebugFrameworkIosSimulatorArm64
 ./gradlew testDebugUnitTest
-./gradlew connectedDebugAndroidTest
-./gradlew ktlintCheck detekt lintRelease
-./gradlew :app:assembleRelease
+./gradlew :app:testReleaseUnitTest          # ajouté à l'étape 21 : hygiène du build de publication
+./gradlew connectedDebugAndroidTest         # reste à exécuter, appareil requis
+./gradlew ktlintCheck detekt :app:lintRelease
+./gradlew :app:assembleRelease :app:bundleRelease
 ```
 
-- [ ] **Remplir `QA_MATRIX.md`** sur la matrice P0 (§20) : au minimum Pixel, Samsung, Xiaomi, sur Android 14, 15, 16 et 17 si disponibles. **Y trancher la question ouverte par l'étape 19** : la permission OEM de démarrage automatique, **laissée dans son état par défaut**, empêche-t-elle le processus de démarrer au boot ? HyperOS l'exempte (mesuré), les autres surcouches sont inconnues ; une qui la bloquerait ferait perdre le réveil après redémarrage et imposerait un contrôle de diagnostic ciblé (§4.2, §20).
-- [ ] **Remplir `RELEASE_REPORT.md`** : chaque critère §21 avec la preuve (test, log ou vidéo). Deux
+- [x] **Remplir `QA_MATRIX.md`**, *sans pouvoir la rendre verte* : 27 lignes mesurées et
+      conformes, 4 limites établies, 1 non reproductible sur HyperOS, 12 non testées faute
+      d'appareil ou de matériel, 2 non testées sur le build release. **La question ouverte par
+      l'étape 19 est tranchée pour HyperOS seulement** : les broadcasts de démarrage sont exemptés
+      de la permission OEM, mesuré permission refusée, donc le réveil après redémarrage n'en
+      dépend pas ; `MY_PACKAGE_REPLACED` y est soumis, sans conséquence sur l'alarme. Les autres
+      surcouches restent inconnues. Texte d'origine du plan :
+      sur la matrice P0 (§20) : au minimum Pixel, Samsung, Xiaomi, sur Android 14, 15, 16 et 17 si disponibles. **Y trancher la question ouverte par l'étape 19** : la permission OEM de démarrage automatique, **laissée dans son état par défaut**, empêche-t-elle le processus de démarrer au boot ? HyperOS l'exempte (mesuré), les autres surcouches sont inconnues ; une qui la bloquerait ferait perdre le réveil après redémarrage et imposerait un contrôle de diagnostic ciblé (§4.2, §20).
+- [x] **Remplir `RELEASE_REPORT.md`** : 22 critères prouvés, 3 partiellement prouvés, 2 ouverts
+      (Android 17, porte Play). Les deux preuves de l'étape 19 sont reprises sans être refaites.
+      Texte d'origine du plan : chaque critère §21 avec la preuve (test, log ou vidéo). Deux
       critères ont déjà leur preuve mesurée à l'étape 19, à reprendre plutôt qu'à refaire : « un
       redémarrage restaure l'alarme avant le premier déverrouillage » et « `AWAITING_NFC` et
       `TRIGGERED_AWAITING_NFC` affichent toujours une notification demandant le scan, sans son ni
       vibration ni full-screen intent, y compris avant le premier déverrouillage ».
-- [ ] **Reprendre les écarts encore ouverts dans `RELEASE_REPORT.md`** plutôt que de les coucher
+- [x] **Reprendre les écarts encore ouverts dans `RELEASE_REPORT.md`** *(sept écarts listés, dont
+      les trois nommés ici, plus le seau d'App Standby, l'arrêt du seul FGS, les trois scénarios
+      « activation refusée » jamais rejoués, et l'absence de tout essai sur artefact de
+      publication.)* Texte d'origine : plutôt que de les coucher
       comme acquis : la matrice §20 hors Xiaomi, le sort du journal technique d'avant déverrouillage
       s'il a été assumé comme limite à l'étape 20, et la dépendance de `MY_PACKAGE_REPLACED` à la
       permission OEM de démarrage automatique.
-- [ ] **Compléter les préconditions de soumission** listées en `LOT-0.md` (identité éditeur, contact, URL de `PRIVACY_POLICY.md` publiée, compte Play vérifié).
-- [ ] **Tourner la vidéo de revue** selon `REVIEW_VIDEO_SCRIPT.md`, sur l'application complète.
+- [ ] **Compléter les préconditions de soumission** listées en `LOT-0.md` (identité éditeur, contact, URL de `PRIVACY_POLICY.md` publiée, compte Play vérifié). *(Table mise à jour au 2026-09-15 : ce qui relevait du code est fait — POC supprimé, écran d'aide livré, AAB qui se construit, signature configurée. Ce qui reste est à la charge de l'utilisateur, keystore compris.)*
+- [ ] **Tourner la vidéo de revue** selon `REVIEW_VIDEO_SCRIPT.md`, sur l'application complète. *(Devenue tournable : le script est mis à jour, ses deux prérequis bloquants sont levés. Action humaine.)*
 - [ ] **Soumettre sur piste interne ou fermée** dès que le compte Play le permet (action humaine) ; consigner la date et la réponse de Google dans `LOT-0.md`.
 
 **Porte de validation finale (0b + finale) :** le MVP n'est déclaré terminé qu'avec `QA_MATRIX.md` verte dans le périmètre §4.1, `RELEASE_REPORT.md` complet et les portes §23 traitées (déclarations Play, vidéo, réponse de Google). Un critère non prouvé reste ouvert dans le rapport, jamais coché par défaut.
 
+**Statut au 2026-09-15 : porte NON franchie.** Le code de l'étape est livré et vérifié ; la porte ne l'est pas, et elle ne pouvait pas l'être dans cette session. `QA_MATRIX.md` n'est verte que sur un appareil, une surcouche et une version d'Android — ni Pixel, ni Samsung, ni Android 17. Aucune campagne n'a porté sur un artefact de publication. La vidéo n'est pas tournée, l'application n'est pas soumise, Google n'a pas statué. Voir `ETAPE-21.md` et `LOT-0.md`, section « Statut de la porte 0b ». **Le suivi de tout ce qui reste est tenu dans `docs/android/RESTE_A_FAIRE.md`.**
+
 ## Recette et critères d'acceptation
 
-Repris de SPEC_ANDROID §21 ; chaque point renvoie à l'étape qui le prouve.
+Repris de SPEC_ANDROID §21 ; chaque point renvoie à l'étape qui le prouve. **Le détail des preuves
+est dans `docs/android/RELEASE_REPORT.md`**, qui les nomme une par une ; cette liste en est le
+résumé. Une case cochée signifie « prouvé », jamais « implémenté ».
 
-- [ ] Session confirmée seulement si le diagnostic est vert (étapes 12, 14).
-- [ ] `setAlarmClock()` seule API de réveil (étape 3, `ReleaseHygieneTest`).
+- [x] Session confirmée seulement si le diagnostic est vert (étapes 12, 14).
+- [x] `setAlarmClock()` seule API de réveil (étape 3, `ReleaseHygieneTest`).
 - [ ] Alarme hors ligne, écran éteint, Doze, Android 17 `USAGE_ALARM` (étapes 3, 6, 21).
-- [ ] Sonnerie maintenue après fermeture de l'activité, aucun bouton d'arrêt (étapes 3, 17).
-- [ ] Seul un tag accepté par KMP avec preuve opaque produit `VALID_NFC_SCANNED` (étapes 2, 18).
-- [ ] `ARMED` → `RELEASING`/`CANCELLED` ; `RINGING`/`AWAITING_NFC`/`TRIGGERED_AWAITING_NFC` → `RELEASING`/`COMPLETED` (étapes 7, 18).
-- [ ] État final uniquement après `RELEASE_SUCCEEDED` ; session active jamais `FAILED` (étapes 7, 11, 20).
-- [ ] Tag invalide sans effet ; fin valide en moins d'une seconde (étape 18).
-- [ ] Blocage des seules applications choisies, sans lecture de contenu (étapes 5, 15).
-- [ ] Plus de 50 applications refusé (étapes 8, 13).
-- [ ] Redémarrage → alarme restaurée avant déverrouillage ; notification d'attente de scan sans son ni full-screen (étapes 18, 19).
-- [ ] Changement d'heure ou de fuseau → même instant (étape 19).
-- [ ] Aucun appel réseau, aucun `INTERNET` (étape 21).
+      **Partiel :** verts sur Xiaomi / Android 16, Doze profond réel compris. La matrice P0 n'est
+      pas couverte, et aucun appareil Android 17 n'existe pour le dernier point.
+- [x] Sonnerie maintenue après fermeture de l'activité, aucun bouton d'arrêt (étapes 3, 17).
+- [x] Seul un tag accepté par KMP avec preuve opaque produit `VALID_NFC_SCANNED` (étapes 2, 18).
+- [x] `ARMED` → `RELEASING`/`CANCELLED` ; `RINGING`/`AWAITING_NFC`/`TRIGGERED_AWAITING_NFC` → `RELEASING`/`COMPLETED` (étapes 7, 18).
+- [x] État final uniquement après `RELEASE_SUCCEEDED` ; session active jamais `FAILED` (étapes 7, 11, 20).
+- [x] Tag invalide sans effet ; fin valide en moins d'une seconde (étape 18).
+- [x] Blocage des seules applications choisies, sans lecture de contenu (étapes 5, 15).
+- [x] Plus de 50 applications refusé (étapes 8, 13).
+- [x] Redémarrage → alarme restaurée avant déverrouillage ; notification d'attente de scan sans son ni full-screen (étapes 18, 19).
+- [x] Changement d'heure ou de fuseau → même instant (étape 19).
+- [x] Aucun appel réseau, aucun `INTERNET` (étape 21). *Manifeste fusionné release lu en DOM par
+      `ReleaseHygieneTest` : exactement les neuf permissions de §14.*
 - [ ] Lint, ktlint, detekt, tests unitaires et instrumentés verts (chaque étape, étape 21).
-- [ ] Limites documentées dans l'application et le rapport QA (étapes 12, 21).
+      **Partiel :** JVM, ktlint, detekt et `:app:lintRelease` verts ; les instrumentés n'ont pas
+      été rejoués depuis l'ajout de `HelpScreenTest`.
+- [x] Limites documentées dans l'application et le rapport QA (étapes 12, 21). *Écran 13
+      « Aide et limites » + `LIMITES.md`, correspondance verrouillée par test.*
 - [ ] Dossier Play AccessibilityService préparé (étape 6) et soumis avec réponse de Google traitée (étape 21).
+      **Ouvert — porte 0b.** Dossier prêt et prérequis techniques levés ; vidéo non tournée,
+      application non soumise, Google n'a pas statué.
 
 ## Hypothèses et limites du plan
 

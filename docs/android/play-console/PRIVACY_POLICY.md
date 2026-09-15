@@ -56,7 +56,8 @@ l'application pour supprimer toutes ses données locales.
 Niumi bloque le passage au premier plan des applications choisies par l'utilisateur en
 observant uniquement leur nom de package. Ce blocage est comportemental et peut être contourné
 en désactivant le service d'accessibilité, en arrêtant Niumi de force ou en le désinstallant —
-voir le détail dans l'application, écran « Aide et limites » (ajouté à l'étape 21).
+voir le détail dans l'application, écran « Aide et limites », accessible depuis l'accueil. Son
+texte intégral est repris dans `docs/android/LIMITES.md`.
 
 ## Contact
 

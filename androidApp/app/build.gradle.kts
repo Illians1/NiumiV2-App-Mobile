@@ -1,3 +1,8 @@
+import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.HostTestBuilder
+import org.gradle.process.CommandLineArgumentProvider
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,6 +11,25 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
+
+/**
+ * Signature de publication. `keystore.properties`, à la racine du dépôt et **jamais versionné**
+ * (`.gitignore`), porte `storeFile`, `storePassword`, `keyAlias` et `keyPassword` ; le keystore
+ * lui-même vit hors du dépôt. Quand le fichier est absent — CI, autre poste — la variante release
+ * reste simplement non signée au lieu de faire échouer la configuration : un build de
+ * vérification n'a pas besoin de la clé d'upload, et l'exiger rendrait la CI impossible.
+ *
+ * `providers.fileContents` plutôt qu'une lecture directe : le fichier devient une entrée de
+ * configuration, donc le configuration cache est invalidé s'il apparaît, change ou disparaît.
+ */
+val keystoreProperties: Provider<Properties> =
+    providers
+        .fileContents(rootProject.layout.projectDirectory.file("keystore.properties"))
+        .asText
+        .map { text -> Properties().apply { load(text.reader()) } }
+
+fun Properties.required(key: String): String =
+    requireNotNull(getProperty(key)) { "keystore.properties : la clé « $key » manque." }
 
 android {
     namespace = "com.niumi.app"
@@ -21,8 +45,23 @@ android {
         testInstrumentationRunner = "com.niumi.app.HiltTestRunner"
     }
 
+    // Doit précéder `buildTypes`, qui y cherche la configuration par son nom.
+    signingConfigs {
+        if (keystoreProperties.isPresent) {
+            val properties = keystoreProperties.get()
+            create("release") {
+                storeFile = rootProject.file(properties.required("storeFile"))
+                storePassword = properties.required("storePassword")
+                keyAlias = properties.required("keyAlias")
+                keyPassword = properties.required("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // `null` sans `keystore.properties` : l'APK et l'AAB sortent non signés, sans erreur.
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -82,8 +121,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     // `LocalLifecycleOwner` (androidx.lifecycle.compose) : l'accueil relit l'accusé de réception
-    // de l'onboarding sur ON_RESUME. La dépendance était en `debug` tant que seul PocScreen s'en
-    // servait ; elle passe en production avec l'écran 1.
+    // de l'onboarding sur ON_RESUME.
     implementation(libs.lifecycle.runtime.compose)
 
     implementation(libs.hilt.android)
@@ -91,10 +129,6 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.kotlinx.coroutines.android)
-
-    // DataStore de la route POC (debug uniquement, SPEC_ANDROID §22 Lot 0) :
-    // `PairedBoxStore` a son implémentation Room à l'étape 13.
-    debugImplementation(libs.datastore.preferences)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)
@@ -118,6 +152,40 @@ dependencies {
 }
 
 tasks.withType<Test>().configureEach {
-    // Consommé par ModuleListTest : évite de dépendre du répertoire de travail des tests.
+    // Consommé par ModuleListTest et ReleaseHygieneTest : évite de dépendre du répertoire de
+    // travail des tests.
     systemProperty("niumi.rootDir", rootProject.rootDir.absolutePath)
+}
+
+/**
+ * Passe un fichier au test sous forme de propriété système, en le déclarant comme entrée de
+ * tâche. Une classe nommée plutôt qu'une lambda : le configuration cache sérialise le
+ * `Provider`, pas le `Project` qui l'a créé.
+ */
+private class SystemPropertyFileArgument(
+    private val name: String,
+    @get:InputFile @get:PathSensitive(PathSensitivity.RELATIVE)
+    val file: Provider<RegularFile>,
+) : CommandLineArgumentProvider {
+    override fun asArguments(): Iterable<String> = listOf("-D$name=${file.get().asFile.absolutePath}")
+}
+
+// `ReleaseHygieneTest` (variante release uniquement) contrôle le manifeste **fusionné**, celui
+// qui part dans l'AAB : c'est là qu'apparaîtrait une permission ajoutée par une dépendance, que
+// le manifeste de `:app` seul ne montrerait jamais. Brancher l'artefact ainsi fait tourner
+// `processReleaseManifest` avant le test, sans coder son chemin en dur.
+androidComponents {
+    // AGP 9 ne crée les tâches de test unitaire que pour `testBuildType` (« debug ») : sans
+    // cette ligne, `testReleaseUnitTest` n'existe pas et le garde-fou ne pourrait tourner que
+    // sur un classpath qui contient `src/debug`, où il ne prouverait rien.
+    beforeVariants(selector().withBuildType("release")) { variantBuilder ->
+        variantBuilder.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
+    }
+
+    onVariants(selector().withBuildType("release")) { variant ->
+        val mergedManifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
+        tasks.withType<Test>().matching { it.name == "testReleaseUnitTest" }.configureEach {
+            jvmArgumentProviders.add(SystemPropertyFileArgument("niumi.mergedManifest", mergedManifest))
+        }
+    }
 }

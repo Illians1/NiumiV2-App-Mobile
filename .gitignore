@@ -39,6 +39,7 @@ fastlane/test_output/
 *.jks
 *.p12
 *.mobileprovision
+keystore.properties
 .env
 .env.*
 !.env.example

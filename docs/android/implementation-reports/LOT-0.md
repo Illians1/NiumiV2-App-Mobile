@@ -2,8 +2,11 @@
 
 Statut : **porte 0a franchie le 2026-09-08** (voir « Statut de la porte 0a » en fin de document).
 Dossier documentaire rédigé le 2026-09-07, campagne d'essais physiques déroulée les 7 et 8
-septembre 2026. La porte 0b — verdict Google Play sur l'AccessibilityService — reste ouverte et
-est rattachée à l'étape 21.
+septembre 2026. La porte 0b — verdict Google Play sur l'AccessibilityService — **reste ouverte à
+l'issue de l'étape 21** : ses préconditions techniques sont levées (POC supprimé, écran « Aide et
+limites » livré, parcours utilisateur complet, build release qui passe), mais la vidéo n'est pas
+tournée, l'application n'est pas soumise et Google n'a pas statué. Voir « Préconditions de
+soumission » ci-dessous, mis à jour le 2026-09-15.
 
 ## Décision de calendrier (2026-09-07)
 
@@ -32,9 +35,9 @@ Specs mises à jour en conséquence : `SPEC_ANDROID.md` §22 (Lot 0) et §23. Pl
 `docs/superpowers/plans/2026-09-03-mvp-android.md`, étapes 6 et 21, et la ligne correspondante
 de la section « Recette et critères d'acceptation ».
 
-## Préconditions de soumission encore ouvertes
+## Préconditions de soumission
 
-Non traitées à cette étape, à lever avant l'étape 21 :
+État au 2026-09-15, fin de l'étape 21.
 
 | Précondition | État | Qui |
 | --- | --- | --- |
@@ -42,9 +45,14 @@ Non traitées à cette étape, à lever avant l'étape 21 :
 | E-mail de contact public | `<À COMPLÉTER>` | utilisateur |
 | URL d'hébergement de `PRIVACY_POLICY.md` | `<À COMPLÉTER>` | utilisateur |
 | Compte développeur Google Play créé et vérifié | à faire | utilisateur |
-| Keystore d'upload (release) | inexistant, non versionné, généré à l'étape 21 | agent + utilisateur |
-| AAB release signé (R8, suppression des ressources, §16) | configuration inexistante ; `assembleRelease` prévu à l'étape 21 | agent |
+| Keystore d'upload (release) | **configuration livrée**, keystore à créer hors dépôt ; `keystore.properties` est ignoré par git, et son absence laisse simplement la variante release non signée | utilisateur |
+| AAB release signé (R8, suppression des ressources, §16) | **`bundleRelease` passe** (AAB de 4,0 Mo, APK de 3,4 Mo) ; R8 n'a réclamé aucune règle supplémentaire. Signature en attente du keystore | fait (agent) |
+| Suppression du POC de debug | **fait** — `androidApp/app/src/debug/` supprimé, `ReleaseHygieneTest` interdit son retour | fait (agent) |
+| Écran « Aide et limites » | **fait** — écran 13, `docs/android/LIMITES.md`, correspondance verrouillée par test | fait (agent) |
+| Campagne sur un artefact release signé | **à faire** — toutes les campagnes ont porté sur la variante debug | utilisateur + agent |
 | 12 testeurs opt-in pendant 14 jours consécutifs si compte personnel ([exigence Play](https://support.google.com/googleplay/android-developer/answer/14151465)) | non démarré | utilisateur |
+| Vidéo de revue (`REVIEW_VIDEO_SCRIPT.md`) | **tournable désormais**, non tournée | utilisateur |
+| Soumission sur piste interne ou fermée, date et réponse de Google | non soumise — à consigner ici | utilisateur |
 
 ## Documents Play rédigés (`docs/android/play-console/`)
 
@@ -284,6 +292,26 @@ autorise pour ouvrir une activité depuis l'arrière-plan.
 | Redémarrage / Direct Boot | Dépend du coordinateur, livré à l'étape 17 ; scénarios repris à l'étape 19 |
 | Scan d'un second boîtier associé à un autre tag | Un seul tag physique disponible (limite déjà notée en `ETAPE-04.md`) |
 | Route audio modifiée pendant `RINGING` (déconnexion casque en cours de sonnerie) | Nécessite un second appareil audio manipulable pendant l'essai, non disponible pour cette session |
+
+## Statut de la porte 0b — ouverte
+
+**Non franchie au 2026-09-15.** L'étape 21 lève tout ce qui relevait du code et de la
+documentation ; ce qui reste est hors de portée d'un agent.
+
+- [ ] Keystore d'upload créé, `keystore.properties` renseigné, APK release signé installé sur un
+      appareil et session complète déroulée dessus.
+- [ ] Champs éditeur complétés dans `PRIVACY_POLICY.md`, politique hébergée à une URL publique.
+- [ ] Compte Play Console créé et vérifié.
+- [ ] Vidéo de revue tournée selon `REVIEW_VIDEO_SCRIPT.md`, sur l'application complète.
+- [ ] Version soumise sur piste interne ou fermée. **Date de soumission :** `<À COMPLÉTER>`.
+- [ ] Réponse de Google traitée. **Date et teneur :** `<À COMPLÉTER>`.
+
+Le mode opératoire de chacun de ces points est détaillé dans `docs/android/RESTE_A_FAIRE.md`,
+section A.
+
+Le risque acté le 2026-09-07 est désormais entièrement matérialisé : les étapes 7 à 21 ont été
+développées avant que Google ne statue. Un refus de l'usage de l'`AccessibilityService`
+remettrait en cause le blocage d'applications, c'est-à-dire la moitié de la promesse produit.
 
 ## Statut de la porte 0a
 

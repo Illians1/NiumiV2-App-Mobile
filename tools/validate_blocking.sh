@@ -19,6 +19,9 @@
 #   2. Niumi installé (`./gradlew :app:installDebug`) ;
 #   3. le service d'accessibilité Niumi activé à la main — §12.3 interdit de simuler un
 #      consentement, et une réinstallation le désactive systématiquement ;
+#   5. une session Niumi armée, avec le package à bloquer dans la sélection d'applications.
+#      Le blocage n'existe pas en dehors d'une session (§12.2) : depuis l'étape 21 et la
+#      suppression de la route POC, il n'y a plus d'autre moyen de l'armer que le parcours réel ;
 #   4. Niumi exempté des restrictions d'énergie du constructeur. Sans cela, la surcouche gèle
 #      le process en arrière-plan et le blocage devient silencieusement inopérant (§13). Cette
 #      précondition n'est pas détectable de façon fiable : `isIgnoringBatteryOptimizations()`
@@ -142,8 +145,9 @@ require_preconditions() {
 
 require_block_armed() {
     log_step "Armement du blocage"
-    log_info "Dans Niumi : POC → « Package à bloquer » = ${BLOCKED_PACKAGE} → « Bloquer »."
-    printf '       Appuyer sur Entrée une fois le blocage armé... '
+    log_info "Dans Niumi : armer une session avec ${BLOCKED_PACKAGE} dans la sélection"
+    log_info "d'applications (diagnostic, boîtier, applications, heure, activation)."
+    printf '       Appuyer sur Entrée une fois la session armée... '
     read -r _
 }
 
@@ -262,7 +266,7 @@ main() {
         printf '  Tous les essais automatisables sont passés.\n'
         printf '  Restent à vérifier à l'"'"'œil : le texte exact de l'"'"'overlay (§12.2) et le fait\n'
         printf '  qu'"'"'il ne rende pas le téléphone inutilisable.\n'
-        printf '  Penser à retirer le blocage dans le POC.\n'
+        printf '  Penser à terminer la session par un scan du boîtier (§3 : aucune autre sortie).\n'
         exit 0
     fi
     printf '  \033[31m%s essai(s) en échec.\033[0m\n' "$failures"

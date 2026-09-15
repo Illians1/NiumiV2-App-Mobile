@@ -2,16 +2,15 @@
 
 Exigée par la politique Play pour toute déclaration d'usage non-accessibilité d'un
 `AccessibilityService` : montrer la divulgation, le consentement, et l'usage réel du service en
-conditions normales. **Non tournée à cette étape.** Le seul parcours d'activation qui existe
-aujourd'hui est la route de debug (`PocScreen`), un écran technique où l'on saisit un nom de
-package à la main — filmer ce parcours donnerait à Google une fausse image du produit et
-n'apporterait pas de signal exploitable sur l'acceptation de la politique. Le tournage est
-reporté à l'étape 21, une fois le POC supprimé et le parcours utilisateur complet livré (voir
-`LOT-0.md` pour la décision et sa justification).
+conditions normales.
 
-Ce script reste utile dès maintenant : il sert de check-list à l'implémentation des écrans
-restants (association du boîtier, sélection des applications, session active, écran d'aide),
-pour vérifier qu'ils permettent bien de filmer chaque séquence sans détour par le debug.
+**Statut au 2026-09-15 : tournage possible, non encore fait.** Le report décidé le 2026-09-07
+(voir `LOT-0.md`) attendait deux choses, toutes deux livrées à l'étape 21 : la suppression de la
+route de debug, et l'écran « Aide et limites ». Chaque séquence ci-dessous se filme désormais sur
+le parcours utilisateur réel, sans aucun détour par le debug — ce qui était la raison même du
+report, la route POC ne pouvant donner à Google qu'une fausse image du produit.
+
+Le tournage lui-même reste une action humaine, sur appareil réel, et conditionne la porte 0b.
 
 ## Séquences à filmer, dans l'ordre
 
@@ -40,12 +39,18 @@ un délai réel supérieur à ce qu'affiche l'application).
 - Un parcours de debug, un mock, ou des données factices en dehors de ce qu'un utilisateur
   produirait normalement.
 
-## Prérequis avant tournage (rappel, détaillés à l'étape 21)
+## Prérequis avant tournage
 
-- POC supprimé (`androidApp/app/src/debug/kotlin/com/niumi/app/poc/`) ;
-- écran « Aide et limites » livré ;
-- build release fonctionnel sur un appareil réel, service d'accessibilité activé manuellement
-  avant le début de l'enregistrement (la spec interdit de le simuler, donc aussi de le pré-armer
-  hors caméra si la vidéo est censée montrer l'activation) ;
+- POC supprimé — **fait à l'étape 21** ;
+- écran « Aide et limites » livré — **fait à l'étape 21** ;
+- build release fonctionnel sur un appareil réel — **reste à vérifier** : l'APK release exige le
+  keystore d'upload, et aucune campagne n'a encore tourné sur un artefact de publication
+  (`RELEASE_REPORT.md`, écart 7) ;
+- service d'accessibilité activé manuellement avant le début de l'enregistrement : la spec
+  interdit de simuler le consentement, donc aussi de pré-armer le service hors caméra si la vidéo
+  est censée montrer l'activation ;
 - appareil exempté des restrictions de batterie du fabricant (§13), sans quoi le blocage peut
-  échouer silencieusement pendant le tournage (voir `ETAPE-05.md`).
+  échouer silencieusement pendant le tournage (voir `ETAPE-05.md`) ;
+- séquence 11 : l'écran « Aide et limites » n'est pas au script d'origine. L'ajouter après la
+  session terminée est utile pour la revue, la politique Play appréciant que les limites du
+  blocage soient visibles dans le produit (§4.3, §23).

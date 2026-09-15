@@ -22,8 +22,7 @@ import com.niumi.system.setup.SetupPreferences
  * plutôt que d'en redéfinir.
  *
  * [pairedBoxStore] est obligatoire depuis l'étape 13 : `RoomPairedBoxStore` (`:core:database`)
- * est désormais lié en production, la variante optionnelle (`DebugPairedBoxStore`) ne servant
- * plus que le POC de debug.
+ * est désormais la seule liaison, en production comme en debug.
  *
  * [unlockState] rejoint le groupe à l'étape 19 : avant le premier déverrouillage, le contrôle du
  * service d'accessibilité ne peut rien dire de vrai et doit être neutralisé — voir

@@ -134,8 +134,8 @@ private fun ReplacementConfirmation(
 /**
  * Point d'entrée réel. Le Reader Mode est branché ici et non dans le ViewModel :
  * `NfcAdapter.enableReaderMode()` exige une `Activity` au premier plan (§11.1). Il démarre sur
- * `ON_RESUME` et s'arrête sur `ON_PAUSE`, comme `AlarmActivity` et `PocPairingActivity` — la
- * lecture ne reste jamais active quand l'écran n'est pas devant l'utilisateur.
+ * `ON_RESUME` et s'arrête sur `ON_PAUSE`, comme `AlarmActivity` — la lecture ne reste jamais
+ * active quand l'écran n'est pas devant l'utilisateur.
  *
  * [onSessionInProgress] applique la garde de `SetupGate` : une session en cours interdit la
  * ré-association (SPEC_CORE_KMP §2 point 11).
