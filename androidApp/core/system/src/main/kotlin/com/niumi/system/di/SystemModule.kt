@@ -3,6 +3,8 @@ package com.niumi.system.di
 import android.content.Context
 import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.alarm.AndroidAlarmScheduler
+import com.niumi.system.alarm.AndroidRingingWatchdog
+import com.niumi.system.alarm.RingingWatchdog
 import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.DeviceProtected
@@ -88,4 +90,14 @@ object SystemModule {
     fun provideWakeLockHolder(
         @ApplicationContext context: Context,
     ): WakeLockHolder = AndroidWakeLockHolder(context)
+
+    /** Alarme de secours pendant `RINGING` (SPEC_ANDROID §10.2 ; étape 20). */
+    @Provides
+    @Singleton
+    fun provideRingingWatchdog(
+        @DeviceProtected context: Context,
+        resolver: NiumiComponentResolver,
+        pendingIntentFactory: AndroidPendingIntentFactory,
+        clock: Clock,
+    ): RingingWatchdog = AndroidRingingWatchdog(context, resolver, pendingIntentFactory, clock)
 }

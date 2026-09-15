@@ -2,6 +2,7 @@ package com.niumi.feature.ringing
 
 import android.content.ComponentName
 import android.content.Context
+import com.niumi.system.alarm.RingingWatchdogReceiver
 import com.niumi.system.intent.NiumiComponent
 import com.niumi.system.intent.NiumiComponentResolver
 import com.niumi.system.notification.NotificationIconResolver
@@ -22,6 +23,8 @@ import javax.inject.Singleton
  * que `AlarmRingingService` utilise pour son full-screen intent, donc la partie qui compte ici
  * est bien la vraie. `MAIN_ACTIVITY` vit dans `:app`, hors de portée : elle pointe vers
  * `AlarmActivity` faute de mieux, et n'est empruntée par aucun test de ce module.
+ * `RINGING_WATCHDOG_RECEIVER` (étape 20) vit dans `:core:system`, dont ce module dépend déjà :
+ * résolu réellement, sans repli.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -33,9 +36,21 @@ object TestComponentResolverModule {
     ): NiumiComponentResolver =
         NiumiComponentResolver { component ->
             when (component) {
-                NiumiComponent.ALARM_RECEIVER -> ComponentName(context, AlarmReceiver::class.java)
-                NiumiComponent.ALARM_ACTIVITY -> ComponentName(context, AlarmActivity::class.java)
-                NiumiComponent.MAIN_ACTIVITY -> ComponentName(context, AlarmActivity::class.java)
+                NiumiComponent.ALARM_RECEIVER -> {
+                    ComponentName(context, AlarmReceiver::class.java)
+                }
+
+                NiumiComponent.ALARM_ACTIVITY -> {
+                    ComponentName(context, AlarmActivity::class.java)
+                }
+
+                NiumiComponent.MAIN_ACTIVITY -> {
+                    ComponentName(context, AlarmActivity::class.java)
+                }
+
+                NiumiComponent.RINGING_WATCHDOG_RECEIVER -> {
+                    ComponentName(context, RingingWatchdogReceiver::class.java)
+                }
             }
         }
 

@@ -15,12 +15,19 @@ import com.niumi.system.session.isSessionInProgress
  *
  * Le classement des états finaux vient de `:core:system` (`SESSION_FINAL_STATES`) depuis
  * l'étape 13 : il était redéclaré ici et l'aurait été une troisième fois par `SetupGate`.
+ *
+ * [storageUnreadable] prend le pas sur tout le reste (étape 20) : si Niumi ne peut plus lire son
+ * état enregistré, ni l'état d'une session en cours ni l'accusé de l'onboarding ne sont fiables —
+ * l'écran de diagnostic est la seule destination honnête, et le blocage, lui, n'est jamais retiré
+ * par ce chemin (§18).
  */
 fun homeDestinationFor(
     state: SessionStateDto?,
     onboardingAcknowledged: Boolean,
+    storageUnreadable: Boolean = false,
 ): NiumiRoute =
     when {
+        storageUnreadable -> NiumiRoute.IncidentDiagnostic
         state.isSessionInProgress() -> NiumiRoute.ActiveSession
         onboardingAcknowledged -> NiumiRoute.Readiness
         else -> NiumiRoute.Onboarding

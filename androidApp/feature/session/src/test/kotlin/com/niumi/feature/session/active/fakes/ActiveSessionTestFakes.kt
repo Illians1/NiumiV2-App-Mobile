@@ -36,8 +36,12 @@ class RecordingForegroundReadinessTrigger : ForegroundReadinessTrigger {
 
 class FakeSessionIncidentsReader(
     var incidents: List<SessionIncidentDto> = emptyList(),
+    var failure: Throwable? = null,
 ) : SessionIncidentsReader {
-    override suspend fun incidents(sessionId: String): List<SessionIncidentDto> = incidents
+    override suspend fun incidents(sessionId: String): List<SessionIncidentDto> {
+        failure?.let { throw it }
+        return incidents
+    }
 }
 
 /**

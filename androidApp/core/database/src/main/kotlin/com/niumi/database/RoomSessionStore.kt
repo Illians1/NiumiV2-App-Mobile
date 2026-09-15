@@ -1,5 +1,6 @@
 package com.niumi.database
 
+import android.database.sqlite.SQLiteException
 import androidx.room.withTransaction
 import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.database.dao.BlockedAppDao
@@ -46,7 +47,16 @@ class RoomSessionStore(
     private val outboxDao get() = database.outboxDao()
     private val incidentDao get() = database.incidentDao()
 
-    override suspend fun activeSession(): StoredSession? = database.withTransaction { loadActiveSession() }
+    // `SQLiteException` seule : la garde `ROOM_BEFORE_UNLOCK` (`IllegalStateException`, levée par
+    // `database` avant même d'atteindre `withTransaction`) est un défaut de programmation, pas une
+    // corruption, et doit continuer de remonter telle quelle plutôt que devenir un diagnostic
+    // affiché à l'utilisateur (SPEC_ANDROID §18, étape 20).
+    override suspend fun activeSession(): StoredSession? =
+        try {
+            database.withTransaction { loadActiveSession() }
+        } catch (exception: SQLiteException) {
+            throw SessionStoreUnreadableException(exception.message ?: "ROOM_UNREADABLE", exception)
+        }
 
     override suspend fun commitDecision(decision: StoredDecision) {
         database.withTransaction { writeDecision(decision) }

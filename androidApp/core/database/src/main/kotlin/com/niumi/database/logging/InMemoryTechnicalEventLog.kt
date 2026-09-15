@@ -40,4 +40,16 @@ class InMemoryTechnicalEventLog(
     }
 
     override suspend fun recent(): List<TechnicalEventEntry> = lock.withLock { entries.toList() }
+
+    /**
+     * Vidange atomique pour le versement dans Room au déverrouillage (§9.3, §17 ; étape 20) :
+     * jamais rejouée deux fois, sans quoi un second appel dupliquerait ce que le premier a déjà
+     * versé.
+     */
+    fun drain(): List<TechnicalEventEntry> =
+        lock.withLock {
+            val drained = entries.toList()
+            entries.clear()
+            drained
+        }
 }

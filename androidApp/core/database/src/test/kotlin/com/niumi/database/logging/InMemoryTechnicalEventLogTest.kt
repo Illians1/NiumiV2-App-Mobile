@@ -76,4 +76,30 @@ class InMemoryTechnicalEventLogTest {
             assertThat(entry.androidVersion).isEqualTo("16 (API 36)")
             assertThat(entry.appVersion).isEqualTo("1.0.0 (1)")
         }
+
+    /** Étape 20 : le versement dans Room au déverrouillage doit voir tout ce qui a été écrit. */
+    @Test
+    fun drainReturnsEverything() {
+        log.log(TechnicalEventType.ALARM_RECEIVED, sessionId = "s1")
+        log.log(TechnicalEventType.RINGING_STARTED, sessionId = "s1")
+
+        val drained = log.drain()
+
+        assertThat(drained.map { it.type }).containsExactly(
+            TechnicalEventType.ALARM_RECEIVED,
+            TechnicalEventType.RINGING_STARTED,
+        )
+    }
+
+    /** Vidange atomique : jamais rejouée deux fois, sans quoi le versement dans Room dupliquerait. */
+    @Test
+    fun drainEmptiesTheLogAtomically() =
+        runTest {
+            log.log(TechnicalEventType.ALARM_RECEIVED, sessionId = "s1")
+
+            log.drain()
+
+            assertThat(log.drain()).isEmpty()
+            assertThat(log.recent()).isEmpty()
+        }
 }

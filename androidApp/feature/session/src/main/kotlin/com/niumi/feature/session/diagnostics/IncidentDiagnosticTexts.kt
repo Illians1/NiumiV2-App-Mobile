@@ -18,6 +18,12 @@ import com.niumi.system.readiness.ReadinessOutcome
 object IncidentDiagnosticTexts {
     const val TITLE = "Diagnostic"
 
+    /** Étape 20 : Room et Direct Boot illisibles à la fois, ou Room seul après déverrouillage. */
+    const val STORAGE_FAILURE_TITLE = "Niumi ne peut plus lire son état enregistré"
+
+    const val STORAGE_FAILURE_MESSAGE =
+        "Tes applications restent bloquées. Scanne ton boîtier pour terminer ta session."
+
     const val EXPORT_TITLE = "Niumi — diagnostic"
 
     const val EXPORT_BUTTON = "Exporter le diagnostic"

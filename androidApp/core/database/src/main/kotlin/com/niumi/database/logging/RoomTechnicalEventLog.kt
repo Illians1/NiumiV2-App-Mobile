@@ -53,8 +53,30 @@ class RoomTechnicalEventLog(
         }
     }
 
+    // Une base illisible ne doit pas empêcher l'écran de diagnostic de s'afficher (SPEC_ANDROID
+    // §18, étape 20) : liste vide plutôt qu'une exception qui remonterait jusqu'au `ViewModel`.
     override suspend fun recent(): List<TechnicalEventEntry> =
-        technicalEventDao.mostRecent(MAX_TECHNICAL_EVENTS).map { it.toEntry() }
+        runCatching {
+            technicalEventDao.mostRecent(MAX_TECHNICAL_EVENTS).map { it.toEntry() }
+        }.getOrDefault(emptyList())
+
+    /**
+     * Versement du journal d'avant déverrouillage (SPEC_ANDROID §17, §9.3 ; étape 20), appelé par
+     * [UnlockAwareTechnicalEventLog.flush]. **L'horodatage et le contexte d'appareil sont ceux de
+     * l'entrée d'origine, jamais ceux du moment du versement** — même raison que §17 porte déjà ce
+     * contexte par ligne plutôt qu'en facteur commun : un journal de 200 événements peut enjamber
+     * une mise à jour, et le contexte du versement mentirait sur celui de la capture. `detailsJson`
+     * n'est pas resanitisé : il l'a déjà été à l'écriture par [InMemoryTechnicalEventLog], et cette
+     * sanitisation est idempotente.
+     */
+    suspend fun restore(entries: List<TechnicalEventEntry>) {
+        if (entries.isEmpty()) return
+        writeMutex.withLock {
+            runCatching {
+                technicalEventDao.insertAllAndPurge(entries.map { it.toEntity() }, MAX_TECHNICAL_EVENTS)
+            }
+        }
+    }
 
     private fun TechnicalEventEntity.toEntry(): TechnicalEventEntry =
         TechnicalEventEntry(
@@ -62,6 +84,17 @@ class RoomTechnicalEventLog(
             sessionId = sessionId,
             detailsJson = detailsJson,
             occurredAtEpochMillis = createdAtEpochMillis,
+            deviceModel = deviceModel,
+            androidVersion = androidVersion,
+            appVersion = appVersion,
+        )
+
+    private fun TechnicalEventEntry.toEntity(): TechnicalEventEntity =
+        TechnicalEventEntity(
+            sessionId = sessionId,
+            type = type.name,
+            createdAtEpochMillis = occurredAtEpochMillis,
+            detailsJson = detailsJson,
             deviceModel = deviceModel,
             androidVersion = androidVersion,
             appVersion = appVersion,

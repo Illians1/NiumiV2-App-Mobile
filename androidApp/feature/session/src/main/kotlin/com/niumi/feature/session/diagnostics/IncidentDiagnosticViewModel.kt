@@ -47,8 +47,24 @@ class IncidentDiagnosticViewModel
 
         private var boxId: String? = null
 
+        /**
+         * Filet de sécurité (étape 20), en plus des sources elles-mêmes déjà protégées
+         * (`RoomTechnicalEventLog.recent()`, `RoomSessionIncidentsReader.incidents()`,
+         * `UnlockAwarePersistenceGateway.load()`) : une exception inattendue ne doit jamais laisser
+         * l'écran en `isLoading` indéfiniment.
+         */
         fun refresh() {
-            viewModelScope.launch { state = load(sources.snapshotPublisher.snapshot.value) }
+            viewModelScope.launch {
+                state =
+                    runCatching { load(sources.snapshotPublisher.snapshot.value) }
+                        .getOrElse {
+                            IncidentDiagnosticUiState(
+                                storageFailureReason =
+                                    sources.storageIntegrity.failure.value ?: "DIAGNOSTIC_UNAVAILABLE",
+                                isLoading = false,
+                            )
+                        }
+            }
         }
 
         /**
@@ -71,11 +87,17 @@ class IncidentDiagnosticViewModel
             )
 
         private suspend fun load(snapshot: SessionSnapshotDto?): IncidentDiagnosticUiState {
+            val storageFailureReason = sources.storageIntegrity.failure.value
             val checks = sources.readinessChecker.check(ReadinessInput()).checks
             val events = sources.technicalEventLog.recent()
             if (snapshot == null) {
                 boxId = null
-                return IncidentDiagnosticUiState(checks = checks, events = events, isLoading = false)
+                return IncidentDiagnosticUiState(
+                    checks = checks,
+                    events = events,
+                    storageFailureReason = storageFailureReason,
+                    isLoading = false,
+                )
             }
 
             boxId = (sources.gateway.load() as? LoadResult.Present)?.extras?.boxId
@@ -86,6 +108,7 @@ class IncidentDiagnosticViewModel
                 checks = checks,
                 incidents = sources.incidentsReader.incidents(snapshot.sessionId).sortedWith(INCIDENT_ORDER),
                 events = events,
+                storageFailureReason = storageFailureReason,
                 isLoading = false,
             )
         }

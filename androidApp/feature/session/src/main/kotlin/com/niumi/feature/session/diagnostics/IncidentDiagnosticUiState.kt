@@ -16,6 +16,10 @@ import com.niumi.system.readiness.ReadinessCheck
  *
  * L'écran est consultable **sans session active** : le journal technique et les contrôles de §13
  * restent utiles quand la session vient de se terminer ou d'échouer.
+ *
+ * [storageFailureReason] (étape 20) : Niumi ne peut plus lire son état enregistré. L'écran doit
+ * l'afficher explicitement plutôt que se figer en chargement, et rappeler que le blocage n'est
+ * jamais retiré par ce chemin (§18) — le scan du boîtier reste la seule sortie.
  */
 data class IncidentDiagnosticUiState(
     val sessionId: String? = null,
@@ -24,6 +28,7 @@ data class IncidentDiagnosticUiState(
     val checks: List<ReadinessCheck> = emptyList(),
     val incidents: List<SessionIncidentDto> = emptyList(),
     val events: List<TechnicalEventEntry> = emptyList(),
+    val storageFailureReason: String? = null,
     val isLoading: Boolean = true,
 ) {
     val hasSession: Boolean get() = sessionId != null

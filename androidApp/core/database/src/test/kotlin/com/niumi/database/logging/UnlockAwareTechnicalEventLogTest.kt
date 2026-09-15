@@ -37,6 +37,12 @@ class UnlockAwareTechnicalEventLogTest {
             synchronized(this) { rows += entity.copy(id = nextId++) }
         }
 
+        override suspend fun insertAll(entities: List<TechnicalEventEntity>) {
+            synchronized(this) { entities.forEach { rows += it.copy(id = nextId++) } }
+        }
+
+        fun snapshot(): List<TechnicalEventEntity> = synchronized(this) { rows.toList() }
+
         override suspend fun mostRecent(limit: Int): List<TechnicalEventEntity> =
             synchronized(this) {
                 rows
@@ -119,5 +125,61 @@ class UnlockAwareTechnicalEventLogTest {
 
         val entries = runBlocking { log.recent() }
         assertThat(entries.map { it.sessionId }).containsExactly("after-unlock", "before-unlock").inOrder()
+    }
+
+    @Test
+    fun `flushing while locked does nothing and never resolves room`() {
+        val inMemory = InMemoryTechnicalEventLog(deviceContext, nowEpochMillis = { 1L })
+        inMemory.log(TechnicalEventType.ALARM_RECEIVED, sessionId = "s1")
+        val log =
+            UnlockAwareTechnicalEventLog(
+                unlockState = FakeUnlockState(isUserUnlocked = false),
+                inMemory = inMemory,
+                roomLog = Provider { error("Room must not be resolved before unlock") },
+            )
+
+        runBlocking { log.flush() }
+
+        assertThat(runBlocking { inMemory.recent() }).hasSize(1)
+    }
+
+    /**
+     * §17 : l'horodatage et le contexte d'appareil versés dans Room sont ceux de la capture
+     * (`nowEpochMillis = { 1L }`, `deviceContext` d'origine), jamais ceux du moment du versement.
+     */
+    @Test
+    @Suppress("InjectDispatcher") // Le test est ici le fournisseur du scope de l'objet sous test.
+    fun `flushing after unlock moves the entries to room preserving their original timestamp`() {
+        val dao = FakeTechnicalEventDao()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val roomLog = RoomTechnicalEventLog(dao, scope, deviceContext, nowEpochMillis = { 999L })
+        val inMemory = InMemoryTechnicalEventLog(deviceContext, nowEpochMillis = { 1L })
+        inMemory.log(TechnicalEventType.MISSED_TRIGGER_WINDOW, sessionId = "s1")
+        val log = UnlockAwareTechnicalEventLog(FakeUnlockState(isUserUnlocked = true), inMemory, Provider { roomLog })
+
+        runBlocking { log.flush() }
+
+        val restored = dao.snapshot().single()
+        assertThat(restored.createdAtEpochMillis).isEqualTo(1L)
+        assertThat(restored.type).isEqualTo(TechnicalEventType.MISSED_TRIGGER_WINDOW.name)
+        assertThat(runBlocking { inMemory.recent() }).isEmpty()
+    }
+
+    @Test
+    @Suppress("InjectDispatcher") // Le test est ici le fournisseur du scope de l'objet sous test.
+    fun `flushing twice moves the entries only once`() {
+        val dao = FakeTechnicalEventDao()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val roomLog = RoomTechnicalEventLog(dao, scope, deviceContext, nowEpochMillis = { 999L })
+        val inMemory = InMemoryTechnicalEventLog(deviceContext, nowEpochMillis = { 1L })
+        inMemory.log(TechnicalEventType.ALARM_RECEIVED, sessionId = "s1")
+        val log = UnlockAwareTechnicalEventLog(FakeUnlockState(isUserUnlocked = true), inMemory, Provider { roomLog })
+
+        runBlocking {
+            log.flush()
+            log.flush()
+        }
+
+        assertThat(dao.snapshot()).hasSize(1)
     }
 }

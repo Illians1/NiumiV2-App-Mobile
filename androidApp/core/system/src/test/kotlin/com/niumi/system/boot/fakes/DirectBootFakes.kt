@@ -7,6 +7,7 @@ import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
 import com.niumi.database.SessionStore
+import com.niumi.database.SessionStoreUnreadableException
 import com.niumi.database.StoredDecision
 import com.niumi.database.StoredSession
 import com.niumi.database.directboot.DirectBootMergeResult
@@ -74,10 +75,17 @@ class RecordingDirectBootRoomMerge(
             effectsInserted = 0,
             effectsAdvanced = 0,
         ),
+    /**
+     * Base illisible (étape 20). Aucune doublure ne levait jusqu'ici, et c'est précisément ce qui
+     * a laissé passer le plantage mesuré sur appareil le 2026-09-15 : `RoomDirectBootMerge` touche
+     * Room avant le `gateway.load()` de la passe.
+     */
+    var failure: SessionStoreUnreadableException? = null,
 ) : DirectBootRoomMerge {
     val merged: MutableList<DirectBootSnapshot.Active> = mutableListOf()
 
     override suspend fun merge(projection: DirectBootSnapshot.Active): DirectBootMergeResult {
+        failure?.let { throw it }
         merged += projection
         return result
     }

@@ -22,6 +22,18 @@ data class StoredDecision(
 )
 
 /**
+ * Room illisible une fois l'appareil déverrouillé (SPEC_CORE_KMP §13, « corruption traitée
+ * explicitement » ; SPEC_ANDROID §18, étape 20). Levée par `RoomSessionStore.activeSession()`
+ * quand la lecture échoue avec une `android.database.sqlite.SQLiteException` — jamais quand la
+ * garde `ROOM_BEFORE_UNLOCK` (`IllegalStateException`) se déclenche : celle-ci est un défaut de
+ * programmation, pas une corruption, et doit continuer de remonter telle quelle.
+ */
+class SessionStoreUnreadableException(
+    val reason: String,
+    cause: Throwable? = null,
+) : Exception(reason, cause)
+
+/**
  * Persistance canonique Android après déverrouillage (SPEC_CORE_KMP §13). Implémentée par
  * `RoomSessionStore`. Toutes les opérations sont `suspend` : jamais d'accès Room sur le thread
  * appelant.

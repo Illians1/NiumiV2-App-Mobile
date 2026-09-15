@@ -25,7 +25,8 @@ class UnlockAwareTechnicalEventLog
         private val unlockState: UnlockState,
         private val inMemory: InMemoryTechnicalEventLog,
         private val roomLog: Provider<RoomTechnicalEventLog>,
-    ) : TechnicalEventLog {
+    ) : TechnicalEventLog,
+        TechnicalEventLogFlush {
         override fun log(
             type: TechnicalEventType,
             sessionId: String?,
@@ -43,5 +44,17 @@ class UnlockAwareTechnicalEventLog
             return (inMemory.recent() + fromRoom)
                 .sortedByDescending { it.occurredAtEpochMillis }
                 .take(MAX_TECHNICAL_EVENTS)
+        }
+
+        /**
+         * Versement dans Room au premier déverrouillage atteint par ce processus (SPEC_ANDROID
+         * §17, §9.3 ; étape 20). Verrouillé : un processus qui journalise avant déverrouillage et
+         * meurt avant d'appeler [flush] perd ses entrées — limite résiduelle assumée, reprise dans
+         * `LIMITES.md` (étape 21). L'incident métier correspondant, lui, atteint Room par le rejeu
+         * de l'outbox et n'est jamais perdu.
+         */
+        override suspend fun flush() {
+            if (!unlockState.isUserUnlocked) return
+            inMemory.drain().takeIf { it.isNotEmpty() }?.let { roomLog.get().restore(it) }
         }
     }

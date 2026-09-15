@@ -1,8 +1,10 @@
 package com.niumi.database.directboot
 
+import android.database.sqlite.SQLiteException
 import androidx.room.withTransaction
 import com.niumi.database.EffectStatus
 import com.niumi.database.NiumiDatabase
+import com.niumi.database.SessionStoreUnreadableException
 import com.niumi.database.entity.AlarmSessionEntity
 import com.niumi.database.entity.SessionEffectOutboxEntity
 import com.niumi.database.mapping.toEntity
@@ -79,15 +81,25 @@ class RoomDirectBootMerge(
             return databaseProvider.get()
         }
 
+    // `SQLiteException` traduite comme dans `RoomSessionStore.activeSession()` : aucune exception
+    // SQLite brute ne sort de `:core:database`. **Défaut mesuré sur appareil le 2026-09-15** : la
+    // fusion touche Room *avant* le `gateway.load()` de la passe, et une base illisible y faisait
+    // planter le processus à chaque démarrage — donc une boucle de plantage, et l'écran de
+    // diagnostic que §18 promet jamais atteint. La garde `ROOM_BEFORE_UNLOCK`
+    // (`IllegalStateException`) continue, elle, de remonter : c'est un défaut de programmation.
     override suspend fun merge(projection: DirectBootSnapshot.Active): DirectBootMergeResult =
-        database.withTransaction {
-            val existing =
-                database.sessionDao().findById(projection.sessionId)
-                    ?: return@withTransaction DirectBootMergeResult.UnknownSession
-            if (projection.domainRevision < existing.revision) {
-                return@withTransaction DirectBootMergeResult.StaleRevision
+        try {
+            database.withTransaction {
+                val existing =
+                    database.sessionDao().findById(projection.sessionId)
+                        ?: return@withTransaction DirectBootMergeResult.UnknownSession
+                if (projection.domainRevision < existing.revision) {
+                    return@withTransaction DirectBootMergeResult.StaleRevision
+                }
+                applyMerge(projection, existing)
             }
-            applyMerge(projection, existing)
+        } catch (exception: SQLiteException) {
+            throw SessionStoreUnreadableException(exception.message ?: "ROOM_UNREADABLE", exception)
         }
 
     private suspend fun applyMerge(

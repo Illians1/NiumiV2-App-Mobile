@@ -7,7 +7,9 @@ import com.niumi.database.directboot.DirectBootStore
 import com.niumi.database.directboot.UnlockState
 import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.database.logging.TechnicalEventLog
+import com.niumi.database.logging.TechnicalEventLogFlush
 import com.niumi.system.alarm.AlarmScheduler
+import com.niumi.system.alarm.RingingWatchdog
 import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.blocking.AccessibilityServiceStatus
 import com.niumi.system.blocking.BlockedPackagesProjection
@@ -31,9 +33,11 @@ import com.niumi.system.session.SessionEventFactory
 import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionReconciler
 import com.niumi.system.session.SessionReducer
+import com.niumi.system.session.SessionRuntimeReconciler
 import com.niumi.system.session.SessionRuntimeStatusProbe
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.SessionStartupReconciler
+import com.niumi.system.session.StorageIntegrityState
 import com.niumi.system.session.UnlockAwarePersistenceGateway
 import dagger.Module
 import dagger.Provides
@@ -100,6 +104,10 @@ object SessionModule {
         scanRequestNotifier: ScanRequestNotifier,
         directBootMerger: DirectBootMerger,
         incidentsReader: SessionIncidentsReader,
+        ringingWatchdog: RingingWatchdog,
+        runtimeReconciler: SessionRuntimeReconciler,
+        storageIntegrity: StorageIntegrityState,
+        technicalEventFlush: TechnicalEventLogFlush,
     ): ReconcilerSources =
         ReconcilerSources(
             alarmScheduler,
@@ -110,6 +118,10 @@ object SessionModule {
             scanRequestNotifier,
             directBootMerger,
             incidentsReader,
+            ringingWatchdog,
+            runtimeReconciler,
+            storageIntegrity,
+            technicalEventFlush,
         )
 
     @Provides

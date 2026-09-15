@@ -6,6 +6,7 @@ import com.niumi.database.logging.DeviceContext
 import com.niumi.database.logging.InMemoryTechnicalEventLog
 import com.niumi.database.logging.RoomTechnicalEventLog
 import com.niumi.database.logging.TechnicalEventLog
+import com.niumi.database.logging.TechnicalEventLogFlush
 import com.niumi.database.logging.UnlockAwareTechnicalEventLog
 import com.niumi.database.logging.readDeviceContext
 import dagger.Binds
@@ -32,6 +33,16 @@ interface LoggingModule {
     @Binds
     @Singleton
     fun bindTechnicalEventLog(impl: UnlockAwareTechnicalEventLog): TechnicalEventLog
+
+    /**
+     * Même implémentation que [bindTechnicalEventLog], donc la même instance `@Singleton` : un
+     * second graphe donnerait un [com.niumi.database.logging.InMemoryTechnicalEventLog] jamais
+     * alimenté par les seize sites d'appel de `log()`, et [TechnicalEventLogFlush.flush] viderait
+     * un journal vide.
+     */
+    @Binds
+    @Singleton
+    fun bindTechnicalEventLogFlush(impl: UnlockAwareTechnicalEventLog): TechnicalEventLogFlush
 
     companion object {
         /**

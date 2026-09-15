@@ -11,6 +11,9 @@ interface TechnicalEventDao {
     @Insert
     suspend fun insert(entity: TechnicalEventEntity)
 
+    @Insert
+    suspend fun insertAll(entities: List<TechnicalEventEntity>)
+
     // Tri chronologique (`createdAtEpochMillis`), `id` seulement en départage : l'horodatage est
     // capturé au moment de l'appel à `log()`, l'insertion étant asynchrone, deux écritures peuvent
     // atteindre la base dans un ordre différent de celui des appels. Trier par `id` seul ferait
@@ -31,6 +34,16 @@ interface TechnicalEventDao {
         limit: Int,
     ) {
         insert(entity)
+        purgeBeyond(limit)
+    }
+
+    /** Versement du journal d'avant déverrouillage (SPEC_ANDROID §17, §9.3 ; étape 20). */
+    @Transaction
+    suspend fun insertAllAndPurge(
+        entities: List<TechnicalEventEntity>,
+        limit: Int,
+    ) {
+        insertAll(entities)
         purgeBeyond(limit)
     }
 }

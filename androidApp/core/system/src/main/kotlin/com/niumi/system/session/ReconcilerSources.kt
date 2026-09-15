@@ -1,7 +1,9 @@
 package com.niumi.system.session
 
 import com.niumi.database.incident.SessionIncidentsReader
+import com.niumi.database.logging.TechnicalEventLogFlush
 import com.niumi.system.alarm.AlarmScheduler
+import com.niumi.system.alarm.RingingWatchdog
 import com.niumi.system.blocking.BlockedPackagesProjection
 import com.niumi.system.boot.DirectBootMerger
 import com.niumi.system.notification.ScanRequestNotifier
@@ -35,6 +37,21 @@ import com.niumi.system.ringing.RingingController
  * qu'un incident de changement d'heure ne doit être consigné qu'une fois par session, et que la
  * garde se lit en base — ces deux raisons n'arrivent que par broadcast, parfois dans un processus
  * qui vient de naître, où une garde en mémoire serait toujours vide.
+ *
+ * [ringingWatchdog] rejoint le groupe à l'étape 20 : chaque passe applique la politique de l'alarme
+ * de secours (§10.2) sur l'état décidé, qu'elle l'arme (`RINGING`) ou la désarme (tout autre état).
+ *
+ * [runtimeReconciler] rejoint le groupe à l'étape 20 : les deux écarts que
+ * `SessionReadinessMonitor` ne couvre pas (§7.1, §18) — une alarme `ARMED` disparue et le NFC —
+ * sont traités en fin de passe, sur le snapshot le plus à jour.
+ *
+ * [storageIntegrity] rejoint le groupe à l'étape 20 : le réconciliateur est le seul point qui voit
+ * `LoadResult.Unreadable`, donc le seul qui puisse tenir à jour l'état lu par l'accueil et l'écran
+ * de diagnostic.
+ *
+ * [technicalEventFlush] rejoint le groupe à l'étape 20 : le journal écrit avant déverrouillage doit
+ * rejoindre Room dès que possible (§17), au même endroit que la fusion Direct Boot et pour la même
+ * raison — un déverrouillage n'attend pas éternellement.
  */
 data class ReconcilerSources(
     val alarmScheduler: AlarmScheduler,
@@ -45,4 +62,8 @@ data class ReconcilerSources(
     val scanRequestNotifier: ScanRequestNotifier,
     val directBootMerger: DirectBootMerger,
     val incidentsReader: SessionIncidentsReader,
+    val ringingWatchdog: RingingWatchdog,
+    val runtimeReconciler: SessionRuntimeReconciler,
+    val storageIntegrity: StorageIntegrityState,
+    val technicalEventFlush: TechnicalEventLogFlush,
 )

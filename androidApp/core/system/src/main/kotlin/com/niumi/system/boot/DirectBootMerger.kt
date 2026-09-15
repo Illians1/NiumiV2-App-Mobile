@@ -1,6 +1,7 @@
 package com.niumi.system.boot
 
 import com.niumi.database.SessionStore
+import com.niumi.database.SessionStoreUnreadableException
 import com.niumi.database.directboot.DirectBootMergeResult
 import com.niumi.database.directboot.DirectBootRoomMerge
 import com.niumi.database.directboot.DirectBootSnapshot
@@ -15,8 +16,13 @@ sealed interface DirectBootMergeOutcome {
 
     /**
      * Projection illisible (SPEC_CORE_KMP §13, « corruption traitée explicitement »). Rien n'est
-     * fusionné et **rien n'est effacé** : `SessionReconciler` produit `SnapshotCorrupted` sur la
-     * passe qui suit, et Room reste la source intacte.
+     * fusionné, mais la projection **est réécrite depuis Room** (étape 20, décision explicite,
+     * après journalisation par `SessionReconciler` qui seul connaît le `sessionId` à ce stade) :
+     * la conserver corrompue laisserait le prochain redémarrage avant déverrouillage sans alarme
+     * reprogrammable, exactement le défaut que §9.3 doit empêcher. Aucune quarantaine du fichier
+     * fautif : il porte `boxTokenSha256Hex` et la liste des applications bloquées, que §17 interdit
+     * de faire transiter par l'export de diagnostic — le conserver ne servirait qu'un `adb run-as`
+     * en debug, jamais l'utilisateur.
      */
     data class Corrupted(
         val reason: String,
@@ -25,6 +31,17 @@ sealed interface DirectBootMergeOutcome {
     /** Fusion tentée ; [result] dit ce que Room a réellement absorbé. */
     data class Merged(
         val result: DirectBootMergeResult,
+    ) : DirectBootMergeOutcome
+
+    /**
+     * Room est illisible (SPEC_ANDROID §18, étape 20). **Défaut mesuré sur appareil le
+     * 2026-09-15 :** la fusion touche Room *avant* le `gateway.load()` de la passe, et une base
+     * illisible y faisait planter le processus à chaque démarrage — donc une boucle de plantage,
+     * et l'écran de diagnostic que §18 promet jamais atteint. Rien n'est fusionné ni réécrit ; la
+     * passe continue et c'est `gateway.load()`, qui lit la même base, qui conclura et consignera.
+     */
+    data class RoomUnreadable(
+        val reason: String,
     ) : DirectBootMergeOutcome
 }
 
@@ -50,10 +67,11 @@ sealed interface DirectBootMergeOutcome {
  * le cas contraire. La fusion étant idempotente et bornée à la lecture d'un fichier quand il n'y a
  * rien à faire, la tenter trois fois ne coûte rien.
  *
- * **Rien n'est journalisé.** §17 est une liste fermée de 26 types et aucun ne décrit une fusion de
- * projection. Le fait reste observable autrement : ce que la fusion a absorbé ressort dans les
- * événements que la passe de réconciliation suivante produit en rejouant les effets. Même
- * raisonnement que le dépassement de fenêtre d'`AlarmReceiver` (étape 17).
+ * **La fusion elle-même n'est pas journalisée.** §17 ne décrit pas de fusion de projection. Ce
+ * qu'elle a absorbé ressort dans les événements que la passe de réconciliation suivante produit en
+ * rejouant les effets. Même raisonnement que le dépassement de fenêtre d'`AlarmReceiver`
+ * (étape 17). **Une corruption, si `merge()` en trouve une, l'est en revanche** — voir
+ * [DirectBootMergeOutcome.Corrupted] et `SessionReconciler`.
  */
 class DirectBootMerger(
     private val unlockState: UnlockState,
@@ -63,12 +81,33 @@ class DirectBootMerger(
 ) {
     suspend fun merge(): DirectBootMergeOutcome {
         if (!unlockState.isUserUnlocked) return DirectBootMergeOutcome.NothingToMerge
-        return when (val projection = directBootStore.read()) {
-            null -> DirectBootMergeOutcome.NothingToMerge
-            is DirectBootSnapshot.Corrupted -> DirectBootMergeOutcome.Corrupted(projection.reason)
-            is DirectBootSnapshot.Active -> DirectBootMergeOutcome.Merged(mergeActive(projection))
+        // Toutes les branches ci-dessous touchent Room, aucune ne doit pouvoir faire tomber la
+        // passe : `SessionStoreUnreadableException` est la traduction unique que `:core:database`
+        // donne à une base illisible (`RoomSessionStore`, `RoomDirectBootMerge`).
+        return try {
+            mergeReadableRoom()
+        } catch (exception: SessionStoreUnreadableException) {
+            DirectBootMergeOutcome.RoomUnreadable(exception.reason)
         }
     }
+
+    private suspend fun mergeReadableRoom(): DirectBootMergeOutcome =
+        when (val projection = directBootStore.read()) {
+            null -> {
+                DirectBootMergeOutcome.NothingToMerge
+            }
+
+            is DirectBootSnapshot.Corrupted -> {
+                // Écrase depuis Room après le constat : voir le KDoc de `Corrupted` pour pourquoi
+                // ce n'est ni une quarantaine ni un effacement muet.
+                mirrorActiveSessionToDirectBoot(sessionStore, directBootStore)
+                DirectBootMergeOutcome.Corrupted(projection.reason)
+            }
+
+            is DirectBootSnapshot.Active -> {
+                DirectBootMergeOutcome.Merged(mergeActive(projection))
+            }
+        }
 
     private suspend fun mergeActive(projection: DirectBootSnapshot.Active): DirectBootMergeResult {
         val result = roomMerge.merge(projection)

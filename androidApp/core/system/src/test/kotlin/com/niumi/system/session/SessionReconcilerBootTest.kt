@@ -205,7 +205,7 @@ class SessionReconcilerBootTest {
                 ),
             )
 
-            val result = harness.coordinator.reconcile(ReconcileReason.FOREGROUND_AWAITING_SCAN)
+            val result = harness.coordinator.reconcile(ReconcileReason.FOREGROUND)
 
             assertThat(result.actions).contains(ReconcileAction.ScanRequestRepublished)
             assertThat(harness.scanRequestNotifier.presentCallCount).isEqualTo(1)
@@ -230,7 +230,7 @@ class SessionReconcilerBootTest {
                 ),
             )
 
-            harness.coordinator.reconcile(ReconcileReason.FOREGROUND_AWAITING_SCAN)
+            harness.coordinator.reconcile(ReconcileReason.FOREGROUND)
 
             assertThat(harness.journal.calls).doesNotContain("AlarmScheduler.schedule")
             assertThat(harness.gateway.incidentsRecorded).isEmpty()

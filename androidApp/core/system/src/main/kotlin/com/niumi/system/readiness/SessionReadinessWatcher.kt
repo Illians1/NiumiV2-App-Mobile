@@ -47,9 +47,14 @@ class SessionReadinessWatcher(
         }
 
     /**
-     * Aucune session publiée signifie qu'aucune n'est active **dans ce processus** : la
-     * surveillance n'a alors pas d'objet. La réconciliation, qui lit la persistance, reste le
-     * chemin qui découvre une session après un redémarrage du processus.
+     * **Aucune session publiée ne signifie plus « rien à faire » depuis l'étape 20.** Un processus
+     * fraîchement recréé (mort pendant `RINGING`, par exemple) peut afficher un `onResume` avant
+     * que `SessionStartupReconciler` — lancé en tâche de fond depuis `Application.onCreate` — ait
+     * eu le temps de publier quoi que ce soit. Sortir silencieusement ici, comme avant cette étape,
+     * laissait cet `onResume` sans effet : la surveillance et la reprise éventuelle n'avaient plus
+     * aucune chance avant le prochain déclencheur. Une réconciliation est donc déclenchée dans ce
+     * cas, qui republie le snapshot ([SessionReconciler.reconcile], §9.3) — ce que la persistance
+     * décrit, une fois lu, remplace le silence.
      *
      * **Une session qui attend un scan déclenche en plus une réconciliation (§10.5, étape 19).**
      * Elle republie la notification d'attente de scan, seul rappel visible une fois l'écran de
@@ -59,15 +64,19 @@ class SessionReadinessWatcher(
      * déverrouillage d'écran ordinaire (`ACTION_USER_UNLOCKED` n'est émis qu'au premier
      * déverrouillage après démarrage). Mesuré le 2026-09-14 sur Xiaomi 25080RABDG / Android 16.
      *
-     * La surveillance de §13.1 est appelée en premier et n'est pas remplacée : `reconcile` ne
-     * rejoue le diagnostic que sur une session `ARMED`, alors que le service d'accessibilité reste
-     * surveillé dans tous les états non finaux.
+     * La surveillance de §13.1 est appelée en premier et n'est pas remplacée quand un snapshot est
+     * déjà publié : `reconcile` ne rejoue le diagnostic que sur une session `ARMED`, alors que le
+     * service d'accessibilité reste surveillé dans tous les états non finaux.
      */
     suspend fun evaluate() {
-        val snapshot = publisher.snapshot.value ?: return
+        val snapshot = publisher.snapshot.value
+        if (snapshot == null) {
+            coordinator.reconcile(ReconcileReason.FOREGROUND)
+            return
+        }
         monitor.evaluate(snapshot) { event -> coordinator.dispatch(event) }
         if (snapshot.state in SESSION_SCAN_STATES) {
-            coordinator.reconcile(ReconcileReason.FOREGROUND_AWAITING_SCAN)
+            coordinator.reconcile(ReconcileReason.FOREGROUND)
         }
     }
 

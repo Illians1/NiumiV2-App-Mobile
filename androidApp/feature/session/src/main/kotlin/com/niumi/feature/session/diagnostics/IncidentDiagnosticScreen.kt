@@ -51,6 +51,7 @@ fun IncidentDiagnosticScreen(
         ) {
             Text(text = IncidentDiagnosticTexts.TITLE, style = MaterialTheme.typography.headlineSmall)
 
+            StorageFailureBanner(state.storageFailureReason)
             CriticalIncidents(state.criticalIncidents)
             SessionSection(state)
             ChecksSection(state.checks)
@@ -60,6 +61,36 @@ fun IncidentDiagnosticScreen(
             Button(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
                 Text(text = IncidentDiagnosticTexts.EXPORT_BUTTON)
             }
+        }
+    }
+}
+
+/**
+ * SPEC_ANDROID §18, §20 : passe avant même les incidents `CRITICAL` — sans persistance lisible, il
+ * n'y a ni session ni incident à afficher de toute façon. Dit explicitement les deux choses qui
+ * comptent : Niumi ne sait plus où il en est, et le blocage n'est pour autant jamais retiré.
+ */
+@Composable
+private fun StorageFailureBanner(reason: String?) {
+    if (reason == null) return
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = IncidentDiagnosticTexts.STORAGE_FAILURE_TITLE,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = IncidentDiagnosticTexts.STORAGE_FAILURE_MESSAGE,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }

@@ -27,6 +27,10 @@ interface SessionIncidentsReader {
  * leur écriture jusqu'à `USER_UNLOCKED`. Vide et non erreur : l'écran qui les affiche n'est de
  * toute façon atteignable qu'appareil déverrouillé, et un incident manquant ne doit jamais
  * empêcher d'afficher le reste de la session.
+ *
+ * **Une base illisible n'empêche pas non plus l'affichage (étape 20).** L'écran de diagnostic doit
+ * pouvoir se construire même quand Room ne se lit plus : une liste vide plutôt qu'une exception qui
+ * remonterait jusqu'au `ViewModel` et laisserait l'écran indéfiniment en chargement.
  */
 @Singleton
 class RoomSessionIncidentsReader
@@ -37,10 +41,12 @@ class RoomSessionIncidentsReader
     ) : SessionIncidentsReader {
         override suspend fun incidents(sessionId: String): List<SessionIncidentDto> {
             if (!unlockState.isUserUnlocked) return emptyList()
-            return databaseProvider
-                .get()
-                .incidentDao()
-                .forSession(sessionId)
-                .map { it.toDomain() }
+            return runCatching {
+                databaseProvider
+                    .get()
+                    .incidentDao()
+                    .forSession(sessionId)
+                    .map { it.toDomain() }
+            }.getOrDefault(emptyList())
         }
     }

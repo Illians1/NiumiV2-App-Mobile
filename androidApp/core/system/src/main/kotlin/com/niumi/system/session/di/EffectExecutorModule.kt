@@ -3,6 +3,7 @@ package com.niumi.system.session.di
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.system.alarm.AlarmScheduler
+import com.niumi.system.alarm.RingingWatchdog
 import com.niumi.system.blocking.BlockingController
 import com.niumi.system.common.Clock
 import com.niumi.system.notification.ScanRequestNotifier
@@ -43,6 +44,7 @@ object EffectExecutorModule {
         blockingController: BlockingController,
         clock: Clock,
         ringingController: RingingController,
+        ringingWatchdog: RingingWatchdog,
         scanRequestNotifier: ScanRequestNotifier,
         gateway: SessionPersistenceGateway,
     ): Map<SessionEffectKindDto, EffectExecutor> =
@@ -52,8 +54,9 @@ object EffectExecutorModule {
             SessionEffectKindDto.CANCEL_ALARM to CancelAlarmExecutor(alarmScheduler),
             SessionEffectKindDto.APPLY_BLOCKING to ApplyBlockingExecutor(blockingController, technicalEventLog),
             SessionEffectKindDto.REMOVE_BLOCKING to RemoveBlockingExecutor(blockingController, clock),
-            SessionEffectKindDto.START_RINGING to StartRingingExecutor(ringingController, technicalEventLog),
-            SessionEffectKindDto.STOP_RINGING to StopRingingExecutor(ringingController),
+            SessionEffectKindDto.START_RINGING to
+                StartRingingExecutor(ringingController, ringingWatchdog, technicalEventLog),
+            SessionEffectKindDto.STOP_RINGING to StopRingingExecutor(ringingController, ringingWatchdog),
             SessionEffectKindDto.PRESENT_SCAN_REQUEST to
                 PresentScanRequestExecutor(scanRequestNotifier, technicalEventLog),
             SessionEffectKindDto.CLEAR_SCAN_REQUEST to ClearScanRequestExecutor(scanRequestNotifier, technicalEventLog),

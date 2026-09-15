@@ -23,6 +23,7 @@ import com.niumi.system.readiness.ReadinessCheckId
 import com.niumi.system.readiness.ReadinessOutcome
 import com.niumi.system.readiness.ReadinessReport
 import com.niumi.system.session.SessionSnapshotPublisher
+import com.niumi.system.session.StorageIntegrityState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -46,6 +47,7 @@ class IncidentDiagnosticViewModelTest {
     private val gateway = FakeSessionPersistenceGateway()
     private val incidentsReader = FakeSessionIncidentsReader()
     private val technicalEventLog = ReplayingTechnicalEventLog()
+    private val storageIntegrity = StorageIntegrityState()
     private val deviceContext =
         DeviceContext(deviceModel = "Pixel Test", androidVersion = "16 (API 36)", appVersion = "1.0.0 (1)")
 
@@ -114,6 +116,7 @@ class IncidentDiagnosticViewModelTest {
                     incidentsReader = incidentsReader,
                     technicalEventLog = technicalEventLog,
                     readinessChecker = readinessChecker,
+                    storageIntegrity = storageIntegrity,
                 ),
             deviceContext = deviceContext,
             timeZoneProvider = FakeTimeZoneProvider(zoneId = "Europe/Paris"),
@@ -214,5 +217,37 @@ class IncidentDiagnosticViewModelTest {
 
         assertThat(viewModel.state.hasSession).isFalse()
         assertThat(viewModel.exportText()).contains(IncidentDiagnosticTexts.EXPORT_TITLE)
+    }
+
+    /**
+     * SPEC_ANDROID §18, §20 : l'écran doit afficher la limite plutôt que rester en chargement
+     * indéfini, et ne jamais présenter le blocage comme levé pendant qu'il l'est effectivement.
+     */
+    @Test
+    fun aStorageFailureIsShownWithoutLeavingTheScreenLoading() {
+        storageIntegrity.reportUnreadable("SQLITE_CORRUPT")
+
+        val viewModel = viewModel()
+        viewModel.refresh()
+
+        assertThat(viewModel.state.storageFailureReason).isEqualTo("SQLITE_CORRUPT")
+        assertThat(viewModel.state.isLoading).isFalse()
+    }
+
+    /**
+     * Filet de sécurité : une source qui échoue malgré tout (au-delà de ce que Room protège déjà)
+     * ne doit jamais laisser l'écran figé en chargement.
+     */
+    @Test
+    fun anUnexpectedFailureIsShownWithoutLeavingTheScreenLoading() {
+        gateway.result = presentSession(snapshot(), emptyList())
+        snapshotPublisher.publish(snapshot())
+        incidentsReader.failure = IllegalStateException("unexpected")
+
+        val viewModel = viewModel()
+        viewModel.refresh()
+
+        assertThat(viewModel.state.isLoading).isFalse()
+        assertThat(viewModel.state.storageFailureReason).isEqualTo("DIAGNOSTIC_UNAVAILABLE")
     }
 }

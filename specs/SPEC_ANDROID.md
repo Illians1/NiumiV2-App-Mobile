@@ -115,6 +115,14 @@ Portée mesurée le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.
 
 Aucun contrôle de diagnostic n'est ajouté pour ce réglage: ce qu'il conditionne est une sécurité supplémentaire, jamais le déclenchement du réveil. L'ajouter au tableau de §13 ferait refuser une activation sur un motif qui ne compromet pas la promesse. Il est en revanche nommé dans l'aide (§21, `LIMITES.md`) et dans la matrice de tests physiques, au même titre que l'arrêt forcé.
 
+**Quota Doze de l'alarme de secours — mesuré et écarté (§9.1, §10.2, étape 20).** La documentation d'Android annonce que `setAndAllowWhileIdle()` et `setExactAndAllowWhileIdle()` ne peuvent pas être délivrées plus d'une fois toutes les neuf minutes par application en Doze. Ce quota aurait fait dégénérer la chaîne du watchdog de 60 secondes à ~9 minutes, et il avait d'abord été consigné ici comme une réserve permanente, au motif que la mesure exigerait l'état qu'elle romprait — **ce raisonnement était faux**, `dumpsys deviceidle` servant précisément à forcer cet état.
+
+**Mesuré le 2026-09-15 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0, par Doze profond forcé** (`dumpsys battery unplug`, puis `dumpsys deviceidle force-idle`), processus tué pendant `RINGING` à chaque cycle: **cinq livraisons consécutives, toutes à l'heure, toutes appareil en `IDLE`** — tics programmés à 12:57:02, 12:58:02, 12:59:03, 13:01:05 et 13:02:06, sons revenus à 12:57:05, 12:58:03, 12:59:05, 13:01:06 et 13:02:08. Intervalles mesurés de 58 à 62 secondes en veille profonde.
+
+**Le quota ne s'applique donc pas à Niumi**, et `dumpsys alarm` dit pourquoi: `exactAllowReason=policy_permission` — l'application détient `USE_EXACT_ALARM` — et la ligne de politique de l'alarme ne porte aucune contrainte (`device_idle=-2s180ms`, `app_standby=-37s222ms`, valeurs passées donc inopérantes). Le choix de `setExactAndAllowWhileIdle` (§9.1) est confirmé par la mesure, et `setAlarmClock` n'est pas nécessaire.
+
+**Réserve résiduelle, honnête et étroite:** un seul appareil, et le seau d'App Standby de Niumi n'a **jamais pu être rétrogradé** sous `EXEMPTED` (5) pendant l'essai, y compris processus mort — le système a refusé un `am set-standby-bucket restricted`. Un appareil qui placerait Niumi en `RARE` ou `RESTRICTED` au moment du watchdog n'a donc pas été observé. L'argument de proportion: le watchdog ne tourne que dans la fenêtre qui suit immédiatement un service de premier plan et un écran de réveil plein écran, état où un seau bas est improbable par construction.
+
 Depuis Android 15, un arrêt forcé annule les `PendingIntent` de l'application. Il supprime donc aussi l'alarme programmée. L'application doit signaler clairement cette limite dans l'aide et dans le plan de test. Elle ne doit pas tenter de bloquer les réglages, la désinstallation ou l'arrêt du service d'accessibilité.
 
 ### 4.3 Limite du blocage d'applications
@@ -302,6 +310,8 @@ data class SessionRuntimeStatus(
 
 **Implémentation (étape 11).** `SessionRuntimeStatusProbe` (`:core:system.session`) construit cette structure à partir de sources déjà existantes, réutilisées telles quelles par le `DeviceReadinessChecker` de l'étape 12 plutôt que redéfinies : `alarmScheduled` via `AlarmScheduler.isScheduled(sessionId)`, `accessibilityReady` via `AccessibilityServiceStatus.isEnabled()`, `notificationReady` et `fullScreenReady` via `NotificationAvailability` (`areNotificationsEnabled()`, `canUseFullScreenIntent()` — toujours `true` avant Android 14, l'API n'existant pas), `nfcReady` via `NfcReader.availability == ENABLED`, `audioReady` via `AlarmVolumeSource.alarmStreamVolume() > 0` (`AudioManager.STREAM_ALARM`).
 
+**Deux consommateurs distincts, pas un seul (étape 20).** La structure entière est construite à chaque sonde, mais seuls deux de ses six champs pilotent une réconciliation : `alarmScheduled` et `nfcReady`, via `SessionRuntimeReconciler`. Les quatre autres — `accessibilityReady`, `notificationReady`, `fullScreenReady`, `audioReady` — sont la propriété de `SessionReadinessMonitor` (§13.1), qui les surveille déjà avec sa propre déduplication d'incidents ; les y faire aussi piloter `SessionRuntimeReconciler` recréerait pour eux les doublons corrigés à l'étape 16, deux producteurs consignant le même fait. La distinction entre les deux champs traités ici et le contrôle `EXACT_ALARM` de §13.1 : celui-ci teste la **permission** (`canScheduleExactAlarms()`), `alarmScheduled` teste l'**alarme réellement programmée** (`isScheduled()`) — une surcouche OEM peut effacer la seconde sans toucher à la première. Voir §18.
+
 Toute nouvelle session reçoit `health = HEALTHY`. Seul un incident postérieur au passage à `ARMED` peut la faire passer à `DEGRADED`. La santé ne revient pas silencieusement à `HEALTHY`; une réconciliation réussie doit être journalisée.
 
 ### 7.2 Entités Room
@@ -478,6 +488,10 @@ Tous les `PendingIntent` internes doivent être explicites et utiliser `FLAG_IMM
 
 Ne pas utiliser WorkManager, `Handler`, `setInexactRepeating()` ou une notification planifiée pour déclencher le réveil.
 
+**Dérogation strictement limitée à l'alarme de secours de `RINGING` (§10.2, étape 20).** `AlarmManager.setExactAndAllowWhileIdle()` y est autorisé, et seulement là: le réveil lui-même reste exclusivement `setAlarmClock()`. La distinction tient à ce que chacune doit paraître. Le réveil est l'alarme visible de l'utilisateur — `setAlarmClock()` l'affiche au réglage système « prochaine alarme », ce qui est le comportement voulu. Le watchdog est un tic invisible toutes les 60 secondes tant que Niumi sonne; l'afficher au même endroit mentirait sur ce qu'il est (§10.5 exige déjà la même discrétion pour la notification d'attente de scan). Un `PendingIntent` distinct de celui du réveil, ciblant `RingingWatchdogReceiver`, garantit que `cancel()` ne peut jamais atteindre l'un en visant l'autre.
+
+Contrepartie annoncée par la documentation — Doze limitant `setExactAndAllowWhileIdle()` à une livraison par application toutes les neuf minutes — **mesurée puis écartée le 2026-09-15**: en Doze profond forcé, cinq tics consécutifs ont été délivrés à l'heure, à 58-62 secondes d'intervalle. La raison tient à `USE_EXACT_ALARM` (`exactAllowReason=policy_permission` dans `dumpsys alarm`), qui affranchit l'alarme des politiques `device_idle` et `app_standby`. `setAlarmClock` n'est donc pas nécessaire ici. Détail de la mesure et réserve résiduelle sur le seau d'App Standby: §4.2.
+
 ### 9.2 Activation en deux phases
 
 `ArmSessionUseCase` orchestre les effets retournés par `NiumiCoreFacade` dans cet ordre:
@@ -621,7 +635,9 @@ Le cas illisible n'était couvert par aucune des deux issues possibles : sonner 
 
 **La réconciliation est le second filet, et il est nécessaire (étape 17).** `START_STICKY` ne suffit pas : mesuré sur appareil, HyperOS n'a rejoué **aucun** redémarrage du service après un crash du processus. Le rejeu de l'outbox ne rattrape pas ce cas, `START_RINGING` y étant déjà `SUCCEEDED`. Sans reprise explicite, la sonnerie s'arrêtait définitivement alors que la session restait active et le blocage en place — le réveil se taisait sans que rien ne le signale. `SessionReconciler` relance donc `START_RINGING` chaque fois qu'il trouve l'état `RINGING`. L'appel est idempotent : c'est le chemin emprunté à chaque `onStartCommand` valide, et le moteur audio ne double jamais le son.
 
-**Ce que cela ne garantit pas.** Encore faut-il que le processus revienne à la vie : la reprise n'a lieu qu'à la prochaine réconciliation, donc au prochain réveil de Niumi — l'utilisateur ouvrant l'application, un redémarrage, un remplacement de paquet. Si rien ne réveille le processus, le réveil reste muet. Une alarme de secours posée pendant `RINGING`, qui réveillerait le processus périodiquement, relève de la résilience et **reste à concevoir (étape 20)** : période, annulation, distinction d'avec l'alarme du réveil et coût en alarmes exactes sont autant de points ouverts.
+**Ce que cela ne garantissait pas avant l'étape 20.** Encore fallait-il que le processus revienne à la vie : la reprise n'avait lieu qu'à la prochaine réconciliation, donc au prochain réveil de Niumi — l'utilisateur ouvrant l'application, un redémarrage, un remplacement de paquet. Si rien ne réveillait le processus, le réveil restait muet.
+
+**Alarme de secours (étape 20).** `RingingWatchdogReceiver` réveille le processus toutes les 60 secondes tant que la session est `RINGING`, via `AlarmManager.setExactAndAllowWhileIdle()` (dérogation à §9.1, strictement limitée à ce watchdog) et un `PendingIntent` dont le code de requête est distinct de celui du réveil (`RingingWatchdogSpecs`, target `RingingWatchdogReceiver`). Une seule alarme de secours à la fois : `StartRingingExecutor` l'arme à l'entrée en `RINGING`, `SessionReconciler` la réarme à chaque passe trouvant encore cet état (après avoir relancé le son, jamais avant), et `StopRingingExecutor` la désarme avant même de tenter l'arrêt du service — si celui-ci échoue, l'alarme de secours doit malgré tout disparaître. Chaque tic ne fait que rejouer une passe ordinaire (`ReconcileReason.RINGING_WATCHDOG`) : c'est la réconciliation, pas le receveur, qui décide de tout — relancer le son si la session sonne encore, réarmer le prochain tic, ou se désarmer si l'état a changé. Contrepartie et réserve : voir §4.2, §9.1.
 
 ### 10.3 Notification et plein écran
 
@@ -714,9 +730,11 @@ Cette fenêtre n'interrompt aucun chemin de sortie: l'overlay de blocage (§12.2
 
 **Sa durée a été mesurée à l'étape 19, et elle est illimitée en usage ordinaire.** Le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0: après un balayage, la notification est restée absente 523 s sans revenir, et rien ne la ramenait. Ni le passage de l'application au premier plan, ni un verrouillage puis déverrouillage d'écran — `ACTION_USER_UNLOCKED` n'est émis qu'au **premier** déverrouillage après un démarrage. Seuls un démarrage de processus, un redémarrage de l'appareil ou un changement d'horloge republiaient. Le pari de l'étape 18 — « `SystemEventsReceiver` multiplie les occasions de réconciliation et devrait resserrer la fenêtre » — est donc démenti par la mesure: les occasions qu'il ajoute sont toutes liées au démarrage ou à l'horloge, et aucune ne survient pendant qu'on se sert du téléphone.
 
-**Décision prise sur cette mesure (étape 19): la réconciliation est déclenchée au passage de l'application au premier plan quand la session attend un scan** (`ReconcileReason.FOREGROUND_AWAITING_SCAN`). La republication redevient ainsi liée au seul geste que l'utilisateur fait forcément pour sortir de sa session. Mesurée à 1 s après réouverture.
+**Décision prise sur cette mesure (étape 19): la réconciliation est déclenchée au passage de l'application au premier plan quand la session attend un scan** (`ReconcileReason.FOREGROUND`). La republication redevient ainsi liée au seul geste que l'utilisateur fait forcément pour sortir de sa session. Mesurée à 1 s après réouverture.
 
 Le déclencheur est posé sur **`MainActivity` et `AlarmActivity`**, et non sur la seule `MainActivity`. Dans un état de scan, rouvrir Niumi ramène le task au premier plan avec l'écran de réveil au sommet (`launchMode="singleTask"`): `MainActivity.onResume` n'est alors jamais rejoué. Mesuré: posé sur la seule `MainActivity`, le correctif ne se déclenchait pas.
+
+**La même raison couvre un second cas depuis l'étape 20 : aucun snapshot encore publié dans ce processus.** `SessionSnapshotPublisher` repart à `null` à chaque démarrage de processus, et `SessionStartupReconciler` le republie en tâche de fond — un `onResume` peut donc survenir avant cette republication, typiquement un processus recréé après une mort pendant `RINGING` (§10.2). `SessionReadinessWatcher.evaluate()` déclenche alors une réconciliation complète (`ReconcileReason.FOREGROUND`) plutôt que de sortir silencieusement : c'est le seul moyen de découvrir la session dans ce processus avant le prochain déclencheur (démarrage, redémarrage, événement système). Renommée `FOREGROUND_AWAITING_SCAN` → `FOREGROUND` pour refléter ce périmètre élargi ; le comportement sur un état de scan est inchangé.
 
 L'option d'adosser la notification à un service de premier plan reste **écartée**: l'attente d'un scan peut durer des heures, et §10.5 exige que cette notification ne ressemble pas à une alarme active.
 
@@ -1043,6 +1061,9 @@ Contrôles surveillés, avec le code d'incident associé:
 | Plein écran révoqué | `ANDROID_FULL_SCREEN_REVOKED` | `CRITICAL` | `ARMED` |
 | Service d'accessibilité désactivé | `BLOCKING_PERMISSION_REVOKED` (code commun) | `CRITICAL` | tous les états non finaux |
 | Accès aux alarmes exactes perdu | `ALARM_PERMISSION_REVOKED` (code commun) | `CRITICAL` | `ARMED` |
+| NFC désactivé | `NFC_DISABLED` (code commun) | `CRITICAL` | `ARMED`, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC`, `RELEASING` |
+
+**La ligne NFC n'est pas portée par `SessionReadinessMonitor` (étape 20).** Elle est produite par `SessionRuntimeReconciler` (§7.1, §18), un chemin distinct pour deux raisons : le périmètre diffère de `ARMED` seul — le scan reste le seul chemin de sortie d'une session tant qu'elle n'est pas terminée (11.2), donc l'avertissement doit rester actionnable dans `RINGING` comme ailleurs — et aucune réparation n'est possible côté NFC, contrairement aux cinq contrôles du tableau ci-dessus qui ont chacun leur écran de réglages. `PREPARING` en est exclu : une activation interrompue n'a jamais promis de scan à l'utilisateur.
 
 **Le contrôle du service d'accessibilité est neutralisé avant le premier déverrouillage (étape 19, mesuré sur appareil).** Android refuse de lier un service d'accessibilité qui n'est pas `directBootAware` (`Ignoring non-encryption-aware service`) et remet `accessibility_enabled` à 0 tant qu'aucun service ne tourne, alors même que le réglage choisi par l'utilisateur (`enabled_accessibility_services`) n'a pas bougé. Évalué tel quel pendant la réconciliation `LOCKED_BOOT`, le contrôle était doublement faux: il consignait un incident `BLOCKING_PERMISSION_REVOKED` `CRITICAL` mensonger avec sa notification (« Tes applications ne sont plus bloquées »), et surtout la garde de permission du réconciliateur interrompait la passe **avant la reprogrammation de l'alarme** — le réveil était perdu par le redémarrage même que §9.3 doit rattraper. Mesuré le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0.
 
@@ -1050,8 +1071,8 @@ Le contrôle est donc `NOT_APPLICABLE` tant que `UserManager.isUserUnlocked` est
 
 Quand la surveillance s'exécute:
 
-- à chaque réconciliation (`PROCESS_START`, `USER_UNLOCKED`, `BOOT`, `PACKAGE_REPLACED`, `TIME_CHANGED`, `TIMEZONE_CHANGED`);
-- à chaque passage de l'application au premier plan, porté par l'écran de session active (15, écran 7);
+- à chaque réconciliation, quelle qu'en soit la raison — `reconcileArmed` l'appelle sans condition sur `reason` avant sa propre garde de permission ; l'énumérer devient inexact à chaque raison ajoutée, ce qui s'est produit quatre fois depuis l'étape 12 (`BEFORE_SCAN`, `SERVICE_RECREATED`, `FOREGROUND`, `RINGING_WATCHDOG`);
+- à chaque passage de l'application au premier plan (`SessionReadinessWatcher`, §10.5) ;
 - immédiatement, par un `BroadcastReceiver` enregistré à chaud, pour les seuls changements qu'Android diffuse publiquement, au premier rang desquels `NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`;
 - au déclenchement, avant de démarrer la sonnerie.
 
@@ -1212,6 +1233,7 @@ Règles UI:
 
 - utiliser le tutoiement partout;
 - ne jamais afficher un faux état de fiabilité;
+- **ne jamais affirmer « Aucune session » quand la persistance est illisible (étape 20, défaut mesuré sur appareil).** Room rendue illisible, l'accueil annonçait « Aucune session » alors qu'une session était armée, l'alarme programmée et le blocage en place: l'affirmation la plus rassurante était aussi la seule que Niumi n'était pas en mesure de faire. L'accueil affiche alors « État illisible », dit que le blocage tient et que le scan reste la seule sortie, et son bouton principal mène au diagnostic. Le signal vient de `StorageIntegrityState` (§18) et doit alimenter ce que l'écran **affiche**, pas seulement la destination de son bouton — celle-ci n'est lue qu'au clic, ce qui avait laissé le défaut invisible;
 - afficher la date, l'heure et le fuseau de la session active;
 - afficher la prochaine heure système calculée;
 - ne jamais mettre une action d'arrêt dans l'écran de réveil;
@@ -1267,9 +1289,14 @@ OEM_RESTRICTION_SUSPECTED
 SESSION_COMPLETED
 SESSION_FAILED
 RELEASE_PARTIAL_FAILURE
+SNAPSHOT_CORRUPTED
 ```
 
 Chaque événement contient seulement l'heure, le type, l'identifiant de session, le modèle de l'appareil, la version Android, la version de l'application et un code d'erreur contrôlé. Le nom de package est accepté uniquement pour `BLOCK_APPLIED`. Aucun événement n'est envoyé à distance dans le MVP.
+
+**`SNAPSHOT_CORRUPTED` (étape 20).** Journalisé dans deux cas distincts : `sessionId` renseigné, quand la projection Direct Boot est illisible mais que Room permet de retrouver la session concernée (`DirectBootMerger.merge()`, `SessionReconciler`) ; `sessionId` absent, quand aucun stockage lisible ne permet de savoir de quelle session il s'agissait — Direct Boot et Room illisibles à la fois, ou Room seul illisible une fois déverrouillé. Le second cas n'a pas d'équivalent `SessionIncident` : SPEC_CORE_KMP §13 exige une révision pour ouvrir un incident, qu'aucune session lisible ne peut fournir.
+
+**Le journal technique écrit avant le premier déverrouillage est versé dans Room au déverrouillage (étape 20).** `UnlockAwareTechnicalEventLog` route vers la mémoire tant que l'appareil est verrouillé ; au premier passage de ce processus par `DirectBootMerger.merge()` réellement exécuté (donc déverrouillé), la mémoire est vidée et ses entrées sont insérées dans Room en conservant leur horodatage et leur contexte d'appareil d'origine — jamais ceux du moment du versement, pour la même raison que §17 exige déjà ce contexte par ligne : un journal de 200 événements peut enjamber une mise à jour. Vidage atomique, jamais rejoué deux fois. **Limite résiduelle assumée :** un processus qui journalise avant déverrouillage et meurt avant d'atteindre ce point perd ses entrées ; l'incident métier correspondant, lui, atteint Room par le rejeu de l'outbox (§9.3) et n'est jamais perdu.
 
 **Contexte porté par événement (étape 16).** Le modèle de l'appareil, la version Android et la version de l'application sont des colonnes de `technical_event`, pas un en-tête d'export mis en facteur. Ces valeurs sont certes constantes pour un processus donné, mais un journal de 200 événements peut enjamber une mise à jour de l'application ou du système : un en-tête unique attribuerait alors la nouvelle version aux événements antérieurs. Elles sont ajoutées par l'implémentation du journal, jamais par l'appelant — la signature de `log()` ne les expose pas, sans quoi seize sites d'appel devraient les tenir à jour. Les lignes écrites avant cette montée valent `''` : une absence, jamais une erreur de lecture.
 
@@ -1293,6 +1320,14 @@ Principes:
 - une erreur inconnue reçoit un identifiant local consultable dans le diagnostic.
 
 La réconciliation s'appuie sur `SessionRuntimeStatus` pour comparer l'état métier aux sous-systèmes Android. Elle tente les réparations idempotentes autorisées, puis consigne un incident si l'écart persiste. Elle ne transforme pas une session active en `FAILED` pour simplifier la gestion d'une erreur technique.
+
+**`SessionRuntimeReconciler` (étape 20)** exécute concrètement cet alinéa pour `alarmScheduled` et `nfcReady` (§7.1), en fin de passe, sur le snapshot le plus à jour : réparer d'abord (reprogrammer l'alarme via `AlarmScheduler.schedule`, aucune réparation n'existant côté NFC), re-sonder, puis consigner un incident `CRITICAL` une seule fois par code et par session si l'écart tient bon — même garde que `SessionReadinessMonitor`. Une exception : quand `alarmScheduled` est faux **parce que** la permission d'alarme exacte l'est aussi (`AlarmScheduler.canScheduleExact() == false`), aucune réparation n'est tentée et aucun incident n'est produit ici — `SessionReadinessMonitor` (§13.1, contrôle `EXACT_ALARM`) couvre déjà ce cas, et retenter `schedule()` serait un second essai voué au même échec pour la même cause.
+
+**Aucune exception SQLite brute ne sort de `:core:database` (étape 20, défaut mesuré sur appareil).** `RoomSessionStore.activeSession()` **et** `RoomDirectBootMerge.merge()` traduisent `SQLiteException` en `SessionStoreUnreadableException`; `UnlockAwarePersistenceGateway` en fait un `LoadResult.Unreadable`, `DirectBootMerger` un `DirectBootMergeOutcome.RoomUnreadable`. Les lectures de diagnostic (`RoomSessionIncidentsReader.incidents()`, `RoomTechnicalEventLog.recent()`) rendent une liste vide, et `RoomBlockedPackagesSource` un `BlockedPackagesRead.Unreadable`. La garde `ROOM_BEFORE_UNLOCK` (`IllegalStateException`) continue seule de remonter: c'est un défaut de programmation, pas une corruption.
+
+Le chemin de la fusion n'est pas accessoire: elle touche Room **avant** le `gateway.load()` de la passe, si bien qu'une base illisible y faisait planter le processus à chaque démarrage — une boucle de plantage, et l'écran de diagnostic promis ci-dessous jamais atteint. Mesuré le 2026-09-15 en rendant `niumi.db` illisible (`chmod 000`), corrigé le même jour.
+
+**Trois cas de corruption, traités distinctement (étape 20).** Une projection Direct Boot lisible mais Room valide produit un événement technique `SNAPSHOT_CORRUPTED` et un incident du même nom, `CRITICAL`, une fois par session ; la projection est réécrite depuis Room, jamais laissée corrompue. Room elle-même illisible, appareil déverrouillé, ne peut produire aucun `SessionIncident` — sans session lisible, ni `sessionId` ni révision n'existent pour porter l'événement — seul l'événement technique `SNAPSHOT_CORRUPTED` avec `sessionId = null` est possible ; l'écran de diagnostic doit alors s'afficher sans retirer le blocage, la dernière projection de blocage connue restant en mémoire dans le service d'accessibilité. Les deux stockages illisibles à la fois : aucune écriture, aucune suppression, le même événement technique sans session, la projection de blocage inchangée.
 
 Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 
@@ -1431,7 +1466,7 @@ Scénarios à exécuter:
 | ouverture d'une app autorisée | aucun effet |
 | Niumi retiré des applications récentes après armement | alarme et blocage conservés |
 | processus Niumi tué par le système après armement | alarme conservée et état réconcilié au redémarrage du processus |
-| processus Niumi tué pendant `RINGING` | service et sonnerie repris depuis le snapshot, ou incident critique documenté selon le comportement système |
+| processus Niumi tué pendant `RINGING` (étape 20) | le watchdog réveille le processus au plus tard toutes les ~9 minutes (Doze, §4.2), le son reprend depuis le snapshot |
 | fermeture de `AlarmActivity` | sonnerie maintenue |
 | verrouillage pendant la sonnerie | sonnerie maintenue |
 | scan du bon tag | passage par `RELEASING`, arrêt et déblocage en moins d'une seconde, puis état final |
@@ -1441,6 +1476,8 @@ Scénarios à exécuter:
 | NFC réactivé pendant la sonnerie | Reader Mode restauré et scan valide accepté |
 | arrêt du FGS depuis le système | limite connue consignée |
 | arrêt forcé de Niumi | alarme annulée par le système, limite connue consignée |
+| `niumi_session.json` corrompu à la main, Room valide (étape 20, debug) | incident `SNAPSHOT_CORRUPTED` unique, projection réécrite, session et blocage conservés |
+| base Room corrompue, appareil déverrouillé (étape 20, debug) | écran de diagnostic affiché, blocage conservé, aucune session perdue |
 
 Pour chaque essai, consigner le fabricant, le modèle, la version Android, la version du firmware, les permissions, le résultat, le retard mesuré et les logs locaux.
 

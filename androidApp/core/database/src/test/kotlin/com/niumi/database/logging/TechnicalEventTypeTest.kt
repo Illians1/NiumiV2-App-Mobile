@@ -39,6 +39,7 @@ class TechnicalEventTypeTest {
                 "SESSION_COMPLETED",
                 "SESSION_FAILED",
                 "RELEASE_PARTIAL_FAILURE",
+                "SNAPSHOT_CORRUPTED",
             )
 
         assertThat(TechnicalEventType.entries.map { it.name }).containsExactlyElementsIn(expected)

@@ -47,6 +47,17 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!--
+            Alarme de secours pendant RINGING (SPEC_ANDROID §10.2, §9.1 ; étape 20). Aucun
+            intent-filter : ce receveur n'est jamais ciblé que par le PendingIntent explicite posé
+            par AndroidRingingWatchdog.arm(), jamais par un broadcast système. directBootAware :
+            une sonnerie peut commencer avant le premier déverrouillage (prouvé à l'étape 19).
+        -->
+        <receiver
+            android:name="com.niumi.system.alarm.RingingWatchdogReceiver"
+            android:exported="false"
+            android:directBootAware="true" />
     </application>
 
 </manifest>

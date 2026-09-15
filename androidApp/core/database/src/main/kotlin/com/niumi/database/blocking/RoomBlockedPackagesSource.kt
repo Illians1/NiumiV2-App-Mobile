@@ -1,5 +1,6 @@
 package com.niumi.database.blocking
 
+import android.database.sqlite.SQLiteException
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.BlockedPackage
@@ -39,20 +40,27 @@ class RoomBlockedPackagesSource
         override suspend fun read(): BlockedPackagesRead =
             if (unlockState.isUserUnlocked) readFromRoom() else readFromDirectBoot()
 
-        private suspend fun readFromRoom(): BlockedPackagesRead {
-            val database = databaseProvider.get()
-            val sessionId = database.activeSessionPointerDao().current()?.sessionId
-            val session =
-                sessionId?.let { database.sessionDao().findById(it) }
-                    ?: return BlockedPackagesRead.Resolved(BlockedPackagesState.Inactive)
-            val packages =
-                database
-                    .blockedAppDao()
-                    .forSession(session.id)
-                    .map { it.toBlockedPackage() }
-                    .toSet()
-            return BlockedPackagesRead.Resolved(roomStateOf(database, session, packages))
-        }
+        // `SQLiteException` seule (SPEC_ANDROID §18, étape 20) : avant cette étape, elle traversait
+        // le `collect` de `BlockingProjectionRefresher.observeDecisions()` sans jamais être
+        // rattrapée, ce qui arrêtait **définitivement** le rafraîchissement du blocage — un défaut
+        // réel, indépendant du reste de l'étape, découvert en la cherchant.
+        private suspend fun readFromRoom(): BlockedPackagesRead =
+            try {
+                val database = databaseProvider.get()
+                val sessionId = database.activeSessionPointerDao().current()?.sessionId
+                val session =
+                    sessionId?.let { database.sessionDao().findById(it) }
+                        ?: return BlockedPackagesRead.Resolved(BlockedPackagesState.Inactive)
+                val packages =
+                    database
+                        .blockedAppDao()
+                        .forSession(session.id)
+                        .map { it.toBlockedPackage() }
+                        .toSet()
+                BlockedPackagesRead.Resolved(roomStateOf(database, session, packages))
+            } catch (exception: SQLiteException) {
+                BlockedPackagesRead.Unreadable(exception.message ?: "ROOM_UNREADABLE")
+            }
 
         /**
          * En Room, un effet est décidé dès que sa ligne existe : l'absence de ligne signifie

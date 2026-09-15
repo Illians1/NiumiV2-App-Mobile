@@ -6,6 +6,7 @@ import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
+import com.niumi.database.SessionStoreUnreadableException
 import com.niumi.database.directboot.DirectBootMapper
 import com.niumi.database.directboot.DirectBootMergeResult
 import com.niumi.database.directboot.DirectBootSnapshot
@@ -23,6 +24,26 @@ import org.junit.Test
  * est prouvée par `RoomDirectBootMergeTest`, instrumenté : elle n'existe qu'en SQL.
  */
 class DirectBootMergerTest {
+    /**
+     * **Régression mesurée sur appareil le 2026-09-15 (étape 20).** La fusion touche Room *avant*
+     * le `gateway.load()` de la passe. Une base illisible y faisait remonter une
+     * `SQLiteCantOpenDatabaseException` brute jusqu'au scope du réconciliateur : le processus
+     * plantait à chaque démarrage — boucle de plantage — et l'écran de diagnostic promis par §18
+     * n'était jamais atteint. Aucun test ne pouvait le voir : les doublures de Room ne levaient
+     * jamais, et le harnais du coordinateur simule l'échec sur `gateway.load()`, pas sur la fusion.
+     */
+    @Test
+    fun anUnreadableRoomIsReportedWithoutLettingTheExceptionEscape() =
+        runTest {
+            val fixture = MergerFixture(roomFailure = SessionStoreUnreadableException("SQLITE_CANTOPEN"))
+            fixture.seedProjection(revision = 3)
+
+            val outcome = fixture.merger.merge()
+
+            assertThat(outcome).isEqualTo(DirectBootMergeOutcome.RoomUnreadable("SQLITE_CANTOPEN"))
+            assertThat(fixture.directBootStore.writeCount).isEqualTo(0)
+        }
+
     @Test
     fun aLockedDeviceMergesNothingAndNeverTouchesRoom() =
         runTest {
@@ -173,11 +194,12 @@ class DirectBootMergerTest {
 
 private class MergerFixture(
     unlocked: Boolean = true,
+    roomFailure: SessionStoreUnreadableException? = null,
 ) {
     val unlockState = FakeUnlockState(isUserUnlocked = unlocked)
     val directBootStore = InMemoryDirectBootStore()
     val sessionStore = InMemorySessionStore()
-    val roomMerge = RecordingDirectBootRoomMerge()
+    val roomMerge = RecordingDirectBootRoomMerge(failure = roomFailure)
     val merger = DirectBootMerger(unlockState, directBootStore, sessionStore, roomMerge)
 
     fun seedProjection(

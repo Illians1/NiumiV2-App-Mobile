@@ -40,6 +40,38 @@ private const val NO_SESSION_TITLE = "Aucune session"
 private const val ACTIVE_SESSION_TITLE = "Une session est en cours."
 
 /**
+ * Étape 20, défaut mesuré sur appareil : quand la persistance est illisible, l'accueil affichait
+ * « Aucune session » alors qu'une session était armée et le blocage en place. §15 interdit ce faux
+ * état de fiabilité ; l'accueil dit donc ce qu'il sait — et surtout ce qu'il ne sait plus.
+ */
+private const val STORAGE_UNREADABLE_TITLE = "État illisible"
+private const val STORAGE_UNREADABLE_MESSAGE =
+    "Niumi ne peut plus lire son état enregistré. Si une session était en cours, tes applications " +
+        "restent bloquées et le scan du boîtier reste la seule sortie."
+private const val STORAGE_UNREADABLE_BUTTON_LABEL = "Voir le diagnostic"
+
+/**
+ * Titre de l'accueil. Fonctions pures et non `when` inline dans le composable : c'est la règle de
+ * §15 (« ne jamais afficher un faux état de fiabilité »), et elle se teste sans rendu Compose.
+ * L'état illisible prime sur tout : sans lecture, « Aucune session » serait une affirmation que
+ * Niumi n'est pas en mesure de faire.
+ */
+fun homeTitleFor(state: HomeUiState): String =
+    when {
+        state.storageUnreadable -> STORAGE_UNREADABLE_TITLE
+        state.hasActiveSession -> ACTIVE_SESSION_TITLE
+        else -> NO_SESSION_TITLE
+    }
+
+/** Même règle pour le bouton principal : il mène au diagnostic, seul écran honnête à ce stade. */
+fun primaryLabelFor(state: HomeUiState): String =
+    when {
+        state.storageUnreadable -> STORAGE_UNREADABLE_BUTTON_LABEL
+        state.hasActiveSession -> VIEW_SESSION_BUTTON_LABEL
+        else -> PREPARE_BUTTON_LABEL
+    }
+
+/**
  * Les trois sorties de l'accueil, groupées : l'écran 12 (étape 16) en portait une sixième et
  * `HomeScreen` dépassait `LongParameterList` de detekt. Les regrouper dit aussi ce qu'elles sont —
  * la navigation de l'accueil — là où six paramètres plats ne disaient plus rien.
@@ -76,18 +108,25 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = if (state.hasActiveSession) ACTIVE_SESSION_TITLE else NO_SESSION_TITLE,
+                text = homeTitleFor(state),
                 style = MaterialTheme.typography.headlineMedium,
             )
-            val primaryLabel = if (state.hasActiveSession) VIEW_SESSION_BUTTON_LABEL else PREPARE_BUTTON_LABEL
+            if (state.storageUnreadable) {
+                Text(text = STORAGE_UNREADABLE_MESSAGE, style = MaterialTheme.typography.bodyMedium)
+            }
+            val primaryLabel = primaryLabelFor(state)
             Button(
                 onClick = actions.onPrepare,
                 modifier = Modifier.semantics { contentDescription = primaryLabel },
             ) {
                 Text(primaryLabel)
             }
-            TextButton(onClick = actions.onOpenDiagnostic) {
-                Text(DIAGNOSTIC_BUTTON_LABEL)
+            // Sur un état illisible, le bouton principal mène déjà au diagnostic : le lien
+            // secondaire ferait doublon (constaté à l'écran le 2026-09-15).
+            if (!state.storageUnreadable) {
+                TextButton(onClick = actions.onOpenDiagnostic) {
+                    Text(DIAGNOSTIC_BUTTON_LABEL)
+                }
             }
             entryPoints.forEach { entryPoint ->
                 TextButton(onClick = { actions.onEntryPointClick(entryPoint.route) }) {

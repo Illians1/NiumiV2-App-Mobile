@@ -1145,49 +1145,83 @@ périodiquement et laisse la réconciliation faire le reste. Points ouverts : p�
 l'annulation, distinction d'avec l'alarme du réveil (extras, `requestCode`), et coût en alarmes
 exactes. Voir `ETAPE-17.md`, section « Réserves subsistantes ».
 
+**Conception retenue et livrée ici :** `setExactAndAllowWhileIdle`, 60 s, une seule alarme de
+secours à la fois réarmée en chaîne par `RingingWatchdogReceiver`, `requestCode` décalé de celui du
+réveil (`RingingWatchdogSpecs`). Armée à l'entrée en `RINGING` (`StartRingingExecutor`), réarmée à
+chaque passe qui trouve encore cet état, désarmée avant même la tentative d'arrêt du service
+(`StopRingingExecutor`). Réserve **à mesurer, pas à assumer** : le quota Doze d'une livraison par
+application toutes les neuf minutes fait dégénérer la chaîne de 60 s à ~9 min. Invisible sur un banc
+branché en USB (un appareil en charge n'entre pas en Doze), le cas se force
+(`dumpsys battery unplug`, puis `dumpsys deviceidle force-idle`) et le chiffre décide si
+`setExactAndAllowWhileIdle` tient ou si `setAlarmClock`, exempt de Doze, reprend la main. Voir §4.2,
+§9.1, §10.2, `ETAPE-20.md`.
+
 **Specs à lire :** SPEC_ANDROID §4.2, §7.1 (incidents), §9.2 (dernier paragraphe), §18, §20 (scénarios processus et permissions).
 
 **Trois héritages de l'étape 19 à traiter ici.**
 
-1. **Le plan de cette étape est partiellement périmé sur `AppStartReconciler`.** Il demande de créer
-   `Application.onCreate → reconcile(PROCESS_START)` : c'est livré depuis l'étape 11
-   (`SessionStartupReconciler`). Il demande aussi un déclencheur `ON_START` via
-   `ProcessLifecycleOwner` : l'étape 19 a livré l'équivalent ciblé — `SessionReadinessWatcher`
-   réconcilie au premier plan quand la session attend un scan (`FOREGROUND_AWAITING_SCAN`), posé sur
-   `MainActivity` **et** `AlarmActivity`. **Commencer par vérifier ce qui manque réellement** plutôt
-   que de créer une classe redondante, et décider si un déclencheur de premier plan *général* (tous
-   états) apporte quelque chose au-delà du cas de scan déjà couvert. Si oui, `ProcessLifecycleOwner`
-   exige une nouvelle dépendance (`androidx.lifecycle:lifecycle-process`), donc un accord explicite.
-2. **Le chemin `Corrupted` a déjà un premier maillon.** `DirectBootMerger` (étape 19) renvoie
-   `DirectBootMergeOutcome.Corrupted` sans rien fusionner ni effacer, et laisse `SessionReconciler`
-   produire `SnapshotCorrupted`. Le travail restant est la journalisation `SNAPSHOT_CORRUPTED`
-   `CRITICAL` et le cas « Room *aussi* illisible ». Couvert côté orchestration par
-   `aCorruptedProjectionIsReportedWithoutMergingOrErasingAnything`.
-3. **Arbitrage ouvert — le journal technique écrit avant déverrouillage ne rejoint jamais Room.**
-   `UnlockAwareTechnicalEventLog` (étape 10) route vers `InMemoryTechnicalEventLog` tant que
-   l'appareil est verrouillé, et `recent()` fusionne les deux sources : l'utilisateur **voit** donc
-   le `MISSED_TRIGGER_WINDOW` produit en Direct Boot, tant que le processus vit. Il est perdu si le
-   processus meurt entre-temps — précisément le sujet de cette étape. La fusion de §9.3 ne couvre pas
-   ce cas, son contrat ne portant que sur « le registre et l'outbox ». **Deux issues, à trancher avec
-   l'utilisateur :** verser le journal mémoire dans Room au déverrouillage (au même endroit que
-   `DirectBootMerger`, petit), ou l'assumer comme limite documentée dans §17 et `LIMITES.md`. Ne pas
-   laisser ce point implicite : il est signalé dans `ETAPE-19.md` et n'a aujourd'hui aucun
-   propriétaire.
+1. **Le plan de cette étape était partiellement périmé sur `AppStartReconciler` — confirmé et
+   tranché.** `Application.onCreate → reconcile(PROCESS_START)` est bien livré depuis l'étape 11
+   (`SessionStartupReconciler`) : rien créé de plus. Le déclencheur `ON_START` général via
+   `ProcessLifecycleOwner` est **écarté** : l'étape 19 avait déjà livré l'équivalent ciblé
+   (`SessionReadinessWatcher`, `FOREGROUND_AWAITING_SCAN`), et le vrai défaut trouvé n'était pas
+   l'absence d'un déclencheur général mais que `SessionReadinessWatcher.evaluate()` abandonnait
+   silencieusement quand `publisher.snapshot.value` était encore `null` — un processus recréé après
+   une mort pendant `RINGING` pouvait ainsi voir un premier `onResume` sans effet. Corrigé : ce cas
+   déclenche désormais une réconciliation complète, sous la même raison, renommée `FOREGROUND`
+   (§10.5). Aucune nouvelle dépendance ajoutée.
+2. **Le chemin `Corrupted` a déjà un premier maillon — complété.** `DirectBootMerger` (étape 19)
+   renvoie `DirectBootMergeOutcome.Corrupted` ; `SessionReconciler` en consomme désormais le
+   résultat (jeté jusqu'ici) pour journaliser `SNAPSHOT_CORRUPTED` et consigner un incident une fois
+   par session. Écart tranché avec l'utilisateur : la projection Direct Boot corrompue est
+   **écrasée** après journalisation (pas de quarantaine — le fichier porte `boxTokenSha256Hex`, que
+   §17 interdit de faire transiter par l'export, donc une copie ne servirait qu'un `adb run-as` en
+   debug). Room aussi illisible (nouveau, hors du périmètre `DirectBootMerger`) : détectée
+   (`SessionStoreUnreadableException`), représentée (`LoadResult.Unreadable`), affichée (écran de
+   diagnostic, blocage conservé).
+3. **Arbitrage tranché avec l'utilisateur — le journal technique écrit avant déverrouillage rejoint
+   désormais Room.** Vidage atomique de `InMemoryTechnicalEventLog` au déverrouillage
+   (`TechnicalEventLogFlush`, implémentée par `UnlockAwareTechnicalEventLog`), versé dans Room en
+   préservant l'horodatage et le contexte d'appareil d'origine. Appelé par `SessionReconciler`, au
+   même endroit que la fusion Direct Boot. Limite résiduelle assumée et documentée (§17) : un
+   processus qui journalise avant déverrouillage et meurt avant d'atteindre ce point perd ses
+   entrées — l'incident métier correspondant, lui, n'est jamais perdu (rejeu de l'outbox, §9.3).
 
 **Fichiers :**
-- Créer dans `androidApp/app/src/main/kotlin/com/niumi/app/` : `AppStartReconciler.kt` (`Application.onCreate` → `reconcile(PROCESS_START)` hors du thread principal, puis à chaque `ON_START` de l'application via `ProcessLifecycleOwner`).
-- Modifier `SessionRuntimeStatusProbe` : `alarmScheduled`, `accessibilityReady`, `notificationReady`, `fullScreenReady`, `nfcReady`, `audioReady` alimentent le réconciliateur ; chaque perte après `ARMED` produit une seule fois par session l'incident correspondant (`ALARM_PERMISSION_REVOKED`, `BLOCKING_PERMISSION_REVOKED`, `ANDROID_FULL_SCREEN_REVOKED`, `NFC_DISABLED`), sans changer l'état.
-- Modifier `DirectBootStore`/`RoomSessionStore` : un snapshot `Corrupted` produit `SNAPSHOT_CORRUPTED CRITICAL` dans le journal, conserve le fichier, et Room fait foi si accessible ; si Room est aussi illisible, l'application affiche l'écran de diagnostic sans retirer le blocage (le service d'accessibilité garde sa dernière projection en mémoire).
-- Tests : `AppStartReconcilerTest`, `SessionRuntimeStatusProbeTest` (chaque perte → incident unique), `SessionReconcilerCorruptionTest` (Direct Boot corrompu + Room valide → Direct Boot réécrit ; les deux corrompus → aucun `dispatch`, incident journalisé, projection de blocage inchangée), instrumenté `ProcessDeathInstrumentedTest` (session `RINGING` en base, redémarrage du service via `ServiceTestRule` sans intent → audio repris).
+- ~~Créer `AppStartReconciler.kt`~~ : non créé, voir héritage 1 ci-dessus.
+- Modifiée : la sonde alimente le réconciliateur sur son écart réel uniquement —
+  `alarmScheduled` et `nfcReady` (`SessionRuntimeReconciler`, nouveau), pas les quatre autres champs
+  déjà couverts par `SessionReadinessMonitor` (§13.1), qu'un second contrôle aurait dédoublés.
+  `NFC_DISABLED` ajouté au tableau de §13.1, sur tous les états non finaux sauf `PREPARING`.
+- `DirectBootStore`/`RoomSessionStore`/`RoomBlockedPackagesSource` : voir héritages 2 et 3.
+- Tests : `SessionRuntimeStatusProbeTest`, `RuntimeStatusGapsTest`, `SessionReconcilerCorruptionTest`,
+  `UnlockAwarePersistenceGatewayCorruptionTest`, `StorageIntegrityStateTest`,
+  `RingingWatchdogSpecsTest`, `RingingWatchdogPolicyTest`, `SessionReconcilerWatchdogTest`,
+  `SessionCoordinatorRingingWatchdogTest`, `SessionReadinessWatcherTest`,
+  `SessionReconcilerTechnicalEventFlushTest`, instrumenté `ProcessDeathInstrumentedTest` (session
+  `RINGING` en base, publisher vidé, `reconcile(PROCESS_START)` → service et watchdog repris ; le
+  plan demandait `ServiceTestRule`, écarté pour la même raison qu'à l'étape 3 — `bindServiceAndWait()`
+  échoue sur un service sans binder).
 
-- [ ] **Écrire `AppStartReconcilerTest`**, implémenter.
-- [ ] **Écrire `SessionRuntimeStatusProbeTest`**, compléter la sonde et le réconciliateur.
-- [ ] **Écrire `SessionReconcilerCorruptionTest`**, implémenter le traitement explicite de la corruption.
-- [ ] **Trancher le sort du journal technique écrit avant déverrouillage** (héritage 3 ci-dessus) :
-      correctif ou limite assumée. Dans les deux cas, documenter la décision dans §17 et le rapport ;
-      si c'est une limite, la reprendre dans `LIMITES.md` à l'étape 21.
-- [ ] **Écrire `ProcessDeathInstrumentedTest`**.
-- [ ] **Vérifier :**
+- [x] **Écrire `SessionRuntimeStatusProbeTest`**, compléter la sonde et le réconciliateur.
+- [x] **Écrire `SessionReconcilerCorruptionTest`**, implémenter le traitement explicite de la corruption.
+- [x] **Trancher le sort du journal technique écrit avant déverrouillage** (héritage 3 ci-dessus) :
+      **versé dans Room**. Documenté dans §17 ; limite résiduelle à reprendre dans `LIMITES.md` à
+      l'étape 21.
+- [x] **Écrire `ProcessDeathInstrumentedTest`**. *(4 tests, exécutés verts sur appareil le
+      2026-09-15. Un échec au premier passage, de mon fait : `eventId` constant alors que les reçus
+      survivent volontairement à `clearActive` — même défaut qu'à l'étape 19, voir `ETAPE-20.md`.)*
+- [x] **Alarme de secours pendant `RINGING`** *(écart au plan, hors de sa lettre d'origine mais
+      couvrant exactement le report de l'étape 17 ouvert en tête de cette section) :*
+      `RingingWatchdog`/`RingingWatchdogSpecs`/`RingingWatchdogPolicy`/`AndroidRingingWatchdog`/
+      `RingingWatchdogReceiver`, câblés sur `StartRingingExecutor`/`StopRingingExecutor` et
+      réarmés par `SessionReconciler`.
+- [x] **Vérifier :** *(2026-09-15 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0 — JVM, ktlint,
+      detekt, `:app:assembleDebug` et `:app:lintDebug` verts ; **141 tests instrumentés verts**
+      (136 à l'étape 19) ; protocole manuel déroulé en entier, neuf essais. **Deux défauts trouvés
+      sur appareil et corrigés** : Room illisible faisait planter le processus à chaque démarrage
+      via le chemin de fusion Direct Boot, et l'accueil affichait « Aucune session » alors que la
+      session était armée et le blocage en place. Voir `ETAPE-20.md`.)*
 
 ```bash
 ./gradlew :app:testDebugUnitTest :core:system:testDebugUnitTest :core:database:testDebugUnitTest
@@ -1195,9 +1229,9 @@ exactes. Voir `ETAPE-17.md`, section « Réserves subsistantes ».
 ./gradlew ktlintCheck detekt :app:lintDebug
 ```
 
-**Tests manuels :** (lire « Particularités de l'appareil de test » avant : `am kill` ne tue pas le processus quand le service d'accessibilité est lié, et `am force-stop` coupe l'accessibilité **et** met le paquet à l'état *stopped*, où il ne reçoit plus aucun broadcast) `am kill` après armement → alarme conservée, état réconcilié à la relance ; désactiver l'accessibilité pendant `ARMED` → incident `CRITICAL`, session conservée ; corrompre `niumi_session.json` à la main (`adb shell run-as` impossible en release : tester en debug) → incident, blocage conservé.
+**Tests manuels :** (lire « Particularités de l'appareil de test » avant : `am kill` ne tue pas le processus quand le service d'accessibilité est lié, et `am force-stop` coupe l'accessibilité **et** met le paquet à l'état *stopped*, où il ne reçoit plus aucun broadcast) `am kill` après armement → alarme conservée, état réconcilié à la relance ; session `RINGING`, `am crash` ou `kill -9` → le son revient seul, `dumpsys alarm` montre une seule alarme de secours à la fois ; désactiver l'accessibilité pendant `ARMED` → incident `CRITICAL`, session conservée ; alarme supprimée sous une session `ARMED` → reprogrammée sans incident ; NFC coupé pendant `RINGING` → incident `NFC_DISABLED` unique ; corrompre `niumi_session.json` à la main (`adb shell run-as` impossible en release : tester en debug) → incident, blocage conservé, projection réécrite ; corrompre la base Room (debug) → écran de diagnostic, blocage conservé ; **essai sous Doze forcé** (`adb shell dumpsys battery unplug`, puis `dumpsys deviceidle force-idle`, processus tué pendant `RINGING`) → mesurer le délai réel entre deux tics du watchdog, chiffre qui décide du choix d'API de §9.1. **Reste hors de portée de ce protocole** : la matrice §20 sur d'autres fabricants.
 
-**Terminé quand :** aucune session armée ne passe à `FAILED` dans ces scénarios (tests), la corruption est explicite et non destructive, chaque perte de permission produit un incident unique.
+**Terminé quand :** aucune session armée ne passe à `FAILED` dans ces scénarios (tests), la corruption est explicite et non destructive, chaque perte de permission produit un incident unique. *(**Atteint le 2026-09-15**, validations matérielles comprises. Aucune session armée n'a été perdue ni passée à `FAILED` dans les neuf essais ; la corruption Direct Boot est journalisée, consignée et réparée par réécriture depuis Room ; une base Room illisible mène à l'écran « État illisible » sans rien détruire — la session a été intégralement retrouvée à la restauration des droits ; l'alarme de secours a ramené le son cinq fois de suite sous Doze profond forcé, à 58-62 s d'intervalle, ce qui écarte le quota de 9 minutes redouté. Restent ouverts, signalés dans `ETAPE-20.md` : le seau d'App Standby jamais rétrogradable sous `EXEMPTED` sur cet appareil, et la matrice §20 sur d'autres fabricants.)*
 
 ### Étape 21 : finalisation release, suppression du POC, documentation QA, soumission Play et porte finale
 

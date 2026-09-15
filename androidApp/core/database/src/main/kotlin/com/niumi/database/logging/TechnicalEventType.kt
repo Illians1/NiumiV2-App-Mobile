@@ -33,4 +33,7 @@ enum class TechnicalEventType {
     SESSION_COMPLETED,
     SESSION_FAILED,
     RELEASE_PARTIAL_FAILURE,
+
+    /** Snapshot Direct Boot ou Room illisible (SPEC_CORE_KMP §13 ; SPEC_ANDROID §18, étape 20). */
+    SNAPSHOT_CORRUPTED,
 }

@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.niumi.system.session.SessionSnapshotPublisher
+import com.niumi.system.session.StorageIntegrityState
 import com.niumi.system.session.isSessionInProgress
 import com.niumi.system.setup.SetupPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,7 @@ class HomeViewModel
     constructor(
         private val setupPreferences: SetupPreferences,
         private val snapshotPublisher: SessionSnapshotPublisher,
+        private val storageIntegrity: StorageIntegrityState,
     ) : ViewModel() {
         private var onboardingAcknowledged = false
         private var alarmScreenAcknowledged = false
@@ -43,6 +45,9 @@ class HomeViewModel
         init {
             viewModelScope.launch {
                 snapshotPublisher.snapshot.collectLatest { recompute() }
+            }
+            viewModelScope.launch {
+                storageIntegrity.failure.collectLatest { recompute() }
             }
             refresh()
         }
@@ -63,14 +68,16 @@ class HomeViewModel
 
         private fun recompute() {
             val sessionState = snapshotPublisher.snapshot.value?.state
+            val storageUnreadable = storageIntegrity.failure.value != null
             val launcher = launcherDestinationFor(sessionState, onboardingAcknowledged)
             state =
                 HomeUiState(
-                    destination = homeDestinationFor(sessionState, onboardingAcknowledged),
+                    destination = homeDestinationFor(sessionState, onboardingAcknowledged, storageUnreadable),
                     hasActiveSession = sessionState.isSessionInProgress(),
                     alarmScreenRequired = launcher == LauncherDestination.AlarmScreen,
                     pendingAlarmScreen =
                         launcher == LauncherDestination.AlarmScreen && !alarmScreenAcknowledged,
+                    storageUnreadable = storageUnreadable,
                 )
         }
     }

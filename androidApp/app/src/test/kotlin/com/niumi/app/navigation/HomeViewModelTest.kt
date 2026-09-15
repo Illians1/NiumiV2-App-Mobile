@@ -6,6 +6,7 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.system.session.SessionSnapshotPublisher
+import com.niumi.system.session.StorageIntegrityState
 import com.niumi.system.setup.SetupPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,6 +45,7 @@ private class FakeSetupPreferences(
 class HomeViewModelTest {
     private val publisher = SessionSnapshotPublisher()
     private val preferences = FakeSetupPreferences()
+    private val storageIntegrity = StorageIntegrityState()
 
     @Before
     fun setUp() {
@@ -76,7 +78,7 @@ class HomeViewModelTest {
             failureCode = null,
         )
 
-    private fun viewModel() = HomeViewModel(preferences, publisher)
+    private fun viewModel() = HomeViewModel(preferences, publisher, storageIntegrity)
 
     @Test
     fun aRingingSessionAsksForTheAlarmScreen() =
@@ -152,5 +154,21 @@ class HomeViewModelTest {
             assertThat(state.pendingAlarmScreen).isFalse()
             assertThat(state.hasActiveSession).isFalse()
             assertThat(state.destination).isEqualTo(NiumiRoute.Readiness)
+        }
+
+    /**
+     * SPEC_ANDROID §18, §20 : une persistance illisible envoie vers le diagnostic même pendant une
+     * session en cours, et la redirection suit `StorageIntegrityState` sans attendre `refresh()`.
+     */
+    @Test
+    fun anUnreadableStorageOverridesTheActiveSessionScreen() =
+        runTest {
+            publisher.publish(snapshot(SessionStateDto.ARMED))
+            val viewModel = viewModel()
+            assertThat(viewModel.state.destination).isEqualTo(NiumiRoute.ActiveSession)
+
+            storageIntegrity.reportUnreadable("SQLITE_CORRUPT")
+
+            assertThat(viewModel.state.destination).isEqualTo(NiumiRoute.IncidentDiagnostic)
         }
 }

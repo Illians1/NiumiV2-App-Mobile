@@ -5,6 +5,7 @@ import android.content.Context
 import com.niumi.app.MainActivity
 import com.niumi.feature.ringing.AlarmActivity
 import com.niumi.feature.ringing.AlarmReceiver
+import com.niumi.system.alarm.RingingWatchdogReceiver
 import com.niumi.system.intent.NiumiComponent
 import com.niumi.system.intent.NiumiComponentResolver
 
@@ -21,5 +22,6 @@ class AppComponentResolver(
             NiumiComponent.ALARM_RECEIVER -> ComponentName(context, AlarmReceiver::class.java)
             NiumiComponent.MAIN_ACTIVITY -> ComponentName(context, MainActivity::class.java)
             NiumiComponent.ALARM_ACTIVITY -> ComponentName(context, AlarmActivity::class.java)
+            NiumiComponent.RINGING_WATCHDOG_RECEIVER -> ComponentName(context, RingingWatchdogReceiver::class.java)
         }
 }

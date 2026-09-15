@@ -21,7 +21,9 @@ import com.niumi.system.session.SessionCoordinator
 import com.niumi.system.session.SessionEventFactory
 import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionReconciler
+import com.niumi.system.session.SessionRuntimeReconciler
 import com.niumi.system.session.SessionSnapshotPublisher
+import com.niumi.system.session.StorageIntegrityState
 import com.niumi.system.session.executors.ApplyBlockingExecutor
 import com.niumi.system.session.executors.CancelAlarmExecutor
 import com.niumi.system.session.executors.ClearActiveSessionExecutor
@@ -52,6 +54,7 @@ class TestCoordinatorHarness {
     val alarmScheduler: FakeAlarmScheduler = FakeAlarmScheduler(journal)
     val blockingController: FakeBlockingController = FakeBlockingController(journal)
     val ringingController: FakeRingingController = FakeRingingController(journal)
+    val ringingWatchdog: FakeRingingWatchdog = FakeRingingWatchdog(journal)
     val scanRequestNotifier: FakeScanRequestNotifier = FakeScanRequestNotifier(journal)
     val accessibilityServiceStatus: FakeAccessibilityServiceStatus = FakeAccessibilityServiceStatus()
     val blockedPackagesProjection: FakeBlockedPackagesProjection = FakeBlockedPackagesProjection()
@@ -88,6 +91,23 @@ class TestCoordinatorHarness {
      */
     val reconcilerIncidentsReader = GatewayIncidentsReader(gateway)
 
+    /** [StorageIntegrityState] (étape 20) : ce que l'accueil et l'écran 12 lisent. */
+    val storageIntegrity = StorageIntegrityState()
+
+    /** Versement du journal technique d'avant déverrouillage (étape 20). */
+    val technicalEventFlush = FakeTechnicalEventLogFlush(journal)
+
+    /** [SessionRuntimeReconciler] (étape 20) : les deux écarts hors du périmètre du moniteur. */
+    val runtimeStatusProbe = FakeSessionRuntimeStatusProbe(alarmScheduler)
+    val runtimeReconciler =
+        SessionRuntimeReconciler(
+            runtimeStatusProbe,
+            alarmScheduler,
+            eventFactory,
+            reconcilerIncidentsReader,
+            technicalEventLog,
+        )
+
     /**
      * Fusion Direct Boot → Room inerte par défaut : [unlockState] est verrouillé, donc
      * `DirectBootMerger.merge()` sort avant de toucher quoi que ce soit. Les scénarios qui la
@@ -109,6 +129,10 @@ class TestCoordinatorHarness {
             scanRequestNotifier,
             directBootMerger,
             reconcilerIncidentsReader,
+            ringingWatchdog,
+            runtimeReconciler,
+            storageIntegrity,
+            technicalEventFlush,
         )
 
     private val executors: Map<SessionEffectKindDto, EffectExecutor> =
@@ -118,8 +142,9 @@ class TestCoordinatorHarness {
             SessionEffectKindDto.CANCEL_ALARM to CancelAlarmExecutor(alarmScheduler),
             SessionEffectKindDto.APPLY_BLOCKING to ApplyBlockingExecutor(blockingController, technicalEventLog),
             SessionEffectKindDto.REMOVE_BLOCKING to RemoveBlockingExecutor(blockingController, clock),
-            SessionEffectKindDto.START_RINGING to StartRingingExecutor(ringingController, technicalEventLog),
-            SessionEffectKindDto.STOP_RINGING to StopRingingExecutor(ringingController),
+            SessionEffectKindDto.START_RINGING to
+                StartRingingExecutor(ringingController, ringingWatchdog, technicalEventLog),
+            SessionEffectKindDto.STOP_RINGING to StopRingingExecutor(ringingController, ringingWatchdog),
             SessionEffectKindDto.PRESENT_SCAN_REQUEST to
                 PresentScanRequestExecutor(scanRequestNotifier, technicalEventLog),
             SessionEffectKindDto.CLEAR_SCAN_REQUEST to ClearScanRequestExecutor(scanRequestNotifier, technicalEventLog),

@@ -55,4 +55,25 @@ class HomeDestinationTest {
         assertThat(homeDestinationFor(SessionStateDto.COMPLETED, onboardingAcknowledged = false))
             .isEqualTo(NiumiRoute.Onboarding)
     }
+
+    /**
+     * SPEC_ANDROID §18, §20 : une persistance illisible prime sur tout le reste — ni l'état d'une
+     * session en cours ni l'accusé d'onboarding ne sont fiables si Niumi ne peut plus les lire.
+     */
+    @Test
+    fun anUnreadableStorageSendsTheUserToTheIncidentDiagnosticBeforeAnythingElse() {
+        assertThat(
+            homeDestinationFor(SessionStateDto.ARMED, onboardingAcknowledged = true, storageUnreadable = true),
+        ).isEqualTo(NiumiRoute.IncidentDiagnostic)
+        assertThat(
+            homeDestinationFor(state = null, onboardingAcknowledged = false, storageUnreadable = true),
+        ).isEqualTo(NiumiRoute.IncidentDiagnostic)
+    }
+
+    @Test
+    fun theRedirectionDisappearsAsSoonAsStorageIsReadableAgain() {
+        assertThat(
+            homeDestinationFor(SessionStateDto.ARMED, onboardingAcknowledged = true, storageUnreadable = false),
+        ).isEqualTo(NiumiRoute.ActiveSession)
+    }
 }

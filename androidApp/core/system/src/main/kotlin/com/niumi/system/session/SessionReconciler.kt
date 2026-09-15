@@ -12,6 +12,10 @@ import com.niumi.core.interop.TriggerDelayOutcomeDto
 import com.niumi.database.blocking.BlockedPackagesState
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.system.alarm.RingingWatchdog
+import com.niumi.system.alarm.RingingWatchdogPolicy
+import com.niumi.system.alarm.WatchdogAction
+import com.niumi.system.boot.DirectBootMergeOutcome
 import com.niumi.system.common.OperationResult
 import com.niumi.system.readiness.ReadinessCheckId
 
@@ -40,16 +44,35 @@ class SessionReconciler(
         reason: ReconcileReason,
         dispatch: suspend (SessionEventDto) -> DispatchResult,
     ): ReconcileResult {
+        // Versement du journal technique d'avant déverrouillage (§17, étape 20), avant même la
+        // fusion : les deux vivent des raisons de « le processus est enfin vivant et déverrouillé »,
+        // et le vidage doit avoir lieu y compris quand il n'y a aucune projection Direct Boot à
+        // fusionner — c'est de loin le cas le plus fréquent. `flush()` est son propre garde-fou
+        // (verrouillé → no-op).
+        if (reason in MERGING_REASONS) sources.technicalEventFlush.flush()
+
         // SPEC_ANDROID §9.3, dernier alinéa : « À `USER_UNLOCKED`, le réconciliateur fusionne de
         // façon idempotente le registre et l'outbox Direct Boot dans Room. » Avant `gateway.load()`,
         // sans quoi la passe déciderait sur un Room amputé de ce qui a été fait avant le
         // déverrouillage. Sous le mutex du coordinateur, qui le tient pendant tout cet appel.
-        if (reason in MERGING_REASONS) sources.directBootMerger.merge()
+        // Résultat consommé depuis l'étape 20 : un `Corrupted` doit être journalisé et consigné,
+        // pas seulement rejoué en silence (auparavant jeté ici, la ligne suivante suffisait déjà à
+        // masquer une corruption Direct Boot tant que Room restait lisible).
+        val mergeOutcome = if (reason in MERGING_REASONS) sources.directBootMerger.merge() else null
 
         val loaded = gateway.load()
         if (loaded is LoadResult.Unreadable) {
+            // Aucune session lisible : ni `sessionId` ni révision n'existent pour porter un
+            // `SessionIncident` (SPEC_CORE_KMP §13, « aucune suppression silencieuse ») — seul
+            // l'événement technique est possible dans ce cas, y compris quand la fusion ci-dessus a
+            // elle aussi trouvé le Direct Boot corrompu : les deux causes convergent vers la même
+            // conclusion, rien à faire de plus qu'à consigner le fait et laisser le blocage en
+            // place (§18).
+            technicalEventLog.log(TechnicalEventType.SNAPSHOT_CORRUPTED, sessionId = null)
+            sources.storageIntegrity.reportUnreadable(loaded.reason)
             return ReconcileResult(sessionId = null, actions = listOf(ReconcileAction.SnapshotCorrupted))
         }
+        sources.storageIntegrity.reportReadable()
         val present = loaded as? LoadResult.Present ?: return ReconcileResult(sessionId = null, actions = emptyList())
 
         val sessionId = present.snapshot.sessionId
@@ -63,7 +86,24 @@ class SessionReconciler(
         // n'émet que sur changement.
         sources.snapshotPublisher.publish(present.snapshot)
 
-        val replayed = replayOutbox(present, dispatch, actions)
+        // La projection Direct Boot était illisible, mais Room, lui, l'est : on connaît maintenant
+        // le `sessionId` qui manquait à `DirectBootMerger` pour journaliser et consigner
+        // (`DirectBootMerger.merge()` a déjà réécrit la projection depuis Room dans ce cas).
+        var workingPresent = present
+        if (mergeOutcome is DirectBootMergeOutcome.Corrupted) {
+            technicalEventLog.log(TechnicalEventType.SNAPSHOT_CORRUPTED, sessionId)
+            val corrected =
+                reportIncidentOnce(
+                    present.snapshot,
+                    IncidentCodes.SNAPSHOT_CORRUPTED,
+                    IncidentSeverityDto.CRITICAL,
+                    dispatch,
+                    actions,
+                )
+            workingPresent = present.copy(snapshot = corrected)
+        }
+
+        val replayed = replayOutbox(workingPresent, dispatch, actions)
         val snapshot = reportClockChange(replayed, reason, dispatch, actions)
 
         when (snapshot.state) {
@@ -93,6 +133,18 @@ class SessionReconciler(
                 gateway.clearActive(sessionId)
                 actions += ReconcileAction.PointerCleared
             }
+        }
+
+        // Après la décision de cette passe, jamais avant : sur `RINGING`, le watchdog n'est armé
+        // qu'une fois `resumeRinging` (ci-dessus) déjà exécuté (SPEC_ANDROID §10.2, étape 20).
+        sources.ringingWatchdog.applyPolicyFor(snapshot)
+
+        // Snapshot relu, pas celui du début de passe : les branches ci-dessus ont pu dispatcher
+        // des incidents qui ont avancé la révision, et un état final a pu vider le pointeur actif
+        // (`gateway.load()` rend alors `Absent`, ce qui écarte naturellement les sessions closes
+        // du contrôle §7.1 sans test explicite sur l'état).
+        (gateway.load() as? LoadResult.Present)?.snapshot?.let { latest ->
+            sources.runtimeReconciler.reconcile(latest, dispatch)
         }
 
         return ReconcileResult(sessionId, actions)
@@ -158,19 +210,33 @@ class SessionReconciler(
         dispatch: suspend (SessionEventDto) -> DispatchResult,
         actions: MutableList<ReconcileAction>,
     ): SessionSnapshotDto {
-        // Les trois gardes en une seule expression court-circuitée : la lecture en base n'a lieu
-        // que si la raison décrit bien un déplacement d'horloge sur une session encore vivante.
-        val code = CLOCK_CHANGE_INCIDENT_CODES[reason]
-        if (code == null ||
-            snapshot.state in SESSION_FINAL_STATES ||
+        val code = CLOCK_CHANGE_INCIDENT_CODES[reason] ?: return snapshot
+        return reportIncidentOnce(snapshot, code, IncidentSeverityDto.WARNING, dispatch, actions)
+    }
+
+    /**
+     * Un incident par code et par session, quelle que soit la cause — factorisé à l'étape 20 entre
+     * [reportClockChange] et la corruption Direct Boot (même garde, seul le code et la gravité
+     * changent). Avant déverrouillage, [ReconcilerSources.incidentsReader] renvoie une liste vide
+     * sans pouvoir dire si des incidents existent (§7.3) : l'incident est alors enregistré plutôt
+     * que perdu.
+     */
+    private suspend fun reportIncidentOnce(
+        snapshot: SessionSnapshotDto,
+        code: String,
+        severity: IncidentSeverityDto,
+        dispatch: suspend (SessionEventDto) -> DispatchResult,
+        actions: MutableList<ReconcileAction>,
+    ): SessionSnapshotDto {
+        if (snapshot.state in SESSION_FINAL_STATES ||
             sources.incidentsReader.incidents(snapshot.sessionId).any { it.code == code }
         ) {
             return snapshot
         }
 
-        val incident = eventFactory.buildIncident(code, IncidentSeverityDto.WARNING)
+        val incident = eventFactory.buildIncident(code, severity)
         val result = dispatch(eventFactory.incidentReported(snapshot, incident))
-        actions += ReconcileAction.IncidentDispatched(code, IncidentSeverityDto.WARNING)
+        actions += ReconcileAction.IncidentDispatched(code, severity)
         actions += ReconcileAction.DecisionApplied(result)
         return (result as? DispatchResult.Applied)?.snapshot ?: snapshot
     }
@@ -409,3 +475,12 @@ class SessionReconciler(
             )
     }
 }
+
+// Fonction de fichier plutôt que membre de la classe : même motif qu'`UnlockAwarePersistenceGateway`
+// (`replayableEffectsOf`), au plafond detekt `TooManyFunctions` (11) depuis l'ajout de la fusion et
+// du changement d'horloge à l'étape 19.
+private fun RingingWatchdog.applyPolicyFor(snapshot: SessionSnapshotDto): OperationResult =
+    when (RingingWatchdogPolicy.decide(snapshot.state)) {
+        WatchdogAction.Arm -> arm(snapshot.sessionId)
+        WatchdogAction.Disarm -> disarm(snapshot.sessionId)
+    }

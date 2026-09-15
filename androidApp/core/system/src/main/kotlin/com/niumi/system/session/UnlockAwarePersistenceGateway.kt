@@ -5,6 +5,7 @@ import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
 import com.niumi.database.SessionStore
+import com.niumi.database.SessionStoreUnreadableException
 import com.niumi.database.StoredDecision
 import com.niumi.database.directboot.DirectBootMapper
 import com.niumi.database.directboot.DirectBootSnapshot
@@ -35,9 +36,16 @@ class UnlockAwarePersistenceGateway(
 ) : SessionPersistenceGateway {
     override suspend fun load(): LoadResult =
         if (unlockState.isUserUnlocked) {
-            sessionStore.activeSession()?.let { stored ->
-                LoadResult.Present(stored.snapshot, stored.extras, stored.pendingEffects)
-            } ?: LoadResult.Absent
+            // `SessionStoreUnreadableException` seule (SPEC_ANDROID §18, étape 20) : une base Room
+            // illisible devient un `Unreadable` explicite, au même titre qu'une projection Direct
+            // Boot corrompue — jamais une exception qui traverse jusqu'à l'appelant.
+            try {
+                sessionStore.activeSession()?.let { stored ->
+                    LoadResult.Present(stored.snapshot, stored.extras, stored.pendingEffects)
+                } ?: LoadResult.Absent
+            } catch (exception: SessionStoreUnreadableException) {
+                LoadResult.Unreadable(exception.reason)
+            }
         } else {
             when (val snapshot = directBootStore.read()) {
                 null -> {
