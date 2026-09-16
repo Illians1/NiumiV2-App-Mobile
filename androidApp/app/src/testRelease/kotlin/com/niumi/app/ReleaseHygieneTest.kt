@@ -116,13 +116,20 @@ class ReleaseHygieneTest {
     }
 
     /**
-     * SPEC_ANDROID §9.1 : `setAlarmClock()` est la seule API de réveil, et
-     * `setExactAndAllowWhileIdle()` n'est toléré que pour l'alarme de secours de `RINGING`
-     * (§10.2, étape 20). Le test verrouille les deux points d'appel **et** leur fichier : une
-     * troisième API, ou la même API ailleurs, échoue.
+     * SPEC_ANDROID §9.1 : `setAlarmClock()` est la seule API du **réveil**, et
+     * `setExactAndAllowWhileIdle()` n'est toléré que par ses deux dérogations nommées — l'alarme de
+     * secours de `RINGING` (§10.2, étape 20) et le début du blocage différé (§12.4, Lot 6). Toutes
+     * deux tiennent au même raisonnement : ces alarmes ne sont pas des alarmes de l'utilisateur, et
+     * les afficher au réglage « prochaine alarme » mentirait sur ce qu'elles sont.
+     *
+     * Le test verrouille chaque point d'appel **et** son fichier : une troisième API, ou la même API
+     * dans un fichier de plus, échoue. C'est voulu — tout nouvel usage d'une API d'alarme doit être
+     * acté ici en connaissance de cause, jamais glissé. `BlockingStartAlarmVisibilityTest` (`:app`,
+     * instrumenté) prouve de son côté que la seconde dérogation tient sa promesse sur appareil : le
+     * début du blocage n'atteint pas le réglage système.
      */
     @Test
-    fun theOnlyAlarmSchedulingApisAreTheTwoAllowedByTheSpec() {
+    fun theOnlyAlarmSchedulingApisAreTheThreeAllowedByTheSpec() {
         val callSites =
             productionSources().flatMap { file ->
                 val code = file.readText().withoutComments()
@@ -142,6 +149,7 @@ class ReleaseHygieneTest {
             .containsExactly(
                 "AndroidAlarmScheduler.kt : setAlarmClock",
                 "AndroidRingingWatchdog.kt : setExactAndAllowWhileIdle",
+                "AndroidBlockingStartScheduler.kt : setExactAndAllowWhileIdle",
             )
     }
 
