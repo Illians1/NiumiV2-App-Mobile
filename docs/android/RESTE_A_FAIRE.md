@@ -219,12 +219,26 @@ Android 17 porte un critère d'acceptation à lui seul et n'a aucun appareil pou
 - [ ] **C6. Appareil placé dans un seau d'économie d'énergie bas.** Le téléphone de test a refusé
       d'y descendre. L'alarme de secours qui rallume le son après un plantage n'a donc jamais été
       observée dans cette situation.
-- [ ] **C7. Observer la première exécution de la chaîne d'intégration continue.** Le fichier
-      `.github/workflows/mobile.yml` existe et chacune de ses commandes tourne en local, mais aucun
-      envoi sur GitHub n'a encore déclenché la chaîne. Vérifier au passage que les deux caches
-      fonctionnent et que la compilation du composant iOS passe sur la machine de Google.
+- [x] **C7. Observer la première exécution de la chaîne d'intégration continue.** *(Faite le
+      2026-09-15 sur le commit `c8bb92d`, **verte du premier coup**, treize étapes sur treize,
+      29,7 minutes. La compilation du composant iOS, le point le plus incertain sur une machine
+      distante, passe en 2,1 minutes. Détail des durées dans `ETAPE-21.md`. Les deux caches ont été
+      **écrits** pendant cette exécution mais pas encore relus : leur effet réel reste à constater
+      au prochain envoi, voir C8.)*
+- [ ] **C8. Confirmer que les caches de la chaîne servent à quelque chose.** La première exécution
+      les a remplis ; seule la deuxième dira s'ils sont relus et combien de temps ils font gagner.
+      Si le gain est nul, la clé de cache est probablement mal choisie. Attendu : nettement moins
+      de 29 minutes.
 
 ---
+
+## D. Évolution planifiée après le MVP
+
+Le **blocage différé** (l'utilisateur choisit si le blocage commence tout de suite ou à une heure
+donnée avant le réveil) est planifié aux **étapes 22 à 25** du plan
+`docs/superpowers/plans/2026-09-03-mvp-android.md` (Lot 6, décisions du 2026-09-15). Ce n'est pas
+une tâche de publication : le MVP décrit ci-dessus peut être publié sans lui. Le contrat KMP 1.3
+et les spécifications Android et iOS le décrivent déjà ; le code, lui, n'existe pas encore.
 
 ## Ce qui n'est pas dans ce document
 

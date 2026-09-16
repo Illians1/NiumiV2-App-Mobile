@@ -334,6 +334,29 @@ Rien de ce qui suit n'est acquis, et rien n'a été coché par anticipation.
 - Le seau d'App Standby jamais rétrogradable et l'arrêt du seul FGS non reproductible sur HyperOS,
   hérités de l'étape 20.
 
+## Première exécution de la chaîne d'intégration continue
+
+Déclenchée par le push du commit `c8bb92d` le 2026-09-15, **verte du premier coup**, treize étapes
+sur treize, 29,7 minutes sur `macos-26`.
+
+| Étape | Durée |
+| --- | --- |
+| Tests JVM du moteur commun | 3,1 min |
+| Framework iOS (simulateur arm64) | 2,1 min |
+| Tests unitaires Android | 5,8 min |
+| Hygiène release | 1,6 min |
+| Analyse statique (ktlint, detekt, `lintRelease`) | 9,2 min |
+| Build de publication | 6,8 min |
+
+Aucun écart entre la machine de développement et celle de GitHub, ce qui était l'incertitude de
+cette étape : les six commandes avaient été jouées localement, jamais ailleurs. Les deux points qui
+pouvaient échouer ne l'ont pas fait — la compilation du framework iOS a trouvé Xcode sans qu'il
+faille le sélectionner explicitement, et `assembleRelease` produit bien un APK non signé plutôt que
+d'exiger `keystore.properties`, absent du dépôt par construction.
+
+Les caches Gradle et Kotlin/Native ont été **écrits** pendant cette exécution, pas relus. Leur
+effet reste donc à constater : tâche C8 de `RESTE_A_FAIRE.md`.
+
 ## Suivi ouvert
 
 `docs/android/RESTE_A_FAIRE.md`, créé à la fin de cette étape à la demande de l'utilisateur,
