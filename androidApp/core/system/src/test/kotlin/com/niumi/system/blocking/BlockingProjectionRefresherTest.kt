@@ -81,5 +81,78 @@ class BlockingProjectionRefresherTest {
             job.cancel()
         }
 
-    private fun TestScope.launchObservation(): Job = launch { refresher.observeDecisions() }
+    /**
+     * SPEC_ANDROID §12.4 (Lot 6) : au début d'un blocage différé, la projection passe d'inactive à
+     * active et le service doit rejouer sa décision sur la dernière application vue.
+     */
+    @Test
+    fun theListenerIsCalledOnceWhenTheProjectionBecomesActive() =
+        runTest(UnconfinedTestDispatcher()) {
+            val activations = mutableListOf<BlockedPackagesState.Active>()
+            val job = launchObservation { activations += it }
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Active(SESSION_ID, packages))
+
+            publisher.publish(SessionDtoFixtures.snapshotInState(SessionStateDto.ARMED, SESSION_ID))
+
+            assertThat(activations).hasSize(1)
+            assertThat(activations.single().packages).isEqualTo(packages)
+            job.cancel()
+        }
+
+    /**
+     * Chaque appel peut déclencher un `GLOBAL_ACTION_HOME` : une projection restée active ne doit
+     * jamais en provoquer un second, même si sa liste de paquets change.
+     */
+    @Test
+    fun theListenerIsNotCalledAgainWhileTheProjectionStaysActive() =
+        runTest(UnconfinedTestDispatcher()) {
+            val activations = mutableListOf<BlockedPackagesState.Active>()
+            val job = launchObservation { activations += it }
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Active(SESSION_ID, packages))
+            publisher.publish(SessionDtoFixtures.snapshotInState(SessionStateDto.ARMED, SESSION_ID))
+
+            source.next =
+                BlockedPackagesRead.Resolved(
+                    BlockedPackagesState.Active(SESSION_ID, packages + BlockedPackage("com.exemple.autre", "Autre")),
+                )
+            publisher.publish(SessionDtoFixtures.snapshotInState(SessionStateDto.ARMED, SESSION_ID, revision = 2))
+
+            assertThat(activations).hasSize(1)
+            job.cancel()
+        }
+
+    /** Une persistance illisible ne lève pas le blocage (§13) et n'est donc pas une activation. */
+    @Test
+    fun anUnreadablePersistenceNeverNotifiesAnActivation() =
+        runTest(UnconfinedTestDispatcher()) {
+            val activations = mutableListOf<BlockedPackagesState.Active>()
+            val job = launchObservation { activations += it }
+            source.next = BlockedPackagesRead.Unreadable("json")
+
+            publisher.publish(SessionDtoFixtures.snapshotInState(SessionStateDto.ARMED, SESSION_ID))
+
+            assertThat(activations).isEmpty()
+            job.cancel()
+        }
+
+    /**
+     * L'autre chemin de la même transition : `APPLY_BLOCKING` avance le cache sans attendre le
+     * rafraîchissement suivant. Les deux arrivent dans la décision `BLOCKING_START_ELAPSED`, et
+     * n'observer que le rafraîchissement laisserait une course décider si l'application déjà ouverte
+     * est renvoyée à l'accueil.
+     */
+    @Test
+    fun applyingTheBlockingDirectlyAlsoNotifiesTheActivation() =
+        runTest(UnconfinedTestDispatcher()) {
+            val activations = mutableListOf<BlockedPackagesState.Active>()
+            val job = launchObservation { activations += it }
+
+            projection.apply(SESSION_ID, packages)
+
+            assertThat(activations).hasSize(1)
+            job.cancel()
+        }
+
+    private fun TestScope.launchObservation(listener: BlockingActivationListener? = null): Job =
+        launch { refresher.observeDecisions(listener) }
 }

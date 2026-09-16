@@ -1,5 +1,6 @@
 package com.niumi.database.directboot
 
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
@@ -33,6 +34,10 @@ object DirectBootMapper {
             localTime = snapshot.wakeSchedule.localTimeIso,
             zoneIdAtActivation = snapshot.wakeSchedule.zoneIdAtActivation,
             triggerAtEpochMillis = snapshot.wakeSchedule.triggerAtEpochMillis,
+            blockingLocalDate = snapshot.blockingSchedule.localDateIso,
+            blockingLocalTime = snapshot.blockingSchedule.localTimeIso,
+            blockingStartsAtEpochMillis = snapshot.blockingSchedule.startsAtEpochMillis,
+            blockingAppliedAtEpochMillis = snapshot.blockingAppliedAtEpochMillis,
             state = snapshot.state,
             releaseTarget = snapshot.releaseTarget,
             health = snapshot.health,
@@ -56,6 +61,15 @@ object DirectBootMapper {
         )
 }
 
+/**
+ * **Lecture d'un fichier v1 (Lot 6, SPEC_ANDROID §7.3).** Une projection écrite avant ce lot ne porte
+ * aucun champ `blocking*` et décrit nécessairement un blocage immédiat, demandé dès l'activation :
+ * elle se relit donc en `IMMEDIATE` avec `blockingAppliedAtEpochMillis = createdAtEpochMillis`. Sans
+ * cette traduction, les quatre champs vaudraient `null` et `isBlockingPending` resterait faux —
+ * correct par chance pour un schedule immédiat, mais l'instant d'application serait perdu. La
+ * projection est réécrite en v2 à la fusion suivante. Un fichier v1 ne se lit jamais « pas de
+ * session ».
+ */
 fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
     SessionSnapshotDto(
         schemaVersion = domainSchemaVersion,
@@ -68,6 +82,18 @@ fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
                 zoneIdAtActivation = zoneIdAtActivation,
                 triggerAtEpochMillis = triggerAtEpochMillis,
             ),
+        blockingSchedule =
+            if (isLegacyProjection) {
+                BlockingScheduleDto()
+            } else {
+                BlockingScheduleDto(
+                    localDateIso = blockingLocalDate,
+                    localTimeIso = blockingLocalTime,
+                    startsAtEpochMillis = blockingStartsAtEpochMillis,
+                )
+            },
+        blockingAppliedAtEpochMillis =
+            if (isLegacyProjection) createdAtEpochMillis else blockingAppliedAtEpochMillis,
         state = state,
         releaseTarget = releaseTarget,
         health = health,
@@ -112,3 +138,12 @@ private fun PendingEffect.toProjection(): DirectBootEffect =
 
 private fun DirectBootEffect.toDomain(): PendingEffect =
     PendingEffect(effectId, sessionId, revision, kind, ordinal, payloadJson, status, lastError)
+
+/**
+ * Vrai pour une projection écrite avant la v2, donc sans champ `blocking*`. La comparaison porte sur
+ * la version du **format de projection**, jamais sur la nullité des champs : en v2, un blocage
+ * immédiat les laisse eux aussi nuls, et les confondre ferait réécrire `blockingAppliedAtEpochMillis`
+ * avec `createdAtEpochMillis` à chaque relecture.
+ */
+private val DirectBootSnapshot.Active.isLegacyProjection: Boolean
+    get() = projectionSchemaVersion < DIRECT_BOOT_PROJECTION_SCHEMA_VERSION

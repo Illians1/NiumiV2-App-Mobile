@@ -8,7 +8,7 @@ import com.niumi.database.EffectStatus
 import kotlinx.serialization.Serializable
 
 /** Version du format de projection lui-même, indépendante de [DirectBootSnapshot.Active.domainSchemaVersion]. */
-public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 1
+public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 2
 
 /**
  * Projection partielle de Room dans le stockage protégé de l'appareil (SPEC_ANDROID §7.3,
@@ -28,6 +28,13 @@ public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 1
  * `EffectStatus`) sont sérialisés par leur nom : comportement natif de kotlinx-serialization pour
  * un `enum class`, aucune annotation requise (déjà exploité par `EventFingerprint` à l'étape 9).
  *
+ * **Projection v2 (Lot 6).** Les quatre champs `blocking*` portent une valeur par défaut afin qu'un
+ * fichier écrit en v1 reste désérialisable : `directBootJson` conserve `encodeDefaults = true`
+ * précisément pour qu'un champ absent y signifie « ancien fichier » et non « écrit à null ». La
+ * traduction d'un fichier v1 en blocage immédiat appartient à `DirectBootMapper.toSnapshotDto`, qui
+ * seul dispose de `createdAtEpochMillis` pour renseigner `blockingAppliedAtEpochMillis`
+ * (SPEC_ANDROID §7.3). L'écriture est toujours en v2.
+ *
  * Seul [Active] est jamais sérialisé (directement, via son propre sérialiseur) : [Corrupted]
  * représente un état de lecture, jamais écrit. L'interface scellée n'est donc pas elle-même
  * `@Serializable` — cela imposerait à [Corrupted] de l'être aussi pour la sérialisation
@@ -44,6 +51,10 @@ public sealed interface DirectBootSnapshot {
         val localTime: String,
         val zoneIdAtActivation: String,
         val triggerAtEpochMillis: Long,
+        val blockingLocalDate: String? = null,
+        val blockingLocalTime: String? = null,
+        val blockingStartsAtEpochMillis: Long? = null,
+        val blockingAppliedAtEpochMillis: Long? = null,
         val state: SessionStateDto,
         val releaseTarget: ReleaseTargetDto?,
         val health: SessionHealthDto,

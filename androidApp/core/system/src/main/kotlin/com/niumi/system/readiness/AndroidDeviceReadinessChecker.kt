@@ -38,6 +38,9 @@ class AndroidDeviceReadinessChecker(
             appSelectionCount = appSelectionCount,
             hasPairedBox = hasPairedBox,
             candidateTriggerAtEpochMillis = input.candidateTriggerAtEpochMillis,
+            // Transporté tel quel, sans contrôle dédié : l'antériorité au réveil est une règle
+            // commune (SPEC_ANDROID §13, point 4).
+            candidateBlockingStartsAtEpochMillis = input.candidateBlockingStartsAtEpochMillis,
             nowEpochMillis = now,
         )
     }

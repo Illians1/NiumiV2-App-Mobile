@@ -20,6 +20,14 @@ fun interface DeviceReadinessChecker {
  */
 data class ReadinessInput(
     val candidateTriggerAtEpochMillis: Long? = null,
+    /**
+     * Début de blocage candidat (Lot 6), `null` pour un blocage immédiat. Transporté jusqu'à
+     * `ActivationPolicyInputDto.blockingStartsAtEpochMillis` par le même chemin que le réveil :
+     * l'antériorité au réveil est une règle **commune**, refusée par
+     * `BLOCKING_START_NOT_BEFORE_TRIGGER` (SPEC_CORE_KMP §8.3, §14). Elle n'ajoute donc aucun
+     * quinzième contrôle de diagnostic (SPEC_ANDROID §13, point 4).
+     */
+    val candidateBlockingStartsAtEpochMillis: Long? = null,
 )
 
 /**
@@ -35,6 +43,8 @@ data class ReadinessReport(
     val appSelectionCount: Int,
     val hasPairedBox: Boolean,
     val candidateTriggerAtEpochMillis: Long?,
+    /** `null` quand aucun début différé n'a été choisi — le cas de tout diagnostic hors Lot 6. */
+    val candidateBlockingStartsAtEpochMillis: Long? = null,
     val nowEpochMillis: Long,
 ) {
     fun check(id: ReadinessCheckId): ReadinessCheck = checks.first { it.id == id }

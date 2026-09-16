@@ -31,6 +31,10 @@ import com.niumi.database.entity.TechnicalEventEntity
  * v2 (étape 16) ajoute à `technical_event` les trois champs de contexte de SPEC_ANDROID §17
  * (modèle de l'appareil, version Android, version de l'application). La migration est additive et
  * ne touche aucune autre table : voir [com.niumi.database.migration.MIGRATION_1_2].
+ *
+ * v3 (Lot 6, blocage différé) ajoute à `alarm_session` les quatre colonnes `blocking*` de
+ * SPEC_ANDROID §7.2, toutes nullables. Migration additive elle aussi :
+ * voir [com.niumi.database.migration.MIGRATION_2_3].
  */
 @Database(
     entities = [
@@ -43,7 +47,7 @@ import com.niumi.database.entity.TechnicalEventEntity
         SessionEffectOutboxEntity::class,
         ActiveSessionPointerEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(SessionEnumConverters::class, EffectEnumConverters::class, IncidentEnumConverters::class)

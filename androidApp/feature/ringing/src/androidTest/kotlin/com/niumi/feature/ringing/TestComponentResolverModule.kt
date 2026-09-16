@@ -3,6 +3,7 @@ package com.niumi.feature.ringing
 import android.content.ComponentName
 import android.content.Context
 import com.niumi.system.alarm.RingingWatchdogReceiver
+import com.niumi.system.blocking.BlockingStartReceiver
 import com.niumi.system.intent.NiumiComponent
 import com.niumi.system.intent.NiumiComponentResolver
 import com.niumi.system.notification.NotificationIconResolver
@@ -50,6 +51,11 @@ object TestComponentResolverModule {
 
                 NiumiComponent.RINGING_WATCHDOG_RECEIVER -> {
                     ComponentName(context, RingingWatchdogReceiver::class.java)
+                }
+
+                // Lot 6 : le receveur vit dans `:core:system`, visible depuis ce module de test.
+                NiumiComponent.BLOCKING_START_RECEIVER -> {
+                    ComponentName(context, BlockingStartReceiver::class.java)
                 }
             }
         }

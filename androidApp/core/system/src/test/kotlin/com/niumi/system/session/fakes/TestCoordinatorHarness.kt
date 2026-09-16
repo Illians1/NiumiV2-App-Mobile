@@ -26,6 +26,7 @@ import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.StorageIntegrityState
 import com.niumi.system.session.executors.ApplyBlockingExecutor
 import com.niumi.system.session.executors.CancelAlarmExecutor
+import com.niumi.system.session.executors.CancelBlockingStartExecutor
 import com.niumi.system.session.executors.ClearActiveSessionExecutor
 import com.niumi.system.session.executors.ClearScanRequestExecutor
 import com.niumi.system.session.executors.PresentScanRequestExecutor
@@ -33,6 +34,7 @@ import com.niumi.system.session.executors.PublishSnapshotExecutor
 import com.niumi.system.session.executors.RecordIncidentExecutor
 import com.niumi.system.session.executors.RemoveBlockingExecutor
 import com.niumi.system.session.executors.ScheduleAlarmExecutor
+import com.niumi.system.session.executors.ScheduleBlockingStartExecutor
 import com.niumi.system.session.executors.StartRingingExecutor
 import com.niumi.system.session.executors.StopRingingExecutor
 
@@ -52,6 +54,7 @@ class TestCoordinatorHarness {
     val journal: CallJournal = CallJournal()
     val gateway: InMemoryPersistenceGateway = InMemoryPersistenceGateway(journal)
     val alarmScheduler: FakeAlarmScheduler = FakeAlarmScheduler(journal)
+    val blockingStartScheduler: FakeBlockingStartScheduler = FakeBlockingStartScheduler(journal)
     val blockingController: FakeBlockingController = FakeBlockingController(journal)
     val ringingController: FakeRingingController = FakeRingingController(journal)
     val ringingWatchdog: FakeRingingWatchdog = FakeRingingWatchdog(journal)
@@ -121,18 +124,19 @@ class TestCoordinatorHarness {
 
     private val sources =
         ReconcilerSources(
-            alarmScheduler,
-            blockedPackagesProjection,
-            readinessMonitor,
-            publisher,
-            ringingController,
-            scanRequestNotifier,
-            directBootMerger,
-            reconcilerIncidentsReader,
-            ringingWatchdog,
-            runtimeReconciler,
-            storageIntegrity,
-            technicalEventFlush,
+            alarmScheduler = alarmScheduler,
+            blockingStartScheduler = blockingStartScheduler,
+            blockedPackagesProjection = blockedPackagesProjection,
+            readinessMonitor = readinessMonitor,
+            snapshotPublisher = publisher,
+            ringingController = ringingController,
+            scanRequestNotifier = scanRequestNotifier,
+            directBootMerger = directBootMerger,
+            incidentsReader = reconcilerIncidentsReader,
+            ringingWatchdog = ringingWatchdog,
+            runtimeReconciler = runtimeReconciler,
+            storageIntegrity = storageIntegrity,
+            technicalEventFlush = technicalEventFlush,
         )
 
     private val executors: Map<SessionEffectKindDto, EffectExecutor> =
@@ -149,6 +153,9 @@ class TestCoordinatorHarness {
                 PresentScanRequestExecutor(scanRequestNotifier, technicalEventLog),
             SessionEffectKindDto.CLEAR_SCAN_REQUEST to ClearScanRequestExecutor(scanRequestNotifier, technicalEventLog),
             SessionEffectKindDto.CLEAR_ACTIVE_SESSION to ClearActiveSessionExecutor(gateway),
+            SessionEffectKindDto.SCHEDULE_BLOCKING_START to
+                ScheduleBlockingStartExecutor(blockingStartScheduler, technicalEventLog),
+            SessionEffectKindDto.CANCEL_BLOCKING_START to CancelBlockingStartExecutor(blockingStartScheduler),
             SessionEffectKindDto.RECORD_INCIDENT to RecordIncidentExecutor(gateway),
         )
 

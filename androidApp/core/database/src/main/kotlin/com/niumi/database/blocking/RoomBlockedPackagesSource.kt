@@ -3,6 +3,7 @@ package com.niumi.database.blocking
 import android.database.sqlite.SQLiteException
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.core.interop.SessionStateDto
+import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EffectStatus
 import com.niumi.database.NiumiDatabase
@@ -11,9 +12,11 @@ import com.niumi.database.directboot.DirectBootStore
 import com.niumi.database.directboot.UnlockState
 import com.niumi.database.entity.AlarmSessionEntity
 import com.niumi.database.mapping.toBlockedPackage
+import com.niumi.database.mapping.toSnapshotDto
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
+import com.niumi.database.directboot.toSnapshotDto as projectionToSnapshotDto
 
 /**
  * Reconstruit la projection de blocage depuis la persistance (SPEC_ANDROID §12.2 : « le service
@@ -65,6 +68,18 @@ class RoomBlockedPackagesSource
         /**
          * En Room, un effet est décidé dès que sa ligne existe : l'absence de ligne signifie
          * « jamais décidé », et seule la révision la plus récente décrit l'état courant.
+         *
+         * **`ARMED` a sa propre branche depuis le Lot 6** : l'état ne dit plus si le blocage est
+         * appliqué, `blockingAppliedAtEpochMillis` le dit (SPEC_ANDROID §12.2, table de projection).
+         * Le laisser tomber dans le `else` bloquerait les applications dès l'armement, avant l'heure
+         * de début choisie par l'utilisateur. La condition passe par `isBlockingPending`
+         * (`:shared:core`) et non par une recopie de la règle : le KDoc de `BlockingStatus` interdit
+         * toute troisième copie, côté commun comme côté natif.
+         *
+         * C'est bien le champ du snapshot qui décide, et non le statut de l'effet `APPLY_BLOCKING`
+         * comme pour `PREPARING` : dans le miroir Direct Boot, une session différée n'a aucun
+         * `APPLY_BLOCKING` avant son début, et « absent donc exécuté » y donnerait un blocage actif
+         * avant l'heure.
          */
         private suspend fun roomStateOf(
             database: NiumiDatabase,
@@ -93,6 +108,14 @@ class RoomBlockedPackagesSource
                         BlockedPackagesState.Active(session.id, packages)
                     } else {
                         BlockedPackagesState.Inactive
+                    }
+                }
+
+                SessionStateDto.ARMED -> {
+                    if (session.toSnapshotDto().isBlockingPending) {
+                        BlockedPackagesState.Inactive
+                    } else {
+                        BlockedPackagesState.Active(session.id, packages)
                     }
                 }
 
@@ -148,6 +171,17 @@ class RoomBlockedPackagesSource
 
                 SessionStateDto.PREPARING -> {
                     if (isPendingInDirectBoot(stored, SessionEffectKindDto.APPLY_BLOCKING)) {
+                        BlockedPackagesState.Inactive
+                    } else {
+                        BlockedPackagesState.Active(stored.sessionId, packages)
+                    }
+                }
+
+                // `projectionToSnapshotDto` est l'alias d'import de `toSnapshotDto` côté Direct
+                // Boot : les deux mappers exposent ce nom, et l'alias lève le conflit sans recopier
+                // la règle de `isBlockingPending` d'un côté ou de l'autre.
+                SessionStateDto.ARMED -> {
+                    if (stored.projectionToSnapshotDto().isBlockingPending) {
                         BlockedPackagesState.Inactive
                     } else {
                         BlockedPackagesState.Active(stored.sessionId, packages)

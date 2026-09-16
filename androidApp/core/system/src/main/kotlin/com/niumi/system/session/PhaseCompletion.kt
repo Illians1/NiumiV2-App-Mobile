@@ -10,9 +10,27 @@ import com.niumi.core.interop.SessionEventKindDto
  * déclarer une session terminée pendant que le réveil sonne encore serait le pire résultat
  * possible pour un produit de réveil, et l'outbox existe pour rejouer l'arrêt du son.
  * SPEC_ANDROID §11.3 est corrigée en conséquence dans le même changement.
+ *
+ * `CANCEL_BLOCKING_START` reste absent de [releaseRequired] : SPEC_CORE_KMP §6 le range parmi les
+ * effets best-effort, une alarme de début laissée programmée après un état final étant absorbée par
+ * `BlockingStartHandler`, dont le moteur refuse l'événement faute de session `ARMED` en attente.
  */
 object PhaseCompletion {
-    private val activationRequired = setOf(SessionEffectKindDto.SCHEDULE_ALARM, SessionEffectKindDto.APPLY_BLOCKING)
+    /**
+     * Les trois effets dont dépend `ACTIVATION_SUCCEEDED`, dont **deux seulement sont produits à la
+     * fois** : `APPLY_BLOCKING` pour un blocage immédiat, `SCHEDULE_BLOCKING_START` pour un blocage
+     * différé (SPEC_CORE_KMP §6, Lot 6). Aucune intersection avec les kinds produits n'est
+     * nécessaire : [EffectOutcomes.succeeded] est un `all {}` sur les outcomes de ce kind, donc
+     * vacuement vrai pour un kind que la décision n'a pas produit. Une activation immédiate ignore
+     * ainsi `SCHEDULE_BLOCKING_START`, et ses effets restent exactement ceux du contrat 1.2 —
+     * ordinaux et `effectId` compris.
+     */
+    private val activationRequired =
+        setOf(
+            SessionEffectKindDto.SCHEDULE_ALARM,
+            SessionEffectKindDto.APPLY_BLOCKING,
+            SessionEffectKindDto.SCHEDULE_BLOCKING_START,
+        )
     private val releaseRequired =
         setOf(
             SessionEffectKindDto.CANCEL_ALARM,

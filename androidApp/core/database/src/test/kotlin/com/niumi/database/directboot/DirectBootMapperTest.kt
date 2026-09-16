@@ -4,7 +4,9 @@ import com.google.common.truth.Truth.assertThat
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionEffectKind
 import com.niumi.core.domain.SessionState
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
@@ -175,6 +177,83 @@ class DirectBootMapperTest {
         assertThat(active.domainSchemaVersion).isEqualTo(snapshot.schemaVersion)
         assertThat(active.domainRevision).isEqualTo(snapshot.revision)
         assertThat(active.projectionSchemaVersion).isEqualTo(DIRECT_BOOT_PROJECTION_SCHEMA_VERSION)
+    }
+
+    @Test
+    fun aPendingDeferredBlockingIsProjectedAndReadBackUnchanged() {
+        val snapshot = SessionSnapshotDtoFixtures.armedBlockingPendingSnapshot()
+
+        val active = DirectBootMapper.projectionOf(snapshot, extras, receipts, effects)
+
+        assertThat(active.blockingLocalDate).isEqualTo(snapshot.blockingSchedule.localDateIso)
+        assertThat(active.blockingLocalTime).isEqualTo(snapshot.blockingSchedule.localTimeIso)
+        assertThat(active.blockingStartsAtEpochMillis).isEqualTo(snapshot.blockingSchedule.startsAtEpochMillis)
+        assertThat(active.blockingAppliedAtEpochMillis).isNull()
+        assertThat(active.toSnapshotDto()).isEqualTo(snapshot)
+        assertThat(active.toSnapshotDto().isBlockingPending).isTrue()
+    }
+
+    @Test
+    fun anAppliedDeferredBlockingIsProjectedAndReadBackUnchanged() {
+        val snapshot = SessionSnapshotDtoFixtures.armedBlockingAppliedSnapshot()
+
+        val active = DirectBootMapper.projectionOf(snapshot, extras, receipts, effects)
+
+        assertThat(active.toSnapshotDto()).isEqualTo(snapshot)
+        assertThat(active.toSnapshotDto().isBlockingPending).isFalse()
+    }
+
+    /** Toute écriture se fait en v2, quelle que soit la session projetée (SPEC_ANDROID §7.3). */
+    @Test
+    fun theProjectionIsAlwaysWrittenAtTheCurrentVersion() {
+        val active =
+            DirectBootMapper.projectionOf(
+                SessionSnapshotDtoFixtures.armedBlockingPendingSnapshot(),
+                extras,
+                receipts,
+                effects,
+            )
+
+        assertThat(active.projectionSchemaVersion).isEqualTo(2)
+    }
+
+    /**
+     * SPEC_ANDROID §7.3 : « les champs absents se lisent comme un blocage immédiat dont
+     * `blockingAppliedAtEpochMillis` vaut `createdAtEpochMillis` ». Le fichier v1 est simulé par une
+     * projection dont `projectionSchemaVersion` vaut 1 et dont les quatre champs sont nuls — ce que
+     * produit exactement la désérialisation d'un JSON écrit avant ce lot.
+     */
+    @Test
+    fun aVersionOneProjectionReadsAsAnImmediateBlockingAppliedAtCreation() {
+        val legacy =
+            DirectBootMapper
+                .projectionOf(SessionSnapshotDtoFixtures.preparingSnapshot(), extras, receipts, effects)
+                .copy(projectionSchemaVersion = 1)
+
+        val snapshot = legacy.toSnapshotDto()
+
+        assertThat(snapshot.blockingSchedule).isEqualTo(BlockingScheduleDto())
+        assertThat(snapshot.blockingAppliedAtEpochMillis).isEqualTo(legacy.createdAtEpochMillis)
+        assertThat(snapshot.isBlockingPending).isFalse()
+    }
+
+    /**
+     * La distinction se fait sur la version du format, jamais sur la nullité des champs : en v2, une
+     * session à blocage immédiat les laisse nuls elle aussi, et les confondre réécrirait
+     * `blockingAppliedAtEpochMillis` avec `createdAtEpochMillis` à chaque relecture.
+     */
+    @Test
+    fun aVersionTwoImmediateBlockingKeepsItsOwnAppliedInstant() {
+        val applied = 1_700_000_009_000L
+        val active =
+            DirectBootMapper
+                .projectionOf(SessionSnapshotDtoFixtures.preparingSnapshot(), extras, receipts, effects)
+                .copy(blockingAppliedAtEpochMillis = applied)
+
+        val snapshot = active.toSnapshotDto()
+
+        assertThat(snapshot.blockingAppliedAtEpochMillis).isEqualTo(applied)
+        assertThat(snapshot.blockingAppliedAtEpochMillis).isNotEqualTo(active.createdAtEpochMillis)
     }
 
     private fun assertRoundTrips(snapshot: SessionSnapshotDto) {

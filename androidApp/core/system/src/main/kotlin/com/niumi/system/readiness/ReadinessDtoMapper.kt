@@ -33,6 +33,10 @@ fun ReadinessReport.toActivationPolicyInput(): ActivationPolicyInputDto =
                 .map { ReadinessCheckInputDto(it.id.name, it.severity, it.outcome == ReadinessOutcome.PASSED) },
         appSelectionCount = appSelectionCount,
         triggerAtEpochMillis = candidateTriggerAtEpochMillis ?: nowEpochMillis,
+        // `null` pour un blocage immédiat, ce que la politique commune accepte sans rien vérifier
+        // (SPEC_CORE_KMP §8.3). Aucun repli sur `nowEpochMillis` ici, contrairement au réveil : un
+        // début absent n'est pas un début invalide, c'est l'absence de choix différé.
+        blockingStartsAtEpochMillis = candidateBlockingStartsAtEpochMillis,
         nowEpochMillis = nowEpochMillis,
         hasPairedBox = hasPairedBox,
     )

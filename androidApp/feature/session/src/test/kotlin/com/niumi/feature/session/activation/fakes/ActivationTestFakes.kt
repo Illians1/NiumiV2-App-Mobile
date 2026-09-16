@@ -37,7 +37,12 @@ class RecordingReadinessChecker(
     var reportForNull: ReadinessReport,
     var reportForCandidate: (candidateTriggerAtEpochMillis: Long) -> ReadinessReport,
 ) : DeviceReadinessChecker {
+    /** Dernière entrée reçue : le Lot 6 doit prouver que le début de blocage candidat y parvient. */
+    var lastInput: ReadinessInput? = null
+        private set
+
     override suspend fun check(input: ReadinessInput): ReadinessReport {
+        lastInput = input
         val candidate = input.candidateTriggerAtEpochMillis
         return if (candidate == null) {
             journal.record("readiness.check(null)")

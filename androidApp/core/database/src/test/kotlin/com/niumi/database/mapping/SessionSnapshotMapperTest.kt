@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionState
 import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.isBlockingPending
 import org.junit.Test
 
 /**
@@ -119,6 +120,52 @@ class SessionSnapshotMapperTest {
         assertThat(roundTrippedExtras.blockedPackages.map { it.packageName })
             .containsExactlyElementsIn(extras.blockedPackages.map { it.packageName })
             .inOrder()
+    }
+
+    @Test
+    fun aPendingDeferredBlockingRoundTripsAndStaysPending() {
+        val snapshot = SessionSnapshotDtoFixtures.armedBlockingPendingSnapshot()
+
+        val entity = snapshot.toEntity(extras)
+
+        // Colonne par colonne avant l'égalité globale, même motif que les horodatages : les quatre
+        // colonnes sont adjacentes et de deux types seulement, donc interchangeables par erreur.
+        assertThat(entity.blockingLocalDate).isEqualTo(snapshot.blockingSchedule.localDateIso)
+        assertThat(entity.blockingLocalTime).isEqualTo(snapshot.blockingSchedule.localTimeIso)
+        assertThat(entity.blockingStartsAtEpochMillis).isEqualTo(snapshot.blockingSchedule.startsAtEpochMillis)
+        assertThat(entity.blockingAppliedAtEpochMillis).isNull()
+        assertThat(entity.toSnapshotDto()).isEqualTo(snapshot)
+        assertThat(entity.toSnapshotDto().isBlockingPending).isTrue()
+    }
+
+    @Test
+    fun anAppliedDeferredBlockingRoundTripsAndIsNoLongerPending() {
+        val snapshot = SessionSnapshotDtoFixtures.armedBlockingAppliedSnapshot()
+
+        val entity = snapshot.toEntity(extras)
+
+        assertThat(entity.blockingAppliedAtEpochMillis).isEqualTo(snapshot.blockingAppliedAtEpochMillis)
+        assertThat(entity.toSnapshotDto()).isEqualTo(snapshot)
+        assertThat(entity.toSnapshotDto().isBlockingPending).isFalse()
+    }
+
+    /**
+     * Les valeurs par défaut des DTO posées à l'étape 22 sont transitoires : le mapper doit
+     * renseigner les quatre colonnes **explicitement**. Ce test construit le DTO sans les mentionner
+     * — donc en s'appuyant sur ces défauts — et vérifie que l'entité en porte tout de même la trace
+     * exacte. Si un jour le mapper oubliait ces champs, il compilerait toujours et ce test tomberait.
+     */
+    @Test
+    fun aSnapshotBuiltWithoutTheBlockingFieldsStillMapsThemExplicitly() {
+        val snapshot = SessionSnapshotDtoFixtures.preparingSnapshot()
+
+        val entity = snapshot.toEntity(extras)
+
+        assertThat(entity.blockingLocalDate).isNull()
+        assertThat(entity.blockingLocalTime).isNull()
+        assertThat(entity.blockingStartsAtEpochMillis).isNull()
+        assertThat(entity.blockingAppliedAtEpochMillis).isNull()
+        assertThat(entity.toSnapshotDto()).isEqualTo(snapshot)
     }
 
     private fun assertRoundTrips(snapshot: SessionSnapshotDto) {

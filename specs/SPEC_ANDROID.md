@@ -1343,6 +1343,7 @@ NFC_SCAN_VALID
 BLOCK_APPLIED
 BLOCKING_SCHEDULED
 BLOCKING_START_RESCHEDULED
+BLOCKING_START_RECEIVED
 BLOCKING_STARTED
 MISSED_BLOCKING_START_WINDOW
 ACCESSIBILITY_DISABLED
@@ -1356,7 +1357,9 @@ SNAPSHOT_CORRUPTED
 
 Chaque événement contient seulement l'heure, le type, l'identifiant de session, le modèle de l'appareil, la version Android, la version de l'application et un code d'erreur contrôlé. Le nom de package est accepté uniquement pour `BLOCK_APPLIED`. Aucun événement n'est envoyé à distance dans le MVP.
 
-**Événements du blocage différé (Lot 6).** `BLOCKING_SCHEDULED` à l'exécution de `SCHEDULE_BLOCKING_START`, `BLOCKING_START_RESCHEDULED` à chaque reprogrammation par le réconciliateur, `BLOCKING_STARTED` à l'exécution réussie de `APPLY_BLOCKING` sur une session différée (les `BLOCK_APPLIED` par package suivent, comme à l'activation), `MISSED_BLOCKING_START_WINDOW` quand l'incident du même nom est produit. Ces quatre types s'ajoutent à la liste fermée ci-dessus ; `packageName` y reste refusé.
+**Événements du blocage différé (Lot 6).** `BLOCKING_SCHEDULED` à l'exécution de `SCHEDULE_BLOCKING_START`, `BLOCKING_START_RESCHEDULED` à chaque reprogrammation par le réconciliateur, `BLOCKING_START_RECEIVED` à chaque déclenchement reçu par `BlockingStartReceiver`, `BLOCKING_STARTED` à l'exécution réussie de `APPLY_BLOCKING` sur une session différée (les `BLOCK_APPLIED` par package suivent, comme à l'activation), `MISSED_BLOCKING_START_WINDOW` quand l'incident du même nom est produit. Ces cinq types s'ajoutent à la liste fermée ci-dessus ; `packageName` y reste refusé.
+
+**`BLOCKING_START_RECEIVED` est journalisé avant toute décision** (étape 23), y compris quand le handler ou le moteur refusent ensuite d'appliquer le blocage — même convention qu'`ALARM_RECEIVED` pour le réveil. `BLOCKING_STARTED` ne peut pas y servir : il désigne l'exécution **réussie** d'`APPLY_BLOCKING`, et l'employer pour un refus ferait lire au journal qu'un blocage a commencé alors qu'il n'a rien commencé. Ce type existe pour rendre visible le seul cas réaliste de refus : une alarme de début ayant survécu à la fin de sa session, `CANCEL_BLOCKING_START` étant un effet best-effort dont l'échec ne bloque pas la libération (SPEC_CORE_KMP §6). Sans lui, ce déclenchement orphelin ne laisserait aucune trace exportable — l'échec de l'annulation n'apparaît que dans l'outbox, que §17 n'exporte pas. Décision validée avec l'utilisateur le 2026-09-16, voir `docs/android/implementation-reports/ETAPE-23.md`.
 
 **`SNAPSHOT_CORRUPTED` (étape 20).** Journalisé dans deux cas distincts : `sessionId` renseigné, quand la projection Direct Boot est illisible mais que Room permet de retrouver la session concernée (`DirectBootMerger.merge()`, `SessionReconciler`) ; `sessionId` absent, quand aucun stockage lisible ne permet de savoir de quelle session il s'agissait — Direct Boot et Room illisibles à la fois, ou Room seul illisible une fois déverrouillé. Le second cas n'a pas d'équivalent `SessionIncident` : SPEC_CORE_KMP §13 exige une révision pour ouvrir un incident, qu'aucune session lisible ne peut fournir.
 

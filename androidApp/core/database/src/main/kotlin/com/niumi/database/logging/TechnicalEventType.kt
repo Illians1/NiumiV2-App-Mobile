@@ -27,6 +27,21 @@ enum class TechnicalEventType {
     NFC_SCAN_INVALID,
     NFC_SCAN_VALID,
     BLOCK_APPLIED,
+
+    /** Début du blocage différé (Lot 6, SPEC_ANDROID §17). `packageName` y reste refusé. */
+    BLOCKING_SCHEDULED,
+    BLOCKING_START_RESCHEDULED,
+
+    /**
+     * Déclenchement de l'alarme de début reçu par `BlockingStartReceiver`, journalisé **avant toute
+     * décision** — y compris quand la suite refuse d'appliquer le blocage. Pendant de
+     * `ALARM_RECEIVED` pour le réveil : c'est ce qui rend visible un déclenchement orphelin, celui
+     * d'une alarme qui a survécu à la fin de sa session parce que `CANCEL_BLOCKING_START`, effet
+     * best-effort, a échoué. Sans lui, ce fait ne laisserait aucune trace exportable.
+     */
+    BLOCKING_START_RECEIVED,
+    BLOCKING_STARTED,
+    MISSED_BLOCKING_START_WINDOW,
     ACCESSIBILITY_DISABLED,
     PROCESS_RECREATED,
     OEM_RESTRICTION_SUSPECTED,

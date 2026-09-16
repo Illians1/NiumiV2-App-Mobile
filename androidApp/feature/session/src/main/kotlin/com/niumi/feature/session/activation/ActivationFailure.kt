@@ -1,6 +1,7 @@
 package com.niumi.feature.session.activation
 
 import com.niumi.core.interop.ActivationReasonDto
+import com.niumi.core.interop.BlockingScheduleStatusDto
 import com.niumi.core.interop.DomainViolationDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
@@ -22,6 +23,16 @@ sealed interface ActivationFailure {
     /** `computeWakeSchedule` n'a produit aucun horaire pour l'heure locale demandée. */
     data class InvalidSchedule(
         val status: WakeScheduleStatusDto,
+    ) : ActivationFailure
+
+    /**
+     * `computeBlockingSchedule` a refusé le début de blocage demandé (Lot 6). Le cas courant est
+     * `NOT_BEFORE_TRIGGER` : la règle de « prochaine occurrence » fait tomber l'heure choisie après le
+     * réveil, et l'utilisateur doit alors choisir un blocage immédiat (SPEC_CORE_KMP §8.3). Distinct
+     * de [Blocked] : rien ne cloche sur l'appareil, c'est le choix qui est impossible.
+     */
+    data class InvalidBlockingSchedule(
+        val status: BlockingScheduleStatusDto,
     ) : ActivationFailure
 
     /** Le coordinateur a enchaîné `ACTIVATION_FAILED` : le pointeur actif a été effacé, réessai sûr. */

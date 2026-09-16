@@ -18,10 +18,16 @@ import org.junit.Test
  * `RELEASE_SUCCEEDED` — décision validée le 2026-09-10, voir [PhaseCompletion].
  */
 class SessionCoordinatorReleaseTest {
-    private suspend fun armSession(harness: TestCoordinatorHarness): SessionSnapshotDto {
+    private suspend fun armSession(
+        harness: TestCoordinatorHarness,
+        blockingStartsAtEpochMillis: Long? = null,
+    ): SessionSnapshotDto {
         val result =
             harness.coordinator.dispatch(
-                SessionDtoFixtures.activationRequested(eventId = "00000000-0000-0000-0000-000000000001"),
+                SessionDtoFixtures.activationRequested(
+                    eventId = "00000000-0000-0000-0000-000000000001",
+                    blockingStartsAtEpochMillis = blockingStartsAtEpochMillis,
+                ),
                 SessionDtoFixtures.extras(),
             )
         return (result as DispatchResult.Applied).snapshot!!
@@ -52,6 +58,49 @@ class SessionCoordinatorReleaseTest {
             assertThat(applied.snapshot?.releaseTarget).isEqualTo(ReleaseTargetDto.CANCELLED)
             assertThat(harness.alarmScheduler.isScheduled(SessionDtoFixtures.SESSION_ID)).isFalse()
             assertThat(harness.blockingController.effectivePackages()).isEmpty()
+            assertThat(harness.gateway.load()).isEqualTo(LoadResult.Absent)
+        }
+
+    /**
+     * SPEC_ANDROID §11.3 point 7 : le scan annule « l'alarme système, l'alarme de début du blocage si
+     * elle existe encore, et les `PendingIntent` de la session ». Scanner avant l'heure de début doit
+     * laisser l'appareil sans **aucune** alarme Niumi, et sans qu'aucune application n'ait jamais été
+     * bloquée.
+     */
+    @Test
+    fun aScanBeforeTheBlockingStartCancelsItAndNeverBlocksAnything() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            val armed = armSession(harness, SessionDtoFixtures.BLOCKING_STARTS_AT_EPOCH_MILLIS)
+            assertThat(harness.blockingStartScheduler.isScheduled(SessionDtoFixtures.SESSION_ID)).isTrue()
+
+            val result = harness.coordinator.dispatch(validNfcScanned(harness, armed))
+
+            val applied = result as DispatchResult.Applied
+            assertThat(applied.requiredEffectsSucceeded).isTrue()
+            assertThat(applied.snapshot?.state).isEqualTo(SessionStateDto.CANCELLED)
+            assertThat(harness.alarmScheduler.isScheduled(SessionDtoFixtures.SESSION_ID)).isFalse()
+            assertThat(harness.blockingStartScheduler.isScheduled(SessionDtoFixtures.SESSION_ID)).isFalse()
+            assertThat(harness.journal.calls).doesNotContain("BlockingController.apply")
+        }
+
+    /**
+     * `CANCEL_BLOCKING_START` est best-effort (SPEC_CORE_KMP §6) : son échec est consigné mais ne
+     * retient jamais `RELEASING`. Un déclenchement orphelin qui en résulterait serait absorbé par
+     * `BlockingStartHandler`, dont le moteur refuse l'événement faute de session `ARMED` en attente.
+     */
+    @Test
+    fun aFailedBlockingStartCancellationDoesNotPreventReleaseSucceeded() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            val armed = armSession(harness, SessionDtoFixtures.BLOCKING_STARTS_AT_EPOCH_MILLIS)
+            harness.blockingStartScheduler.cancelResult = OperationResult.Failure("ANDROID_CANCEL_FAILED")
+
+            val result = harness.coordinator.dispatch(validNfcScanned(harness, armed))
+
+            val applied = result as DispatchResult.Applied
+            assertThat(applied.requiredEffectsSucceeded).isTrue()
+            assertThat(applied.snapshot?.state).isEqualTo(SessionStateDto.CANCELLED)
             assertThat(harness.gateway.load()).isEqualTo(LoadResult.Absent)
         }
 

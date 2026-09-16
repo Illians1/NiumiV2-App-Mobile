@@ -9,6 +9,7 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.TriggerDelayInputDto
 import com.niumi.core.interop.TriggerDelayOutcomeDto
+import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.blocking.BlockedPackagesState
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
@@ -32,10 +33,10 @@ import com.niumi.system.readiness.ReadinessCheckId
 class SessionReconciler(
     private val gateway: SessionPersistenceGateway,
     private val effectDispatcher: EffectDispatcher,
-    private val sources: ReconcilerSources,
+    internal val sources: ReconcilerSources,
     private val facade: NiumiCoreFacade,
     private val eventFactory: SessionEventFactory,
-    private val technicalEventLog: TechnicalEventLog,
+    internal val technicalEventLog: TechnicalEventLog,
 ) {
     // Clauses de garde séquentielles (snapshot illisible, absent) avant le corps principal — même
     // motif que `NfcReducer.onValidScan` (:shared:core), voir `ETAPE-07.md`.
@@ -375,8 +376,81 @@ class SessionReconciler(
         // `TRIGGER_ELAPSED` serait perdu. Même relecture qu'`AlarmTriggerHandler` après la même
         // surveillance (étape 17). Un état devenu non-`ARMED` entre-temps ne relève plus d'ici.
         val refreshed = (gateway.load() as? LoadResult.Present)?.snapshot
-        if (refreshed != null && refreshed.state == SessionStateDto.ARMED) {
-            reconcileTriggerDelay(refreshed, reason, dispatch, actions)
+        if (refreshed == null || refreshed.state != SessionStateDto.ARMED) return
+
+        // Le début du blocage **avant** le retard du réveil (§12.4) : une session dont les deux
+        // instants sont dépassés doit d'abord voir son blocage demandé, faute de quoi le
+        // `TRIGGER_ELAPSED` l'appliquerait par le repli du moteur (SPEC_CORE_KMP §5.1) et le
+        // `BLOCKING_START_ELAPSED` serait ensuite refusé — le journal ne garderait alors aucune trace
+        // du début manqué, et `MISSED_BLOCKING_START_WINDOW` ne serait jamais consigné.
+        reconcileBlockingStart(refreshed, reason, dispatch, actions)
+
+        // Quatrième relecture de ce motif dans le dépôt : `BLOCKING_START_ELAPSED` incrémente la
+        // révision, et poursuivre sur `refreshed` ferait tomber le `TRIGGER_ELAPSED` en
+        // `STALE_REVISION` (égalité stricte d'`expectedRevision`, `SessionEventValidation`). Même
+        // défaut qu'à l'étape 17 (`SessionReadinessMonitor`), au rejeu d'outbox et à l'étape 18
+        // (juste au-dessus).
+        val afterBlocking = (gateway.load() as? LoadResult.Present)?.snapshot
+        if (afterBlocking != null && afterBlocking.state == SessionStateDto.ARMED) {
+            reconcileTriggerDelay(afterBlocking, reason, dispatch, actions)
+        }
+    }
+
+    /**
+     * Début d'un blocage différé dont l'instant est atteint, ou alarme de début disparue
+     * (SPEC_ANDROID §12.4, §9.3 ; SPEC_CORE_KMP §8.3). Sans objet pour une session à blocage
+     * immédiat, ou différé déjà demandé : `isBlockingPending` porte la règle unique, jamais recopiée
+     * ici.
+     *
+     * Le retard est lu par [NiumiCoreFacade.evaluateTriggerDelay], la même politique que celle du
+     * réveil appliquée à `blockingStartsAtEpochMillis` — SPEC_CORE_KMP §8.3 l'impose explicitement
+     * (« en réutilisant `evaluateTriggerDelay` »), et Android ne recalcule jamais une règle commune.
+     *
+     * Trois différences voulues avec [reconcileTriggerDelay] : `FIRE_NOW` **produit l'événement** au
+     * lieu de reprogrammer une alarme immédiate, et ce quelle que soit la raison de la passe — « un
+     * blocage ne se manque pas, il s'applique en retard » (§8.3), là où le réveil réserve ce chemin à
+     * `BEFORE_SCAN` parce qu'un réveil, lui, doit sonner ; la gravité de l'incident est `WARNING` et
+     * non `DEGRADED`, un blocage appliqué en retard n'ayant dégradé aucune promesse
+     * (`IncidentCodes.defaultSeverityOf`) ; et l'instant reprogrammé est **contractuel**, jamais
+     * `now`, `startsAtEpochMillis` étant immuable après l'activation.
+     */
+    private suspend fun reconcileBlockingStart(
+        snapshot: SessionSnapshotDto,
+        reason: ReconcileReason,
+        dispatch: suspend (SessionEventDto) -> DispatchResult,
+        actions: MutableList<ReconcileAction>,
+    ) {
+        if (!snapshot.isBlockingPending) return
+        val startsAt = snapshot.blockingSchedule.startsAtEpochMillis ?: return
+        val now = eventFactory.nowEpochMillis()
+
+        when (facade.evaluateTriggerDelay(TriggerDelayInputDto(startsAt, now)).outcome) {
+            TriggerDelayOutcomeDto.NOT_REACHED -> {
+                // Même condition que pour l'alarme du réveil (§9.3) : sur un déplacement d'horloge,
+                // le réenregistrement est inconditionnel, un `PendingIntent` encore présent ne
+                // prouvant pas que le système l'a conservé au bon instant.
+                val clockMoved = reason in CLOCK_CHANGE_INCIDENT_CODES
+                if (clockMoved || !sources.blockingStartScheduler.isScheduled(snapshot.sessionId)) {
+                    sources.blockingStartScheduler.schedule(snapshot.sessionId, snapshot.revision, startsAt)
+                    technicalEventLog.log(TechnicalEventType.BLOCKING_START_RESCHEDULED, snapshot.sessionId)
+                    actions += ReconcileAction.BlockingStartRescheduled(startsAt)
+                }
+            }
+
+            TriggerDelayOutcomeDto.FIRE_NOW -> {
+                actions += ReconcileAction.DecisionApplied(dispatch(eventFactory.blockingStartElapsed(snapshot, null)))
+            }
+
+            TriggerDelayOutcomeDto.MISSED -> {
+                technicalEventLog.log(TechnicalEventType.MISSED_BLOCKING_START_WINDOW, snapshot.sessionId)
+                val incident =
+                    eventFactory.buildIncident(
+                        IncidentCodes.MISSED_BLOCKING_START_WINDOW,
+                        IncidentSeverityDto.WARNING,
+                    )
+                actions +=
+                    ReconcileAction.DecisionApplied(dispatch(eventFactory.blockingStartElapsed(snapshot, incident)))
+            }
         }
     }
 
@@ -398,7 +472,7 @@ class SessionReconciler(
                 // est idempotent (`FLAG_UPDATE_CURRENT`) et coûte un appel.
                 val clockMoved = reason in CLOCK_CHANGE_INCIDENT_CODES
                 if (clockMoved || !sources.alarmScheduler.isScheduled(snapshot.sessionId)) {
-                    rescheduleAlarm(snapshot, triggerAt, actions)
+                    rescheduleAlarm(sources, technicalEventLog, snapshot, triggerAt, actions)
                 }
             }
 
@@ -409,7 +483,7 @@ class SessionReconciler(
                             dispatch(eventFactory.triggerElapsed(snapshot, incident = null)),
                         )
                 } else {
-                    rescheduleAlarm(snapshot, now, actions)
+                    rescheduleAlarm(sources, technicalEventLog, snapshot, now, actions)
                 }
             }
 
@@ -423,16 +497,6 @@ class SessionReconciler(
                 actions += ReconcileAction.DecisionApplied(dispatch(eventFactory.triggerElapsed(snapshot, incident)))
             }
         }
-    }
-
-    private fun rescheduleAlarm(
-        snapshot: SessionSnapshotDto,
-        triggerAtEpochMillis: Long,
-        actions: MutableList<ReconcileAction>,
-    ) {
-        sources.alarmScheduler.schedule(snapshot.sessionId, snapshot.revision, triggerAtEpochMillis)
-        technicalEventLog.log(TechnicalEventType.ALARM_RESCHEDULED, snapshot.sessionId)
-        actions += ReconcileAction.AlarmRescheduled(triggerAtEpochMillis)
     }
 
     private companion object {
@@ -474,6 +538,24 @@ class SessionReconciler(
                 ReconcileReason.TIMEZONE_CHANGED to IncidentCodes.TIMEZONE_CHANGED,
             )
     }
+}
+
+/**
+ * Reprogrammation de l'alarme du réveil au même instant contractuel (§9.3). Fonction de fichier
+ * depuis le Lot 6 : la classe est au plafond detekt `TooManyFunctions` (11), et [reconcileBlockingStart]
+ * y a pris la place — celle-ci est la plus mécanique des deux, et la seule qui n'ait besoin d'aucun
+ * état du réconciliateur hors de ses deux collaborateurs.
+ */
+private fun rescheduleAlarm(
+    sources: ReconcilerSources,
+    technicalEventLog: TechnicalEventLog,
+    snapshot: SessionSnapshotDto,
+    triggerAtEpochMillis: Long,
+    actions: MutableList<ReconcileAction>,
+) {
+    sources.alarmScheduler.schedule(snapshot.sessionId, snapshot.revision, triggerAtEpochMillis)
+    technicalEventLog.log(TechnicalEventType.ALARM_RESCHEDULED, snapshot.sessionId)
+    actions += ReconcileAction.AlarmRescheduled(triggerAtEpochMillis)
 }
 
 // Fonction de fichier plutôt que membre de la classe : même motif qu'`UnlockAwarePersistenceGateway`

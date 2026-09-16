@@ -32,6 +32,20 @@ subprojects {
         android.set(true)
     }
 
+    // Bruit attendu, à ne pas partir chercher : `:core:database` fait afficher à detekt
+    // « There were 2 compiler errors found during analysis » à chaque exécution. Ce sont les deux
+    // appels à `DirectBootSnapshot.Active.serializer()` de `FileDirectBootStore`, signalés comme
+    // `unresolved reference 'serializer'`. Cette fonction n'existe pas dans le source : le plugin du
+    // compilateur `kotlinx-serialization` la génère sur toute classe `@Serializable`. La passe
+    // d'analyse de detekt s'exécute avec le classpath du module mais **sans** les plugins du
+    // compilateur Kotlin, donc sans cette génération. Le vrai compilateur, lui, ne bronche pas :
+    // `compileDebugKotlin`, les tests et `assembleDebug` sont verts. Frottement connu de detekt avec
+    // les plugins du compilateur, le même que celui rencontré couramment avec Compose.
+    //
+    // Conséquence réelle, circonscrite : la résolution de types est perdue sur ce seul fichier, donc
+    // les règles qui en dépendent peuvent y rater quelque chose. Les règles syntaxiques continuent de
+    // s'y appliquer. Désactiver la type resolution sur tout le module ferait taire le message au prix
+    // d'un affaiblissement bien plus large — mauvais échange, écarté le 2026-09-16 (étape 23).
     extensions.configure<DetektExtension> {
         config.setFrom(rootProject.files("config/detekt/detekt.yml"))
         buildUponDefaultConfig.set(true)

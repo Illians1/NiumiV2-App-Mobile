@@ -3,6 +3,7 @@ package com.niumi.system.session.di
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.system.alarm.AlarmScheduler
+import com.niumi.system.alarm.BlockingStartScheduler
 import com.niumi.system.alarm.RingingWatchdog
 import com.niumi.system.blocking.BlockingController
 import com.niumi.system.common.Clock
@@ -13,6 +14,7 @@ import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.executors.ApplyBlockingExecutor
 import com.niumi.system.session.executors.CancelAlarmExecutor
+import com.niumi.system.session.executors.CancelBlockingStartExecutor
 import com.niumi.system.session.executors.ClearActiveSessionExecutor
 import com.niumi.system.session.executors.ClearScanRequestExecutor
 import com.niumi.system.session.executors.PresentScanRequestExecutor
@@ -20,6 +22,7 @@ import com.niumi.system.session.executors.PublishSnapshotExecutor
 import com.niumi.system.session.executors.RecordIncidentExecutor
 import com.niumi.system.session.executors.RemoveBlockingExecutor
 import com.niumi.system.session.executors.ScheduleAlarmExecutor
+import com.niumi.system.session.executors.ScheduleBlockingStartExecutor
 import com.niumi.system.session.executors.StartRingingExecutor
 import com.niumi.system.session.executors.StopRingingExecutor
 import dagger.Module
@@ -28,8 +31,14 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
 /**
- * Table `SessionEffectKind → EffectExecutor` (SPEC_CORE_KMP §6), les onze exécuteurs de l'étape
- * 11. Une seule fonction plutôt qu'un `@Provides` par exécuteur : les construire directement dans
+ * Table `SessionEffectKind → EffectExecutor` (SPEC_CORE_KMP §6) : les onze exécuteurs de l'étape
+ * 11, plus les deux du début de blocage différé (Lot 6). **Elle doit couvrir chaque valeur de
+ * `SessionEffectKindDto`** : `EffectDispatcher` y accède par `Map.getValue`, qui lève
+ * `NoSuchElementException` sur une clé absente — défaut rencontré à l'étape 22, où
+ * `CANCEL_BLOCKING_START` a dû être conditionné côté moteur faute d'exécuteur lié. Un test
+ * instrumenté (`EffectExecutorCoverageTest`) le prouve désormais sur le graphe complet.
+ *
+ * Une seule fonction plutôt qu'un `@Provides` par exécuteur : les construire directement dans
  * la table évite d'exposer chaque exécuteur comme un type injectable à part entière, ce que rien
  * d'autre ne consomme.
  */
@@ -41,6 +50,7 @@ object EffectExecutorModule {
         publisher: SessionSnapshotPublisher,
         technicalEventLog: TechnicalEventLog,
         alarmScheduler: AlarmScheduler,
+        blockingStartScheduler: BlockingStartScheduler,
         blockingController: BlockingController,
         clock: Clock,
         ringingController: RingingController,
@@ -61,6 +71,9 @@ object EffectExecutorModule {
                 PresentScanRequestExecutor(scanRequestNotifier, technicalEventLog),
             SessionEffectKindDto.CLEAR_SCAN_REQUEST to ClearScanRequestExecutor(scanRequestNotifier, technicalEventLog),
             SessionEffectKindDto.CLEAR_ACTIVE_SESSION to ClearActiveSessionExecutor(gateway),
+            SessionEffectKindDto.SCHEDULE_BLOCKING_START to
+                ScheduleBlockingStartExecutor(blockingStartScheduler, technicalEventLog),
+            SessionEffectKindDto.CANCEL_BLOCKING_START to CancelBlockingStartExecutor(blockingStartScheduler),
             SessionEffectKindDto.RECORD_INCIDENT to RecordIncidentExecutor(gateway),
         )
 }

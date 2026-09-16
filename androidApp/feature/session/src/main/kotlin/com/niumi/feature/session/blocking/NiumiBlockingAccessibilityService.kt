@@ -2,6 +2,7 @@ package com.niumi.feature.session.blocking
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
+import com.niumi.database.blocking.BlockedPackagesState
 import com.niumi.database.logging.TechnicalEventDetails
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
@@ -60,6 +61,14 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
     private var lastBlockedPackage: String? = null
     private var lastBlockAtElapsedMillis: Long = 0L
 
+    /**
+     * Dernier package reçu, bloqué ou non — distinct de [lastBlockedPackage], qui ne retient que les
+     * blocages effectifs pour l'anti-rebond. Sert à la relecture du début différé (SPEC_ANDROID
+     * §12.4) : sans lui, une application bloquée déjà au premier plan à l'heure de début resterait
+     * ouverte jusqu'au prochain changement de fenêtre.
+     */
+    private var lastForegroundPackage: String? = null
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         // Peut être rappelé à chaque reconnexion : ne recrée ni l'overlay ni l'abonnement si
@@ -70,12 +79,46 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
         if (refreshScope == null) {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
             refreshScope = scope
-            scope.launch { refresher.observeDecisions() }
+            scope.launch { refresher.observeDecisions(::onBlockingActivated) }
         }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
+        lastForegroundPackage = packageName
+        applyDecisionFor(packageName)
+    }
+
+    /**
+     * Début d'un blocage différé (SPEC_ANDROID §12.4, Lot 6) : la projection vient de devenir active,
+     * et l'application au premier plan n'a produit aucun événement puisque la fenêtre n'a pas changé.
+     * La décision est donc **rejouée** sur le dernier package vu, par le même chemin et sous le même
+     * anti-rebond qu'un événement ordinaire — `BlockingDecision.decide` est réutilisée telle quelle.
+     *
+     * Seul un nom de package **déjà reçu** par les événements est relu : aucune lecture de l'arbre
+     * d'accessibilité, aucune inspection de fenêtre, donc rien au-delà de l'usage déclaré à Google
+     * Play (§12.3). `NiumiBlockingAccessibilityServiceSourceTest` l'interdit jusque dans ce
+     * commentaire — les jetons proscrits y sont cherchés littéralement, texte compris.
+     *
+     * Appelé depuis la coroutine du coordinateur, pas depuis le thread principal : l'overlay passe par
+     * `WindowManager`, qui exige le thread principal. Le travail est donc reposté sur [refreshScope],
+     * dont le dispatcher est `Main.immediate`.
+     */
+    private fun onBlockingActivated(state: BlockedPackagesState.Active) {
+        val packageName = lastForegroundPackage ?: return
+        refreshScope?.launch {
+            // La projection est **relue** ici, pas reprise de [state] : entre la notification et ce
+            // bloc reposté, un scan a pu libérer la session, et renvoyer alors l'utilisateur à
+            // l'accueil serait un blocage après la fin de sa session. La session notifiée sert de
+            // garde — la projection doit toujours décrire la même.
+            val current = projection.current()
+            if (current is BlockedPackagesState.Active && current.sessionId == state.sessionId) {
+                applyDecisionFor(packageName)
+            }
+        }
+    }
+
+    private fun applyDecisionFor(packageName: String) {
         when (
             val action =
                 BlockingDecision.decide(

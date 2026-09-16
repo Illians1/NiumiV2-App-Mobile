@@ -30,5 +30,16 @@ class BlockingProjectionRefresher
             projection.refresh()
         }
 
-        suspend fun observeDecisions(): Nothing = publisher.snapshot.collect { projection.refresh() }
+        /**
+         * [activationListener] est prévenu quand la projection passe d'inactive à active, pour que le
+         * service rejoue sa décision sur la dernière application vue (SPEC_ANDROID §12.4, Lot 6). Il
+         * est posé sur la projection elle-même, seul point de passage de tout changement d'état :
+         * la transition d'un début différé peut venir du rafraîchissement déclenché par la
+         * publication du snapshot **ou** de l'exécution d'`APPLY_BLOCKING`, et les deux arrivent dans
+         * la même décision.
+         */
+        suspend fun observeDecisions(activationListener: BlockingActivationListener? = null): Nothing {
+            projection.observeActivation(activationListener)
+            publisher.snapshot.collect { projection.refresh() }
+        }
     }

@@ -24,8 +24,9 @@ class ReadinessDtoMapperTest {
     private suspend fun report(
         sources: ReadinessTestSources,
         candidateTriggerAtEpochMillis: Long? = NOW + 3_600_000L,
+        candidateBlockingStartsAtEpochMillis: Long? = null,
     ) = AndroidDeviceReadinessChecker(sources.build(), FakeClock(NOW), ANDROID_16)
-        .check(ReadinessInput(candidateTriggerAtEpochMillis))
+        .check(ReadinessInput(candidateTriggerAtEpochMillis, candidateBlockingStartsAtEpochMillis))
 
     @Test
     fun theThreeJourneyChecksAreNeverCopiedIntoTheChecksList() =
@@ -128,5 +129,60 @@ class ReadinessDtoMapperTest {
 
             assertThat(readinessCheckIdOf(result.blockingReasons.first()))
                 .isEqualTo(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+        }
+
+    /**
+     * SPEC_ANDROID §13 point 4 (Lot 6) : le début de blocage candidat est transporté jusqu'à la
+     * politique commune par le même chemin que le réveil, **sans** quinzième contrôle. Le nombre de
+     * contrôles ne doit donc pas bouger.
+     */
+    @Test
+    fun theBlockingStartCandidateIsCarriedToThePolicyWithoutAddingAnyCheck() =
+        runTest {
+            val startsAt = NOW + 1_800_000L
+
+            val input =
+                report(ReadinessTestSources(), candidateBlockingStartsAtEpochMillis = startsAt)
+                    .toActivationPolicyInput()
+
+            assertThat(input.blockingStartsAtEpochMillis).isEqualTo(startsAt)
+            assertThat(input.checks.map { it.id }).doesNotContain("BLOCKING_START")
+        }
+
+    /**
+     * Blocage immédiat : `null` est transmis tel quel, **sans repli sur `nowEpochMillis`** — un début
+     * absent n'est pas un début invalide, et la politique commune ne vérifie alors rien (§8.3).
+     */
+    @Test
+    fun anImmediateBlockingCarriesANullInstantRatherThanNow() =
+        runTest {
+            val input = report(ReadinessTestSources()).toActivationPolicyInput()
+
+            assertThat(input.blockingStartsAtEpochMillis).isNull()
+            assertThat(facade.evaluateActivation(input).blockingReasons.map { it.code })
+                .doesNotContain(ActivationReasonCode.BLOCKING_START_NOT_BEFORE_TRIGGER)
+        }
+
+    /**
+     * Et quand le début n'est pas antérieur au réveil, c'est bien la politique **commune** qui
+     * refuse, par son propre code : Android n'a aucune règle d'antériorité à lui.
+     */
+    @Test
+    fun aBlockingStartAtOrAfterTheTriggerIsRefusedByTheSharedPolicy() =
+        runTest {
+            val triggerAt = NOW + 3_600_000L
+
+            val input =
+                report(
+                    ReadinessTestSources(),
+                    candidateTriggerAtEpochMillis = triggerAt,
+                    candidateBlockingStartsAtEpochMillis = triggerAt,
+                ).toActivationPolicyInput()
+
+            val result = facade.evaluateActivation(input)
+
+            assertThat(result.allowed).isFalse()
+            assertThat(result.blockingReasons.map { it.code })
+                .contains(ActivationReasonCode.BLOCKING_START_NOT_BEFORE_TRIGGER)
         }
 }

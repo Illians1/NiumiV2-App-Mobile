@@ -58,6 +58,18 @@
             android:name="com.niumi.system.alarm.RingingWatchdogReceiver"
             android:exported="false"
             android:directBootAware="true" />
+
+        <!--
+            Début du blocage différé (SPEC_ANDROID §12.4, §9.1 seconde dérogation ; Lot 6). Aucun
+            intent-filter : ce receveur n'est jamais ciblé que par le PendingIntent explicite posé
+            par AndroidBlockingStartScheduler.schedule(), jamais par un broadcast système.
+            directBootAware : l'instant de début peut tomber avant le premier déverrouillage, et
+            Room reste alors inaccessible — le coordinateur travaille sur la projection Direct Boot.
+        -->
+        <receiver
+            android:name="com.niumi.system.blocking.BlockingStartReceiver"
+            android:exported="false"
+            android:directBootAware="true" />
     </application>
 
 </manifest>

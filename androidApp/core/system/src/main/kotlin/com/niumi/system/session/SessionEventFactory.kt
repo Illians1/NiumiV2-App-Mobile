@@ -17,8 +17,8 @@ import com.niumi.system.common.IdGenerator
  * fabrique évite neuf arguments explicites à chaque site d'appel.
  */
 class SessionEventFactory(
-    private val idGenerator: IdGenerator,
-    private val clock: Clock,
+    internal val idGenerator: IdGenerator,
+    internal val clock: Clock,
 ) {
     /**
      * Expose l'horloge injectée aux appelants qui construisent leurs propres incidents
@@ -84,19 +84,36 @@ class SessionEventFactory(
         incident: SessionIncidentDto?,
     ) = base(snapshot, SessionEventKindDto.TRIGGER_ELAPSED, incident = incident)
 
-    private fun base(
+    /**
+     * Début d'un blocage différé (SPEC_ANDROID §12.4 ; SPEC_CORE_KMP §5.1). [incident] porte
+     * `MISSED_BLOCKING_START_WINDOW` quand le retard dépasse quinze minutes, `null` sinon —
+     * facultatif pour ce kind comme il l'est pour `TRIGGER_ELAPSED` (SPEC_CORE_KMP §6).
+     */
+    fun blockingStartElapsed(
         snapshot: SessionSnapshotDto,
-        kind: SessionEventKindDto,
-        failureCode: String? = null,
-        incident: SessionIncidentDto? = null,
-    ) = SessionEventDto(
-        eventId = idGenerator.newId(),
-        sessionId = snapshot.sessionId,
-        kind = kind,
-        occurredAtEpochMillis = clock.nowEpochMillis(),
-        expectedRevision = snapshot.revision,
-        activationRequest = null,
-        failureCode = failureCode,
-        incident = incident,
-    )
+        incident: SessionIncidentDto?,
+    ) = base(snapshot, SessionEventKindDto.BLOCKING_START_ELAPSED, incident = incident)
 }
+
+/**
+ * Squelette commun des événements de suivi. Fonction de fichier plutôt que membre depuis le Lot 6 :
+ * `blockingStartElapsed` en faisait la douzième fonction de la classe, au-delà du plafond detekt
+ * `TooManyFunctions` (11). C'est la seule qui ne soit pas une entrée de la fabrique — chacune des
+ * onze autres correspond à un événement du contrat commun, et en retirer une masquerait cette
+ * correspondance. Même motif que `rescheduleAlarm` dans `SessionReconciler`.
+ */
+private fun SessionEventFactory.base(
+    snapshot: SessionSnapshotDto,
+    kind: SessionEventKindDto,
+    failureCode: String? = null,
+    incident: SessionIncidentDto? = null,
+) = SessionEventDto(
+    eventId = idGenerator.newId(),
+    sessionId = snapshot.sessionId,
+    kind = kind,
+    occurredAtEpochMillis = clock.nowEpochMillis(),
+    expectedRevision = snapshot.revision,
+    activationRequest = null,
+    failureCode = failureCode,
+    incident = incident,
+)

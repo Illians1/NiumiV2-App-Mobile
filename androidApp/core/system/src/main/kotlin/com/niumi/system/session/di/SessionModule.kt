@@ -9,6 +9,7 @@ import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventLogFlush
 import com.niumi.system.alarm.AlarmScheduler
+import com.niumi.system.alarm.BlockingStartScheduler
 import com.niumi.system.alarm.RingingWatchdog
 import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.blocking.AccessibilityServiceStatus
@@ -97,6 +98,7 @@ object SessionModule {
     @Provides
     fun provideReconcilerSources(
         alarmScheduler: AlarmScheduler,
+        blockingStartScheduler: BlockingStartScheduler,
         blockedPackagesProjection: BlockedPackagesProjection,
         readinessMonitor: SessionReadinessMonitor,
         snapshotPublisher: SessionSnapshotPublisher,
@@ -110,18 +112,19 @@ object SessionModule {
         technicalEventFlush: TechnicalEventLogFlush,
     ): ReconcilerSources =
         ReconcilerSources(
-            alarmScheduler,
-            blockedPackagesProjection,
-            readinessMonitor,
-            snapshotPublisher,
-            ringingController,
-            scanRequestNotifier,
-            directBootMerger,
-            incidentsReader,
-            ringingWatchdog,
-            runtimeReconciler,
-            storageIntegrity,
-            technicalEventFlush,
+            alarmScheduler = alarmScheduler,
+            blockingStartScheduler = blockingStartScheduler,
+            blockedPackagesProjection = blockedPackagesProjection,
+            readinessMonitor = readinessMonitor,
+            snapshotPublisher = snapshotPublisher,
+            ringingController = ringingController,
+            scanRequestNotifier = scanRequestNotifier,
+            directBootMerger = directBootMerger,
+            incidentsReader = incidentsReader,
+            ringingWatchdog = ringingWatchdog,
+            runtimeReconciler = runtimeReconciler,
+            storageIntegrity = storageIntegrity,
+            technicalEventFlush = technicalEventFlush,
         )
 
     @Provides

@@ -2,6 +2,7 @@ package com.niumi.database.blocking
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
@@ -68,6 +69,19 @@ class RoomBlockedPackagesSourceTest {
         revision: Long = 1,
     ): SessionSnapshotDto = RoomTestFixtures.preparingSnapshot(sessionId, revision).copy(state = state)
 
+    /** Session `ARMED` à blocage différé, dont le début est strictement antérieur au réveil (§8.3). */
+    private fun deferredSnapshot(blockingAppliedAtEpochMillis: Long?): SessionSnapshotDto =
+        snapshotInState(SessionStateDto.ARMED).copy(
+            schemaVersion = 2,
+            blockingSchedule =
+                BlockingScheduleDto(
+                    localDateIso = "2026-09-07",
+                    localTimeIso = "22:30",
+                    startsAtEpochMillis = 1_799_970_000_000L,
+                ),
+            blockingAppliedAtEpochMillis = blockingAppliedAtEpochMillis,
+        )
+
     private fun blockingEffect(
         kind: SessionEffectKindDto,
         revision: Long = 1,
@@ -110,6 +124,42 @@ class RoomBlockedPackagesSourceTest {
     fun anArmedSessionReadsAsActiveWithItsFrozenPackages() =
         runTest {
             seed(SessionStateDto.ARMED)
+
+            assertThat(readState())
+                .isEqualTo(BlockedPackagesState.Active(sessionId, blockedPackages.toSet()))
+        }
+
+    /**
+     * SPEC_ANDROID §12.2 (Lot 6) : sur `ARMED`, c'est `blockingAppliedAtEpochMillis` qui décide, pas
+     * l'état. Tant que l'instant de début choisi n'est pas atteint, **aucune** application n'est
+     * bloquée, alors même que l'alarme est programmée et la session pleinement armée.
+     */
+    @Test
+    fun anArmedSessionAwaitingItsBlockingStartReadsAsInactive() =
+        runTest {
+            store.commitDecision(
+                StoredDecision(
+                    snapshot = deferredSnapshot(blockingAppliedAtEpochMillis = null),
+                    receipt = RoomTestFixtures.receipt("deferred-pending", sessionId),
+                    effects = emptyList(),
+                    androidExtras = RoomTestFixtures.extras(blockedPackages = blockedPackages),
+                ),
+            )
+
+            assertThat(readState()).isEqualTo(BlockedPackagesState.Inactive)
+        }
+
+    @Test
+    fun anArmedSessionWhoseBlockingStartHasPassedReadsAsActive() =
+        runTest {
+            store.commitDecision(
+                StoredDecision(
+                    snapshot = deferredSnapshot(blockingAppliedAtEpochMillis = 1_799_970_000_500L),
+                    receipt = RoomTestFixtures.receipt("deferred-applied", sessionId),
+                    effects = emptyList(),
+                    androidExtras = RoomTestFixtures.extras(blockedPackages = blockedPackages),
+                ),
+            )
 
             assertThat(readState())
                 .isEqualTo(BlockedPackagesState.Active(sessionId, blockedPackages.toSet()))

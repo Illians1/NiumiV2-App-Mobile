@@ -33,6 +33,12 @@ class TechnicalEventTypeTest {
                 "NFC_SCAN_INVALID",
                 "NFC_SCAN_VALID",
                 "BLOCK_APPLIED",
+                // Lot 6, blocage différé (SPEC_ANDROID §17) : `packageName` y reste refusé.
+                "BLOCKING_SCHEDULED",
+                "BLOCKING_START_RESCHEDULED",
+                "BLOCKING_START_RECEIVED",
+                "BLOCKING_STARTED",
+                "MISSED_BLOCKING_START_WINDOW",
                 "ACCESSIBILITY_DISABLED",
                 "PROCESS_RECREATED",
                 "OEM_RESTRICTION_SUSPECTED",

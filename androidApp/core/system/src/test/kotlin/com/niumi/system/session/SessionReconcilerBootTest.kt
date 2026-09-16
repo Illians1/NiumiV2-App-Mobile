@@ -5,6 +5,7 @@ import com.niumi.core.domain.IncidentCodes
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionStateDto
+import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.EventReceipt
 import com.niumi.database.StoredDecision
 import com.niumi.database.logging.TechnicalEventType
@@ -247,6 +248,75 @@ class SessionReconcilerBootTest {
             assertThat(harness.gateway.incidentsRecorded.map { it.second.code })
                 .containsNoneOf(IncidentCodes.TIME_CHANGED, IncidentCodes.TIMEZONE_CHANGED)
         }
+
+    /**
+     * SPEC_ANDROID §9.3 (Lot 6) : « il rappelle de même `BlockingStartScheduler` avec le même
+     * `blockingStartsAtEpochMillis` tant que le blocage différé n'a pas été demandé ». Un redémarrage
+     * efface toutes les alarmes ; sans cette reprogrammation, le blocage ne commencerait jamais.
+     */
+    @Test
+    fun lockedBootReschedulesThePendingBlockingStartAtTheSameInstant() =
+        runTest {
+            val harness =
+                deferredArmedSession(
+                    nowEpochMillis = SessionDtoFixtures.BLOCKING_STARTS_AT_EPOCH_MILLIS - TEN_MINUTES,
+                )
+
+            val result = harness.coordinator.reconcile(ReconcileReason.LOCKED_BOOT)
+
+            assertThat(result.actions)
+                .contains(ReconcileAction.BlockingStartRescheduled(SessionDtoFixtures.BLOCKING_STARTS_AT_EPOCH_MILLIS))
+            assertThat(harness.blockingStartScheduler.lastScheduledAtEpochMillis)
+                .isEqualTo(SessionDtoFixtures.BLOCKING_STARTS_AT_EPOCH_MILLIS)
+            assertThat(harness.technicalEventLog.logged).contains(TechnicalEventType.BLOCKING_START_RESCHEDULED)
+        }
+
+    /**
+     * §9.3 : « si cet instant est dépassé, il produit `BLOCKING_START_ELAPSED` sous le même mutex,
+     * **avant la politique de retard du réveil**, et exécute `APPLY_BLOCKING` sur la projection Direct
+     * Boot ». Sans objet pour l'utilisateur avant déverrouillage — il n'atteint aucune application —
+     * mais nécessaire pour que Room reçoive à la fusion un état où le blocage est demandé.
+     *
+     * Le service d'accessibilité ne peut pas tourner à ce moment (il n'est pas `directBootAware`), et
+     * c'est précisément pourquoi le contrôle `ACCESSIBILITY_SERVICE` est `NOT_APPLICABLE` tant que
+     * l'appareil est verrouillé : sinon la garde de permission couperait la passe ici aussi.
+     */
+    @Test
+    fun lockedBootAppliesABlockingStartAlreadyElapsedBeforeAnyTriggerPolicy() =
+        runTest {
+            val harness =
+                deferredArmedSession(
+                    nowEpochMillis = SessionDtoFixtures.BLOCKING_STARTS_AT_EPOCH_MILLIS + TEN_MINUTES,
+                )
+
+            harness.coordinator.reconcile(ReconcileReason.LOCKED_BOOT)
+
+            val snapshot = (harness.gateway.load() as LoadResult.Present).snapshot
+            assertThat(snapshot.state).isEqualTo(SessionStateDto.ARMED)
+            assertThat(snapshot.isBlockingPending).isFalse()
+            assertThat(harness.journal.calls).contains("BlockingController.apply")
+        }
+
+    /** Session `ARMED` à blocage différé, alarmes effacées comme après un vrai redémarrage. */
+    private suspend fun deferredArmedSession(nowEpochMillis: Long): TestCoordinatorHarness {
+        val harness = TestCoordinatorHarness()
+        val snapshot = SessionDtoFixtures.deferredArmedSnapshot()
+        harness.gateway.commit(
+            StoredDecision(
+                snapshot = snapshot,
+                receipt = EventReceipt("seed", snapshot.sessionId, "hash", snapshot.revision, 900L),
+                effects = emptyList(),
+                androidExtras = SessionDtoFixtures.extras(),
+            ),
+        )
+        harness.alarmScheduler.schedule(
+            snapshot.sessionId,
+            snapshot.revision,
+            SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS,
+        )
+        harness.clock.now = nowEpochMillis
+        return harness
+    }
 
     /** Session `ARMED` persistée, alarme enregistrée, horloge positionnée par l'appelant. */
     private suspend fun armedSession(nowEpochMillis: Long): TestCoordinatorHarness {

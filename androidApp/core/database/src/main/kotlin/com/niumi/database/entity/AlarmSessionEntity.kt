@@ -13,6 +13,11 @@ import com.niumi.core.interop.SessionStateDto
  * plutôt que de l'appelant. `localDate`/`localTime` reprennent le nom de colonne de §7.2, qui
  * diffère de `localDateIso`/`localTimeIso` du DTO (SPEC_CORE_KMP §7.2) : divergence absorbée par
  * `SessionSnapshotMapper`.
+ *
+ * Les quatre colonnes `blocking*` (v3, Lot 6) sont toutes nulles pour un blocage immédiat et toutes
+ * renseignées pour un blocage différé, sauf `blockingAppliedAtEpochMillis`, qui porte l'instant où le
+ * moteur a demandé le blocage — l'activation pour un blocage immédiat, la première décision à ou
+ * après `blockingStartsAtEpochMillis` sinon (SPEC_CORE_KMP §7.5).
  */
 @Entity(tableName = "alarm_session")
 data class AlarmSessionEntity(
@@ -23,6 +28,10 @@ data class AlarmSessionEntity(
     val localTime: String,
     val zoneIdAtActivation: String,
     val triggerAtEpochMillis: Long,
+    val blockingLocalDate: String?,
+    val blockingLocalTime: String?,
+    val blockingStartsAtEpochMillis: Long?,
+    val blockingAppliedAtEpochMillis: Long?,
     val state: SessionStateDto,
     val releaseTarget: ReleaseTargetDto?,
     val health: SessionHealthDto,

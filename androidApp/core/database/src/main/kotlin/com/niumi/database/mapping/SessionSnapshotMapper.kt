@@ -1,5 +1,6 @@
 package com.niumi.database.mapping
 
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
@@ -12,6 +13,10 @@ import com.niumi.database.entity.AlarmSessionEntity
  * `WakeScheduleDto` est aplati dans quatre colonnes (`localDate`, `localTime`,
  * `zoneIdAtActivation`, `triggerAtEpochMillis`) ; `localDateIso`/`localTimeIso` du DTO deviennent
  * `localDate`/`localTime` (nom de colonne imposé par SPEC_ANDROID §7.2, différent du DTO).
+ *
+ * `BlockingScheduleDto` est aplati de la même façon (v3, Lot 6). Les quatre champs sont renseignés
+ * **explicitement** dans les deux sens : les valeurs par défaut posées sur les DTO à l'étape 22 sont
+ * transitoires, et s'y appuyer ici ferait relire tout blocage différé comme immédiat.
  */
 fun SessionSnapshotDto.toEntity(extras: AndroidSessionExtras): AlarmSessionEntity =
     AlarmSessionEntity(
@@ -22,6 +27,10 @@ fun SessionSnapshotDto.toEntity(extras: AndroidSessionExtras): AlarmSessionEntit
         localTime = wakeSchedule.localTimeIso,
         zoneIdAtActivation = wakeSchedule.zoneIdAtActivation,
         triggerAtEpochMillis = wakeSchedule.triggerAtEpochMillis,
+        blockingLocalDate = blockingSchedule.localDateIso,
+        blockingLocalTime = blockingSchedule.localTimeIso,
+        blockingStartsAtEpochMillis = blockingSchedule.startsAtEpochMillis,
+        blockingAppliedAtEpochMillis = blockingAppliedAtEpochMillis,
         state = state,
         releaseTarget = releaseTarget,
         health = health,
@@ -53,6 +62,13 @@ fun AlarmSessionEntity.toSnapshotDto(): SessionSnapshotDto =
                 zoneIdAtActivation = zoneIdAtActivation,
                 triggerAtEpochMillis = triggerAtEpochMillis,
             ),
+        blockingSchedule =
+            BlockingScheduleDto(
+                localDateIso = blockingLocalDate,
+                localTimeIso = blockingLocalTime,
+                startsAtEpochMillis = blockingStartsAtEpochMillis,
+            ),
+        blockingAppliedAtEpochMillis = blockingAppliedAtEpochMillis,
         state = state,
         releaseTarget = releaseTarget,
         health = health,

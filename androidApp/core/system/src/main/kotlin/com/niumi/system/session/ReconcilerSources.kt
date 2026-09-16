@@ -3,6 +3,7 @@ package com.niumi.system.session
 import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.database.logging.TechnicalEventLogFlush
 import com.niumi.system.alarm.AlarmScheduler
+import com.niumi.system.alarm.BlockingStartScheduler
 import com.niumi.system.alarm.RingingWatchdog
 import com.niumi.system.blocking.BlockedPackagesProjection
 import com.niumi.system.boot.DirectBootMerger
@@ -55,6 +56,8 @@ import com.niumi.system.ringing.RingingController
  */
 data class ReconcilerSources(
     val alarmScheduler: AlarmScheduler,
+    /** Alarme de début du blocage différé, reprogrammée au même instant contractuel (Lot 6, §12.4). */
+    val blockingStartScheduler: BlockingStartScheduler,
     val blockedPackagesProjection: BlockedPackagesProjection,
     val readinessMonitor: SessionReadinessMonitor,
     val snapshotPublisher: SessionSnapshotPublisher,

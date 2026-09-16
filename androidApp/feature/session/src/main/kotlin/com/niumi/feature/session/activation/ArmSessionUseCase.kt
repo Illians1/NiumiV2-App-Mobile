@@ -5,6 +5,9 @@ import com.niumi.core.interop.ActivationPolicyResultDto
 import com.niumi.core.interop.ActivationReasonDto
 import com.niumi.core.interop.ActivationRequestDto
 import com.niumi.core.interop.AppSelectionSummaryDto
+import com.niumi.core.interop.BlockingScheduleInputDto
+import com.niumi.core.interop.BlockingScheduleResultDto
+import com.niumi.core.interop.BlockingScheduleStatusDto
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleInputDto
@@ -29,6 +32,7 @@ import javax.inject.Inject
 private data class Diagnosis(
     val nowEpochMillis: Long,
     val scheduleResult: WakeScheduleResultDto,
+    val blockingResult: BlockingScheduleResultDto?,
     val policy: ActivationPolicyResultDto?,
 )
 
@@ -40,12 +44,24 @@ private data class Diagnosis(
  */
 data class ActivationPreview(
     val scheduleResult: WakeScheduleResultDto,
+    /**
+     * Résultat du calcul du début de blocage (Lot 6), `null` quand l'horaire de réveil lui-même n'est
+     * pas valide — il n'y a alors rien à comparer. Un blocage immédiat donne `VALID` avec un schedule
+     * `IMMEDIATE`, jamais `null`.
+     */
+    val blockingResult: BlockingScheduleResultDto?,
     val policy: ActivationPolicyResultDto?,
     val blockedPackages: List<BlockedPackage>,
     val boxId: String?,
     val nowEpochMillis: Long,
 ) {
-    val canActivate: Boolean get() = policy?.allowed == true
+    /**
+     * L'écran 5 refuse de continuer sur un début non antérieur au réveil **avant même** le diagnostic
+     * (SPEC_ANDROID §13, point 4) : la politique commune le refuserait aussi, mais l'utilisateur doit
+     * l'apprendre de la phrase de confirmation, pas d'un message d'appareil non prêt.
+     */
+    val canActivate: Boolean
+        get() = policy?.allowed == true && blockingResult?.status == BlockingScheduleStatusDto.VALID
 }
 
 /**
@@ -75,10 +91,14 @@ class ArmSessionUseCase
         private val eventFactory: SessionEventFactory,
         private val sources: ActivationSources,
     ) {
-        suspend fun preview(localTimeIso: String): ActivationPreview {
-            val diagnosis = diagnose(localTimeIso)
+        suspend fun preview(
+            localTimeIso: String,
+            blockingLocalTimeIso: String?,
+        ): ActivationPreview {
+            val diagnosis = diagnose(localTimeIso, blockingLocalTimeIso)
             return ActivationPreview(
                 scheduleResult = diagnosis.scheduleResult,
+                blockingResult = diagnosis.blockingResult,
                 policy = diagnosis.policy,
                 blockedPackages = sources.appSelectionStore.selection(),
                 boxId = sources.pairedBoxStore.current()?.boxId,
@@ -94,13 +114,28 @@ class ArmSessionUseCase
          * lisible, pas plus.
          */
         @Suppress("ReturnCount")
-        suspend fun arm(localTimeIso: String): ArmSessionResult {
-            val diagnosis = diagnose(localTimeIso)
+        suspend fun arm(
+            localTimeIso: String,
+            blockingLocalTimeIso: String?,
+        ): ArmSessionResult {
+            val diagnosis = diagnose(localTimeIso, blockingLocalTimeIso)
             val schedule = diagnosis.scheduleResult.schedule
             val policy = diagnosis.policy
             if (schedule == null || policy == null) {
                 return ArmSessionResult.Failed(ActivationFailure.InvalidSchedule(diagnosis.scheduleResult.status))
             }
+            // Avant le refus de la politique : un début de blocage mal choisi est une erreur de
+            // saisie, pas un défaut de l'appareil, et l'annoncer comme tel renverrait l'utilisateur
+            // vers des réglages système qui n'y peuvent rien (SPEC_ANDROID §13, point 4).
+            val blockingSchedule =
+                diagnosis.blockingResult
+                    ?.takeIf { it.status == BlockingScheduleStatusDto.VALID }
+                    ?.schedule
+                    ?: return ArmSessionResult.Failed(
+                        ActivationFailure.InvalidBlockingSchedule(
+                            diagnosis.blockingResult?.status ?: BlockingScheduleStatusDto.INVALID_TIME,
+                        ),
+                    )
             if (!policy.allowed) {
                 return ArmSessionResult.Failed(ActivationFailure.Blocked(policy.blockingReasons))
             }
@@ -120,6 +155,9 @@ class ArmSessionUseCase
                 ActivationRequestDto(
                     wakeSchedule = schedule,
                     appSelection = AppSelectionSummaryDto(count = selection.size),
+                    // L'instant **calculé**, jamais l'heure saisie : c'est lui qui est contractuel et
+                    // immuable pour la durée de la session (SPEC_CORE_KMP §8.3).
+                    blockingSchedule = blockingSchedule,
                 )
             val extras =
                 AndroidSessionExtras(
@@ -154,20 +192,41 @@ class ArmSessionUseCase
          * `triggerAtEpochMillis = nowEpochMillis` et serait refusé par `TRIGGER_NOT_IN_FUTURE` —
          * impossible ici puisque [schedule] est déjà connu au second appel.
          */
-        private suspend fun diagnose(localTimeIso: String): Diagnosis {
+        private suspend fun diagnose(
+            localTimeIso: String,
+            blockingLocalTimeIso: String?,
+        ): Diagnosis {
             val nowEpochMillis = readinessChecker.check(ReadinessInput()).nowEpochMillis
             val zoneId = sources.timeZoneProvider.currentZoneId()
             val scheduleResult =
                 facade.computeWakeSchedule(WakeScheduleInputDto(localTimeIso, zoneId, nowEpochMillis))
             val schedule = scheduleResult.schedule
+            // Même zone et même `nowEpochMillis` que le réveil : une session n'a qu'un fuseau
+            // d'activation, et les deux instants doivent être calculés sur la même horloge, faute de
+            // quoi l'antériorité vérifiée ne serait pas celle qui sera persistée (SPEC_CORE_KMP §8.3).
+            val blockingResult =
+                schedule?.let {
+                    facade.computeBlockingSchedule(
+                        BlockingScheduleInputDto(
+                            localTimeIso = blockingLocalTimeIso,
+                            zoneId = zoneId,
+                            nowEpochMillis = nowEpochMillis,
+                            triggerAtEpochMillis = it.triggerAtEpochMillis,
+                        ),
+                    )
+                }
             val policy =
                 schedule?.let {
                     val report =
                         readinessChecker.check(
-                            ReadinessInput(candidateTriggerAtEpochMillis = it.triggerAtEpochMillis),
+                            ReadinessInput(
+                                candidateTriggerAtEpochMillis = it.triggerAtEpochMillis,
+                                candidateBlockingStartsAtEpochMillis =
+                                    blockingResult?.schedule?.startsAtEpochMillis,
+                            ),
                         )
                     facade.evaluateActivation(report.toActivationPolicyInput())
                 }
-            return Diagnosis(nowEpochMillis, scheduleResult, policy)
+            return Diagnosis(nowEpochMillis, scheduleResult, blockingResult, policy)
         }
     }

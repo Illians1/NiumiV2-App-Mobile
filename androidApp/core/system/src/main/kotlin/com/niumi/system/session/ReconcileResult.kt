@@ -21,6 +21,15 @@ sealed interface ReconcileAction {
         val triggerAtEpochMillis: Long,
     ) : ReconcileAction
 
+    /**
+     * Alarme de début du blocage reposée au **même** instant contractuel (Lot 6, §9.3, §12.4) :
+     * jamais recalculée depuis l'heure locale, `startsAtEpochMillis` étant immuable après
+     * l'activation (SPEC_CORE_KMP §8.3).
+     */
+    data class BlockingStartRescheduled(
+        val startsAtEpochMillis: Long,
+    ) : ReconcileAction
+
     data class IncidentDispatched(
         val code: String,
         val severity: IncidentSeverityDto,

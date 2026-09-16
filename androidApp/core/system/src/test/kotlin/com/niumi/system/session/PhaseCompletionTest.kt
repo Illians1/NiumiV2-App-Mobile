@@ -30,9 +30,13 @@ class PhaseCompletionTest {
         EffectOutcomes(pairs.map { (kind, result) -> EffectOutcome(effect(kind), result) })
 
     @Test
-    fun activationRequiresScheduleAlarmAndApplyBlocking() {
+    fun activationRequiresTheAlarmAndWhicheverBlockingEffectTheDecisionProduced() {
         assertThat(PhaseCompletion.requiredKindsFor(SessionEventKindDto.ACTIVATION_REQUESTED))
-            .containsExactly(SessionEffectKindDto.SCHEDULE_ALARM, SessionEffectKindDto.APPLY_BLOCKING)
+            .containsExactly(
+                SessionEffectKindDto.SCHEDULE_ALARM,
+                SessionEffectKindDto.APPLY_BLOCKING,
+                SessionEffectKindDto.SCHEDULE_BLOCKING_START,
+            )
     }
 
     @Test
@@ -73,6 +77,69 @@ class PhaseCompletionTest {
         assertThat(PhaseCompletion.isSatisfied(SessionEventKindDto.ACTIVATION_REQUESTED, result)).isFalse()
         assertThat(PhaseCompletion.firstFailureCode(SessionEventKindDto.ACTIVATION_REQUESTED, result))
             .isEqualTo("ANDROID_ALARM_SCHEDULE_FAILED")
+    }
+
+    /**
+     * Non-régression du contrat 1.2 : une activation **immédiate** ne produit jamais
+     * `SCHEDULE_BLOCKING_START`, et l'ajouter à la table des effets requis ne doit pas la bloquer.
+     * `EffectOutcomes.succeeded` est vacuement vrai pour un kind non produit — c'est ce qui rend
+     * l'intersection inutile (Lot 6).
+     */
+    @Test
+    fun anImmediateActivationIsSatisfiedWithoutAnyScheduledBlockingStart() {
+        val result =
+            outcomes(
+                SessionEffectKindDto.PUBLISH_PLATFORM_SNAPSHOT to OperationResult.Success,
+                SessionEffectKindDto.SCHEDULE_ALARM to OperationResult.Success,
+                SessionEffectKindDto.APPLY_BLOCKING to OperationResult.Success,
+            )
+
+        assertThat(PhaseCompletion.isSatisfied(SessionEventKindDto.ACTIVATION_REQUESTED, result)).isTrue()
+    }
+
+    /** Symétriquement, une activation différée ne produit pas `APPLY_BLOCKING` et reste satisfaite. */
+    @Test
+    fun aDeferredActivationIsSatisfiedWithoutAnyAppliedBlocking() {
+        val result =
+            outcomes(
+                SessionEffectKindDto.PUBLISH_PLATFORM_SNAPSHOT to OperationResult.Success,
+                SessionEffectKindDto.SCHEDULE_ALARM to OperationResult.Success,
+                SessionEffectKindDto.SCHEDULE_BLOCKING_START to OperationResult.Success,
+            )
+
+        assertThat(PhaseCompletion.isSatisfied(SessionEventKindDto.ACTIVATION_REQUESTED, result)).isTrue()
+    }
+
+    /**
+     * SPEC_ANDROID §18 : « un échec de `SCHEDULE_BLOCKING_START` pendant `PREPARING` fait échouer
+     * l'activation comme un échec de `SCHEDULE_ALARM` ». Une session armée dont le blocage ne
+     * commencerait jamais serait un engagement que Niumi ne tiendrait pas.
+     */
+    @Test
+    fun aDeferredActivationFailsWhenTheBlockingStartCannotBeScheduled() {
+        val result =
+            outcomes(
+                SessionEffectKindDto.SCHEDULE_ALARM to OperationResult.Success,
+                SessionEffectKindDto.SCHEDULE_BLOCKING_START to OperationResult.Failure("ANDROID_EXACT_ALARM_DENIED"),
+            )
+
+        assertThat(PhaseCompletion.isSatisfied(SessionEventKindDto.ACTIVATION_REQUESTED, result)).isFalse()
+        assertThat(PhaseCompletion.firstFailureCode(SessionEventKindDto.ACTIVATION_REQUESTED, result))
+            .isEqualTo("ANDROID_EXACT_ALARM_DENIED")
+    }
+
+    /** `CANCEL_BLOCKING_START` est best-effort : son échec ne retient jamais `RELEASING` (§6). */
+    @Test
+    fun releaseIsSatisfiedEvenWhenCancellingTheBlockingStartFails() {
+        val result =
+            outcomes(
+                SessionEffectKindDto.CANCEL_ALARM to OperationResult.Success,
+                SessionEffectKindDto.CANCEL_BLOCKING_START to OperationResult.Failure("ANDROID_CANCEL_FAILED"),
+                SessionEffectKindDto.STOP_RINGING to OperationResult.Success,
+                SessionEffectKindDto.REMOVE_BLOCKING to OperationResult.Success,
+            )
+
+        assertThat(PhaseCompletion.isSatisfied(SessionEventKindDto.VALID_NFC_SCANNED, result)).isTrue()
     }
 
     @Test

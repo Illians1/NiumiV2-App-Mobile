@@ -6,6 +6,7 @@ import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EffectStatus
+import com.niumi.database.directboot.DIRECT_BOOT_PROJECTION_SCHEMA_VERSION
 import com.niumi.database.directboot.DirectBootBlockedPackage
 import com.niumi.database.directboot.DirectBootEffect
 import com.niumi.database.directboot.DirectBootSnapshot
@@ -44,7 +45,15 @@ class DirectBootBlockedPackagesSourceTest {
     private fun snapshot(
         state: SessionState,
         pendingEffects: List<DirectBootEffect> = emptyList(),
+        projectionSchemaVersion: Int = DIRECT_BOOT_PROJECTION_SCHEMA_VERSION,
+        blockingStartsAtEpochMillis: Long? = null,
+        blockingAppliedAtEpochMillis: Long? = 1_700_000_001_000L,
     ) = DirectBootSnapshot.Active(
+        projectionSchemaVersion = projectionSchemaVersion,
+        blockingLocalDate = blockingStartsAtEpochMillis?.let { "2026-09-07" },
+        blockingLocalTime = blockingStartsAtEpochMillis?.let { "22:30" },
+        blockingStartsAtEpochMillis = blockingStartsAtEpochMillis,
+        blockingAppliedAtEpochMillis = blockingAppliedAtEpochMillis,
         domainSchemaVersion = 1,
         domainRevision = 3,
         sessionId = sessionId,
@@ -120,6 +129,56 @@ class DirectBootBlockedPackagesSourceTest {
     fun anArmedSnapshotReadsAsActive() =
         runTest {
             assertThat(readState(snapshot(SessionState.ARMED)))
+                .isEqualTo(BlockedPackagesState.Active(sessionId, expectedPackages))
+        }
+
+    /**
+     * SPEC_ANDROID §12.2 (Lot 6) : sur `ARMED`, c'est `blockingAppliedAtEpochMillis` qui décide, pas
+     * l'état. Une session dont l'instant de début n'est pas atteint ne bloque **rien**.
+     */
+    @Test
+    fun anArmedSnapshotAwaitingItsBlockingStartReadsAsInactive() =
+        runTest {
+            val stored =
+                snapshot(
+                    SessionState.ARMED,
+                    blockingStartsAtEpochMillis = 1_799_970_000_000L,
+                    blockingAppliedAtEpochMillis = null,
+                )
+
+            assertThat(readState(stored)).isEqualTo(BlockedPackagesState.Inactive)
+        }
+
+    @Test
+    fun anArmedSnapshotWhoseBlockingStartHasPassedReadsAsActive() =
+        runTest {
+            val stored =
+                snapshot(
+                    SessionState.ARMED,
+                    blockingStartsAtEpochMillis = 1_799_970_000_000L,
+                    blockingAppliedAtEpochMillis = 1_799_970_000_500L,
+                )
+
+            assertThat(readState(stored))
+                .isEqualTo(BlockedPackagesState.Active(sessionId, expectedPackages))
+        }
+
+    /**
+     * Une projection écrite avant le Lot 6 décrit un blocage immédiat, jamais un blocage en attente :
+     * le blocage d'une session active ne doit pas être levé par une simple mise à jour de Niumi
+     * (§7.3). Ses quatre champs sont nuls, comme le produit la désérialisation d'un fichier v1.
+     */
+    @Test
+    fun aVersionOneArmedProjectionStillBlocks() =
+        runTest {
+            val stored =
+                snapshot(
+                    SessionState.ARMED,
+                    projectionSchemaVersion = 1,
+                    blockingAppliedAtEpochMillis = null,
+                )
+
+            assertThat(readState(stored))
                 .isEqualTo(BlockedPackagesState.Active(sessionId, expectedPackages))
         }
 

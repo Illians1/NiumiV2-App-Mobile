@@ -38,12 +38,27 @@ class PersistedBlockedPackagesProjection
         @Volatile
         private var state: BlockedPackagesState = BlockedPackagesState.Inactive
 
+        @Volatile
+        private var activationListener: BlockingActivationListener? = null
+
         override fun current(): BlockedPackagesState = state
+
+        /**
+         * Enregistre l'observateur de la transition « inactive → active » (Lot 6, §12.4). Posé ici et
+         * non dans [BlockingProjectionRefresher] parce que cette classe est le **point de passage
+         * unique** de tout changement d'état : la transition peut venir d'un [refresh] comme d'un
+         * [apply], et les deux chemins sont empruntés au début d'un blocage différé — la décision
+         * publie le snapshot (donc rafraîchit) puis exécute `APPLY_BLOCKING`. N'observer que l'un des
+         * deux laisserait la course décider si l'application déjà ouverte est renvoyée à l'accueil.
+         */
+        fun observeActivation(listener: BlockingActivationListener?) {
+            activationListener = listener
+        }
 
         /** Renvoie l'état retenu, qui reste le précédent si la persistance est illisible. */
         suspend fun refresh(): BlockedPackagesState {
             when (val read = source.read()) {
-                is BlockedPackagesRead.Resolved -> state = read.state
+                is BlockedPackagesRead.Resolved -> moveTo(read.state)
                 is BlockedPackagesRead.Unreadable -> Unit
             }
             return state
@@ -55,8 +70,21 @@ class PersistedBlockedPackagesProjection
         ): OperationResult {
             val next = BlockedPackagesState.Active(sessionId, packages)
             if (state == next) return OperationResult.AlreadySatisfied
-            state = next
+            moveTo(next)
             return OperationResult.Success
+        }
+
+        /**
+         * Seul écrivain de [state]. Notifie l'observateur quand, et seulement quand, la projection
+         * devient active en partant d'inactive : `Active → Active` (changement de liste) et
+         * `Releasing → …` ne sont pas des débuts de blocage.
+         */
+        private fun moveTo(next: BlockedPackagesState) {
+            val previous = state
+            state = next
+            if (previous == BlockedPackagesState.Inactive && next is BlockedPackagesState.Active) {
+                activationListener?.onBlockingActivated(next)
+            }
         }
 
         fun remove(sessionId: String): OperationResult {
@@ -68,7 +96,7 @@ class PersistedBlockedPackagesProjection
                     is BlockedPackagesState.Releasing -> current.sessionId == sessionId
                 }
             if (!matchesSession) return OperationResult.AlreadySatisfied
-            state = BlockedPackagesState.Inactive
+            moveTo(BlockedPackagesState.Inactive)
             return OperationResult.Success
         }
 

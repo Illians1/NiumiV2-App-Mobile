@@ -54,7 +54,7 @@ class SummaryViewModel
             use24Hour: Boolean,
         ) {
             viewModelScope.launch {
-                applyPreview(armSessionUseCase.preview(localTimeIso), use24Hour)
+                applyPreview(armSessionUseCase.preview(localTimeIso, blockingLocalTimeIso = null), use24Hour)
             }
         }
 
@@ -62,7 +62,7 @@ class SummaryViewModel
             if (!state.canActivate) return
             state = state.copy(isActivating = true, message = null)
             viewModelScope.launch {
-                when (val result = armSessionUseCase.arm(localTimeIso)) {
+                when (val result = armSessionUseCase.arm(localTimeIso, blockingLocalTimeIso = null)) {
                     is ArmSessionResult.Armed -> {
                         armedSnapshot = result.snapshot
                         state = state.copy(isActivating = false)
@@ -122,6 +122,10 @@ class SummaryViewModel
 
                 is ActivationFailure.InvalidSchedule -> {
                     SummaryTexts.INVALID_SCHEDULE_MESSAGE
+                }
+
+                is ActivationFailure.InvalidBlockingSchedule -> {
+                    SummaryTexts.INVALID_BLOCKING_SCHEDULE_MESSAGE
                 }
 
                 is ActivationFailure.CoordinatorFailed -> {

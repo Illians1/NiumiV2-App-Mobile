@@ -9,3 +9,13 @@ package com.niumi.core.interop
  */
 public val SessionSnapshotDto.isBlockingPending: Boolean
     get() = blockingSchedule.startsAtEpochMillis != null && blockingAppliedAtEpochMillis == null
+
+/**
+ * Miroir interop de `com.niumi.core.domain.BlockingSchedule.isImmediate` (SPEC_CORE_KMP §7.5), au
+ * même titre que [isBlockingPending] l'est de son homologue du domaine. Distincte de « en attente » :
+ * un blocage différé **déjà appliqué** n'est plus en attente mais reste différé, ce que le journal
+ * technique Android doit savoir pour distinguer `BLOCKING_STARTED` d'un simple `BLOCK_APPLIED`
+ * d'activation (SPEC_ANDROID §17).
+ */
+public val BlockingScheduleDto.isImmediate: Boolean
+    get() = startsAtEpochMillis == null

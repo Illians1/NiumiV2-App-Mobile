@@ -3,6 +3,7 @@ package com.niumi.database.mapping
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
@@ -21,6 +22,14 @@ internal object SessionSnapshotDtoFixtures {
             localTimeIso = "07:00",
             zoneIdAtActivation = "Europe/Paris",
             triggerAtEpochMillis = 1_800_000_000_000L,
+        )
+
+    /** Début de blocage strictement antérieur au réveil de [referenceWakeSchedule] (SPEC_CORE_KMP §8.3). */
+    private val referenceBlockingSchedule =
+        BlockingScheduleDto(
+            localDateIso = "2026-09-07",
+            localTimeIso = "22:30",
+            startsAtEpochMillis = 1_799_970_000_000L,
         )
 
     internal fun preparingSnapshot(
@@ -66,6 +75,30 @@ internal object SessionSnapshotDtoFixtures {
         completedAtEpochMillis = 1_700_000_007_000L,
         cancelledAtEpochMillis = 1_700_000_008_000L,
         failureCode = failureCode,
+    )
+
+    /**
+     * Blocage différé dont l'instant de début n'est pas atteint (Lot 6) : les trois champs du
+     * schedule sont renseignés, `blockingAppliedAtEpochMillis` est nul. C'est le seul état où
+     * `isBlockingPending` vaut vrai.
+     */
+    internal fun armedBlockingPendingSnapshot(
+        sessionId: String = "55555555-5555-5555-5555-555555555555",
+        revision: Long = 3,
+    ) = preparingSnapshot(sessionId, revision).copy(
+        schemaVersion = 2,
+        state = SessionState.ARMED,
+        armedAtEpochMillis = 1_700_000_001_000L,
+        blockingSchedule = referenceBlockingSchedule,
+        blockingAppliedAtEpochMillis = null,
+    )
+
+    /** Le même blocage différé, une fois son instant de début atteint et le blocage demandé. */
+    internal fun armedBlockingAppliedSnapshot(
+        sessionId: String = "66666666-6666-6666-6666-666666666666",
+        revision: Long = 4,
+    ) = armedBlockingPendingSnapshot(sessionId, revision).copy(
+        blockingAppliedAtEpochMillis = 1_799_990_000_000L,
     )
 
     internal fun failedSnapshot(

@@ -13,4 +13,7 @@ enum class NiumiComponent {
 
     /** Alarme de secours pendant `RINGING` (SPEC_ANDROID §10.2 ; étape 20). */
     RINGING_WATCHDOG_RECEIVER,
+
+    /** Alarme de début d'un blocage différé (SPEC_ANDROID §12.4 ; Lot 6). */
+    BLOCKING_START_RECEIVER,
 }

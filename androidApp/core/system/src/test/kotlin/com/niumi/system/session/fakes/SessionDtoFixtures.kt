@@ -2,6 +2,7 @@ package com.niumi.system.session.fakes
 
 import com.niumi.core.interop.ActivationRequestDto
 import com.niumi.core.interop.AppSelectionSummaryDto
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.BoxPayloadDto
 import com.niumi.core.interop.NfcVerificationContextDto
 import com.niumi.core.interop.NiumiCoreFacade
@@ -49,11 +50,31 @@ object SessionDtoFixtures {
             blockedPackages = blockedPackages,
         )
 
+    /**
+     * Début d'un blocage différé, strictement antérieur au réveil (SPEC_CORE_KMP §8.3) et
+     * postérieur aux `occurredAtEpochMillis` des tests, pour que l'activation produise bien
+     * `SCHEDULE_BLOCKING_START` et non `APPLY_BLOCKING` (§8.3, instant déjà dépassé).
+     */
+    const val BLOCKING_STARTS_AT_EPOCH_MILLIS = 1_999_000_000_000L
+
+    private val blockingSchedule =
+        BlockingScheduleDto(
+            localDateIso = "2026-09-09",
+            localTimeIso = "22:30",
+            startsAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS,
+        )
+
+    /**
+     * [blockingStartsAtEpochMillis] nul laisse le blocage **immédiat**, ce qu'Android arme
+     * exclusivement avant l'écran de l'étape 24 : les tests hérités décrivent donc toujours le même
+     * parcours, ordinaux et `effectId` compris.
+     */
     fun activationRequested(
         eventId: String,
         sessionId: String = SESSION_ID,
         occurredAtEpochMillis: Long = 1_000L,
         appCount: Int = 2,
+        blockingStartsAtEpochMillis: Long? = null,
     ): SessionEventDto =
         SessionEventDto(
             eventId = eventId,
@@ -61,7 +82,15 @@ object SessionDtoFixtures {
             kind = SessionEventKindDto.ACTIVATION_REQUESTED,
             occurredAtEpochMillis = occurredAtEpochMillis,
             expectedRevision = null,
-            activationRequest = ActivationRequestDto(wakeSchedule, AppSelectionSummaryDto(appCount)),
+            activationRequest =
+                ActivationRequestDto(
+                    wakeSchedule,
+                    AppSelectionSummaryDto(appCount),
+                    blockingSchedule =
+                        blockingStartsAtEpochMillis
+                            ?.let { blockingSchedule.copy(startsAtEpochMillis = it) }
+                            ?: BlockingScheduleDto(),
+                ),
             failureCode = null,
             incident = null,
         )
@@ -108,6 +137,30 @@ object SessionDtoFixtures {
         sessionId: String = SESSION_ID,
         revision: Long = 1,
     ): SessionSnapshotDto = releasingSnapshot(sessionId, revision).copy(state = state)
+
+    /**
+     * Snapshot `ARMED` à blocage différé (Lot 6). [blockingAppliedAtEpochMillis] nul décrit une
+     * session encore en attente de son instant de début — le seul cas où `isBlockingPending` vaut
+     * vrai. [startsAtEpochMillis] nul décrit une session à blocage immédiat, pour les tests qui
+     * doivent prouver qu'un effet différé n'est jamais produit dans ce cas.
+     */
+    fun deferredArmedSnapshot(
+        sessionId: String = SESSION_ID,
+        revision: Long = 2,
+        startsAtEpochMillis: Long? = BLOCKING_STARTS_AT_EPOCH_MILLIS,
+        blockingAppliedAtEpochMillis: Long? = null,
+    ): SessionSnapshotDto =
+        snapshotInState(SessionStateDto.ARMED, sessionId, revision).copy(
+            schemaVersion = 2,
+            releaseTarget = null,
+            nfcVerifiedAtEpochMillis = null,
+            releasingAtEpochMillis = null,
+            blockingSchedule =
+                startsAtEpochMillis
+                    ?.let { blockingSchedule.copy(startsAtEpochMillis = it) }
+                    ?: BlockingScheduleDto(),
+            blockingAppliedAtEpochMillis = blockingAppliedAtEpochMillis,
+        )
 
     /** Snapshot `RELEASING` synthétique, pour les tests de rejeu d'outbox (réconciliateur). */
     fun releasingSnapshot(

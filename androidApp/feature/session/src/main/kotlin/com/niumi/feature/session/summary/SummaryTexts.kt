@@ -36,6 +36,16 @@ object SummaryTexts {
 
     const val INVALID_SCHEDULE_MESSAGE = "L'heure choisie n'est plus valide. Choisis-en une autre."
 
+    /**
+     * Lot 6. Inatteignable tant que l'écran 5 ne propose pas de début différé (étape 24) : le
+     * récapitulatif transmet `null`, et un blocage immédiat est toujours valide. Le texte définitif
+     * et son test de verrouillage appartiennent à l'étape 24 (SPEC_ANDROID §15) ; celui-ci nomme la
+     * cause et la sortie, comme les autres messages de cet écran.
+     */
+    const val INVALID_BLOCKING_SCHEDULE_MESSAGE =
+        "Le blocage ne peut pas commencer après ton réveil. Choisis une heure plus tôt, " +
+            "ou bloque tes applications dès maintenant."
+
     const val REJECTED_MESSAGE =
         "Niumi n'a pas pu créer cette session. Vérifie qu'aucune session n'est déjà en cours."
 

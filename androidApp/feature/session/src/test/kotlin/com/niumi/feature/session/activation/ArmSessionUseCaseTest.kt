@@ -2,6 +2,7 @@ package com.niumi.feature.session.activation
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.diagnostics.ActivationReasonCode
+import com.niumi.core.interop.BlockingScheduleStatusDto
 import com.niumi.core.interop.DomainViolationDto
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.PairedBoxCredentialDto
@@ -151,7 +152,7 @@ class ArmSessionUseCaseTest {
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
-            useCase().arm("07:00")
+            useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(journal.snapshot())
                 .containsExactly(
@@ -171,7 +172,7 @@ class ArmSessionUseCaseTest {
                 report(candidateTriggerAtEpochMillis = candidate, checks = listOf(failedCheck()))
             }
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(result).isInstanceOf(ArmSessionResult.Failed::class.java)
             assertThat((result as ArmSessionResult.Failed).failure).isInstanceOf(ActivationFailure.Blocked::class.java)
@@ -185,7 +186,7 @@ class ArmSessionUseCaseTest {
                 report(candidateTriggerAtEpochMillis = candidate, appSelectionCount = 0)
             }
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.Blocked
             assertThat(failure.reasons.map { it.code }).contains(ActivationReasonCode.INVALID_APP_SELECTION)
@@ -199,7 +200,7 @@ class ArmSessionUseCaseTest {
                 report(candidateTriggerAtEpochMillis = candidate, appSelectionCount = 51)
             }
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.Blocked
             assertThat(failure.reasons.map { it.code }).contains(ActivationReasonCode.INVALID_APP_SELECTION)
@@ -214,7 +215,7 @@ class ArmSessionUseCaseTest {
             }
             pairedBoxStore.credential = null
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.Blocked
             assertThat(failure.reasons.map { it.code }).contains(ActivationReasonCode.NO_PAIRED_BOX)
@@ -226,7 +227,7 @@ class ArmSessionUseCaseTest {
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
-            useCase().arm("07:00")
+            useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(pairedBoxStore.currentCallCount).isEqualTo(1)
             assertThat(coordinator.lastExtras?.boxId).isEqualTo(credential.boxId)
@@ -238,7 +239,7 @@ class ArmSessionUseCaseTest {
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
-            useCase().arm("07:00")
+            useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(coordinator.lastExtras?.ringtoneKey).isEqualTo("niumi_alarm")
             assertThat(coordinator.lastExtras?.vibrationEnabled).isTrue()
@@ -250,7 +251,7 @@ class ArmSessionUseCaseTest {
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
-            useCase().arm("07:00")
+            useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val count =
                 coordinator.lastEvent
@@ -266,7 +267,7 @@ class ArmSessionUseCaseTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
             timeZoneProvider.zoneId = "America/New_York"
 
-            useCase().arm("07:00")
+            useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val schedule = coordinator.lastEvent?.activationRequest?.wakeSchedule
             assertThat(schedule?.zoneIdAtActivation).isEqualTo("America/New_York")
@@ -276,7 +277,7 @@ class ArmSessionUseCaseTest {
     @Test
     fun anUnparseableLocalTimeRefusesActivationBeforeReadingAnyRepository() =
         runTest {
-            val result = useCase().arm("25:00")
+            val result = useCase().arm("25:00", blockingLocalTimeIso = null)
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.InvalidSchedule
             assertThat(failure.status).isEqualTo(WakeScheduleStatusDto.INVALID_TIME)
@@ -290,7 +291,7 @@ class ArmSessionUseCaseTest {
             val snapshot = armedSnapshot()
             coordinator.result = DispatchResult.Applied(snapshot, requiredEffectsSucceeded = true)
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(result).isEqualTo(ArmSessionResult.Armed(snapshot))
         }
@@ -304,7 +305,7 @@ class ArmSessionUseCaseTest {
                     requiredEffectsSucceeded = false,
                 )
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.CoordinatorFailed
             assertThat(failure.failureCode).isEqualTo("ANDROID_ALARM_SCHEDULE_FAILED")
@@ -316,7 +317,7 @@ class ArmSessionUseCaseTest {
         runTest {
             coordinator.result = DispatchResult.Applied(snapshot = null, requiredEffectsSucceeded = false)
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.CoordinatorFailed
             assertThat(failure.failureCode).isNull()
@@ -329,7 +330,7 @@ class ArmSessionUseCaseTest {
             val violations = listOf(DomainViolationDto("INVALID_STATE_TRANSITION", "Session déjà active"))
             coordinator.result = DispatchResult.Rejected(violations)
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.Rejected
             assertThat(failure.violations).isEqualTo(violations)
@@ -350,7 +351,7 @@ class ArmSessionUseCaseTest {
                     ),
                 )
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat((result as ArmSessionResult.Failed).failure).isEqualTo(ActivationFailure.Duplicate)
         }
@@ -360,7 +361,7 @@ class ArmSessionUseCaseTest {
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
-            useCase().arm("07:00")
+            useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(coordinator.lastExtras).isNotNull()
         }
@@ -368,7 +369,7 @@ class ArmSessionUseCaseTest {
     @Test
     fun previewNeverDispatches() =
         runTest {
-            useCase().preview("07:00")
+            useCase().preview("07:00", blockingLocalTimeIso = null)
 
             assertThat(coordinator.dispatchCount).isEqualTo(0)
         }
@@ -376,7 +377,7 @@ class ArmSessionUseCaseTest {
     @Test
     fun previewReportsWhatTheSummaryNeedsWithoutLeakingTheToken() =
         runTest {
-            val preview = useCase().preview("07:00")
+            val preview = useCase().preview("07:00", blockingLocalTimeIso = null)
 
             assertThat(preview.canActivate).isTrue()
             assertThat(preview.boxId).isEqualTo(credential.boxId)
@@ -390,8 +391,8 @@ class ArmSessionUseCaseTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
             val useCase = useCase()
 
-            useCase.preview("07:00")
-            useCase.arm("07:00")
+            useCase.preview("07:00", blockingLocalTimeIso = null)
+            useCase.arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(journal.snapshot().count { it == "readiness.check(candidate)" }).isEqualTo(2)
         }
@@ -407,7 +408,7 @@ class ArmSessionUseCaseTest {
             }
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
-            val result = useCase().arm("07:00")
+            val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(result).isInstanceOf(ArmSessionResult.Armed::class.java)
         }
@@ -417,11 +418,103 @@ class ArmSessionUseCaseTest {
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
-            useCase().arm("07:00")
+            useCase().arm("07:00", blockingLocalTimeIso = null)
 
             val event = coordinator.lastEvent!!
             assertThat(event.kind).isEqualTo(SessionEventKindDto.ACTIVATION_REQUESTED)
             assertThat(event.expectedRevision).isNull()
             assertThat(NiumiCoreFacade().reduce(null, event).violations).isEmpty()
+        }
+
+    /** « Maintenant » (défaut de l'écran 5) : le blocage demandé dès l'activation, aucun instant. */
+    @Test
+    fun aNullBlockingTimeArmsAnImmediateBlocking() =
+        runTest {
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+
+            useCase().arm("07:00", blockingLocalTimeIso = null)
+
+            val request = coordinator.lastEvent!!.activationRequest!!
+            assertThat(request.blockingSchedule.startsAtEpochMillis).isNull()
+            assertThat(request.blockingSchedule.localDateIso).isNull()
+            assertThat(request.blockingSchedule.localTimeIso).isNull()
+        }
+
+    /**
+     * L'instant **calculé** est transmis au moteur, jamais l'heure saisie : à 20:00 pour un réveil à
+     * 07:00, « 22:30 » désigne ce soir, et c'est cet instant-là qui devient contractuel et immuable
+     * (SPEC_CORE_KMP §8.3). Le moteur, lui, ne sait pas convertir une heure locale.
+     */
+    @Test
+    fun aDeferredBlockingTransmitsTheComputedInstantAndNeverTheTypedString() =
+        runTest {
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+
+            useCase().arm("07:00", blockingLocalTimeIso = "22:30")
+
+            val request = coordinator.lastEvent!!.activationRequest!!
+            val startsAt = request.blockingSchedule.startsAtEpochMillis
+            assertThat(startsAt).isNotNull()
+            assertThat(startsAt!!).isLessThan(request.wakeSchedule.triggerAtEpochMillis)
+            assertThat(startsAt).isGreaterThan(now)
+            assertThat(request.blockingSchedule.localTimeIso).isEqualTo("22:30")
+            // L'événement reste acceptable par le vrai moteur, schedule différé compris.
+            assertThat(NiumiCoreFacade().reduce(null, coordinator.lastEvent!!).violations).isEmpty()
+        }
+
+    /**
+     * SPEC_CORE_KMP §8.3 : à 20:00 pour un réveil à 07:00, un début à 08:00 tombe demain, **après**
+     * le réveil. `NOT_BEFORE_TRIGGER` est refusé avant tout dispatch, et comme un choix impossible —
+     * pas comme un appareil non prêt.
+     */
+    @Test
+    fun aBlockingStartThatWouldFallAfterTheWakeUpIsRefusedWithoutAnyDispatch() =
+        runTest {
+            val result = useCase().arm("07:00", blockingLocalTimeIso = "08:00")
+
+            assertThat(result).isInstanceOf(ArmSessionResult.Failed::class.java)
+            val failure = (result as ArmSessionResult.Failed).failure
+            assertThat(failure).isInstanceOf(ActivationFailure.InvalidBlockingSchedule::class.java)
+            assertThat((failure as ActivationFailure.InvalidBlockingSchedule).status)
+                .isEqualTo(BlockingScheduleStatusDto.NOT_BEFORE_TRIGGER)
+            assertThat(coordinator.dispatchCount).isEqualTo(0)
+        }
+
+    /**
+     * SPEC_ANDROID §13 point 4 : le candidat atteint `ReadinessInput` par le même chemin que le
+     * réveil, sans quinzième contrôle — c'est la politique commune qui tranche.
+     */
+    @Test
+    fun theBlockingStartCandidateReachesTheReadinessInput() =
+        runTest {
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+
+            useCase().arm("07:00", blockingLocalTimeIso = "22:30")
+
+            val input = readinessChecker.lastInput!!
+            assertThat(input.candidateBlockingStartsAtEpochMillis).isNotNull()
+            assertThat(input.candidateBlockingStartsAtEpochMillis!!)
+                .isLessThan(input.candidateTriggerAtEpochMillis!!)
+        }
+
+    /** Blocage immédiat : le candidat reste nul, ce que la politique commune accepte sans rien vérifier. */
+    @Test
+    fun anImmediateBlockingLeavesTheCandidateNull() =
+        runTest {
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+
+            useCase().arm("07:00", blockingLocalTimeIso = null)
+
+            assertThat(readinessChecker.lastInput!!.candidateBlockingStartsAtEpochMillis).isNull()
+        }
+
+    /** L'aperçu de l'écran 6 porte le même verdict, et refuse de confirmer un début impossible. */
+    @Test
+    fun thePreviewRefusesToConfirmAnImpossibleBlockingStart() =
+        runTest {
+            val preview = useCase().preview("07:00", blockingLocalTimeIso = "08:00")
+
+            assertThat(preview.blockingResult?.status).isEqualTo(BlockingScheduleStatusDto.NOT_BEFORE_TRIGGER)
+            assertThat(preview.canActivate).isFalse()
         }
 }

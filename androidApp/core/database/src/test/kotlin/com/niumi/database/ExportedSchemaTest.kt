@@ -9,7 +9,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import java.io.File
 
-private const val CURRENT_VERSION = 2
+private const val CURRENT_VERSION = 3
 
 /**
  * Garde-fou contre un `exportSchema` désactivé ou un schéma non committé (SPEC_CORE_KMP §13 :
@@ -83,5 +83,42 @@ class ExportedSchemaTest {
             }
 
         assertThat(fields).containsAtLeast("deviceModel", "androidVersion", "appVersion")
+    }
+
+    /** SPEC_ANDROID §7.2 (v3, Lot 6) : les quatre colonnes du début de blocage, toutes nullables. */
+    @Test
+    fun alarmSessionCarriesTheBlockingColumnsSinceVersionThree() {
+        val alarmSession =
+            database(CURRENT_VERSION)
+                .getValue("entities")
+                .jsonArray
+                .map { it.jsonObject }
+                .single { it.getValue("tableName").jsonPrimitive.content == "alarm_session" }
+
+        val fields =
+            alarmSession.getValue("fields").jsonArray.map {
+                it.jsonObject
+                    .getValue("fieldPath")
+                    .jsonPrimitive.content
+            }
+
+        assertThat(fields).containsAtLeast(
+            "blockingLocalDate",
+            "blockingLocalTime",
+            "blockingStartsAtEpochMillis",
+            "blockingAppliedAtEpochMillis",
+        )
+
+        // Toutes nullables : `MIGRATION_2_3` les ajoute sans clause `DEFAULT`, et Room n'en attend
+        // donc aucune. Une seule colonne devenue `NOT NULL` ferait échouer `validateMigration` sur
+        // cette seule différence — le défaut que `MIGRATION_1_2` avait dû traiter en v2.
+        val blockingColumns =
+            alarmSession.getValue("fields").jsonArray.map { it.jsonObject }.filter {
+                it
+                    .getValue("fieldPath")
+                    .jsonPrimitive.content
+                    .startsWith("blocking")
+            }
+        assertThat(blockingColumns.none { it["notNull"]?.jsonPrimitive?.content == "true" }).isTrue()
     }
 }
