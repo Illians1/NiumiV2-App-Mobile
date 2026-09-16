@@ -6,7 +6,8 @@ import kotlin.test.assertEquals
 
 class SmokeTest {
     @Test
-    fun schemaVersionIsOne() {
-        assertEquals(1, NiumiCoreVersion.SCHEMA_VERSION)
+    fun schemaVersionIsTwo() {
+        // Contrat 1.3 : les DTO exposés changent de façon incompatible pour Swift (blocage différé).
+        assertEquals(2, NiumiCoreVersion.SCHEMA_VERSION)
     }
 }

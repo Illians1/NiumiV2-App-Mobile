@@ -15,6 +15,7 @@ public data class ReadinessCheckInput(
  * Entrée de la politique d'activation (SPEC_CORE_KMP §7.4, SPEC_ANDROID §13). [checks] porte les
  * contrôles de préparation déjà évalués par le natif ; [appSelectionCount], [triggerAtEpochMillis]
  * et [hasPairedBox] portent les règles communes indépendantes de la plateforme.
+ * [blockingStartsAtEpochMillis] est `null` pour un blocage immédiat (contrat 1.3, §14).
  */
 public data class ActivationPolicyInput(
     val checks: List<ReadinessCheckInput>,
@@ -22,4 +23,5 @@ public data class ActivationPolicyInput(
     val triggerAtEpochMillis: Long,
     val nowEpochMillis: Long,
     val hasPairedBox: Boolean,
+    val blockingStartsAtEpochMillis: Long?,
 )

@@ -30,6 +30,7 @@ Les points `À REVOIR` ne bloquent pas la création du Lot 0. Ils bloquent le pa
 | Signal de réveil manqué (`TRIGGER_ELAPSED` produit sans que l'application ait observé l'alarme) | exception Apple assumée et documentée en section 12 | aucune notification locale au MVP; le routage vers l'écran de réveil à la réouverture de l'application signale ce cas, et le shield reste un indice actionnable tant que Niumi n'est pas rouvert, avec un texte qui indique explicitement qu'un scan termine la session |
 | Ouverture de Niumi depuis un shield | `À REVOIR · POC` | API publique confirmée et parcours acceptable en App Review |
 | Fabrication du tag NFC | `À REVOIR · PRODUIT` | technologie physique du tag, écriture, verrouillage et contrôle qualité |
+| Début du blocage différé (contrat KMP 1.3, section 13) | `À REVOIR · POC` | une extension `DeviceActivityMonitor` s'exécute bien à l'instant planifié par `DeviceActivitySchedule` et peut appliquer les shields Niumi depuis `intervalDidStart` ; à défaut, le blocage différé ne peut être appliqué qu'à la prochaine ouverture de l'application, ce qui devra être documenté comme exception native |
 
 Les décisions produit auparavant ouvertes sont fixées ainsi:
 
@@ -40,7 +41,7 @@ Les décisions produit auparavant ouvertes sont fixées ainsi:
 - le boîtier vérifié pour terminer une session est celui associé au moment de l'activation, figé dans `NiumiSessionRecord`;
 - le payload NFC suit exactement le protocole défini dans `SPEC_CORE_KMP.md`.
 
-Niumi permet à une personne de choisir une heure de lever, de bloquer immédiatement certaines applications, puis de terminer la session le lendemain en scannant un boîtier NFC placé hors de la chambre.
+Niumi permet à une personne de choisir une heure de lever, de bloquer certaines applications immédiatement ou à partir d'une heure choisie avant le lever (contrat KMP 1.3), puis de terminer la session le lendemain en scannant un boîtier NFC placé hors de la chambre.
 
 La version iPhone doit respecter une limite imposée par iOS: AlarmKit affiche un contrôle système qui permet d'arrêter le son. L'application ne peut pas retirer ce contrôle. Si la personne l'utilise avant le scan NFC, le son s'arrête, mais la session Niumi continue et les applications choisies restent bloquées. Seul un scan NFC valide termine la session dans l'application.
 
@@ -52,7 +53,7 @@ La version iPhone doit respecter une limite imposée par iOS: AlarmKit affiche u
 2. associer un boîtier NFC Niumi à l'iPhone;
 3. sélectionner jusqu'à 50 applications à bloquer;
 4. choisir une heure de lever et activer une session;
-5. appliquer les écrans de blocage dès l'activation;
+5. appliquer les écrans de blocage dès l'activation, ou à l'instant de début choisi par la personne, strictement antérieur au lever (contrat KMP 1.3);
 6. programmer une alarme système avec AlarmKit;
 7. conserver la session si l'application est fermée ou si le son est arrêté depuis le contrôle système;
 8. ouvrir le parcours de scan depuis l'alarme ou depuis l'application;
@@ -346,6 +347,10 @@ final class NiumiSessionRecord {
     var localTimeISO: String
     var zoneIDAtActivation: String
     var scheduledFireDate: Date
+    var blockingLocalDateISO: String?
+    var blockingLocalTimeISO: String?
+    var blockingStartsAt: Date?
+    var blockingAppliedAt: Date?
     var boxID: UUID
     var boxTokenSha256Hex: String
     var stateCode: String
@@ -364,7 +369,7 @@ final class NiumiSessionRecord {
 }
 ```
 
-`revision` reste positive et augmente à chaque décision métier acceptée. `stateCode`, `releaseTargetCode` et `healthCode` utilisent les codes canoniques du contrat KMP. Un code inconnu produit une erreur de migration ou de corruption; il n'est pas remplacé par une valeur par défaut. SwiftData permet un aller-retour complet avec `SessionSnapshotDto`.
+Les quatre champs `blocking*` (contrat KMP 1.3, section 7.5) sont tous nuls pour un blocage immédiat ; `blockingAppliedAt` est renseigné dès que le moteur a demandé les shields. Un enregistrement de `schemaVersion` 1 se lit comme un blocage immédiat dont `blockingAppliedAt` vaut `createdAt`, et la migration SwiftData est testée. `revision` reste positive et augmente à chaque décision métier acceptée. `stateCode`, `releaseTargetCode` et `healthCode` utilisent les codes canoniques du contrat KMP. Un code inconnu produit une erreur de migration ou de corruption; il n'est pas remplacé par une valeur par défaut. SwiftData permet un aller-retour complet avec `SessionSnapshotDto`.
 
 `boxID` et `boxTokenSha256Hex` sont copiés depuis le Keychain à l'étape `ACTIVATION_REQUESTED` et figés pour la durée de la session. `SessionCoordinator.handleValidNFC()` vérifie toujours le scan contre ces deux valeurs de la session active, jamais contre le Keychain courant, afin qu'une ré-association ne puisse pas changer le boîtier attendu d'une session en cours. Le parcours d'association reste de toute façon inaccessible pendant une session active (section 14).
 
@@ -489,6 +494,7 @@ stateDiagram-v2
     ARMED --> RINGING: Alarme déclenchée
     ARMED --> AWAITING_NFC: Son arrêté par iOS
     ARMED --> TRIGGERED_AWAITING_NFC: Heure atteinte sans alarme observée
+    ARMED --> ARMED: Début du blocage atteint
     RINGING --> AWAITING_NFC: Son arrêté par iOS
     ARMED --> RELEASING: NFC valide
     RINGING --> RELEASING: NFC valide
@@ -504,8 +510,9 @@ stateDiagram-v2
 | --- | --- | --- | --- |
 | aucun | `ACTIVATION_REQUESTED` | `PREPARING` | persister une transaction provisoire |
 | `PREPARING` | `ACTIVATION_SUCCEEDED` | `ARMED` | publier le snapshot actif |
-| `PREPARING` | `ACTIVATION_FAILED` | `FAILED` | annuler l'alarme et retirer les shields de cette transaction |
-| `ARMED` | `ALARM_FIRED` | `RINGING` | afficher le parcours de réveil à la prochaine ouverture |
+| `PREPARING` | `ACTIVATION_FAILED` | `FAILED` | annuler l'alarme, annuler la planification du début du blocage et retirer les shields de cette transaction |
+| `ARMED`, shields non encore demandés | `BLOCKING_START_ELAPSED` | `ARMED`, `blockingAppliedAt` renseigné | appliquer les shields (contrat KMP 1.3) |
+| `ARMED` | `ALARM_FIRED` | `RINGING` | afficher le parcours de réveil à la prochaine ouverture ; appliquer d'abord les shields s'ils n'ont pas encore été demandés (repli du moteur) |
 | `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | conserver les shields et présenter la demande de scan |
 | `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | conserver les shields et présenter la demande de scan |
 | `TRIGGERED_AWAITING_NFC` | `ALARM_SOUND_STOPPED` | état inchangé | conserver les shields et la demande de scan |
@@ -515,6 +522,8 @@ stateDiagram-v2
 | `RELEASING` | `RELEASE_SUCCEEDED` | cible enregistrée | supprimer le pointeur de session active |
 
 Aucune action d'interface ne doit atteindre `COMPLETED` ou `CANCELLED` sans `nfcVerifiedAt` et `RELEASE_SUCCEEDED`. Pendant `RELEASING`, certains shields peuvent déjà être retirés: l'état seul ne permet pas de déduire la configuration effective de ManagedSettings. Un événement dupliqué, ancien ou destiné à une autre session ne fait jamais régresser la révision.
+
+Dans `ARMED`, l'état seul ne dit pas si les shields sont appliqués : `blockingAppliedAt` le dit (contrat KMP 1.3, section 4). `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` depuis `ARMED` appliquent eux aussi des shields encore en attente, dans la même décision.
 
 `VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé par le moteur avec `TRIGGER_ALREADY_ELAPSED`. `SessionCoordinator.handleValidNFC()` (section 15) réconcilie systématiquement l'état AlarmKit avant un scan depuis `ARMED` et envoie d'abord `ALARM_FIRED` ou `TRIGGER_ELAPSED` selon le fait observé, si bien que ce refus reste un filet de sécurité et ne doit jamais se produire en parcours normal.
 
@@ -545,6 +554,7 @@ L'activation est possible uniquement si:
 - Core NFC est disponible sur l'appareil;
 - aucune autre session n'est active;
 - l'heure calculée est dans le futur;
+- l'instant de début du blocage, s'il existe, est strictement antérieur à l'heure calculée (`BLOCKING_START_NOT_BEFORE_TRIGGER`, contrat KMP 1.3);
 - le snapshot partagé est accessible;
 - le stockage local est accessible.
 
@@ -575,13 +585,13 @@ Le MVP programme une date absolue avec `Alarm.Schedule.fixed`. Un changement de 
 3. envoyer `ACTIVATION_REQUESTED` à `NiumiCoreFacade`;
 4. persister atomiquement `PREPARING`, le reçu de l'événement et l'outbox, puis créer le snapshot partagé;
 5. programmer l'alarme avec AlarmKit;
-6. appliquer les shields à la sélection enregistrée;
+6. appliquer les shields à la sélection enregistrée si le blocage est immédiat, ou planifier leur début si le blocage est différé (section 13, `À REVOIR · POC`);
 7. relire la configuration demandée lorsque l'API le permet, sans en déduire que le shield est effectivement affiché;
 8. envoyer `ACTIVATION_SUCCEEDED` au moteur commun;
 9. persister et publier `ARMED`;
 10. enregistrer un événement local `session_armed`.
 
-Si une étape échoue après la programmation de l'alarme, annuler cette alarme. Si les shields ont été appliqués, les retirer uniquement pour le store nommé de la transaction. Envoyer ensuite `ACTIVATION_FAILED` avec `failureCode`, persister `FAILED`, supprimer le pointeur actif et conserver la trace de l'échec dans l'historique local.
+Si une étape échoue après la programmation de l'alarme, annuler cette alarme et toute planification de début de blocage. Si les shields ont été appliqués, les retirer uniquement pour le store nommé de la transaction. Envoyer ensuite `ACTIVATION_FAILED` avec `failureCode`, persister `FAILED`, supprimer le pointeur actif et conserver la trace de l'échec dans l'historique local.
 
 ### Configuration AlarmKit
 
@@ -688,6 +698,8 @@ store.clearAllSettings()
 ```
 
 Ne jamais utiliser une opération globale qui pourrait retirer les réglages d'une autre fonction ou d'une autre application.
+
+**Début différé des shields (contrat KMP 1.3, section 11.3).** `À REVOIR · POC`. Le mécanisme pressenti est une `DeviceActivitySchedule` ponctuelle démarrant à `blockingStartsAt`, surveillée par une extension `DeviceActivityMonitor` qui, dans `intervalDidStart`, applique `store.shield.applications` depuis la sélection lue dans l'App Group, puis publie un fait natif immuable `blockingStarted` (même patron que `alarmStopped`, section 8). L'application principale convertit ce fait en `BLOCKING_START_ELAPSED` à sa prochaine exécution. L'extension n'importe pas KMP et ne réduit pas la machine à états. Si le POC montre que l'extension n'est pas exécutée à l'heure, l'exception native à documenter est : les shields d'un blocage différé ne sont appliqués qu'à la prochaine ouverture de Niumi, le repli du moteur garantissant qu'ils le sont au plus tard au réveil.
 
 ### Shield Configuration Extension
 
@@ -800,6 +812,7 @@ Exécuter `SessionRecoveryService.reconcile()`:
 | session `PREPARING`, aucune alarme | exécuter le rollback puis envoyer `ACTIVATION_FAILED` avec `failureCode` |
 | session `ARMED`, alarme en état `.alerting` | envoyer `ALARM_FIRED` avant toute action NFC |
 | session `ARMED`, alarme ponctuelle absente après l'heure | envoyer `TRIGGER_ELAPSED` puis router vers l'écran de réveil avant toute action NFC |
+| session `ARMED`, blocage différé, `blockingStartsAt` atteint et `blockingAppliedAt` nul | envoyer `BLOCKING_START_ELAPSED` puis appliquer les shields (contrat KMP 1.3) ; consommer d'abord un fait `blockingStarted` non consommé s'il existe |
 | session active, configuration Niumi absente, Family Controls autorisé | redemander la configuration des shields |
 | session active, Family Controls révoqué | conserver la session et afficher un diagnostic bloquant |
 | `nfcVerifiedAt` présent et état `RELEASING` | comparer les effets natifs et reprendre ceux qui manquent, sans restaurer les shields déjà retirés |
@@ -829,6 +842,7 @@ Contenu:
 
 - heure de lever;
 - date calculée;
+- début du blocage : `Maintenant` (défaut) ou une heure choisie, avec l'instant obtenu affiché (contrat KMP 1.3, section 8.3);
 - nombre d'applications sélectionnées;
 - état du boîtier;
 - bouton `Activer la session`;
@@ -840,7 +854,7 @@ Avant activation, afficher clairement:
 
 - la date et l'heure de l'alarme;
 - le nombre d'applications bloquées;
-- le fait que le blocage commence immédiatement;
+- le fait que le blocage commence immédiatement, ou l'instant de début choisi (instant obtenu, jamais l'heure saisie);
 - le fait qu'un scan du boîtier sera nécessaire pour terminer la session;
 - la limite iOS: le son peut être arrêté par le contrôle système, mais les applications resteront bloquées.
 
@@ -851,6 +865,7 @@ Afficher:
 - `Session active`;
 - date et heure du lever;
 - nombre d'applications bloquées;
+- pour un blocage différé pas encore atteint, l'instant de début : `Blocage à 22:30` ; la sélection reste non modifiable et le scan reste la seule sortie;
 - état `Alarme programmée`, `En attente du scan` après un arrêt du son, ou `Réveil manqué, scan attendu` si `TRIGGER_ELAPSED` a été produit à l'ouverture de l'application sans qu'elle ait observé une alarme `.alerting`;
 - pour l'état `Réveil manqué, scan attendu`, préciser que l'heure de réveil est passée et qu'un scan reste nécessaire, sans affirmer que l'alarme n'a jamais sonné: le contrôle Stop système et le bouton `Scanner Niumi` n'ont de toute façon pas pu servir de signal tant que l'application n'a pas été rouverte;
 - bouton `Scanner le boîtier` lorsque le parcours de réveil est actif;
@@ -974,14 +989,16 @@ Niumi ne prétend pas résister à une personne qui désinstalle l'application, 
 - validation de `failureCode` et de l'effet des gravités `WARNING`, `DEGRADED` et `CRITICAL`;
 - refus d'une régression de `revision`;
 - sélections de 0, 1, 50 et 51 applications;
-- `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables sans effet en double.
+- `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables sans effet en double;
+- blocage différé (contrat KMP 1.3, section 17) : `BLOCKING_START_ELAPSED` avant, à et après l'instant, refus hors `ARMED` ou en double, repli du moteur, effets requis de l'activation selon le `blockingSchedule`, calcul du début et refus `NOT_BEFORE_TRIGGER`.
 
 `NiumiTests` couvre:
 
 - rollback de chaque étape d'activation;
 - idempotence de la fin de session;
 - reprise depuis `RELEASING`;
-- mapping aller-retour entre SwiftData et les DTO KMP, puis mapping de projection pour le snapshot App Group;
+- mapping aller-retour entre SwiftData et les DTO KMP, puis mapping de projection pour le snapshot App Group, champs `blocking*` compris, et lecture d'un enregistrement de `schemaVersion` 1 comme blocage immédiat;
+- conversion de `blockingStarted` vers `BLOCKING_START_ELAPSED` et application des shields à la réconciliation quand l'instant de début est atteint sans shields;
 - vérification effectuée contre `boxID` et `boxTokenSha256Hex` de `NiumiSessionRecord`, refusée si le Keychain a changé depuis l'activation;
 - conversion de `alarmStopped` vers `ALARM_SOUND_STOPPED`;
 - routage vers l'écran de réveil déclenché par `PRESENT_SCAN_REQUEST` au lancement et au retour au premier plan;
@@ -1083,7 +1100,8 @@ La version iPhone est acceptée si tous les critères suivants sont remplis:
 19. un scan depuis `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` termine en `COMPLETED`;
 20. un changement de fuseau conserve l'instant et recalcule seulement l'affichage local;
 21. les tests `commonTest`, les mappings Swift et la construction de `NiumiCore` passent dans la CI;
-22. `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` routent immédiatement vers l'écran de réveil lorsque l'application est active, et la recette sur appareil confirme qu'une réouverture après un réveil manqué affiche `Réveil manqué, scan attendu` sans que le son ait jamais sonné.
+22. `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` routent immédiatement vers l'écran de réveil lorsque l'application est active, et la recette sur appareil confirme qu'une réouverture après un réveil manqué affiche `Réveil manqué, scan attendu` sans que le son ait jamais sonné;
+23. un blocage différé n'applique aucun shield avant son instant de début, l'applique à cet instant si le POC de la section 13 est confirmé, et au plus tard au réveil sinon ; l'activation refuse un début qui n'est pas strictement antérieur au lever (contrat KMP 1.3).
 
 ## 24. Ordre d'implémentation pour Codex
 
@@ -1162,6 +1180,15 @@ Bloquer la suite si l'un de ces comportements diffère de la documentation ou du
 - localisation;
 - gestion des erreurs;
 - journal local.
+
+### Lot 6: blocage différé
+
+Ajouté avec le contrat KMP 1.3 (2026-09-15), après le MVP Android. Conditionné au POC `DeviceActivityMonitor` de la section 1.2.
+
+- champs `blocking*` de `NiumiSessionRecord` et du snapshot App Group, migration;
+- planification et extension `DeviceActivityMonitor`, fait `blockingStarted`;
+- réconciliation et réduction de `BLOCKING_START_ELAPSED`;
+- choix du début du blocage à l'accueil, affichage sur la confirmation et la session active.
 
 ## 25. Consignes d'exécution pour Codex
 

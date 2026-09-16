@@ -29,6 +29,8 @@ Une application mobile qui combine un réveil et un blocage temporaire des appli
 
 Le soir, on règle son heure de réveil et on choisit les applications que l'on ne veut plus pouvoir ouvrir. Une fois le réveil configuré, ces applications restent bloquées jusqu'au lendemain matin.
 
+Le blocage peut commencer tout de suite, ou à une heure que l'on choisit plus tard dans la soirée, avant le réveil : on règle son réveil en rentrant à 18 h, et les applications se ferment à 22 h 30. L'engagement, lui, est pris au moment où le réveil est réglé — le changer ensuite demande le même geste que le matin, le scan du boîtier.
+
 Quand l'alarme sonne, elle ne s'éteint pas simplement depuis le lit. Pour terminer le réveil et retrouver l'accès aux applications bloquées, il faut se lever et scanner un boîtier NFC Niumi placé volontairement dans une autre pièce — par exemple dans la salle de bain, la cuisine ou le salon.
 
 Le boîtier n'est donc pas le réveil : **c'est le point d'arrivée du réveil**, l'endroit qui matérialise le fait d'être réellement sorti du lit.
@@ -71,7 +73,7 @@ Ce n'est pas une interdiction permanente. C'est **un engagement pris pour quelqu
 
 ## Une journée avec Niumi
 
-**Le soir**, on choisit l'heure à laquelle on veut se lever. En configurant le réveil, on active en même temps le blocage des applications que l'on ne veut plus ouvrir jusqu'au lendemain. Le téléphone reste disponible, mais les distractions que l'on a volontairement mises de côté ne le sont plus.
+**Le soir**, on choisit l'heure à laquelle on veut se lever. En configurant le réveil, on engage en même temps le blocage des applications que l'on ne veut plus ouvrir jusqu'au lendemain, tout de suite ou à l'heure de la soirée que l'on a choisie. Le téléphone reste disponible, mais les distractions que l'on a volontairement mises de côté ne le sont plus.
 
 **La nuit**, rien à gérer. Le réveil est programmé et les applications choisies restent bloquées.
 

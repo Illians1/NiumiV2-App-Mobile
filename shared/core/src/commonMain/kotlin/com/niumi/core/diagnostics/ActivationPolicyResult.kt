@@ -12,8 +12,9 @@ public data class ActivationReason(
 
 /**
  * Codes de [ActivationReason] (décision d'étape 8, non fixés par la spec). `READINESS_*` reprend
- * la sévérité du contrôle natif en cause ; les trois derniers portent une règle commune
- * indépendante de tout contrôle de préparation.
+ * la sévérité du contrôle natif en cause ; les quatre derniers portent une règle commune
+ * indépendante de tout contrôle de préparation. `BLOCKING_START_NOT_BEFORE_TRIGGER` est ajouté par
+ * le contrat 1.3 (SPEC_CORE_KMP §8.3, §14).
  */
 public object ActivationReasonCode {
     public const val READINESS_BLOCKING_FOR_ALARM: String = "READINESS_BLOCKING_FOR_ALARM"
@@ -22,6 +23,7 @@ public object ActivationReasonCode {
     public const val INVALID_APP_SELECTION: String = "INVALID_APP_SELECTION"
     public const val TRIGGER_NOT_IN_FUTURE: String = "TRIGGER_NOT_IN_FUTURE"
     public const val NO_PAIRED_BOX: String = "NO_PAIRED_BOX"
+    public const val BLOCKING_START_NOT_BEFORE_TRIGGER: String = "BLOCKING_START_NOT_BEFORE_TRIGGER"
 }
 
 /**

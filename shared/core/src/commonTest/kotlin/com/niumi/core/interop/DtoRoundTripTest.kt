@@ -11,6 +11,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Aller-retour `domaine → dto → domaine` pour chacun des neuf états de SPEC_CORE_KMP §5 et pour
@@ -26,6 +27,61 @@ class DtoRoundTripTest {
 
     @Test
     fun ringingSnapshotRoundTrips() = assertSnapshotRoundTrips(SessionSnapshotFixtures.ringingSnapshot())
+
+    @Test
+    fun pendingBlockingSnapshotRoundTrips() =
+        assertSnapshotRoundTrips(SessionSnapshotFixtures.armedBlockingPendingSnapshot())
+
+    @Test
+    fun appliedBlockingSnapshotRoundTrips() =
+        assertSnapshotRoundTrips(SessionSnapshotFixtures.armedBlockingAppliedSnapshot())
+
+    @Test
+    fun onlyADeferredSnapshotWithoutAppliedInstantIsPending() {
+        assertTrue(SessionSnapshotFixtures.armedBlockingPendingSnapshot().toDto().isBlockingPending)
+        assertFalse(SessionSnapshotFixtures.armedBlockingAppliedSnapshot().toDto().isBlockingPending)
+        assertFalse(SessionSnapshotFixtures.armedSnapshot().toDto().isBlockingPending)
+    }
+
+    @Test
+    fun aVersionOneSnapshotIsReadAsAnImmediateBlockingAndIsNeverPending() {
+        // SPEC_CORE_KMP §7.1, §13 : un snapshot persisté avant le contrat 1.3 ne porte aucun champ
+        // de blocage. Sa relecture doit donner un blocage immédiat, jamais une session en attente.
+        val versionOneJson =
+            """
+            {
+              "schemaVersion": 1,
+              "revision": 2,
+              "sessionId": "11111111-1111-1111-1111-111111111111",
+              "wakeSchedule": {
+                "localDateIso": "2026-09-08",
+                "localTimeIso": "07:00",
+                "zoneIdAtActivation": "Europe/Paris",
+                "triggerAtEpochMillis": 1800000000000
+              },
+              "state": "ARMED",
+              "releaseTarget": null,
+              "health": "HEALTHY",
+              "createdAtEpochMillis": 1700000000000,
+              "armedAtEpochMillis": 1700000001000,
+              "ringingAtEpochMillis": null,
+              "alarmSoundStoppedAtEpochMillis": null,
+              "triggerElapsedAtEpochMillis": null,
+              "nfcVerifiedAtEpochMillis": null,
+              "releasingAtEpochMillis": null,
+              "completedAtEpochMillis": null,
+              "cancelledAtEpochMillis": null,
+              "failureCode": null
+            }
+            """.trimIndent()
+
+        val dto = Json.decodeFromString<SessionSnapshotDto>(versionOneJson)
+
+        assertEquals(BlockingScheduleDto(), dto.blockingSchedule)
+        assertEquals(null, dto.blockingAppliedAtEpochMillis)
+        assertFalse(dto.isBlockingPending)
+        assertTrue(dto.toDomain().blockingSchedule.isImmediate)
+    }
 
     @Test
     fun awaitingNfcSnapshotRoundTrips() = assertSnapshotRoundTrips(SessionSnapshotFixtures.awaitingNfcSnapshot())

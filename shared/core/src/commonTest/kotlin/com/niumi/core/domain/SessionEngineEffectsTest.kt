@@ -1,8 +1,10 @@
 package com.niumi.core.domain
 
 import com.niumi.core.domain.SessionActivationEventFixtures.activationRequestedEvent
+import com.niumi.core.domain.SessionLifecycleEventFixtures.blockingStartElapsedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.incident
 import com.niumi.core.domain.SessionLifecycleEventFixtures.incidentReportedEvent
+import com.niumi.core.domain.SessionSnapshotFixtures.armedBlockingPendingSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.armedSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,6 +34,51 @@ class SessionEngineEffectsTest {
         val second = engine.reduce(snapshot = null, event = event)
 
         assertEquals(first.effects.map { it.effectId }, second.effects.map { it.effectId })
+    }
+
+    @Test
+    fun blockingStartEffectIdsFollowTheirOrdinalInTheDecision() {
+        val pending = armedBlockingPendingSnapshot()
+        val event =
+            blockingStartElapsedEvent(
+                expectedRevision = pending.revision,
+                incident =
+                    incident(
+                        code = IncidentCodes.MISSED_BLOCKING_START_WINDOW,
+                        severity = IncidentSeverity.WARNING,
+                    ),
+            )
+
+        val decision = engine.reduce(snapshot = pending, event = event)
+
+        val snapshot = requireNotNull(decision.snapshot)
+        assertEquals(
+            listOf(
+                "${snapshot.sessionId}:${snapshot.revision}:PUBLISH_PLATFORM_SNAPSHOT:0",
+                "${snapshot.sessionId}:${snapshot.revision}:APPLY_BLOCKING:1",
+                "${snapshot.sessionId}:${snapshot.revision}:RECORD_INCIDENT:2",
+            ),
+            decision.effects.map { it.effectId },
+        )
+    }
+
+    @Test
+    fun deferredActivationEffectIdsFollowTheirOrdinalInTheDecision() {
+        val event =
+            SessionActivationEventFixtures.activationRequestedEvent(
+                activationRequest =
+                    SessionActivationEventFixtures.activationRequest(
+                        blockingSchedule = referenceBlockingSchedule,
+                    ),
+            )
+
+        val decision = engine.reduce(snapshot = null, event = event)
+
+        val snapshot = requireNotNull(decision.snapshot)
+        assertEquals(
+            "${snapshot.sessionId}:${snapshot.revision}:SCHEDULE_BLOCKING_START:2",
+            decision.effects[2].effectId,
+        )
     }
 
     @Test

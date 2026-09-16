@@ -5,12 +5,14 @@ import com.niumi.core.diagnostics.ActivationPolicyInput
 import com.niumi.core.diagnostics.ReadinessCheckInput
 import com.niumi.core.diagnostics.ReadinessSeverity
 import com.niumi.core.domain.SessionEventKind
+import com.niumi.core.schedule.BlockingScheduleStatus
 import com.niumi.core.schedule.TriggerDelayOutcome
 import com.niumi.core.schedule.WakeScheduleCalculator
 import com.niumi.core.schedule.WakeScheduleInput
 import com.niumi.core.schedule.WakeScheduleStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 private const val TRIGGER_AT_EPOCH_MILLIS = 1_800_000_000_000L
@@ -71,7 +73,8 @@ class NiumiCoreFacadeTest {
     @Test
     fun evaluateActivationDelegatesToActivationPolicy() {
         val checks = listOf(ReadinessCheckInputDto("nfc_enabled", ReadinessSeverityDto.WARNING, passed = false))
-        val input = ActivationPolicyInputDto(checks, appSelectionCount = 5, TRIGGER_AT_EPOCH_MILLIS, 0L, true)
+        val input =
+            ActivationPolicyInputDto(checks, appSelectionCount = 5, TRIGGER_AT_EPOCH_MILLIS, 0L, true, null)
         val expected =
             ActivationPolicy.evaluate(
                 ActivationPolicyInput(
@@ -80,6 +83,7 @@ class NiumiCoreFacadeTest {
                     triggerAtEpochMillis = TRIGGER_AT_EPOCH_MILLIS,
                     nowEpochMillis = 0L,
                     hasPairedBox = true,
+                    blockingStartsAtEpochMillis = null,
                 ),
             )
 
@@ -88,6 +92,55 @@ class NiumiCoreFacadeTest {
         assertEquals(expected.allowed, result.allowed)
         assertEquals(expected.warnings.size, result.warnings.size)
     }
+
+    @Test
+    fun computeBlockingScheduleReturnsAnImmediateScheduleForANullLocalTime() {
+        val result = facade.computeBlockingSchedule(blockingInput(localTimeIso = null))
+
+        assertEquals(BlockingScheduleStatus.VALID, result.status)
+        assertEquals(BlockingScheduleDto(), result.schedule)
+    }
+
+    @Test
+    fun computeBlockingScheduleResolvesADeferredStartBeforeTheWakeUp() {
+        val result = facade.computeBlockingSchedule(blockingInput(localTimeIso = "22:30"))
+
+        assertEquals(BlockingScheduleStatus.VALID, result.status)
+        assertEquals("22:30", result.schedule?.localTimeIso)
+        assertEquals(1_788_899_400_000L, result.schedule?.startsAtEpochMillis)
+    }
+
+    @Test
+    fun computeBlockingScheduleRefusesAStartThatIsNotBeforeTheWakeUp() {
+        val result = facade.computeBlockingSchedule(blockingInput(localTimeIso = "08:00"))
+
+        assertEquals(BlockingScheduleStatus.NOT_BEFORE_TRIGGER, result.status)
+        assertNull(result.schedule)
+    }
+
+    @Test
+    fun computeBlockingScheduleRelaysInvalidTimeAndUnknownZoneWithoutThrowing() {
+        assertEquals(
+            BlockingScheduleStatus.INVALID_TIME,
+            facade.computeBlockingSchedule(blockingInput(localTimeIso = "25:00")).status,
+        )
+        assertEquals(
+            BlockingScheduleStatus.UNKNOWN_ZONE,
+            facade.computeBlockingSchedule(blockingInput(localTimeIso = "22:30", zoneId = "Not/AZone")).status,
+        )
+    }
+
+    // 2026-09-08T20:00:00+02:00 et le réveil de 07:00 qui en découle, repères de
+    // `BlockingScheduleCalculatorTest`.
+    private fun blockingInput(
+        localTimeIso: String?,
+        zoneId: String = "Europe/Paris",
+    ) = BlockingScheduleInputDto(
+        localTimeIso = localTimeIso,
+        zoneId = zoneId,
+        nowEpochMillis = 1_788_890_400_000L,
+        triggerAtEpochMillis = 1_788_930_000_000L,
+    )
 
     @Test
     fun evaluateTriggerDelayNotReached() {

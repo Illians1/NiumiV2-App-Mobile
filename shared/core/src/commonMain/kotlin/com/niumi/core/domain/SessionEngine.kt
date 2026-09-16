@@ -22,6 +22,7 @@ public class SessionEngine {
             SessionEventKind.ALARM_FIRED -> TriggerReducer.onAlarmFired(snapshot, event)
             SessionEventKind.ALARM_SOUND_STOPPED -> TriggerReducer.onAlarmSoundStopped(snapshot, event)
             SessionEventKind.TRIGGER_ELAPSED -> TriggerReducer.onTriggerElapsed(snapshot, event)
+            SessionEventKind.BLOCKING_START_ELAPSED -> BlockingReducer.onStartElapsed(snapshot, event)
             SessionEventKind.VALID_NFC_SCANNED -> NfcReducer.onValidScan(snapshot, event)
             SessionEventKind.INVALID_NFC_SCANNED -> NfcReducer.onInvalidScan(snapshot, event)
             SessionEventKind.RELEASE_SUCCEEDED -> ReleaseReducer.onSucceeded(snapshot, event)

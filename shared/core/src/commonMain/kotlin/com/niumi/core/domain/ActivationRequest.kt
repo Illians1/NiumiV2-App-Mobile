@@ -4,4 +4,5 @@ package com.niumi.core.domain
 public data class ActivationRequest(
     val wakeSchedule: WakeSchedule,
     val appSelection: AppSelectionSummary,
+    val blockingSchedule: BlockingSchedule,
 )

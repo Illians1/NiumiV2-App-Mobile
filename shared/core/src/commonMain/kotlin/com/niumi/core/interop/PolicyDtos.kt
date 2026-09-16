@@ -1,6 +1,7 @@
 package com.niumi.core.interop
 
 import com.niumi.core.diagnostics.ReadinessSeverity
+import com.niumi.core.schedule.BlockingScheduleStatus
 import com.niumi.core.schedule.TriggerDelayOutcome
 import com.niumi.core.schedule.WakeScheduleStatus
 
@@ -37,6 +38,25 @@ public data class TriggerDelayResultDto(
     val outcome: TriggerDelayOutcomeDto,
 )
 
+/**
+ * Entrée de `computeBlockingSchedule`, septième méthode de la façade (contrat 1.3, SPEC_CORE_KMP
+ * §8.3, §14). [localTimeIso] nul décrit un blocage immédiat ; [zoneId] et [nowEpochMillis] sont
+ * ceux du calcul du réveil, dont [triggerAtEpochMillis] est le résultat.
+ */
+public data class BlockingScheduleInputDto(
+    val localTimeIso: String?,
+    val zoneId: String,
+    val nowEpochMillis: Long,
+    val triggerAtEpochMillis: Long,
+)
+
+public typealias BlockingScheduleStatusDto = BlockingScheduleStatus
+
+public data class BlockingScheduleResultDto(
+    val status: BlockingScheduleStatusDto,
+    val schedule: BlockingScheduleDto?,
+)
+
 public typealias ReadinessSeverityDto = ReadinessSeverity
 
 public data class ReadinessCheckInputDto(
@@ -45,12 +65,18 @@ public data class ReadinessCheckInputDto(
     val passed: Boolean,
 )
 
+/**
+ * [blockingStartsAtEpochMillis] : `null` pour un blocage immédiat (contrat 1.3). La valeur par
+ * défaut est transitoire, comme celles de [BlockingScheduleDto] — le site de construction Android
+ * la renseignera explicitement à l'étape 23 du plan Android.
+ */
 public data class ActivationPolicyInputDto(
     val checks: List<ReadinessCheckInputDto>,
     val appSelectionCount: Int,
     val triggerAtEpochMillis: Long,
     val nowEpochMillis: Long,
     val hasPairedBox: Boolean,
+    val blockingStartsAtEpochMillis: Long? = null,
 )
 
 public data class ActivationReasonDto(

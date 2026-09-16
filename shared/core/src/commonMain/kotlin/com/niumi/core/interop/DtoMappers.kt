@@ -2,6 +2,7 @@ package com.niumi.core.interop
 
 import com.niumi.core.domain.ActivationRequest
 import com.niumi.core.domain.AppSelectionSummary
+import com.niumi.core.domain.BlockingSchedule
 import com.niumi.core.domain.SessionIncident
 import com.niumi.core.domain.WakeSchedule
 
@@ -16,15 +17,21 @@ internal fun WakeScheduleDto.toDomain(): WakeSchedule =
 internal fun WakeSchedule.toDto(): WakeScheduleDto =
     WakeScheduleDto(localDateIso, localTimeIso, zoneIdAtActivation, triggerAtEpochMillis)
 
+internal fun BlockingScheduleDto.toDomain(): BlockingSchedule =
+    BlockingSchedule(localDateIso, localTimeIso, startsAtEpochMillis)
+
+internal fun BlockingSchedule.toDto(): BlockingScheduleDto =
+    BlockingScheduleDto(localDateIso, localTimeIso, startsAtEpochMillis)
+
 internal fun AppSelectionSummaryDto.toDomain(): AppSelectionSummary = AppSelectionSummary(count)
 
 internal fun AppSelectionSummary.toDto(): AppSelectionSummaryDto = AppSelectionSummaryDto(count)
 
 internal fun ActivationRequestDto.toDomain(): ActivationRequest =
-    ActivationRequest(wakeSchedule.toDomain(), appSelection.toDomain())
+    ActivationRequest(wakeSchedule.toDomain(), appSelection.toDomain(), blockingSchedule.toDomain())
 
 internal fun ActivationRequest.toDto(): ActivationRequestDto =
-    ActivationRequestDto(wakeSchedule.toDto(), appSelection.toDto())
+    ActivationRequestDto(wakeSchedule.toDto(), appSelection.toDto(), blockingSchedule.toDto())
 
 internal fun SessionIncidentDto.toDomain(): SessionIncident =
     SessionIncident(code, severity, occurredAtEpochMillis, platform)

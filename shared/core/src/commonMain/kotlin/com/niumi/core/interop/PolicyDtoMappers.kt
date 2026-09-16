@@ -4,6 +4,8 @@ import com.niumi.core.diagnostics.ActivationPolicyInput
 import com.niumi.core.diagnostics.ActivationPolicyResult
 import com.niumi.core.diagnostics.ActivationReason
 import com.niumi.core.diagnostics.ReadinessCheckInput
+import com.niumi.core.schedule.BlockingScheduleInput
+import com.niumi.core.schedule.BlockingScheduleResult
 import com.niumi.core.schedule.WakeScheduleInput
 import com.niumi.core.schedule.WakeScheduleResult
 
@@ -15,6 +17,12 @@ internal fun WakeScheduleInputDto.toDomain(): WakeScheduleInput =
 
 internal fun WakeScheduleResult.toDto(): WakeScheduleResultDto = WakeScheduleResultDto(status, schedule?.toDto())
 
+internal fun BlockingScheduleInputDto.toDomain(): BlockingScheduleInput =
+    BlockingScheduleInput(localTimeIso, zoneId, nowEpochMillis, triggerAtEpochMillis)
+
+internal fun BlockingScheduleResult.toDto(): BlockingScheduleResultDto =
+    BlockingScheduleResultDto(status, schedule?.toDto())
+
 internal fun ReadinessCheckInputDto.toDomain(): ReadinessCheckInput = ReadinessCheckInput(id, severity, passed)
 
 internal fun ActivationPolicyInputDto.toDomain(): ActivationPolicyInput =
@@ -24,6 +32,7 @@ internal fun ActivationPolicyInputDto.toDomain(): ActivationPolicyInput =
         triggerAtEpochMillis = triggerAtEpochMillis,
         nowEpochMillis = nowEpochMillis,
         hasPairedBox = hasPairedBox,
+        blockingStartsAtEpochMillis = blockingStartsAtEpochMillis,
     )
 
 internal fun ActivationReason.toDto(): ActivationReasonDto = ActivationReasonDto(code, checkId)

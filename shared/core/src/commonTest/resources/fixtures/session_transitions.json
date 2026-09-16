@@ -10,7 +10,11 @@
       "activationRequestAppCount": 5
     },
     "expectedState": "PREPARING",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "SCHEDULE_ALARM", "APPLY_BLOCKING"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "SCHEDULE_ALARM",
+      "APPLY_BLOCKING"
+    ],
     "expectedViolations": []
   },
   {
@@ -25,7 +29,9 @@
     },
     "expectedState": null,
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_APP_SELECTION"]
+    "expectedViolations": [
+      "INVALID_APP_SELECTION"
+    ]
   },
   {
     "name": "activation_requested_with_fifty_one_apps_is_refused",
@@ -39,7 +45,9 @@
     },
     "expectedState": null,
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_APP_SELECTION"]
+    "expectedViolations": [
+      "INVALID_APP_SELECTION"
+    ]
   },
   {
     "name": "activation_requested_with_one_app_is_accepted",
@@ -52,7 +60,11 @@
       "activationRequestAppCount": 1
     },
     "expectedState": "PREPARING",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "SCHEDULE_ALARM", "APPLY_BLOCKING"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "SCHEDULE_ALARM",
+      "APPLY_BLOCKING"
+    ],
     "expectedViolations": []
   },
   {
@@ -66,7 +78,11 @@
       "activationRequestAppCount": 50
     },
     "expectedState": "PREPARING",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "SCHEDULE_ALARM", "APPLY_BLOCKING"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "SCHEDULE_ALARM",
+      "APPLY_BLOCKING"
+    ],
     "expectedViolations": []
   },
   {
@@ -81,7 +97,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   },
   {
     "name": "activation_succeeded_from_preparing_creates_armed",
@@ -94,7 +112,9 @@
       "expectedRevision": 1
     },
     "expectedState": "ARMED",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT"
+    ],
     "expectedViolations": []
   },
   {
@@ -109,7 +129,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   },
   {
     "name": "activation_failed_from_preparing_creates_failed",
@@ -143,7 +165,9 @@
     },
     "expectedState": "PREPARING",
     "expectedEffects": [],
-    "expectedViolations": ["MISSING_FAILURE_CODE"]
+    "expectedViolations": [
+      "MISSING_FAILURE_CODE"
+    ]
   },
   {
     "name": "activation_failed_from_armed_is_refused",
@@ -158,7 +182,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   },
   {
     "name": "alarm_fired_from_armed_creates_ringing",
@@ -171,7 +197,10 @@
       "expectedRevision": 2
     },
     "expectedState": "RINGING",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "START_RINGING"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "START_RINGING"
+    ],
     "expectedViolations": []
   },
   {
@@ -186,7 +215,9 @@
     },
     "expectedState": "FAILED",
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   },
   {
     "name": "alarm_sound_stopped_from_armed_creates_awaiting_nfc",
@@ -199,7 +230,10 @@
       "expectedRevision": 2
     },
     "expectedState": "AWAITING_NFC",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "PRESENT_SCAN_REQUEST"
+    ],
     "expectedViolations": []
   },
   {
@@ -213,7 +247,10 @@
       "expectedRevision": 3
     },
     "expectedState": "AWAITING_NFC",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "PRESENT_SCAN_REQUEST"
+    ],
     "expectedViolations": []
   },
   {
@@ -227,7 +264,10 @@
       "expectedRevision": 3
     },
     "expectedState": "TRIGGERED_AWAITING_NFC",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "PRESENT_SCAN_REQUEST"
+    ],
     "expectedViolations": []
   },
   {
@@ -241,7 +281,10 @@
       "expectedRevision": 2
     },
     "expectedState": "TRIGGERED_AWAITING_NFC",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "PRESENT_SCAN_REQUEST"
+    ],
     "expectedViolations": []
   },
   {
@@ -257,7 +300,11 @@
       "incidentSeverity": "DEGRADED"
     },
     "expectedState": "TRIGGERED_AWAITING_NFC",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "PRESENT_SCAN_REQUEST", "RECORD_INCIDENT"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "PRESENT_SCAN_REQUEST",
+      "RECORD_INCIDENT"
+    ],
     "expectedViolations": []
   },
   {
@@ -272,7 +319,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["TRIGGER_NOT_REACHED"]
+    "expectedViolations": [
+      "TRIGGER_NOT_REACHED"
+    ]
   },
   {
     "name": "release_failed_with_incident_stays_releasing",
@@ -287,7 +336,10 @@
       "incidentSeverity": "DEGRADED"
     },
     "expectedState": "RELEASING",
-    "expectedEffects": ["RECORD_INCIDENT", "PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedEffects": [
+      "RECORD_INCIDENT",
+      "PUBLISH_PLATFORM_SNAPSHOT"
+    ],
     "expectedViolations": []
   },
   {
@@ -302,7 +354,9 @@
     },
     "expectedState": "RELEASING",
     "expectedEffects": [],
-    "expectedViolations": ["MISSING_INCIDENT"]
+    "expectedViolations": [
+      "MISSING_INCIDENT"
+    ]
   },
   {
     "name": "release_succeeded_from_releasing_completed_reaches_final_state",
@@ -315,7 +369,10 @@
       "expectedRevision": 5
     },
     "expectedState": "COMPLETED",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "CLEAR_ACTIVE_SESSION"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "CLEAR_ACTIVE_SESSION"
+    ],
     "expectedViolations": []
   },
   {
@@ -329,7 +386,10 @@
       "expectedRevision": 5
     },
     "expectedState": "CANCELLED",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT", "CLEAR_ACTIVE_SESSION"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "CLEAR_ACTIVE_SESSION"
+    ],
     "expectedViolations": []
   },
   {
@@ -344,7 +404,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   },
   {
     "name": "incident_reported_on_armed_stays_unchanged",
@@ -359,7 +421,10 @@
       "incidentSeverity": "WARNING"
     },
     "expectedState": "ARMED",
-    "expectedEffects": ["RECORD_INCIDENT", "PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedEffects": [
+      "RECORD_INCIDENT",
+      "PUBLISH_PLATFORM_SNAPSHOT"
+    ],
     "expectedViolations": []
   },
   {
@@ -376,7 +441,9 @@
     },
     "expectedState": "COMPLETED",
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   },
   {
     "name": "incident_reported_without_incident_is_refused",
@@ -390,7 +457,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["MISSING_INCIDENT"]
+    "expectedViolations": [
+      "MISSING_INCIDENT"
+    ]
   },
   {
     "name": "invalid_nfc_scanned_on_ringing_stays_unchanged",
@@ -403,7 +472,9 @@
       "expectedRevision": 3
     },
     "expectedState": "RINGING",
-    "expectedEffects": ["PUBLISH_PLATFORM_SNAPSHOT"],
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT"
+    ],
     "expectedViolations": []
   },
   {
@@ -418,7 +489,9 @@
     },
     "expectedState": "CANCELLED",
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_STATE_TRANSITION"]
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   },
   {
     "name": "stale_revision_is_refused",
@@ -432,7 +505,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["STALE_REVISION"]
+    "expectedViolations": [
+      "STALE_REVISION"
+    ]
   },
   {
     "name": "unknown_session_is_refused",
@@ -446,7 +521,9 @@
     },
     "expectedState": "ARMED",
     "expectedEffects": [],
-    "expectedViolations": ["UNKNOWN_SESSION"]
+    "expectedViolations": [
+      "UNKNOWN_SESSION"
+    ]
   },
   {
     "name": "invalid_identifier_is_refused",
@@ -460,7 +537,9 @@
     },
     "expectedState": null,
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_IDENTIFIER"]
+    "expectedViolations": [
+      "INVALID_IDENTIFIER"
+    ]
   },
   {
     "name": "invalid_timestamp_is_refused",
@@ -474,6 +553,108 @@
     },
     "expectedState": null,
     "expectedEffects": [],
-    "expectedViolations": ["INVALID_TIMESTAMP"]
+    "expectedViolations": [
+      "INVALID_TIMESTAMP"
+    ]
+  },
+  {
+    "name": "deferred_activation_schedules_the_blocking_start",
+    "snapshot": "none",
+    "event": {
+      "kind": "ACTIVATION_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "occurredAtEpochMillis": 1700000000000,
+      "activationRequestAppCount": 5,
+      "activationRequestDeferredBlocking": true
+    },
+    "expectedState": "PREPARING",
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "SCHEDULE_ALARM",
+      "SCHEDULE_BLOCKING_START"
+    ],
+    "expectedViolations": []
+  },
+  {
+    "name": "blocking_start_elapsed_at_the_contractual_instant_applies_the_blocking",
+    "snapshot": "armedBlockingPending",
+    "event": {
+      "kind": "BLOCKING_START_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996400000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "APPLY_BLOCKING"
+    ],
+    "expectedViolations": []
+  },
+  {
+    "name": "blocking_start_elapsed_before_the_contractual_instant_is_refused",
+    "snapshot": "armedBlockingPending",
+    "event": {
+      "kind": "BLOCKING_START_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996399999,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "BLOCKING_START_NOT_REACHED"
+    ]
+  },
+  {
+    "name": "blocking_start_elapsed_twice_is_refused",
+    "snapshot": "armedBlockingApplied",
+    "event": {
+      "kind": "BLOCKING_START_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996400000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "BLOCKING_ALREADY_APPLIED"
+    ]
+  },
+  {
+    "name": "blocking_start_elapsed_on_an_immediate_session_is_refused",
+    "snapshot": "armed",
+    "event": {
+      "kind": "BLOCKING_START_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996400000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "BLOCKING_ALREADY_APPLIED"
+    ]
+  },
+  {
+    "name": "blocking_start_elapsed_outside_armed_is_refused",
+    "snapshot": "ringing",
+    "event": {
+      "kind": "BLOCKING_START_ELAPSED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996400000,
+      "expectedRevision": 3
+    },
+    "expectedState": "RINGING",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   }
 ]

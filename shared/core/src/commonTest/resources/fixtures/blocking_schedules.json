@@ -1,0 +1,82 @@
+[
+  {
+    "name": "null_local_time_describes_an_immediate_blocking",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "triggerAtEpochMillis": 1788930000000,
+    "expectedStatus": "VALID"
+  },
+  {
+    "name": "later_time_same_day_is_chosen_the_same_day",
+    "localTimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "triggerAtEpochMillis": 1788930000000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-09-08",
+    "expectedLocalTimeIso": "22:30",
+    "expectedStartsAtEpochMillis": 1788899400000
+  },
+  {
+    "name": "morning_time_rolling_over_after_the_wake_up_is_rejected",
+    "localTimeIso": "08:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "triggerAtEpochMillis": 1788930000000,
+    "expectedStatus": "NOT_BEFORE_TRIGGER"
+  },
+  {
+    "name": "evening_time_rolling_over_to_the_next_day_is_rejected",
+    "localTimeIso": "19:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "triggerAtEpochMillis": 1788930000000,
+    "expectedStatus": "NOT_BEFORE_TRIGGER"
+  },
+  {
+    "name": "instant_equal_to_the_wake_up_is_rejected",
+    "localTimeIso": "07:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "triggerAtEpochMillis": 1788930000000,
+    "expectedStatus": "NOT_BEFORE_TRIGGER"
+  },
+  {
+    "name": "non_existent_time_in_spring_gap_resolves_to_first_valid_instant",
+    "localTimeIso": "02:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1774738800000,
+    "triggerAtEpochMillis": 1774760400000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-03-29",
+    "expectedLocalTimeIso": "02:30",
+    "expectedStartsAtEpochMillis": 1774746000000
+  },
+  {
+    "name": "repeated_time_in_autumn_overlap_resolves_to_first_occurrence",
+    "localTimeIso": "02:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1792879200000,
+    "triggerAtEpochMillis": 1792908000000,
+    "expectedStatus": "VALID",
+    "expectedLocalDateIso": "2026-10-25",
+    "expectedLocalTimeIso": "02:30",
+    "expectedStartsAtEpochMillis": 1792888200000
+  },
+  {
+    "name": "unknown_zone_is_rejected",
+    "localTimeIso": "22:30",
+    "zoneId": "Not/AZone",
+    "nowEpochMillis": 1788890400000,
+    "triggerAtEpochMillis": 1788930000000,
+    "expectedStatus": "UNKNOWN_ZONE"
+  },
+  {
+    "name": "invalid_local_time_is_rejected",
+    "localTimeIso": "25:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1788890400000,
+    "triggerAtEpochMillis": 1788930000000,
+    "expectedStatus": "INVALID_TIME"
+  }
+]

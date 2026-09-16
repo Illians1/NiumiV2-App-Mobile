@@ -5,8 +5,9 @@ import com.niumi.core.domain.AppSelectionSummary
 /**
  * Décide si une activation est permise à partir des contrôles de préparation natifs et des règles
  * communes (SPEC_CORE_KMP §7.4, SPEC_ANDROID §13). Refuse si un contrôle `BLOCKING_*` échoue, si
- * `appSelectionCount` est hors de 1..50, si `triggerAtEpochMillis` n'est pas strictement futur, ou
- * si aucun boîtier n'est associé. Un `WARNING` seul n'empêche jamais l'activation.
+ * `appSelectionCount` est hors de 1..50, si `triggerAtEpochMillis` n'est pas strictement futur, si
+ * le début du blocage n'est pas strictement antérieur au réveil (§8.3), ou si aucun boîtier n'est
+ * associé. Un `WARNING` seul n'empêche jamais l'activation.
  */
 public object ActivationPolicy {
     public fun evaluate(input: ActivationPolicyInput): ActivationPolicyResult {
@@ -52,6 +53,10 @@ public object ActivationPolicy {
         }
         if (input.triggerAtEpochMillis <= input.nowEpochMillis) {
             reasons += ActivationReason(ActivationReasonCode.TRIGGER_NOT_IN_FUTURE, checkId = null)
+        }
+        val blockingStartsAt = input.blockingStartsAtEpochMillis
+        if (blockingStartsAt != null && blockingStartsAt >= input.triggerAtEpochMillis) {
+            reasons += ActivationReason(ActivationReasonCode.BLOCKING_START_NOT_BEFORE_TRIGGER, checkId = null)
         }
         if (!input.hasPairedBox) {
             reasons += ActivationReason(ActivationReasonCode.NO_PAIRED_BOX, checkId = null)

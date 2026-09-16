@@ -58,7 +58,7 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 - Dépendances : `feature:*`, `core:database`, `core:system` → `:shared:core` ; `core:system` → `core:database` (décision du plan : le coordinateur vit dans `core:system`) ; `feature:*` → `core:*` ; `:app` → tout. Aucune dépendance inverse.
 - Manifeste : exactement les permissions de SPEC_ANDROID §14. `USE_EXACT_ALARM` déclaré, `SCHEDULE_EXACT_ALARM` interdit, `QUERY_ALL_PACKAGES` interdit, aucune permission `INTERNET`.
 - Aucune action d'arrêt (bouton, action de notification, intent, binding) dans le parcours de sonnerie (SPEC_ANDROID §3, §10.2, §10.4).
-- Une seule API de réveil : `AlarmManager.setAlarmClock()` avec `PendingIntent` explicites et `FLAG_IMMUTABLE` (SPEC_ANDROID §9.1).
+- Une seule API de réveil : `AlarmManager.setAlarmClock()` avec `PendingIntent` explicites et `FLAG_IMMUTABLE` (SPEC_ANDROID §9.1). Deux dérogations, toutes deux `setExactAndAllowWhileIdle()` sur un `PendingIntent` distinct et salé : l'alarme de secours de `RINGING` (étape 20) et l'alarme de début du blocage différé (étape 23, §12.4). Rien d'autre.
 - Journal technique : 200 événements maximum, types de SPEC_ANDROID §17 uniquement, jamais de token NFC, de hash complet, de texte d'accessibilité ni de contenu d'une autre application (§16, §17).
 - Textes UI : tutoiement, textes imposés par SPEC_ANDROID §10.3, §10.4, §10.5, §12.2, §12.3 et §13 repris mot pour mot.
 - Aucun mock, fake ou raccourci hors des tests et de la variante `debug` (CLAUDE.md). La route POC vit dans `androidApp/app/src/debug` et est supprimée à l'étape 21.
@@ -138,6 +138,8 @@ Signalés ici pour que l'exécutant ne les découvre pas en cours de route.
 9. **`kotlinx-datetime` 0.8.** Les types `Instant` et `Clock` sont dans `kotlin.time` ; les tests reçoivent `nowEpochMillis` explicitement (SPEC_CORE_KMP §8.2).
 10. **Tout dépôt en stockage chiffré par les identifiants porte une garde de déverrouillage (étape 19).** La règle de SPEC_ANDROID §7.3 ne vaut pas que pour Room. Mesuré sur appareil : une instance de `DataStore` créée avant le premier déverrouillage continue de servir un état vide **après** celui-ci, pour toute la durée de vie du processus — la sélection d'applications de l'utilisateur devenait invisible. La garde doit empêcher l'instance de **naître** (`Provider<Context>` jamais résolu), pas seulement ignorer son résultat. Tout nouveau dépôt de ce type ajouté aux étapes suivantes doit suivre ce patron : `RoomSessionStore`, `DataStoreAppSelectionStore`, `DataStoreSetupPreferences`.
 11. **Un contrôle de diagnostic ne peut pas être évalué à l'aveugle avant déverrouillage (étape 19).** Le contrôle `ACCESSIBILITY_SERVICE` tombait en échec parce qu'Android remet `accessibility_enabled` à 0 tant qu'aucun service n'est lié — il refuse de lier un service non `directBootAware`. Le résultat : un incident `CRITICAL` mensonger, et surtout la garde de permission du réconciliateur interrompait la passe **avant la reprogrammation de l'alarme**. Avant d'ajouter ou de modifier un contrôle de §13, se demander ce qu'il peut honnêtement dire quand l'appareil est verrouillé : `NOT_APPLICABLE` est une réponse valide.
+12. **`ARMED` ne signifie plus « applications bloquées » (Lot 6, contrat KMP 1.3).** Depuis le blocage différé, une session `ARMED` peut attendre son instant de début sans qu'aucune application soit bloquée ; c'est `blockingAppliedAtEpochMillis` (ou l'aide `isBlockingPending`) qui le dit, jamais l'état seul, et le compilateur ne signale aucun des lecteurs qui supposaient le contraire. Ceux qu'il faut auditer à la main à l'étape 23 : `RoomBlockedPackagesSource` (les deux `when`, Room et Direct Boot), `ActiveSessionTexts.stateLabel` et le titre de la liste d'applications de l'écran 7 (étape 24), et les trois phrases de spec déjà corrigées (SPEC_CORE_KMP §4, SPEC_ANDROID §3 et §12.2). Tout le reste de ce que `ARMED` déclenche — alarme programmée, six contrôles de §13.1, scan avant l'heure vers `CANCELLED`, règles `TRIGGER_ELAPSED` — reste identique, et c'est voulu.
+13. **Le repli du moteur n'est pas une permission de manquer l'alarme de début.** `ALARM_FIRED` et `TRIGGER_ELAPSED` appliquent eux-mêmes un blocage encore en attente (SPEC_CORE_KMP §5.1) : c'est un filet pour qu'aucune sonnerie ne parte sans blocage, pas un chemin normal. Le chemin normal est `BlockingStartReceiver` à l'heure, puis `SessionReconciler` au premier réveil du processus. Un test qui n'observerait le blocage qu'au réveil prouverait le filet, pas la fonctionnalité.
 
 ## Interfaces transverses
 
@@ -298,6 +300,96 @@ interface SessionPersistenceGateway {
 ```
 
 `SessionCoordinator` sérialise `dispatch()` et `reconcile()` sous un unique `Mutex`. Il persiste (snapshot, reçu, effets) avant d'exécuter le moindre effet, puis renvoie `ACTIVATION_SUCCEEDED`/`ACTIVATION_FAILED` ou `RELEASE_SUCCEEDED`/`RELEASE_FAILED` au moteur selon le résultat des effets requis (SPEC_CORE_KMP §6). Avant `UserManager.isUserUnlocked`, il travaille exclusivement sur `DirectBootStore` ; après, Room fait foi et Direct Boot reçoit une copie à chaque décision.
+
+### Ajouts du Lot 6 (étapes 22 à 25)
+
+Définis ici une fois, créés à l'étape indiquée, consommés ensuite sans renommage.
+
+```kotlin
+// :shared:core — com.niumi.core.domain (étape 22, contrat 1.3 §7.5)
+data class BlockingSchedule(val localDateIso: String?, val localTimeIso: String?, val startsAtEpochMillis: Long?) {
+    val isImmediate: Boolean get() = startsAtEpochMillis == null
+    companion object { val IMMEDIATE = BlockingSchedule(null, null, null) }
+}
+// SessionSnapshot : + blockingSchedule: BlockingSchedule, + blockingAppliedAtEpochMillis: Long? ; SCHEMA_VERSION = 2
+// ActivationRequest : + blockingSchedule: BlockingSchedule
+// SessionEventKind : + BLOCKING_START_ELAPSED ; SessionEffectKind : + SCHEDULE_BLOCKING_START, + CANCEL_BLOCKING_START
+// ViolationCode : + INVALID_BLOCKING_SCHEDULE, BLOCKING_START_NOT_REACHED, BLOCKING_ALREADY_APPLIED
+// IncidentCodes : + MISSED_BLOCKING_START_WINDOW (WARNING)
+// Règle unique « blocage en attente », domaine et interop (une définition chacun, mêmes termes) :
+//   isBlockingPending = !blockingSchedule.isImmediate && blockingAppliedAtEpochMillis == null
+//   — un snapshot de version 1 (schedule immédiat, appliedAt nul) n'est donc jamais « en attente ».
+
+// :shared:core — com.niumi.core.interop (étape 22, contrat 1.3 §14)
+// Les nouveaux champs DTO portent une valeur par défaut (IMMEDIATE / null) : compatibilité JSON des
+// fixtures et des projections v1, et compilation Android inchangée à l'étape 22. Les mappers Room et
+// Direct Boot les renseignent explicitement à l'étape 23 (test).
+data class BlockingScheduleDto(val localDateIso: String?, val localTimeIso: String?, val startsAtEpochMillis: Long?)
+data class BlockingScheduleInputDto(val localTimeIso: String?, val zoneId: String, val nowEpochMillis: Long, val triggerAtEpochMillis: Long)
+enum class BlockingScheduleStatusDto { VALID, INVALID_TIME, UNKNOWN_ZONE, NOT_BEFORE_TRIGGER }
+data class BlockingScheduleResultDto(val status: BlockingScheduleStatusDto, val schedule: BlockingScheduleDto?)
+// NiumiCoreFacade : + fun computeBlockingSchedule(input: BlockingScheduleInputDto): BlockingScheduleResultDto
+// ActivationPolicyInputDto : + blockingStartsAtEpochMillis: Long? = null ; ActivationReasonCode : + BLOCKING_START_NOT_BEFORE_TRIGGER
+// SessionSnapshotDto.isBlockingPending : Boolean (extension publique, interop/BlockingStatus.kt)
+
+// :core:system — com.niumi.system.alarm (étape 23, SPEC_ANDROID §9.1 seconde dérogation, §12.4)
+interface BlockingStartScheduler {
+    fun schedule(sessionId: String, revision: Long, startsAtEpochMillis: Long): OperationResult   // setExactAndAllowWhileIdle, RTC_WAKEUP
+    fun cancel(sessionId: String): OperationResult                                                // AlreadySatisfied sans PendingIntent existant
+    fun isScheduled(sessionId: String): Boolean                                                   // FLAG_NO_CREATE
+}
+// BlockingStartPendingIntentSpecs : BROADCAST → NiumiComponent.BLOCKING_START_RECEIVER,
+//   requestCode = sessionId.hashCode() xor 0x424C4B53 ("BLKS"), extras sessionId (Text) et revision (Number),
+//   FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT — jamais le code nu du réveil ni le sel du watchdog.
+
+// :core:system — com.niumi.system.session (étape 23)
+sealed interface BlockingStartOutcome {                          // miroir exact d'AlarmTriggerOutcome
+    data class Dispatched(val result: DispatchResult) : BlockingStartOutcome
+    data object InvalidCommand : BlockingStartOutcome
+    data object NoSession : BlockingStartOutcome
+    data object UnknownSession : BlockingStartOutcome
+    data object RevisionAhead : BlockingStartOutcome
+    data object UnreadableSnapshot : BlockingStartOutcome
+}
+class BlockingStartHandler(gateway, coordinator, eventFactory, technicalEventLog) {
+    suspend fun handle(extras: ServiceCommandExtras): BlockingStartOutcome   // gardes d'AlarmTriggerHandler, sans surveillance §13.1, puis dispatch
+}
+// SessionEventFactory : + fun blockingStartElapsed(snapshot: SessionSnapshotDto, incident: SessionIncidentDto?): SessionEventDto
+// ReconcilerSources : + blockingStartScheduler: BlockingStartScheduler
+// ReconcileAction : + data class BlockingStartRescheduled(val startsAtEpochMillis: Long)
+// PhaseCompletion.requiredKindsFor(ACTIVATION_REQUESTED) = {SCHEDULE_ALARM, APPLY_BLOCKING, SCHEDULE_BLOCKING_START} ∩ kinds produits
+//   (EffectOutcomes.succeeded renvoie déjà true pour un kind absent : seule la table change)
+// ReadinessInput : + candidateBlockingStartsAtEpochMillis: Long? = null ; ReadinessReport idem ; ReadinessDtoMapper le transmet
+// TechnicalEventType : + BLOCKING_SCHEDULED, BLOCKING_START_RESCHEDULED, BLOCKING_STARTED, MISSED_BLOCKING_START_WINDOW
+
+// :core:system — com.niumi.system.blocking (étape 23, SPEC_ANDROID §12.4 « application déjà ouverte »)
+fun interface BlockingActivationListener { fun onBlockingActivated(state: BlockedPackagesState.Active) }
+// BlockingProjectionRefresher.observeDecisions(listener: BlockingActivationListener): Nothing
+//   — appelle listener une fois quand refresh() fait passer la projection d'Inactive à Active pour une session.
+// BlockingDecision.decide(...) est réutilisée telle quelle par le service sur son dernier package vu.
+
+// :core:database (étape 23)
+// AlarmSessionEntity : + blockingLocalDate: String?, blockingLocalTime: String?, blockingStartsAtEpochMillis: Long?, blockingAppliedAtEpochMillis: Long?
+// NiumiDatabase version = 3, MIGRATION_2_3 additive (SPEC_ANDROID §7.2 v3), schemas/3.json
+// DirectBootSnapshot.Active : + les quatre champs, valeur par défaut null ; DIRECT_BOOT_PROJECTION_SCHEMA_VERSION = 2 ;
+//   lecture d'un fichier v1 : schedule IMMEDIATE, blockingAppliedAtEpochMillis = createdAtEpochMillis (SPEC_ANDROID §7.3)
+
+// :feature:session (étapes 23 et 24)
+// ArmSessionUseCase : preview(localTimeIso: String, blockingLocalTimeIso: String?) / arm(localTimeIso, blockingLocalTimeIso)
+// ActivationPreview : + blockingResult: BlockingScheduleResultDto? ; canActivate exige blockingResult?.status == VALID
+// ActivationFailure : + data class InvalidBlockingSchedule(val status: BlockingScheduleStatusDto)
+// SetupPreferences (:core:system) : + lastBlockingStartTimeIso(): String? / setLastBlockingStartTimeIso(value: String?)  (null = « Maintenant »)
+// WakeTimeViewModel : + onBlockingModeChanged(immediate: Boolean), onBlockingTimeChanged(hour: Int, minute: Int),
+//   continueToSummary(onContinue: (localTimeIso: String, blockingLocalTimeIso: String?) -> Unit)
+// BlockingScheduleFormatter.format(schedule: BlockingScheduleDto, zoneIdAtActivation: String, nowEpochMillis: Long,
+//   displayZoneId: String = zoneIdAtActivation, use24Hour: Boolean): WakeScheduleDisplay?   // null si immédiat ; réutilise WakeScheduleFormatter
+// ActiveSessionUiState : + isBlockingPending: Boolean, blockingDisplayAtActivation: WakeScheduleDisplay?, blockingDisplayInCurrentZone: WakeScheduleDisplay?
+// ActiveSessionTexts : stateLabel(state, blockingTimeLabel: String?) ; blockedAppsTitle(isBlockingPending: Boolean)
+
+// :app (étapes 23 et 24)
+// NiumiComponent : + BLOCKING_START_RECEIVER, résolu par AppComponentResolver
+// NiumiRoute.Summary(localTimeIso: String, blockingLocalTimeIso: String? = null) — transporte le choix, jamais l'instant calculé
+```
 
 ---
 
@@ -1324,6 +1416,165 @@ maintenant que le POC est supprimé et que le parcours utilisateur réel existe.
 
 **Statut au 2026-09-15 : porte NON franchie.** Le code de l'étape est livré et vérifié ; la porte ne l'est pas, et elle ne pouvait pas l'être dans cette session. `QA_MATRIX.md` n'est verte que sur un appareil, une surcouche et une version d'Android — ni Pixel, ni Samsung, ni Android 17. Aucune campagne n'a porté sur un artefact de publication. La vidéo n'est pas tournée, l'application n'est pas soumise, Google n'a pas statué. Voir `ETAPE-21.md` et `LOT-0.md`, section « Statut de la porte 0b ». **Le suivi de tout ce qui reste est tenu dans `docs/android/RESTE_A_FAIRE.md`.**
 
+## Phase I — Lot 6 : blocage différé
+
+**Lot ajouté le 2026-09-15**, après la livraison de l'étape 21. Le MVP peut être publié sans lui ;
+il n'entre pas dans la porte finale de l'étape 21 et ne modifie ni l'usage déclaré à Google Play du
+service d'accessibilité (12.3), ni la vidéo de revue. Les specs ont été mises à jour **avant** ce
+lot, dans le même changement que ces étapes : contrat KMP 1.3 (SPEC_CORE_KMP §2 décision 15, §4,
+§5.1, §5.2, §6, §7.1, §7.5, §8.3, §10, §11.3, §13, §14, §17, §19), SPEC_ANDROID (§1, §2, §3, §4.2,
+§7.1, §7.2 v3, §7.3 v2, §8, §9.1, §9.2, §9.3, §10.1, §11.3, §12.2, §12.4, §13, §14, §15, §17, §18,
+§19, §20, §21, §22 Lot 6) et SPEC_IOS (§1.2, §2, §8, §9, §10, §11, §13, §16, §17, §22, §23, §24).
+
+**Quatre décisions validées avec l'utilisateur le 2026-09-15**, qui fixent le périmètre :
+
+1. **Avant le début du blocage, annuler ou modifier exige le scan**, comme après : l'engagement est
+   pris à l'activation (décision commune 15). Aucune transition sans preuve NFC n'est ajoutée.
+2. **Le choix vit sur l'écran 5**, avec l'heure de réveil : une section « Blocage des applications »,
+   « Maintenant » (défaut) ou « À partir de » une heure. Pas d'écran supplémentaire.
+3. **Pas de bouton « Bloquer dès maintenant »** sur l'écran 7 dans ce lot. L'événement
+   `BLOCKING_START_ELAPSED` existant, l'ajouter plus tard ne touchera pas au contrat.
+4. **Modélisation par champ, `ARMED` conservé** : `blockingSchedule` et `blockingAppliedAtEpochMillis`
+   dans le snapshot, neuf états inchangés. Conséquence : point de vigilance 12.
+
+**Ce que chaque étape produit, en une ligne.** 22 : le contrat KMP sait dire « blocage en attente »,
+l'appliquer à l'heure et se rattraper au réveil. 23 : Android programme l'alarme de début, l'exécute,
+la reprogramme, et le service d'accessibilité ne bloque qu'à partir de l'heure. 24 : l'utilisateur
+choisit, relit et suit ce qu'il a choisi. 25 : tout cela est prouvé sur appareil, écrit dans l'aide,
+la matrice et le rapport.
+
+### Étape 22 : contrat KMP 1.3 — `BlockingSchedule`, `BLOCKING_START_ELAPSED`, effets, politique, calcul et façade
+
+**Specs à lire :** SPEC_CORE_KMP §2 (décision 15), §4, §5.1 (dont « Repli du moteur »), §5.2, §6, §7.1, §7.5, §8.3, §10, §13 (règles partagées), §14, §17 ; « Ajouts du Lot 6 » des interfaces transverses ; points de vigilance 12 et 13.
+
+**Fichiers :**
+- Créer `shared/core/src/commonMain/kotlin/com/niumi/core/domain/BlockingSchedule.kt` (data class, `isImmediate`, `IMMEDIATE`, extension `SessionSnapshot.isBlockingPending`), `domain/BlockingReducer.kt` (`onStartElapsed` : exige `ARMED`, `isBlockingPending`, `occurredAt >= startsAt` ; sinon `INVALID_STATE_TRANSITION`, `BLOCKING_ALREADY_APPLIED`, `BLOCKING_START_NOT_REACHED` ; snapshot `revision + 1`, `blockingAppliedAtEpochMillis = occurredAt`, `health` via `healthAfter` ; effets `PUBLISH_PLATFORM_SNAPSHOT`, `APPLY_BLOCKING`, puis `RECORD_INCIDENT` si incident), `schedule/BlockingScheduleCalculator.kt` + `BlockingScheduleInput.kt` + `BlockingScheduleResult.kt` (`localTimeIso` nul → `VALID` avec `IMMEDIATE` ; sinon `WakeScheduleCalculator.compute` sur la même zone et le même `now`, puis `startsAt < triggerAt` sinon `NOT_BEFORE_TRIGGER` ; `INVALID_TIME` et `UNKNOWN_ZONE` repris tels quels), `interop/BlockingStatus.kt` (`SessionSnapshotDto.isBlockingPending`).
+- Modifier `domain/SessionSnapshot.kt` (deux champs, `SCHEMA_VERSION = 2`), `domain/ActivationRequest.kt`, `domain/SessionEventKind.kt`, `domain/SessionEffectKind.kt`, `domain/ViolationCode.kt`, `domain/IncidentCodes.kt` (`MISSED_BLOCKING_START_WINDOW` → `WARNING` dans `defaultSeverityOf`), `domain/SessionEventValidation.kt` (`blockingScheduleViolations` : champs tous nuls ou tous renseignés, `startsAt < wakeSchedule.triggerAtEpochMillis`, sinon `INVALID_BLOCKING_SCHEDULE` ; `incident` facultatif aussi pour `BLOCKING_START_ELAPSED`), `domain/ReducerSupport.kt` (`applyPendingBlocking(snapshot, event, builder): SessionSnapshot` — si `isBlockingPending`, renseigne `blockingAppliedAtEpochMillis = event.occurredAtEpochMillis` et ajoute `APPLY_BLOCKING` au builder ; sinon renvoie le snapshot inchangé), `domain/ActivationReducer.kt` (`onRequested` : `blockingSchedule` copié dans le snapshot ; `APPLY_BLOCKING` si immédiat ou `startsAt <= occurredAt`, avec `blockingAppliedAtEpochMillis = occurredAt` ; sinon `SCHEDULE_BLOCKING_START` et `blockingAppliedAtEpochMillis = null` ; `onFailed` : `CANCEL_BLOCKING_START` après `CANCEL_ALARM`), `domain/TriggerReducer.kt` (les trois fonctions appellent `applyPendingBlocking` juste après `PUBLISH_PLATFORM_SNAPSHOT`, avant `START_RINGING` ou `PRESENT_SCAN_REQUEST`), `domain/NfcReducer.kt` (`CANCEL_BLOCKING_START` après `CANCEL_ALARM`), `domain/SessionEngine.kt` (branche `BLOCKING_START_ELAPSED`), `diagnostics/ActivationPolicyInput.kt`, `diagnostics/ActivationPolicy.kt` (`blockingStartsAtEpochMillis != null && >= triggerAtEpochMillis` → `BLOCKING_START_NOT_BEFORE_TRIGGER`), `diagnostics/ActivationPolicyResult.kt`, `interop/SessionDtos.kt`, `interop/PolicyDtos.kt`, `interop/DtoMappers.kt`, `interop/PolicyDtoMappers.kt`, `interop/SessionSnapshotEventMappers.kt`, `interop/NiumiCoreFacade.kt` (`computeBlockingSchedule`), `domain/NiumiCoreVersion.kt` si la version du contrat y est portée (1.3).
+- Fixtures : `commonTest/resources/fixtures/` gagne un snapshot différé en attente (`schemaVersion` 2, `blockingAppliedAtEpochMillis` nul) et un snapshot différé appliqué ; le snapshot v1 existant est conservé tel quel et sert à prouver la lecture par défaut.
+- Tests : créer `SessionEngineBlockingStartTest` (avant l'instant → `BLOCKING_START_NOT_REACHED` ; à l'instant et après → `ARMED`, `blockingAppliedAtEpochMillis = occurredAt`, effets `[PUBLISH, APPLY_BLOCKING]` ; avec incident `MISSED_BLOCKING_START_WINDOW` → `RECORD_INCIDENT` en plus et `health` inchangée ; second envoi → `BLOCKING_ALREADY_APPLIED` ; session immédiate → `BLOCKING_ALREADY_APPLIED` ; depuis `PREPARING`, `RINGING`, états finaux → `INVALID_STATE_TRANSITION` ; `expectedRevision` périmée → `STALE_REVISION`), `BlockingScheduleCalculatorTest` (nul → `IMMEDIATE` ; 22:30 choisi à 20:00 pour un réveil 07:00 → aujourd'hui 22:30 ; 08:00 et 19:00 → `NOT_BEFORE_TRIGGER` ; égal au réveil → `NOT_BEFORE_TRIGGER` ; heure inexistante au printemps et répétée à l'automne → mêmes résultats que `WakeScheduleCalculatorTest` ; zone inconnue, heure invalide), étendre `SessionEngineActivationTest` (immédiat → `APPLY_BLOCKING` et `blockingAppliedAtEpochMillis = occurredAt` ; différé → `SCHEDULE_BLOCKING_START` et champ nul ; différé dont l'instant est déjà passé → `APPLY_BLOCKING` ; `ACTIVATION_FAILED` → `CANCEL_BLOCKING_START` présent), `SessionEngineValidationTest` (schedule partiel, `startsAt >= triggerAt` → `INVALID_BLOCKING_SCHEDULE` ; `incident` accepté sur `BLOCKING_START_ELAPSED`), `SessionEngineTriggerTest` (repli : `ALARM_FIRED`, `ALARM_SOUND_STOPPED`, `TRIGGER_ELAPSED` depuis `ARMED` en attente → `APPLY_BLOCKING` en deuxième position, champ renseigné ; déjà appliqué → aucun `APPLY_BLOCKING`, snapshot v1 → aucun `APPLY_BLOCKING`), `SessionEngineNfcTest` (scan depuis `ARMED` en attente → `CANCELLED`, effets avec `CANCEL_BLOCKING_START` et `REMOVE_BLOCKING`), `SessionEngineEffectsTest` (ordinaux et `effectId` des nouvelles décisions), `SessionEngineForbiddenTransitionsTest` (table exhaustive étendue au nouveau kind), `ActivationPolicyTest` (nul autorisé ; `startsAt < triggerAt` autorisé ; égal ou supérieur → `BLOCKING_START_NOT_BEFORE_TRIGGER` sans `checkId`, cumulable avec `TRIGGER_NOT_IN_FUTURE`), tests de mapping `interop` existants (aller-retour des nouveaux champs, `isBlockingPending` sur les trois fixtures, désérialisation du snapshot v1 avec les valeurs par défaut).
+
+**Produit :** un moteur qui refuse de sonner sans blocage demandé, qui sait attendre l'heure de début, et une façade qui calcule cet instant et refuse ce qui n'est pas antérieur au réveil.
+
+- [x] **Écrire `SessionEngineBlockingStartTest` et `BlockingScheduleCalculatorTest`**, vérifier qu'ils échouent, implémenter `BlockingSchedule`, `BlockingReducer`, `BlockingScheduleCalculator` et les enums. *(Le calculateur délègue à `WakeScheduleCalculator` plutôt que de recopier les règles §8.1 : DST et report au lendemain identiques par construction.)*
+- [x] **Étendre `SessionEngineActivationTest`, `SessionEngineValidationTest`, `SessionEngineTriggerTest`, `SessionEngineNfcTest`**, implémenter la validation, l'activation à deux branches, le repli et l'annulation. `applyPendingBlocking` est l'unique endroit qui écrit `blockingAppliedAtEpochMillis` hors de `ActivationReducer` et `BlockingReducer` — grep de clôture *(fait, conforme)*. **Écart validé le 2026-09-16 :** `CANCEL_BLOCKING_START` n'est produit que pour un blocage différé — inconditionnel, il cassait 15 tests Android (`EffectDispatcher` sans exécuteur lié avant l'étape 23) et décalait les ordinaux d'effets des sessions immédiates. SPEC_CORE_KMP §6 amendée en conséquence, voir `ETAPE-22.md`.
+- [x] **Étendre `ActivationPolicyTest` et les tests de mapping**, implémenter les DTO, la politique et `computeBlockingSchedule`. Les valeurs par défaut des DTO sont posées ici et documentées dans le KDoc comme transitoires pour les sites de construction Android (renseignées explicitement à l'étape 23). *(`NiumiCoreVersion.SCHEMA_VERSION` passe à 2 : rupture réelle pour Swift, décision validée le 2026-09-16. Effet dérivé : l'empreinte canonique des `ACTIVATION_REQUESTED` change, valeur témoin d'`EventFingerprintTest` reprise avec sa justification.)*
+- [x] **Vérifier :** *(les quatre commandes vertes le 2026-09-16 ; 205 tests JVM. Les défauts des DTO ont suffi, aucun mapper Android modifié — mais la non-régression a demandé la condition sur `CANCEL_BLOCKING_START` ci-dessus.)*
+
+```bash
+./gradlew :shared:core:jvmTest
+./gradlew :shared:core:linkDebugFrameworkIosSimulatorArm64
+./gradlew testDebugUnitTest          # non-régression Android : les défauts des DTO doivent suffire, aucun mapper modifié à cette étape
+./gradlew ktlintCheck detekt
+```
+
+- [x] **Rédiger `docs/android/implementation-reports/ETAPE-22.md`.**
+
+**Tests manuels :** aucun, module commun sans matériel. Le framework iOS doit se construire : les nouveaux DTO sont visibles depuis Swift (`BlockingScheduleDto`, `computeBlockingSchedule`), ce que la tâche `link` prouve sans Xcode.
+
+**Terminé quand :** chaque ligne ajoutée à SPEC_CORE_KMP §17 par le contrat 1.3 a son test ; `SessionEngineForbiddenTransitionsTest` énumère `BLOCKING_START_ELAPSED` depuis chacun des neuf états ; aucun test Android existant n'a été modifié pour passer ; `:shared:core:jvmTest` et le framework iOS sont verts.
+
+### Étape 23 : Android — Room v3, Direct Boot v2, alarme de début, `BlockingStartReceiver`, réconciliation et projection de blocage
+
+**Specs à lire :** SPEC_ANDROID §7.1 (paragraphe `BLOCKING_START_ELAPSED`), §7.2 (v3), §7.3 (projection v2), §8, §9.1 (seconde dérogation), §9.2, §9.3, §10.1 (« Blocage différé »), §11.3 (point 7), §12.2 (table de projection), §12.4, §13 (point 4), §14, §17, §18, §19.1, §19.2 ; SPEC_CORE_KMP §6 (effets requis), §8.3, §11.3 ; « Ajouts du Lot 6 » ; points de vigilance 4, 10, 12, 13.
+
+**Fichiers :**
+- `:core:database` — modifier `entity/AlarmSessionEntity.kt`, `NiumiDatabase.kt` (`version = 3`), `migration/Migrations.kt` (`MIGRATION_2_3` : `ALTER TABLE` des quatre colonnes nullables, `UPDATE alarm_session SET blockingAppliedAtEpochMillis = createdAtEpochMillis, schemaVersion = 2`), exporter `schemas/com.niumi.database.NiumiDatabase/3.json`, `mapping/SessionSnapshotMapper.kt` (aller-retour des quatre champs, sans valeur par défaut), `directboot/DirectBootSnapshot.kt` (quatre champs `= null`, `DIRECT_BOOT_PROJECTION_SCHEMA_VERSION = 2`), `directboot/DirectBootMapper.kt` (lecture v1 : `IMMEDIATE` et `blockingAppliedAtEpochMillis = createdAtEpochMillis` ; écriture toujours v2), `blocking/RoomBlockedPackagesSource.kt` (branche `ARMED` explicite dans `roomStateOf` **et** `directBootStateOf` : `Inactive` si `snapshot.isBlockingPending`, `Active` sinon ; `PREPARING` et `RELEASING` inchangés).
+- `:core:system` — créer `alarm/BlockingStartScheduler.kt`, `alarm/AndroidBlockingStartScheduler.kt` (calqué sur `AndroidRingingWatchdog` : `setExactAndAllowWhileIdle(RTC_WAKEUP, startsAt, pi)`, `cancel` avec `FLAG_NO_CREATE` puis double annulation, `SecurityException` → `Failure("ANDROID_EXACT_ALARM_DENIED")`), `alarm/BlockingStartPendingIntentSpecs.kt`, `blocking/BlockingStartReceiver.kt` (coquille `goAsync()` 8 s → `BlockingStartHandler`, déclaré dans le manifeste de `:core:system` : `exported="false"`, `directBootAware="true"`), `session/BlockingStartHandler.kt` + `BlockingStartOutcome`, `session/executors/ScheduleBlockingStartExecutor.kt` (`scheduler.schedule(sessionId, revision, snapshot.blockingSchedule.startsAtEpochMillis!!)` — `!!` interdit par detekt : brancher sur le nullable, `Failure("BLOCKING_START_WITHOUT_SCHEDULE")` si nul, cas impossible par construction du moteur ; journalise `BLOCKING_SCHEDULED`), `session/executors/CancelBlockingStartExecutor.kt` (`scheduler.cancel`), `blocking/BlockingActivationListener.kt`. Modifier `session/di/EffectExecutorModule.kt` (deux liaisons), `di/SystemModule.kt` ou le module d'alarme existant (liaison `BlockingStartScheduler`), `session/PhaseCompletion.kt` (intersection avec les kinds produits — `requiredKindsFor(eventKind, producedKinds: Set<SessionEffectKindDto>)` ou filtrage dans `isSatisfied`/`firstFailureCode` ; `DefaultSessionCoordinator.completePhase` passe les kinds de `pendingEffects`), `session/SessionEventFactory.kt`, `session/ReconcilerSources.kt`, `session/ReconcileResult.kt`, `session/SessionReconciler.kt` (`reconcileBlockingStart(refreshed, reason, dispatch, actions)` appelé dans `reconcileArmed` **après** la garde de permission et la relecture du snapshot, **avant** `reconcileTriggerDelay`, sur le snapshot rendu par un éventuel `BLOCKING_START_ELAPSED` ; `NOT_REACHED` → reprogrammer si `clockMoved || !isScheduled` ; `FIRE_NOW` → `blockingStartElapsed(snapshot, null)` ; `MISSED` → journaliser `MISSED_BLOCKING_START_WINDOW` puis `blockingStartElapsed(snapshot, buildIncident(MISSED_BLOCKING_START_WINDOW, WARNING))` ; `resumeRelease` inchangé, `CANCEL_BLOCKING_START` n'étant pas requis), `readiness/DeviceReadinessChecker.kt` (`ReadinessInput`, `ReadinessReport`), `readiness/ReadinessDtoMapper.kt` (`blockingStartsAtEpochMillis`), `intent/NiumiComponent.kt`, `blocking/BlockingProjectionRefresher.kt` (détection de la transition `Inactive → Active`, listener), `database/logging/TechnicalEventType.kt`, le manifeste de `:core:system`.
+- `:feature:session` — modifier `blocking/NiumiBlockingAccessibilityService.kt` (`lastForegroundPackage` mis à jour à chaque événement ; implémente `BlockingActivationListener` : `BlockingDecision.decide(state, lastForegroundPackage ?: return, packageName)` puis le même chemin `shouldBlockNow` → `GLOBAL_ACTION_HOME` → overlay → `BLOCK_APPLIED`), `activation/ArmSessionUseCase.kt` (`diagnose(localTimeIso, blockingLocalTimeIso)` : `computeWakeSchedule` puis `computeBlockingSchedule(BlockingScheduleInputDto(blockingLocalTimeIso, zoneId, now, schedule.triggerAtEpochMillis))` ; `ReadinessInput(candidateTriggerAtEpochMillis, candidateBlockingStartsAtEpochMillis)` ; `ActivationRequestDto(wakeSchedule, appSelection, blockingSchedule)` ; refus `InvalidBlockingSchedule` avant `Blocked`), `activation/ActivationFailure.kt`. `SummaryViewModel` appelle `preview(localTimeIso, null)` / `arm(localTimeIso, null)` à cette étape — l'interface arrive à l'étape 24, le comportement observable reste le blocage immédiat.
+- `:app` — modifier `system/AppComponentResolver.kt` (`BLOCKING_START_RECEIVER` → `com.niumi.system.blocking.BlockingStartReceiver`).
+- Tests JVM : créer `BlockingStartPendingIntentSpecsTest` (code distinct du réveil et du watchdog pour un même `sessionId`, extras `Text`/`Number`), `BlockingStartHandlerTest` (miroir des 13 cas d'`AlarmTriggerHandlerTest` : extras invalides, session absente, inconnue, illisible, révision en avance, révision inférieure ou égale → dispatch), `ScheduleBlockingStartExecutorTest` et `CancelBlockingStartExecutorTest` (succès, `AlreadySatisfied`, échec, journal), `SessionReconcilerBlockingStartTest` (en attente et non atteint, alarme présente → rien ; absente → reprogrammée au même instant, `BLOCKING_START_RESCHEDULED` ; `TIME_CHANGED` → reprogrammée sans condition ; atteint depuis 1 min → `BLOCKING_START_ELAPSED` sans incident puis passage à `reconcileTriggerDelay` sur le snapshot rendu ; atteint depuis 20 min → incident `MISSED_BLOCKING_START_WINDOW` `WARNING`, `health` inchangée ; permission d'accessibilité perdue → rien, comme pour le réveil ; blocage déjà appliqué → rien ; `BEFORE_SCAN` sur une session en attente dont le début est atteint → `BLOCKING_START_ELAPSED` puis, si l'heure du réveil est aussi atteinte, `TRIGGER_ELAPSED`), `BlockingProjectionRefresherTest` (listener appelé une seule fois à la transition, pas sur `Active → Active`, pas sur `Unreadable`), `BlockingDecisionTest` (inchangé : la relecture réutilise `decide`), `ReadinessDtoMapperTest` (transmission du candidat, `null` par défaut), `SessionEventFactoryTriggerTest` (`blockingStartElapsed` avec et sans incident), `DirectBootMapperTest` (lecture v1 → `IMMEDIATE` + `createdAt`, écriture v2), `DirectBootBlockedPackagesSourceTest` (`ARMED` en attente → `Inactive`, appliqué → `Active`, v1 → `Active`), `PhaseCompletionTest` (activation différée : `SCHEDULE_ALARM` + `SCHEDULE_BLOCKING_START` requis, `APPLY_BLOCKING` absent non requis ; immédiate inchangée). Étendre `SessionCoordinatorActivationTest` (différée : `ACTIVATION_SUCCEEDED` seulement si les deux effets réussissent ; échec de `SCHEDULE_BLOCKING_START` → `ACTIVATION_FAILED` avec son code, `CANCEL_ALARM` et `CANCEL_BLOCKING_START` exécutés), `SessionCoordinatorReleaseTest` (`CANCEL_BLOCKING_START` exécuté, best-effort : son échec n'empêche pas `RELEASE_SUCCEEDED`), `SessionReconcilerBootTest` (`LOCKED_BOOT`, différée, début dépassé → `BLOCKING_START_ELAPSED` depuis Direct Boot avant la politique de retard, `APPLY_BLOCKING` exécuté sur la projection), `ArmSessionUseCaseTest` (`blockingLocalTimeIso` nul → `IMMEDIATE` ; « 22:30 » → schedule calculé transmis, jamais la chaîne ; `NOT_BEFORE_TRIGGER` → `InvalidBlockingSchedule` sans dispatch ; le candidat atteint `ReadinessInput`), `SessionSnapshotMapperTest` (aller-retour des quatre champs, aucune valeur par défaut employée — test qui construit le DTO sans les champs et vérifie que l'entité les reçoit tout de même explicitement).
+- Tests instrumentés : étendre le test de migration de `:core:database` (`NiumiDatabaseSchemaTest` ou le test `MigrationTestHelper` de l'étape 16) d'un cas 2→3 sur une base v2 portant une session `ARMED` : colonnes ajoutées, `blockingAppliedAtEpochMillis = createdAtEpochMillis`, `schemaVersion = 2`, journal conservé ; étendre `RoomBlockedPackagesSourceTest` (`ARMED` en attente → `Inactive`, appliqué → `Active`) ; créer `EffectExecutorCoverageTest` (`:app/src/androidTest`, graphe Hilt complet comme `AlarmChainInstrumentedTest` : injecter `Map<SessionEffectKindDto, EffectExecutor>` et vérifier que ses clés couvrent `SessionEffectKindDto.entries` — `EffectDispatcher.execute` lève `NoSuchElementException` sur un kind non lié, ce qu'aucun test JVM ne voit) ; créer `BlockingStartReceiverInstrumentedTest` (`:app/src/androidTest` : session `ARMED` différée écrite directement en base comme dans `AlarmChainInstrumentedTest`, envoi de l'intent explicite avec `sessionId` et `revision` → snapshot `blockingAppliedAtEpochMillis` renseigné, projection `Active`, `BLOCKING_STARTED` au journal).
+
+**Produit :** une session différée qui n'applique rien avant l'heure, tout à l'heure, et se rattrape à la première réconciliation ; Room et Direct Boot qui savent la décrire ; un service d'accessibilité qui renvoie à l'accueil l'application déjà ouverte à l'instant de début.
+
+- [ ] **Écrire les tests de persistance** (`SessionSnapshotMapperTest`, `DirectBootMapperTest`, `DirectBootBlockedPackagesSourceTest`, migration instrumentée), implémenter Room v3, Direct Boot v2 et la branche `ARMED` de la projection. Exporter le schéma 3 et le committer avec le code.
+- [ ] **Écrire `BlockingStartPendingIntentSpecsTest`, `BlockingStartHandlerTest` et les tests des deux exécuteurs**, implémenter le programmateur, le receveur, le handler, les exécuteurs et leurs liaisons. Manifeste : le receveur, avec le même commentaire de justification `directBootAware` que le watchdog.
+- [ ] **Étendre `PhaseCompletionTest` et `SessionCoordinatorActivationTest`**, implémenter les effets requis par intersection. Vérifier que l'activation immédiate produit exactement les mêmes reçus et effets qu'avant l'étape (test de non-régression sur `effectId`).
+- [ ] **Écrire `SessionReconcilerBlockingStartTest`, étendre `SessionReconcilerBootTest`**, implémenter `reconcileBlockingStart`. Ordre prouvé : surveillance §13.1 → garde de permission → relecture → début du blocage → relecture → retard du réveil.
+- [ ] **Étendre `BlockingProjectionRefresherTest`**, brancher le listener et la relecture du dernier package dans le service (le service ne porte que le câblage, comme à l'étape 15).
+- [ ] **Étendre `ArmSessionUseCaseTest` et `ReadinessDtoMapperTest`**, implémenter le use case à deux heures et le transport du candidat.
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :core:database:testDebugUnitTest :core:system:testDebugUnitTest :feature:session:testDebugUnitTest :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+./gradlew ktlintCheck detekt :app:lintDebug
+./gradlew :core:database:connectedDebugAndroidTest :app:connectedDebugAndroidTest    # appareil requis, à lancer AVANT le protocole manuel
+```
+
+- [ ] **Valider sur appareil** (lire « Particularités de l'appareil de test » d'abord ; **remettre la permission OEM de démarrage automatique à « refusé »**).
+- [ ] **Rédiger `ETAPE-23.md`.**
+
+**Tests manuels :** activer une session différée à +3 min (heure de réveil à +10 min) en écrivant la session par `tools/` ou par un test de debug, faute d'écran (étape 24) — **ou reporter tout le protocole à l'étape 24** si aucun moyen propre n'existe, et le dire dans le rapport ; `dumpsys alarm | grep niumi` → deux alarmes distinctes (`setAlarmClock` du réveil, `setExactAndAllowWhileIdle` du début), aucune « prochaine alarme » système à l'heure du début ; ouvrir une application choisie avant l'heure → **aucun** blocage ; rester dedans à l'heure du début → retour à l'accueil et overlay sans changer de fenêtre ; `am kill` avant l'heure → blocage appliqué à l'heure ; redémarrer avant l'heure sans déverrouiller → `dumpsys alarm` montre l'alarme de début reprogrammée ; redémarrer 20 min après l'heure de début → `MISSED_BLOCKING_START_WINDOW` sur l'écran 12, réveil intact ; scanner avant l'heure de début → `CANCELLED`, plus aucune alarme Niumi.
+
+**Terminé quand :** chaque ligne de SPEC_ANDROID §12.4 a un test ; `RoomBlockedPackagesSource` ne lit `ARMED` que par `isBlockingPending` (grep) ; un `EffectExecutor` existe pour chaque kind (test instrumenté vert) ; l'activation immédiate est prouvée inchangée ; `dumpsys alarm` confirme l'absence d'affichage « prochaine alarme » pour le début du blocage (sinon retour à §9.1 avant de continuer).
+
+### Étape 24 : interface — section blocage de l'écran 5, ligne de l'écran 6, libellé et instant de début sur l'écran 7
+
+**Specs à lire :** SPEC_ANDROID §15 (« Écran 5 — début du blocage », « Écran 6 », « Écran 7 » du Lot 6, règles UI), §13 (point 4), §8 ; SPEC_CORE_KMP §8.1, §8.3 ; `docs/CHARTE_GRAPHIQUE_APP_MOBILE.md` §9 (le soir), §10 (session active), §16 (formes et composants) ; « Ajouts du Lot 6 » ; point de vigilance 12.
+
+**Fichiers :**
+- `:core:system` — modifier `setup/SetupPreferences.kt` (`lastBlockingStartTimeIso` / `setLastBlockingStartTimeIso(null)` retire la clé ; même garde de déverrouillage que les trois préférences existantes).
+- `:feature:session` — créer `ui/BlockingScheduleFormatter.kt` (convertit `BlockingScheduleDto` + `zoneIdAtActivation` en `WakeScheduleDto` et délègue à `WakeScheduleFormatter.format` ; `null` si immédiat — une seule règle de mise en forme des instants, y compris le trou d'heure d'été). Modifier `wake/WakeTimeUiState.kt` (`blockingLocalTimeIso: String?`, `blockingDisplay: WakeScheduleDisplay?`, `blockingMessage: String?`, `isBlockingImmediate` dérivé ; `canContinue = display != null && !isSessionInProgress && (isBlockingImmediate || (blockingDisplay != null && blockingMessage == null))`), `wake/WakeTimeViewModel.kt` (`init` lit `lastBlockingStartTimeIso` ; `recompute()` enchaîne `computeWakeSchedule` puis `computeBlockingSchedule` sur le `triggerAtEpochMillis` obtenu ; `onBlockingModeChanged`, `onBlockingTimeChanged` ; `continueToSummary` mémorise les deux choix), `wake/WakeTimeScreen.kt` (section « Blocage des applications » : `SegmentedButton` Material 3 « Maintenant » / « À partir de », ligne d'heure qui ouvre un `TimePickerDialog` (M3 `TimePicker` dans un `AlertDialog`, même `is24Hour` que le cadran), phrase de confirmation, message de refus sans couleur d'alerte), `wake/WakeTimeTexts.kt` (`BLOCKING_SECTION_TITLE = "Blocage des applications"`, `BLOCKING_NOW_LABEL = "Maintenant"`, `BLOCKING_AT_LABEL = "À partir de"`, `BLOCKING_IMMEDIATE_SENTENCE = "Tes applications seront bloquées dès l'activation."`, `blockingDeferredSentence(display: WakeScheduleDisplay) = "Tes applications seront bloquées ${display.sentence}."` en minuscule initiale sur le libellé relatif, `BLOCKING_NOT_BEFORE_TRIGGER_MESSAGE = "L'heure de début du blocage doit être avant ton réveil. Pour bloquer tout de suite, choisis « Maintenant »."`, plus les messages `INVALID_TIME`/`UNKNOWN_ZONE` réutilisés), `summary/SummaryUiState.kt` (`blockingDisplay: WakeScheduleDisplay?`, `isBlockingImmediate`), `summary/SummaryViewModel.kt` (`refresh(localTimeIso, blockingLocalTimeIso, use24Hour)`, `activate(localTimeIso, blockingLocalTimeIso)` ; `messageFor(InvalidBlockingSchedule)`), `summary/SummaryScreen.kt` (ligne « Blocage des applications » sous la date), `summary/SummaryTexts.kt` (`BLOCKING_TITLE`, `BLOCKING_IMMEDIATE_LABEL = "Dès l'activation"`, `blockingReason(BLOCKING_START_NOT_BEFORE_TRIGGER)` = même phrase que l'écran 5), `active/ActiveSessionUiState.kt`, `active/ActiveSessionViewModel.kt` (`BlockingScheduleFormatter` dans les deux fuseaux, `isBlockingPending = snapshot.isBlockingPending`), `active/ActiveSessionTexts.kt` (`stateLabel(ARMED, blockingTimeLabel = null) = "Réveil programmé · applications bloquées"`, `stateLabel(ARMED, "22:30") = "Réveil programmé · blocage à 22:30"`, autres états inchangés ; `blockedAppsTitle(true) = "Applications qui seront bloquées"`, `blockedAppsTitle(false) = BLOCKED_APPS_TITLE` ; `BLOCKING_START_TITLE = "Début du blocage"`), `active/ActiveSessionScreen.kt` (ligne « Début du blocage » avec les deux fuseaux tant que `isBlockingPending`), `incident/IncidentTexts.kt` (`MISSED_BLOCKING_START_WINDOW` → « Le blocage a commencé en retard : Niumi n'était pas en vie à l'heure prévue. »).
+- `:app` — modifier `navigation/NiumiRoute.kt` (`Summary(localTimeIso, blockingLocalTimeIso: String? = null)`), `navigation/NiumiNavHost.kt` (transport des deux arguments, `SummaryRoute` les passe au ViewModel).
+- Tests : étendre `WakeTimeViewModelTest` (« Maintenant » par défaut et `canContinue` inchangé ; dernière heure de début mémorisée relue ; 22:30 à 20:00 pour 07:00 → `blockingDisplay` aujourd'hui 22:30 ; 08:00 → message de refus, `canContinue` faux ; passage à « Maintenant » efface le message ; changement de l'heure de réveil recalcule le blocage ; `refresh` recalcule les deux ; `continueToSummary` transmet `null` ou l'ISO et persiste les deux), `WakeTimeTextsTest`, créer `BlockingScheduleFormatterTest` (immédiat → `null` ; différé → même `WakeScheduleDisplay` que `WakeScheduleFormatter` sur un `WakeScheduleDto` équivalent ; trou d'heure d'été → `shiftedFromLocalTime` renseigné), étendre `SummaryViewModelTest` (ligne immédiate, ligne différée, `InvalidBlockingSchedule` → message, `activate` transmet les deux arguments), `SummaryTextsTest`, `ActiveSessionViewModelTest` (en attente → `isBlockingPending`, deux affichages si fuseaux différents ; appliqué → `null` ; session immédiate → `null`), `ActiveSessionTextsTest` (les deux libellés `ARMED`, les deux titres, le libellé d'incident via `IncidentTexts`), `NiumiRouteTest` (`Summary` sérialisable avec et sans second argument), `SetupPreferences` : étendre le test existant de la garde de déverrouillage à la nouvelle clé.
+
+**Produit :** écrans 5, 6 et 7 conformes à SPEC_ANDROID §15 pour le Lot 6 ; un utilisateur peut armer une session différée depuis l'interface.
+
+- [ ] **Étendre `WakeTimeViewModelTest`, écrire `BlockingScheduleFormatterTest`**, implémenter le ViewModel, le formateur, les préférences et l'écran 5. Consulter la charte avant de dessiner la section : sobriété, Ambre réservé à la confirmation, aucune couleur d'alerte pour le refus d'antériorité.
+- [ ] **Étendre `SummaryViewModelTest` et `SummaryTextsTest`**, implémenter la route à deux arguments et l'écran 6.
+- [ ] **Étendre `ActiveSessionViewModelTest` et `ActiveSessionTextsTest`**, implémenter l'écran 7 (point de vigilance 12 : aucun autre lecteur d'`ARMED` ne change).
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :feature:session:testDebugUnitTest :core:system:testDebugUnitTest :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+./gradlew ktlintCheck detekt :app:lintDebug
+```
+
+- [ ] **Valider sur appareil** (protocole ci-dessous, en 12 h et en 24 h, format système changé entre deux essais).
+- [ ] **Rédiger `ETAPE-24.md`.**
+
+**Tests manuels :** parcours complet accueil → diagnostic → heure de réveil 07:00 → « À partir de » 22:30 → phrase « Tes applications seront bloquées aujourd'hui, … à 22:30 (…) » → récapitulatif avec la ligne → activation → écran 7 « Réveil programmé · blocage à 22:30 », « Applications qui seront bloquées », « Début du blocage » ; choisir 08:00 → message de refus, « Continuer » inactif ; repasser à « Maintenant » → message effacé ; quitter et revenir sur l'écran 5 → le dernier choix est repris ; changer le fuseau du téléphone pendant une session différée → deux lignes de début de blocage, instant inchangé ; session à +3 min de début → à l'heure, l'écran 7 passe à « applications bloquées » et « Applications bloquées » sans relance ; après l'heure du réveil et scan → écran 10.
+
+**Terminé quand :** chaque texte de SPEC_ANDROID §15 (Lot 6) est verrouillé par un test de textes ; l'écran 5 refuse `NOT_BEFORE_TRIGGER` avant tout diagnostic ; une session immédiate armée depuis l'interface produit les mêmes écrans qu'à l'étape 21 (non-régression visuelle constatée sur appareil) ; les trois écrans affichent l'instant obtenu et jamais l'heure saisie.
+
+### Étape 25 : résilience mesurée, matrice physique, aide et limites, rapport de release
+
+**Specs à lire :** SPEC_ANDROID §4.2 (blocage différé manqué), §9.3, §12.4 (« Réconciliation », « Application déjà ouverte »), §15 (écran 13), §19.2, §20 (lignes « blocage différé »), §21 (critères Lot 6), §23 ; SPEC_CORE_KMP §8.3, §19 ; `docs/android/LIMITES.md` (règle « limites mesurées seulement »), `docs/android/QA_MATRIX.md` (règle de remplissage), `docs/android/RELEASE_REPORT.md`.
+
+**Fichiers :**
+- Étendre `tools/validate_blocking.sh` d'un scénario « début différé » : session différée à +2 min posée par le parcours réel, ouverture d'une application choisie avant l'heure (attendu : aucun retour à l'accueil, contrôlé par `dumpsys activity`), maintien au premier plan jusqu'à l'heure (attendu : retour à l'accueil et fenêtre d'overlay, contrôlés par `dumpsys window`), délai mesuré entre l'instant contractuel et le retour à l'accueil. Le script échoue explicitement si ses préconditions manquent, comme les scénarios existants.
+- Étendre `tools/validate_alarm.sh` (ou créer `tools/validate_blocking_start.sh` si le premier ne s'y prête pas) : `dumpsys alarm` avant et après un redémarrage sans déverrouillage, comparaison des epochs de l'alarme de début ; essai sous Doze forcé (`dumpsys battery unplug`, `dumpsys deviceidle force-idle`) à l'heure de début.
+- Étendre `ProcessDeathInstrumentedTest` (`:app`) d'un cas : session `ARMED` différée, début dépassé en base, processus recréé → `PROCESS_START` produit `BLOCKING_START_ELAPSED`, projection `Active`, incident selon le retard.
+- Modifier `docs/android/LIMITES.md` **et** `androidApp/app/src/main/kotlin/com/niumi/app/help/HelpTexts.kt` ensemble (`HelpTextsTest` les compare mot pour mot), **après mesure seulement**, dans « Ce que Niumi ne peut pas garantir » : « Un blocage différé commence à l'heure choisie si le téléphone est allumé et que Niumi n'a pas été arrêté de force. Sinon, il commence dès que Niumi revit, et la session le signale. » et « À l'heure de début, une application déjà ouverte est renvoyée à l'accueil dès que Niumi la voit. Cela peut prendre quelques secondes. » — reformuler d'après ce qui a été observé ; ne rien écrire qui n'ait été mesuré.
+- Modifier `docs/android/QA_MATRIX.md` (les neuf lignes « blocage différé » de §20, avec fabricant, modèle, Android, firmware, permissions, résultat, retard, logs), `docs/android/RELEASE_REPORT.md` (les quatre critères §21 du Lot 6, chacun avec sa preuve ou son statut ouvert), `docs/android/RESTE_A_FAIRE.md` (section D : remplacer « le code n'existe pas encore » par l'état réel, et ajouter aux campagnes B1/B2 les lignes différées), `docs/android/play-console/ACCESSIBILITY_DECLARATION.md` seulement si l'usage déclaré devait changer — il ne change pas (même lecture du seul `packageName`), le dire dans le rapport.
+- Rédiger `docs/android/implementation-reports/ETAPE-25.md`.
+
+**Produit :** le Lot 6 prouvé sur appareil dans le périmètre §4.1, documenté dans l'application et dans les documents de release.
+
+- [ ] **Étendre les scripts `tools/`** et `ProcessDeathInstrumentedTest` ; exécuter les scripts sur l'appareil branché (`adb devices` d'abord).
+- [ ] **Dérouler les neuf scénarios « blocage différé » de §20**, un par un, en consignant modèle, version, permissions, retard et logs. Le scénario « Doze forcé à l'heure de début » décide si la seconde dérogation de §9.1 tient : si l'alarme de début est retardée, revenir sur §9.1 (option `setAlarmClock` avec `showPendingIntent` vers l'écran 7, au prix de l'affichage « prochaine alarme ») et arbitrer avec l'utilisateur avant de continuer.
+- [ ] **Écrire les limites mesurées** dans `LIMITES.md` et `HelpTexts` ; `HelpTextsTest` vert.
+- [ ] **Remplir `QA_MATRIX.md`, `RELEASE_REPORT.md` et `RESTE_A_FAIRE.md`.**
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :shared:core:jvmTest
+./gradlew :shared:core:linkDebugFrameworkIosSimulatorArm64
+./gradlew testDebugUnitTest
+./gradlew :app:testReleaseUnitTest
+./gradlew connectedDebugAndroidTest         # appareil requis
+./gradlew ktlintCheck detekt :app:lintRelease
+./gradlew :app:assembleRelease :app:bundleRelease
+```
+
+- [ ] **Rédiger `ETAPE-25.md`.**
+
+**Tests manuels :** les neuf lignes de §20, plus une session différée complète sur un **APK release signé** (A1 de `RESTE_A_FAIRE.md`) si la clé existe : activation à 18:00 avec début à 22:30 et réveil à 07:00, téléphone posé, blocage observé à 22:30, sonnerie à 07:00, scan.
+
+**Terminé quand :** les neuf lignes de §20 sont renseignées (vert, limite établie ou « non testé » avec la raison) ; les quatre critères §21 du Lot 6 ont chacun une preuve ou un statut ouvert nommé ; aucune limite de l'aide n'est écrite sans mesure ; `HelpTextsTest` vert ; les scripts `tools/` couvrent le début différé ; `RESTE_A_FAIRE.md` dit l'état réel.
+
 ## Recette et critères d'acceptation
 
 Repris de SPEC_ANDROID §21 ; chaque point renvoie à l'étape qui le prouve. **Le détail des preuves
@@ -1355,6 +1606,16 @@ résumé. Une case cochée signifie « prouvé », jamais « implémenté ».
       **Ouvert — porte 0b.** Dossier prêt et prérequis techniques levés ; vidéo non tournée,
       application non soumise, Google n'a pas statué.
 
+**Lot 6 — blocage différé (SPEC_ANDROID §21, critères ajoutés le 2026-09-15).** Hors porte finale
+du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
+
+- [ ] Aucun blocage avant l'instant de début ; blocage à l'instant à moins d'une minute près quand Niumi est en vie ; en retard avec `MISSED_BLOCKING_START_WINDOW` sinon (étapes 22, 23, 25).
+- [ ] Redémarrage avant l'heure de début → alarme de début reprogrammée avant le premier déverrouillage (étapes 23, 25).
+- [ ] Aucune session n'atteint `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans blocage demandé (étape 22, repli prouvé par test ; étape 25, alarme de début manquée puis réveil).
+- [ ] Annulation avant le début du blocage uniquement par scan ; l'écran 5 refuse un début non strictement antérieur au réveil (étapes 22, 24).
+- [ ] Application déjà ouverte à l'heure de début renvoyée à l'accueil sans changement de fenêtre (étapes 23, 25).
+- [ ] Limites du blocage différé mesurées puis écrites dans l'aide et `LIMITES.md` (étape 25).
+
 ## Hypothèses et limites du plan
 
 - Le boîtier MVP contient un tag NDEF Type 2 (NFC-A) déjà écrit avec le payload canonique ; l'écriture industrielle et l'anti-clonage sont hors périmètre.
@@ -1362,3 +1623,4 @@ résumé. Une case cochée signifie « prouvé », jamais « implémenté ».
 - Le framework iOS `NiumiCore` est construit pour garantir l'interopérabilité ; l'application iOS n'est pas développée par ce plan.
 - Les versions de bibliothèques sont celles vérifiées le 3 septembre 2026 ; l'étape 1 les reconfirme et peut les ajuster à condition de rester dans les plages de compatibilité citées.
 - Aucun commit, push ni publication n'est effectué automatiquement.
+- Le Lot 6 (étapes 22 à 25, blocage différé) est postérieur au MVP et ne conditionne pas la porte finale de l'étape 21. Le mécanisme iOS du début différé (`DeviceActivityMonitor`) est un POC à mener, hors de ce plan ; seul le contrat commun et sa spécification iOS sont livrés ici.

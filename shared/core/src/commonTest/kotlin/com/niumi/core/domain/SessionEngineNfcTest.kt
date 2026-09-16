@@ -2,6 +2,7 @@ package com.niumi.core.domain
 
 import com.niumi.core.domain.NfcScanEventFixtures.validNfcScannedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.invalidNfcScannedEvent
+import com.niumi.core.domain.SessionSnapshotFixtures.armedBlockingPendingSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.armedSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.awaitingNfcSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.preparingSnapshot
@@ -32,6 +33,32 @@ class SessionEngineNfcTest {
             listOf(
                 SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
                 SessionEffectKind.CANCEL_ALARM,
+                SessionEffectKind.STOP_RINGING,
+                SessionEffectKind.CLEAR_SCAN_REQUEST,
+                SessionEffectKind.REMOVE_BLOCKING,
+            ),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun validScanBeforeTheBlockingStartCancelsTheSessionAndItsBlockingStart() {
+        // Décision commune 15 : l'engagement est pris à l'activation, même avant le début du
+        // blocage — le scan reste la seule sortie, et il annule l'alarme de début programmée.
+        val pending = armedBlockingPendingSnapshot()
+        val occurredAt = BLOCKING_STARTS_AT_EPOCH_MILLIS - 1_000L
+        val event = validNfcScannedEvent(expectedRevision = pending.revision, occurredAtEpochMillis = occurredAt)
+
+        val decision = engine.reduce(snapshot = pending, event = event)
+
+        val snapshot = requireNotNull(decision.snapshot)
+        assertEquals(SessionState.RELEASING, snapshot.state)
+        assertEquals(ReleaseTarget.CANCELLED, snapshot.releaseTarget)
+        assertEquals(
+            listOf(
+                SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
+                SessionEffectKind.CANCEL_ALARM,
+                SessionEffectKind.CANCEL_BLOCKING_START,
                 SessionEffectKind.STOP_RINGING,
                 SessionEffectKind.CLEAR_SCAN_REQUEST,
                 SessionEffectKind.REMOVE_BLOCKING,

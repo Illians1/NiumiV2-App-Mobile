@@ -100,7 +100,7 @@ internal object SessionEventValidation {
             }
 
             request != null -> {
-                appSelectionViolations(request)
+                appSelectionViolations(request) + blockingScheduleViolations(request)
             }
 
             else -> {
@@ -113,6 +113,30 @@ internal object SessionEventValidation {
         val count = request.appSelection.count
         return if (count < AppSelectionSummary.MIN_COUNT || count > AppSelectionSummary.MAX_COUNT) {
             listOf(violation(ViolationCode.INVALID_APP_SELECTION, "count doit être compris entre 1 et 50."))
+        } else {
+            emptyList()
+        }
+    }
+
+    /**
+     * SPEC_CORE_KMP §7.5 : les trois champs de `BlockingSchedule` sont tous nuls ou tous renseignés,
+     * et le début du blocage est strictement antérieur au réveil (§8.3). Le calcul de cet instant
+     * appartient à la façade ; la validation ne fait que refuser une charge incohérente.
+     */
+    private fun blockingScheduleViolations(request: ActivationRequest): List<DomainViolation> {
+        val schedule = request.blockingSchedule
+        val fields = listOf(schedule.localDateIso, schedule.localTimeIso, schedule.startsAtEpochMillis)
+        val partial = fields.any { it != null } && fields.any { it == null }
+        val startsAt = schedule.startsAtEpochMillis
+        val notBeforeTrigger = startsAt != null && startsAt >= request.wakeSchedule.triggerAtEpochMillis
+        return if (partial || notBeforeTrigger) {
+            listOf(
+                violation(
+                    ViolationCode.INVALID_BLOCKING_SCHEDULE,
+                    "blockingSchedule doit être entièrement nul ou entièrement renseigné, " +
+                        "et commencer strictement avant le réveil.",
+                ),
+            )
         } else {
             emptyList()
         }
@@ -157,7 +181,9 @@ internal object SessionEventValidation {
     private fun incidentViolations(event: SessionEvent): List<DomainViolation> {
         val requiresIncident =
             event.kind == SessionEventKind.RELEASE_FAILED || event.kind == SessionEventKind.INCIDENT_REPORTED
-        val allowsOptionalIncident = event.kind == SessionEventKind.TRIGGER_ELAPSED
+        val allowsOptionalIncident =
+            event.kind == SessionEventKind.TRIGGER_ELAPSED ||
+                event.kind == SessionEventKind.BLOCKING_START_ELAPSED
         return when {
             requiresIncident && event.incident == null -> {
                 listOf(

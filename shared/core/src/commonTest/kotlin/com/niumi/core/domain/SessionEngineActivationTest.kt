@@ -25,7 +25,57 @@ class SessionEngineActivationTest {
         assertEquals(1, snapshot.revision)
         assertEquals(SessionHealth.HEALTHY, snapshot.health)
         assertEquals(event.sessionId, snapshot.sessionId)
+        // Blocage immédiat : demandé dès l'activation (SPEC_CORE_KMP §7.5).
+        assertEquals(BlockingSchedule.IMMEDIATE, snapshot.blockingSchedule)
+        assertEquals(event.occurredAtEpochMillis, snapshot.blockingAppliedAtEpochMillis)
         assertTrue(decision.violations.isEmpty())
+        assertEquals(
+            listOf(
+                SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
+                SessionEffectKind.SCHEDULE_ALARM,
+                SessionEffectKind.APPLY_BLOCKING,
+            ),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun deferredBlockingSchedulesItsStartInsteadOfApplyingIt() {
+        val event =
+            activationRequestedEvent(
+                activationRequest = activationRequest(blockingSchedule = referenceBlockingSchedule),
+            )
+
+        val decision = engine.reduce(snapshot = null, event = event)
+
+        val snapshot = requireNotNull(decision.snapshot)
+        assertEquals(referenceBlockingSchedule, snapshot.blockingSchedule)
+        assertNull(snapshot.blockingAppliedAtEpochMillis)
+        assertTrue(snapshot.isBlockingPending)
+        assertEquals(
+            listOf(
+                SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
+                SessionEffectKind.SCHEDULE_ALARM,
+                SessionEffectKind.SCHEDULE_BLOCKING_START,
+            ),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun deferredBlockingWhoseStartIsAlreadyPastIsAppliedAtOnce() {
+        // SPEC_CORE_KMP §8.3 : un instant de début déjà dépassé à l'activation vaut blocage immédiat.
+        val event =
+            activationRequestedEvent(
+                occurredAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS + 1_000L,
+                activationRequest = activationRequest(blockingSchedule = referenceBlockingSchedule),
+            )
+
+        val decision = engine.reduce(snapshot = null, event = event)
+
+        val snapshot = requireNotNull(decision.snapshot)
+        assertEquals(event.occurredAtEpochMillis, snapshot.blockingAppliedAtEpochMillis)
+        assertTrue(!snapshot.isBlockingPending)
         assertEquals(
             listOf(
                 SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
@@ -114,6 +164,31 @@ class SessionEngineActivationTest {
         assertEquals(
             listOf(
                 SessionEffectKind.CANCEL_ALARM,
+                SessionEffectKind.REMOVE_BLOCKING,
+                SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
+                SessionEffectKind.CLEAR_ACTIVE_SESSION,
+            ),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun activationFailedOnADeferredSessionAlsoCancelsTheBlockingStart() {
+        // SPEC_CORE_KMP §6 et §10 : le rollback annule l'alarme de début éventuellement programmée.
+        // Une session à blocage immédiat n'en a jamais, et ne produit donc pas cet effet.
+        val preparing =
+            preparingSnapshot().copy(
+                blockingSchedule = referenceBlockingSchedule,
+                blockingAppliedAtEpochMillis = null,
+            )
+        val event = activationFailedEvent(expectedRevision = preparing.revision)
+
+        val decision = engine.reduce(snapshot = preparing, event = event)
+
+        assertEquals(
+            listOf(
+                SessionEffectKind.CANCEL_ALARM,
+                SessionEffectKind.CANCEL_BLOCKING_START,
                 SessionEffectKind.REMOVE_BLOCKING,
                 SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
                 SessionEffectKind.CLEAR_ACTIVE_SESSION,

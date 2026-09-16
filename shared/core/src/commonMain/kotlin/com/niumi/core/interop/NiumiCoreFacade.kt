@@ -4,6 +4,7 @@ import com.niumi.core.diagnostics.ActivationPolicy
 import com.niumi.core.domain.SessionEngine
 import com.niumi.core.nfc.BoxPayloadParser
 import com.niumi.core.nfc.BoxVerifier
+import com.niumi.core.schedule.BlockingScheduleCalculator
 import com.niumi.core.schedule.TriggerDelayPolicy
 import com.niumi.core.schedule.WakeScheduleCalculator
 
@@ -50,4 +51,13 @@ public class NiumiCoreFacade {
      */
     public fun evaluateTriggerDelay(input: TriggerDelayInputDto): TriggerDelayResultDto =
         TriggerDelayResultDto(TriggerDelayPolicy.evaluate(input.triggerAtEpochMillis, input.nowEpochMillis))
+
+    /**
+     * Calcule l'instant de début d'un blocage différé (SPEC_CORE_KMP §8.3). Septième méthode,
+     * ajoutée par le contrat 1.3 (§14) : un `localTimeIso` nul décrit un blocage immédiat et renvoie
+     * `VALID` avec un schedule aux trois champs nuls ; sinon l'instant est résolu comme un réveil
+     * puis comparé à `triggerAtEpochMillis`.
+     */
+    public fun computeBlockingSchedule(input: BlockingScheduleInputDto): BlockingScheduleResultDto =
+        BlockingScheduleCalculator.compute(input.toDomain()).toDto()
 }

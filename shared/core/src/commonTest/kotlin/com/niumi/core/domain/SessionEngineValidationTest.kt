@@ -1,7 +1,11 @@
 package com.niumi.core.domain
 
 import com.niumi.core.domain.SessionActivationEventFixtures.activationRequest
+import com.niumi.core.domain.SessionActivationEventFixtures.activationRequestedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.alarmFiredEvent
+import com.niumi.core.domain.SessionLifecycleEventFixtures.blockingStartElapsedEvent
+import com.niumi.core.domain.SessionLifecycleEventFixtures.incident
+import com.niumi.core.domain.SessionSnapshotFixtures.armedBlockingPendingSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.armedSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,6 +13,45 @@ import kotlin.test.assertTrue
 
 class SessionEngineValidationTest {
     private val engine = SessionEngine()
+
+    @Test
+    fun partiallyFilledBlockingScheduleIsRejected() {
+        val partial = BlockingSchedule(localDateIso = "2026-09-08", localTimeIso = null, startsAtEpochMillis = null)
+        val event = activationRequestedEvent(activationRequest = activationRequest(blockingSchedule = partial))
+
+        val decision = engine.reduce(snapshot = null, event = event)
+
+        assertEquals(listOf(ViolationCode.INVALID_BLOCKING_SCHEDULE), decision.violations.map { it.code })
+        assertTrue(decision.effects.isEmpty())
+    }
+
+    @Test
+    fun blockingStartAtOrAfterTheWakeUpIsRejected() {
+        val notBefore = referenceBlockingSchedule.copy(startsAtEpochMillis = TRIGGER_AT_EPOCH_MILLIS)
+        val event = activationRequestedEvent(activationRequest = activationRequest(blockingSchedule = notBefore))
+
+        val decision = engine.reduce(snapshot = null, event = event)
+
+        assertEquals(listOf(ViolationCode.INVALID_BLOCKING_SCHEDULE), decision.violations.map { it.code })
+    }
+
+    @Test
+    fun incidentIsAcceptedOnBlockingStartElapsed() {
+        val pending = armedBlockingPendingSnapshot()
+        val event =
+            blockingStartElapsedEvent(
+                expectedRevision = pending.revision,
+                incident =
+                    incident(
+                        code = IncidentCodes.MISSED_BLOCKING_START_WINDOW,
+                        severity = IncidentSeverity.WARNING,
+                    ),
+            )
+
+        val decision = engine.reduce(snapshot = pending, event = event)
+
+        assertTrue(decision.violations.isEmpty())
+    }
 
     @Test
     fun missingExpectedRevisionOutsideActivationIsStale() {

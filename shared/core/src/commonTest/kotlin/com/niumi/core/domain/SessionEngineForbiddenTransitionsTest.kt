@@ -6,6 +6,7 @@ import com.niumi.core.domain.SessionActivationEventFixtures.activationRequestedE
 import com.niumi.core.domain.SessionActivationEventFixtures.activationSucceededEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.alarmFiredEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.alarmSoundStoppedEvent
+import com.niumi.core.domain.SessionLifecycleEventFixtures.blockingStartElapsedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.incidentReportedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.invalidNfcScannedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.releaseFailedEvent
@@ -42,6 +43,11 @@ private val ALLOWED_PAIRS: Set<Pair<SessionState?, SessionEventKind>> =
         add(SessionState.RINGING to SessionEventKind.ALARM_SOUND_STOPPED)
         add(SessionState.TRIGGERED_AWAITING_NFC to SessionEventKind.ALARM_SOUND_STOPPED)
         add(SessionState.ARMED to SessionEventKind.TRIGGER_ELAPSED)
+        // §5.1 n'autorise ce couple que pour une session dont le blocage n'est pas encore demandé.
+        // Le snapshot `ARMED` de cette table est à blocage immédiat : le refus correspondant
+        // (`BLOCKING_ALREADY_APPLIED`) et l'acceptation d'une session en attente sont prouvés par
+        // `SessionEngineBlockingStartTest`.
+        add(SessionState.ARMED to SessionEventKind.BLOCKING_START_ELAPSED)
         add(SessionState.ARMED to SessionEventKind.VALID_NFC_SCANNED)
         add(SessionState.RINGING to SessionEventKind.VALID_NFC_SCANNED)
         add(SessionState.AWAITING_NFC to SessionEventKind.VALID_NFC_SCANNED)
@@ -117,6 +123,10 @@ class SessionEngineForbiddenTransitionsTest {
 
             SessionEventKind.TRIGGER_ELAPSED -> {
                 triggerElapsedEvent(expectedRevision = revision)
+            }
+
+            SessionEventKind.BLOCKING_START_ELAPSED -> {
+                blockingStartElapsedEvent(expectedRevision = revision)
             }
 
             SessionEventKind.VALID_NFC_SCANNED -> {

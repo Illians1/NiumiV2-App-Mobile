@@ -17,17 +17,24 @@ internal object ActivationReducer {
             return reject(snapshot, listOf(invalidStateTransition(event)))
         }
         val request = requireNotNull(event.activationRequest) // garanti par SessionEventValidation
+        // Un blocage immédiat, ou différé dont l'instant de début est déjà dépassé, est demandé dès
+        // l'activation (SPEC_CORE_KMP §8.3, dernier alinéa) ; sinon le coordinateur programmera
+        // l'alarme de début.
+        val startsAtEpochMillis = request.blockingSchedule.startsAtEpochMillis
+        val blocksImmediately = startsAtEpochMillis == null || startsAtEpochMillis <= event.occurredAtEpochMillis
         val newSnapshot =
             SessionSnapshot(
                 schemaVersion = SessionSnapshot.SCHEMA_VERSION,
                 revision = 1,
                 sessionId = event.sessionId,
                 wakeSchedule = request.wakeSchedule,
+                blockingSchedule = request.blockingSchedule,
                 state = SessionState.PREPARING,
                 releaseTarget = null,
                 health = SessionHealth.HEALTHY,
                 createdAtEpochMillis = event.occurredAtEpochMillis,
                 armedAtEpochMillis = null,
+                blockingAppliedAtEpochMillis = if (blocksImmediately) event.occurredAtEpochMillis else null,
                 ringingAtEpochMillis = null,
                 alarmSoundStoppedAtEpochMillis = null,
                 triggerElapsedAtEpochMillis = null,
@@ -41,8 +48,13 @@ internal object ActivationReducer {
             SessionEffectBuilder(newSnapshot.sessionId, newSnapshot.revision)
                 .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
                 .add(SessionEffectKind.SCHEDULE_ALARM)
-                .add(SessionEffectKind.APPLY_BLOCKING)
-                .build()
+                .add(
+                    if (blocksImmediately) {
+                        SessionEffectKind.APPLY_BLOCKING
+                    } else {
+                        SessionEffectKind.SCHEDULE_BLOCKING_START
+                    },
+                ).build()
         return SessionDecision(newSnapshot, effects, emptyList())
     }
 
@@ -81,13 +93,20 @@ internal object ActivationReducer {
                 state = SessionState.FAILED,
                 failureCode = event.failureCode,
             )
-        val effects =
+        val builder =
             SessionEffectBuilder(newSnapshot.sessionId, newSnapshot.revision)
                 .add(SessionEffectKind.CANCEL_ALARM)
-                .add(SessionEffectKind.REMOVE_BLOCKING)
-                .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
-                .add(SessionEffectKind.CLEAR_ACTIVE_SESSION)
-                .build()
-        return SessionDecision(newSnapshot, effects, emptyList())
+        // `CANCEL_BLOCKING_START` n'est produit que pour un blocage différé : une alarme de début
+        // n'existe que si `SCHEDULE_BLOCKING_START` l'a demandée, et une session immédiate n'en a
+        // jamais. Écart à la lettre de la table SPEC_CORE_KMP §6, documenté dans cette même section
+        // et validé avec l'utilisateur le 2026-09-16 (voir `ETAPE-22.md`).
+        if (!newSnapshot.blockingSchedule.isImmediate) {
+            builder.add(SessionEffectKind.CANCEL_BLOCKING_START)
+        }
+        builder
+            .add(SessionEffectKind.REMOVE_BLOCKING)
+            .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
+            .add(SessionEffectKind.CLEAR_ACTIVE_SESSION)
+        return SessionDecision(newSnapshot, builder.build(), emptyList())
     }
 }

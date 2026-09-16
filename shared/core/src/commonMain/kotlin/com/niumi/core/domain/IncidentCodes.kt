@@ -11,6 +11,7 @@ public object IncidentCodes {
     public const val TIME_CHANGED: String = "TIME_CHANGED"
     public const val TIMEZONE_CHANGED: String = "TIMEZONE_CHANGED"
     public const val MISSED_TRIGGER_WINDOW: String = "MISSED_TRIGGER_WINDOW"
+    public const val MISSED_BLOCKING_START_WINDOW: String = "MISSED_BLOCKING_START_WINDOW"
     public const val PROCESS_RECREATED: String = "PROCESS_RECREATED"
     public const val RELEASE_PARTIAL_FAILURE: String = "RELEASE_PARTIAL_FAILURE"
     public const val SNAPSHOT_CORRUPTED: String = "SNAPSHOT_CORRUPTED"
@@ -26,7 +27,7 @@ public object IncidentCodes {
                 IncidentSeverity.DEGRADED
             }
 
-            TIME_CHANGED, TIMEZONE_CHANGED, PROCESS_RECREATED -> {
+            TIME_CHANGED, TIMEZONE_CHANGED, PROCESS_RECREATED, MISSED_BLOCKING_START_WINDOW -> {
                 IncidentSeverity.WARNING
             }
 

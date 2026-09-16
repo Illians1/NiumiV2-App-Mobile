@@ -5,6 +5,9 @@ package com.niumi.core.domain
  * Extrait de `SessionEngine.reduce`, voir `ETAPE-07.md`, point 5. Le calcul du retard de 15 minutes
  * et l'incident `MISSED_TRIGGER_WINDOW` restent une décision du coordinateur natif (politique
  * horaire, étape 8) : ce réducteur se contente d'accepter l'incident déjà joint à l'événement.
+ *
+ * Les trois fonctions appliquent le repli du moteur via [applyPendingBlocking] : aucune sonnerie ni
+ * demande de scan ne part sans que le blocage ait été demandé (§5.1, invariant §4).
  */
 internal object TriggerReducer {
     internal fun onAlarmFired(
@@ -14,18 +17,18 @@ internal object TriggerReducer {
         if (snapshot == null || snapshot.state != SessionState.ARMED) {
             return reject(snapshot, listOf(invalidStateTransition(event)))
         }
-        val newSnapshot =
+        val ringingSnapshot =
             snapshot.copy(
                 revision = snapshot.revision + 1,
                 state = SessionState.RINGING,
                 ringingAtEpochMillis = event.occurredAtEpochMillis,
             )
-        val effects =
-            SessionEffectBuilder(newSnapshot.sessionId, newSnapshot.revision)
+        val builder =
+            SessionEffectBuilder(ringingSnapshot.sessionId, ringingSnapshot.revision)
                 .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
-                .add(SessionEffectKind.START_RINGING)
-                .build()
-        return SessionDecision(newSnapshot, effects, emptyList())
+        val newSnapshot = applyPendingBlocking(ringingSnapshot, event, builder)
+        builder.add(SessionEffectKind.START_RINGING)
+        return SessionDecision(newSnapshot, builder.build(), emptyList())
     }
 
     internal fun onAlarmSoundStopped(
@@ -41,18 +44,18 @@ internal object TriggerReducer {
         if (snapshot == null || targetState == null) {
             return reject(snapshot, listOf(invalidStateTransition(event)))
         }
-        val newSnapshot =
+        val stoppedSnapshot =
             snapshot.copy(
                 revision = snapshot.revision + 1,
                 state = targetState,
                 alarmSoundStoppedAtEpochMillis = event.occurredAtEpochMillis,
             )
-        val effects =
-            SessionEffectBuilder(newSnapshot.sessionId, newSnapshot.revision)
+        val builder =
+            SessionEffectBuilder(stoppedSnapshot.sessionId, stoppedSnapshot.revision)
                 .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
-                .add(SessionEffectKind.PRESENT_SCAN_REQUEST)
-                .build()
-        return SessionDecision(newSnapshot, effects, emptyList())
+        val newSnapshot = applyPendingBlocking(stoppedSnapshot, event, builder)
+        builder.add(SessionEffectKind.PRESENT_SCAN_REQUEST)
+        return SessionDecision(newSnapshot, builder.build(), emptyList())
     }
 
     @Suppress("ReturnCount")
@@ -75,7 +78,7 @@ internal object TriggerReducer {
             )
         }
         val incident = event.incident
-        val newSnapshot =
+        val elapsedSnapshot =
             snapshot.copy(
                 revision = snapshot.revision + 1,
                 state = SessionState.TRIGGERED_AWAITING_NFC,
@@ -83,9 +86,10 @@ internal object TriggerReducer {
                 health = healthAfter(snapshot.health, incident),
             )
         val builder =
-            SessionEffectBuilder(newSnapshot.sessionId, newSnapshot.revision)
+            SessionEffectBuilder(elapsedSnapshot.sessionId, elapsedSnapshot.revision)
                 .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
-                .add(SessionEffectKind.PRESENT_SCAN_REQUEST)
+        val newSnapshot = applyPendingBlocking(elapsedSnapshot, event, builder)
+        builder.add(SessionEffectKind.PRESENT_SCAN_REQUEST)
         if (incident != null) {
             builder.add(SessionEffectKind.RECORD_INCIDENT, IncidentEffectPayload(incident))
         }

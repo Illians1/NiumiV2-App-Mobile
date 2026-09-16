@@ -14,6 +14,10 @@ internal const val NFC_VERIFIED_AT_EPOCH_MILLIS = TRIGGER_AT_EPOCH_MILLIS + 2_00
 internal const val CANCEL_NFC_VERIFIED_AT_EPOCH_MILLIS = TRIGGER_AT_EPOCH_MILLIS - 1_000L
 internal const val RELEASED_AT_EPOCH_MILLIS = TRIGGER_AT_EPOCH_MILLIS + 3_000L
 
+// Début d'un blocage différé de référence : une heure avant le réveil, donc strictement antérieur
+// comme l'exige SPEC_CORE_KMP §7.5.
+internal const val BLOCKING_STARTS_AT_EPOCH_MILLIS = TRIGGER_AT_EPOCH_MILLIS - 3_600_000L
+
 internal const val SESSION_ID = "11111111-1111-1111-1111-111111111111"
 internal const val OTHER_SESSION_ID = "22222222-2222-2222-2222-222222222222"
 internal const val EVENT_ID_1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -30,6 +34,14 @@ internal val referenceWakeSchedule =
         triggerAtEpochMillis = TRIGGER_AT_EPOCH_MILLIS,
     )
 
+/** `BlockingSchedule` différé de référence, aligné sur [referenceWakeSchedule] (SPEC_CORE_KMP §7.5). */
+internal val referenceBlockingSchedule =
+    BlockingSchedule(
+        localDateIso = "2026-09-08",
+        localTimeIso = "06:00",
+        startsAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS,
+    )
+
 /**
  * Un snapshot par état de SPEC_CORE_KMP §5. Chaque fonction part de l'état précédent du parcours
  * normal et lui applique `copy()`, ce qui documente au passage l'enchaînement des états.
@@ -44,11 +56,13 @@ internal object SessionSnapshotFixtures {
         revision = revision,
         sessionId = sessionId,
         wakeSchedule = referenceWakeSchedule,
+        blockingSchedule = BlockingSchedule.IMMEDIATE,
         state = SessionState.PREPARING,
         releaseTarget = null,
         health = health,
         createdAtEpochMillis = CREATED_AT_EPOCH_MILLIS,
         armedAtEpochMillis = null,
+        blockingAppliedAtEpochMillis = CREATED_AT_EPOCH_MILLIS,
         ringingAtEpochMillis = null,
         alarmSoundStoppedAtEpochMillis = null,
         triggerElapsedAtEpochMillis = null,
@@ -66,6 +80,28 @@ internal object SessionSnapshotFixtures {
     ) = preparingSnapshot(sessionId, revision, health).copy(
         state = SessionState.ARMED,
         armedAtEpochMillis = ARMED_AT_EPOCH_MILLIS,
+    )
+
+    /**
+     * Session différée dont l'instant de début n'est pas encore traité : `ARMED` sans blocage
+     * demandé (SPEC_CORE_KMP §4, §7.5). C'est le seul état où `isBlockingPending` vaut vrai.
+     */
+    internal fun armedBlockingPendingSnapshot(
+        sessionId: String = SESSION_ID,
+        revision: Long = 2,
+        health: SessionHealth = SessionHealth.HEALTHY,
+    ) = armedSnapshot(sessionId, revision, health).copy(
+        blockingSchedule = referenceBlockingSchedule,
+        blockingAppliedAtEpochMillis = null,
+    )
+
+    /** Même session, une fois le début du blocage traité (`BLOCKING_START_ELAPSED` appliqué). */
+    internal fun armedBlockingAppliedSnapshot(
+        sessionId: String = SESSION_ID,
+        revision: Long = 3,
+        health: SessionHealth = SessionHealth.HEALTHY,
+    ) = armedBlockingPendingSnapshot(sessionId, revision, health).copy(
+        blockingAppliedAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS,
     )
 
     internal fun ringingSnapshot(
@@ -143,8 +179,14 @@ internal object SessionSnapshotFixtures {
 
 /** Événements de la famille activation (plan d'étape 7). */
 internal object SessionActivationEventFixtures {
-    internal fun activationRequest(count: Int = DEFAULT_APP_SELECTION_COUNT) =
-        ActivationRequest(wakeSchedule = referenceWakeSchedule, appSelection = AppSelectionSummary(count))
+    internal fun activationRequest(
+        count: Int = DEFAULT_APP_SELECTION_COUNT,
+        blockingSchedule: BlockingSchedule = BlockingSchedule.IMMEDIATE,
+    ) = ActivationRequest(
+        wakeSchedule = referenceWakeSchedule,
+        appSelection = AppSelectionSummary(count),
+        blockingSchedule = blockingSchedule,
+    )
 
     internal fun activationRequestedEvent(
         sessionId: String = SESSION_ID,
@@ -245,6 +287,24 @@ internal object SessionLifecycleEventFixtures {
         eventId = eventId,
         sessionId = sessionId,
         kind = SessionEventKind.TRIGGER_ELAPSED,
+        occurredAtEpochMillis = occurredAtEpochMillis,
+        expectedRevision = expectedRevision,
+        activationRequest = null,
+        nfcProof = null,
+        failureCode = null,
+        incident = incident,
+    )
+
+    internal fun blockingStartElapsedEvent(
+        sessionId: String = SESSION_ID,
+        eventId: String = EVENT_ID_2,
+        expectedRevision: Long = 2,
+        occurredAtEpochMillis: Long = BLOCKING_STARTS_AT_EPOCH_MILLIS,
+        incident: SessionIncident? = null,
+    ) = SessionEvent(
+        eventId = eventId,
+        sessionId = sessionId,
+        kind = SessionEventKind.BLOCKING_START_ELAPSED,
         occurredAtEpochMillis = occurredAtEpochMillis,
         expectedRevision = expectedRevision,
         activationRequest = null,

@@ -3,6 +3,7 @@ package com.niumi.database.mapping
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.ActivationRequestDto
 import com.niumi.core.interop.AppSelectionSummaryDto
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.SessionEventDto
 import com.niumi.core.interop.SessionEventKindDto
 import com.niumi.core.interop.WakeScheduleDto
@@ -98,10 +99,37 @@ class EventFingerprintTest {
     }
 
     @Test
+    fun differentBlockingScheduleProducesADifferentFingerprint() {
+        val other =
+            referenceEvent.copy(
+                activationRequest =
+                    requireNotNull(referenceEvent.activationRequest)
+                        .copy(
+                            blockingSchedule =
+                                BlockingScheduleDto(
+                                    localDateIso = "2026-09-08",
+                                    localTimeIso = "22:30",
+                                    startsAtEpochMillis = 1_799_996_400_000L,
+                                ),
+                        ),
+            )
+
+        assertThat(EventFingerprint.of(other)).isNotEqualTo(EventFingerprint.of(referenceEvent))
+    }
+
+    @Test
     fun fingerprintMatchesTheGoldenValueForTheReferenceEvent() {
         // Valeur figée : tout changement de forme canonique (ordre des clés, champs par défaut)
         // doit faire échouer ce test plutôt que de dériver silencieusement en base v1.
+        //
+        // Valeur reprise à l'étape 22 (contrat KMP 1.3) : `ActivationRequestDto` gagne
+        // `blockingSchedule`, sérialisé ici puisque `encodeDefaults = true`. Seuls les événements
+        // `ACTIVATION_REQUESTED` sont concernés — les autres portent `activationRequest: null`,
+        // dont la forme canonique ne change pas. Aucune session existante n'est affectée :
+        // l'empreinte n'est recalculée que pour un `eventId` déjà présent au registre
+        // (`DefaultSessionCoordinator.guard`), et un `ACTIVATION_REQUESTED` naît toujours d'un
+        // `eventId` neuf, jamais reconstruit à l'identique après une mise à jour du binaire.
         assertThat(EventFingerprint.of(referenceEvent))
-            .isEqualTo("614f2f10615e552fa05867c08aea28a038a1c487b804d03096d26a2eb0ed1aaa")
+            .isEqualTo("feb10ced0224e3e0817010eb8dd205ad7fe5a73c134186adfa8e7b2666b53b83")
     }
 }

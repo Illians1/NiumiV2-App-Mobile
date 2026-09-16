@@ -1,7 +1,7 @@
 # Niumi Core KMP: spécification métier commune
 
 Statut: contrat proposé pour le MVP Android et iOS
-Version du contrat: 1.2
+Version du contrat: 1.3 (blocage différé, 15 septembre 2026 ; 1.2 du 2 septembre 2026)
 Date de référence: 2 septembre 2026
 Plateformes: Android natif et iOS natif
 Module partagé: Kotlin Multiplatform
@@ -47,6 +47,7 @@ Les décisions suivantes s'appliquent aux deux applications:
 12. L'utilisateur sélectionne entre 1 et 50 applications.
 13. Le MVP ne propose aucun secours logiciel immédiat si le boîtier ou le NFC est indisponible.
 14. Un état qui attend le scan sans présentation d'alarme active demande explicitement ce scan à l'utilisateur, sous réserve de l'exception iOS documentée en section 11.2.
+15. Le blocage commence à l'activation, ou à un instant de début choisi par l'utilisateur et strictement antérieur au réveil. L'alarme est programmée dès l'activation dans les deux cas, et l'engagement est pris à l'activation : avant le début d'un blocage différé, une modification ou une annulation exige le scan, comme le point 4 l'impose. Décision validée le 2026-09-15 (contrat 1.3).
 
 L'absence de secours logiciel est une contrainte produit assumée. L'activation vérifie que le NFC est disponible et que le boîtier associé a été validé; l'application ne présente ni délai, ni code, ni bouton de déblocage comme solution de récupération.
 
@@ -60,6 +61,7 @@ Le module `:shared:core` contient:
 - le réducteur de session;
 - les règles d'activation, d'annulation et de fin;
 - le calcul du prochain réveil;
+- le calcul de l'instant de début du blocage et sa règle d'antériorité au réveil (section 8.3);
 - la politique de changement d'heure et de fuseau;
 - le parseur strict du payload NFC;
 - la vérification d'un boîtier à partir d'une empreinte locale;
@@ -95,7 +97,8 @@ Le moteur commun doit refuser toute transition qui enfreint un invariant.
 - `VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé avec la violation `TRIGGER_ALREADY_ELAPSED`. Le coordinateur doit produire `TRIGGER_ELAPSED` avant tout scan dans ce cas, conformément à la section 5.1.
 - `nfcVerifiedAt` doit exister avant l'entrée dans `RELEASING`.
 - `COMPLETED` et `CANCELLED` ne sont atteints qu'après réussite du nettoyage.
-- Le blocage reste demandé dans `ARMED`, `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`.
+- Le blocage reste demandé dans `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`, et dans `ARMED` dès que `blockingAppliedAtEpochMillis` est renseigné. Dans `ARMED`, l'état seul ne dit pas si le blocage est demandé : ce champ le dit (section 7.5). Une session ne quitte jamais `ARMED` vers `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans que le blocage ait été demandé : le moteur l'applique lui-même dans la transition si le début du blocage n'a pas encore été traité (section 5.1, repli du moteur).
+- `blockingStartsAtEpochMillis`, lorsqu'il existe, est strictement antérieur à `triggerAtEpochMillis`, et figé à l'activation au même titre que l'instant du réveil (décision 9).
 - `RELEASING` autorise un nettoyage partiel. L'état seul ne permet pas de déduire si le blocage natif est encore appliqué.
 - L'arrêt sonore iOS n'est jamais traité comme une preuve NFC.
 - `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` demandent explicitement le scan du boîtier par un signal natif visible. Sur Android, ce signal est une notification persistante quel que soit l'état de l'application. Sur iOS, ce signal se limite au shield actif tant que l'application n'a pas été rouverte après un réveil manqué: c'est une exception assumée à la contrainte Apple sur les notifications locales pour ce cas précis, documentée en section 11.2, et le texte du shield doit alors indiquer explicitement qu'un scan termine la session.
@@ -131,6 +134,7 @@ stateDiagram-v2
     ARMED --> RINGING: Alarme déclenchée
     ARMED --> AWAITING_NFC: Son iOS arrêté
     ARMED --> TRIGGERED_AWAITING_NFC: Heure atteinte sans alarme observée
+    ARMED --> ARMED: Début du blocage atteint
     RINGING --> AWAITING_NFC: Son iOS arrêté
     ARMED --> RELEASING: NFC valide
     RINGING --> RELEASING: NFC valide
@@ -147,6 +151,7 @@ stateDiagram-v2
 | aucun | `ACTIVATION_REQUESTED` | `PREPARING` | aucune |
 | `PREPARING` | `ACTIVATION_SUCCEEDED` | `ARMED` | aucune |
 | `PREPARING` | `ACTIVATION_FAILED` | `FAILED` | aucune |
+| `ARMED`, blocage non encore demandé | `BLOCKING_START_ELAPSED` | `ARMED`, `blockingAppliedAtEpochMillis` renseigné | aucune |
 | `ARMED` | `ALARM_FIRED` | `RINGING` | aucune |
 | `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | aucune |
 | `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | aucune |
@@ -160,6 +165,10 @@ stateDiagram-v2
 
 `TRIGGER_ELAPSED` est produit seulement si l'heure contractuelle est passée alors que la session est encore `ARMED` et qu'aucune alarme en état `.alerting` n'a été observée. Le coordinateur doit le traiter avant un scan NFC afin qu'un scan après le réveil ne mène jamais à `CANCELLED`. Android joint l'incident `MISSED_TRIGGER_WINDOW` lorsque le retard excède 15 minutes.
 
+`BLOCKING_START_ELAPSED` est produit par le coordinateur natif dès que `blockingStartsAtEpochMillis` est atteint alors que la session est `ARMED` et que le blocage n'a pas encore été demandé. Il ne change pas l'état : il renseigne `blockingAppliedAtEpochMillis` et produit `APPLY_BLOCKING`. Une session à blocage immédiat ne le reçoit jamais, son blocage étant demandé dès `ACTIVATION_REQUESTED`. Android joint l'incident `MISSED_BLOCKING_START_WINDOW` lorsque le retard excède 15 minutes (section 8.3).
+
+**Repli du moteur.** `ALARM_FIRED`, `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` reçus depuis `ARMED` alors que le blocage n'a pas encore été demandé renseignent eux-mêmes `blockingAppliedAtEpochMillis` et ajoutent `APPLY_BLOCKING` à leurs effets, avant la sonnerie ou la demande de scan. Le coordinateur natif doit produire `BLOCKING_START_ELAPSED` à l'heure ; ce repli garantit l'invariant de la section 4 si l'alarme de début a été manquée, sans jamais rendre le réveil muet par un refus.
+
 `ALARM_SOUND_STOPPED` existe pour la contrainte iOS. Android ne doit pas produire cet événement dans le parcours normal. La transition depuis `ARMED` couvre le cas où iOS fournit l'événement d'arrêt avant que l'application ait observé `ALARM_FIRED`; celle depuis `TRIGGERED_AWAITING_NFC` absorbe un fait d'arrêt reçu tardivement sans régression.
 
 ### 5.2 Événements refusés
@@ -171,6 +180,10 @@ Les cas suivants produisent une `DomainViolation` sans effet natif:
 - `VALID_NFC_SCANNED` depuis `ARMED` à ou après `triggerAtEpochMillis`, avec la violation `TRIGGER_ALREADY_ELAPSED`;
 - `ALARM_FIRED` dans un état final;
 - `TRIGGER_ELAPSED` avant `triggerAtEpochMillis`;
+- `BLOCKING_START_ELAPSED` hors de `ARMED`;
+- `BLOCKING_START_ELAPSED` avant `blockingStartsAtEpochMillis`, avec la violation `BLOCKING_START_NOT_REACHED`;
+- `BLOCKING_START_ELAPSED` alors que `blockingAppliedAtEpochMillis` est déjà renseigné, ou pour une session à blocage immédiat, avec la violation `BLOCKING_ALREADY_APPLIED`;
+- `ACTIVATION_REQUESTED` dont le `blockingSchedule` est incohérent (champs partiellement renseignés) ou dont `startsAtEpochMillis` n'est pas strictement antérieur à `triggerAtEpochMillis`, avec la violation `INVALID_BLOCKING_SCHEDULE`;
 - événement dont le `sessionId` ne correspond pas à la session active;
 - horodatage ou identifiant mal formé;
 - tentative de régression d'une révision de snapshot.
@@ -208,6 +221,7 @@ enum class SessionEventKind {
     ALARM_FIRED,
     ALARM_SOUND_STOPPED,
     TRIGGER_ELAPSED,
+    BLOCKING_START_ELAPSED,
     VALID_NFC_SCANNED,
     INVALID_NFC_SCANNED,
     RELEASE_SUCCEEDED,
@@ -244,11 +258,12 @@ data class NfcVerificationContext(
 
 data class ActivationRequest(
     val wakeSchedule: WakeSchedule,
-    val appSelection: AppSelectionSummary
+    val appSelection: AppSelectionSummary,
+    val blockingSchedule: BlockingSchedule
 )
 ```
 
-`expectedRevision` est obligatoire sauf pour `ACTIVATION_REQUESTED`. `activationRequest` est obligatoire uniquement pour `ACTIVATION_REQUESTED`. `nfcProof` est obligatoire uniquement pour `VALID_NFC_SCANNED`; le moteur refuse une preuve absente, mal formée, qui ne provient pas de `verifyBox()`, dont `sessionId`, `eventId`, `expectedRevision` ou `verifiedAtEpochMillis` ne correspondent pas à l'événement. `failureCode` est obligatoire uniquement pour `ACTIVATION_FAILED`. `incident` est obligatoire pour `RELEASE_FAILED` et `INCIDENT_REPORTED`; il est facultatif pour `TRIGGER_ELAPSED`, afin d'y joindre `MISSED_TRIGGER_WINDOW`. Les autres événements doivent laisser ces champs à `null`.
+`expectedRevision` est obligatoire sauf pour `ACTIVATION_REQUESTED`. `activationRequest` est obligatoire uniquement pour `ACTIVATION_REQUESTED`. `nfcProof` est obligatoire uniquement pour `VALID_NFC_SCANNED`; le moteur refuse une preuve absente, mal formée, qui ne provient pas de `verifyBox()`, dont `sessionId`, `eventId`, `expectedRevision` ou `verifiedAtEpochMillis` ne correspondent pas à l'événement. `failureCode` est obligatoire uniquement pour `ACTIVATION_FAILED`. `incident` est obligatoire pour `RELEASE_FAILED` et `INCIDENT_REPORTED`; il est facultatif pour `TRIGGER_ELAPSED`, afin d'y joindre `MISSED_TRIGGER_WINDOW`, et pour `BLOCKING_START_ELAPSED`, afin d'y joindre `MISSED_BLOCKING_START_WINDOW`. Les autres événements doivent laisser ces champs à `null`.
 
 `NfcVerificationProof` est une valeur opaque créée uniquement par `NiumiCoreFacade.verifyBox()` après comparaison du payload NFC et du boîtier associé. Le coordinateur fournit à cette vérification le `sessionId`, le nouvel `eventId`, la `expectedRevision` et l'horodatage qui sera placé dans l'événement. La preuve est ainsi liée à une seule transition. Elle est transmise en mémoire à `reduce()`, n'est ni sérialisable, ni journalisée, ni placée dans le reçu d'événement. Les adaptateurs natifs ne peuvent pas construire ou réutiliser cette preuve pour un autre événement.
 
@@ -261,6 +276,8 @@ enum class SessionEffectKind {
     CANCEL_ALARM,
     APPLY_BLOCKING,
     REMOVE_BLOCKING,
+    SCHEDULE_BLOCKING_START,
+    CANCEL_BLOCKING_START,
     START_RINGING,
     STOP_RINGING,
     PRESENT_SCAN_REQUEST,
@@ -288,15 +305,24 @@ data class IncidentEffectPayload(
 
 | Événement appliqué | Effets ordonnés |
 | --- | --- |
-| `ACTIVATION_REQUESTED` | publier, programmer l'alarme, appliquer le blocage |
+| `ACTIVATION_REQUESTED` | publier, programmer l'alarme, puis appliquer le blocage (blocage immédiat, ou instant de début déjà dépassé) ou programmer le début du blocage (blocage différé) |
 | `ACTIVATION_SUCCEEDED` | publier |
-| `ACTIVATION_FAILED` | annuler l'alarme, retirer le blocage de la transaction, publier, effacer le pointeur actif |
-| `ALARM_FIRED` | publier, démarrer la sonnerie native |
-| `ALARM_SOUND_STOPPED` ou `TRIGGER_ELAPSED` | publier, présenter la demande de scan, puis enregistrer l'incident s'il existe |
-| `VALID_NFC_SCANNED` | publier `RELEASING`, annuler l'alarme, arrêter la sonnerie, retirer la demande de scan, retirer le blocage |
+| `ACTIVATION_FAILED` | annuler l'alarme, annuler le début du blocage (blocage différé seulement), retirer le blocage de la transaction, publier, effacer le pointeur actif |
+| `BLOCKING_START_ELAPSED` | publier, appliquer le blocage, puis enregistrer l'incident s'il existe |
+| `ALARM_FIRED` | publier, appliquer le blocage s'il n'a pas encore été demandé, démarrer la sonnerie native |
+| `ALARM_SOUND_STOPPED` ou `TRIGGER_ELAPSED` | publier, appliquer le blocage s'il n'a pas encore été demandé, présenter la demande de scan, puis enregistrer l'incident s'il existe |
+| `VALID_NFC_SCANNED` | publier `RELEASING`, annuler l'alarme, annuler le début du blocage (blocage différé seulement), arrêter la sonnerie, retirer la demande de scan, retirer le blocage |
 | `RELEASE_FAILED` | enregistrer l'incident, publier |
 | `RELEASE_SUCCEEDED` | publier l'état final, effacer le pointeur actif |
 | `INCIDENT_REPORTED` | enregistrer l'incident, publier |
+
+`CANCEL_BLOCKING_START` : produit uniquement lorsque le `blockingSchedule` de la session est
+différé. Une alarme de début n'existe que si `SCHEDULE_BLOCKING_START` l'a demandée, et une session
+à blocage immédiat n'en a jamais : l'effet serait alors une annulation sans objet, qu'aucun
+coordinateur natif n'a de raison d'exécuter. Précision apportée à l'étape 22 de l'implémentation
+Android, la table d'origine ne distinguant pas les deux cas ; décision validée avec l'utilisateur le
+2026-09-16, voir `ETAPE-22.md`. Les effets d'une session à blocage immédiat restent ainsi
+exactement ceux du contrat 1.2, ordinaux et `effectId` compris.
 
 `INCIDENT_REPORTED` : ligne ajoutée à l'étape 7 de l'implémentation Android. Cette table ne
 couvrait pas l'événement d'incident autonome à l'origine. Le même ordre que `RELEASE_FAILED` est
@@ -307,7 +333,7 @@ validée avec l'utilisateur le 2026-09-08, voir `ETAPE-07.md`.
 
 Tous les effets sont idempotents. La réconciliation peut les rejouer après avoir comparé l'état métier et l'état natif observé. `ACTIVATION_SUCCEEDED` et `RELEASE_SUCCEEDED` ne sont produits qu'après la réussite de tous les effets requis de leur phase.
 
-Un effet est *requis* pour une phase s'il conditionne l'envoi de l'événement `_SUCCEEDED` correspondant: `SCHEDULE_ALARM` et `APPLY_BLOCKING` pour `ACTIVATION_SUCCEEDED`; `CANCEL_ALARM`, `STOP_RINGING` et `REMOVE_BLOCKING` pour `RELEASE_SUCCEEDED`. `PUBLISH_PLATFORM_SNAPSHOT`, `PRESENT_SCAN_REQUEST`, `CLEAR_SCAN_REQUEST` et `RECORD_INCIDENT` sont toujours best-effort: leur échec est consigné mais ne bloque jamais la phase. Un effet requis dont la précondition a disparu, par exemple `REMOVE_BLOCKING` alors que l'autorisation système a déjà été révoquée par l'utilisateur, est considéré satisfait dès que le coordinateur constate que l'état natif cible est déjà atteint; il enregistre alors un incident `CRITICAL` au lieu de bloquer indéfiniment la phase.
+Un effet est *requis* pour une phase s'il conditionne l'envoi de l'événement `_SUCCEEDED` correspondant: `SCHEDULE_ALARM` et, selon le `blockingSchedule`, celui des deux effets `APPLY_BLOCKING` ou `SCHEDULE_BLOCKING_START` que la décision a produit, pour `ACTIVATION_SUCCEEDED`; `CANCEL_ALARM`, `STOP_RINGING` et `REMOVE_BLOCKING` pour `RELEASE_SUCCEEDED`. `PUBLISH_PLATFORM_SNAPSHOT`, `PRESENT_SCAN_REQUEST`, `CLEAR_SCAN_REQUEST`, `CANCEL_BLOCKING_START` et `RECORD_INCIDENT` sont toujours best-effort (un début de blocage laissé programmé après un état final est absorbé par le coordinateur, qui refuse tout déclenchement sans session `ARMED` en attente): leur échec est consigné mais ne bloque jamais la phase. Un effet requis dont la précondition a disparu, par exemple `REMOVE_BLOCKING` alors que l'autorisation système a déjà été révoquée par l'utilisateur, est considéré satisfait dès que le coordinateur constate que l'état natif cible est déjà atteint; il enregistre alors un incident `CRITICAL` au lieu de bloquer indéfiniment la phase.
 
 ### 6.1 Registre d'événements et outbox native
 
@@ -329,11 +355,13 @@ data class SessionSnapshot(
     val revision: Long,
     val sessionId: String,
     val wakeSchedule: WakeSchedule,
+    val blockingSchedule: BlockingSchedule,
     val state: SessionState,
     val releaseTarget: ReleaseTarget?,
     val health: SessionHealth,
     val createdAtEpochMillis: Long,
     val armedAtEpochMillis: Long?,
+    val blockingAppliedAtEpochMillis: Long?,
     val ringingAtEpochMillis: Long?,
     val alarmSoundStoppedAtEpochMillis: Long?,
     val triggerElapsedAtEpochMillis: Long?,
@@ -345,7 +373,7 @@ data class SessionSnapshot(
 )
 ```
 
-`schemaVersion` vaut `1` pour le MVP. `revision` augmente à chaque décision persistée. Les dates exposées aux plateformes utilisent des millisecondes Unix. Les types `Instant`, `LocalDate` et `LocalTime` peuvent rester internes au module.
+`schemaVersion` vaut `2` depuis le contrat 1.3 (`1` pour le MVP d'origine). Un snapshot de version 1 se lit comme un blocage immédiat dont `blockingAppliedAtEpochMillis` vaut `createdAtEpochMillis` ; la montée est testée sur chaque plateforme (section 13). `revision` augmente à chaque décision persistée. Les dates exposées aux plateformes utilisent des millisecondes Unix. Les types `Instant`, `LocalDate` et `LocalTime` peuvent rester internes au module.
 
 ### 7.2 Programmation du réveil
 
@@ -410,7 +438,12 @@ UNEXPECTED_EVENT_PAYLOAD
 TRIGGER_NOT_REACHED
 TRIGGER_ALREADY_ELAPSED
 INVALID_APP_SELECTION
+INVALID_BLOCKING_SCHEDULE
+BLOCKING_START_NOT_REACHED
+BLOCKING_ALREADY_APPLIED
 ```
+
+`INVALID_BLOCKING_SCHEDULE`, `BLOCKING_START_NOT_REACHED` et `BLOCKING_ALREADY_APPLIED` : ajoutés au contrat 1.3 (blocage différé, section 5.2).
 
 `INVALID_APP_SELECTION` : ajouté à l'étape 7 de l'implémentation Android. La section 7.4 refuse une
 activation dont `count` est hors de 1..50, mais aucun des treize codes d'origine ne couvrait ce
@@ -428,11 +461,14 @@ Les codes communs initiaux sont, avec leur gravité par défaut:
 | `TIME_CHANGED` | `WARNING` |
 | `TIMEZONE_CHANGED` | `WARNING` |
 | `MISSED_TRIGGER_WINDOW` | `DEGRADED` |
+| `MISSED_BLOCKING_START_WINDOW` | `WARNING` |
 | `PROCESS_RECREATED` | `WARNING` |
 | `RELEASE_PARTIAL_FAILURE` | `DEGRADED` |
 | `SNAPSHOT_CORRUPTED` | `CRITICAL` |
 
 Chaque plateforme peut ajouter des codes préfixés par `ANDROID_` ou `IOS_`, avec leur propre gravité par défaut documentée dans leur spécification. Le module commun ne contient pas les textes affichés à l'utilisateur.
+
+`MISSED_BLOCKING_START_WINDOW` (contrat 1.3) est un `WARNING` et non un `DEGRADED`, contrairement à `MISSED_TRIGGER_WINDOW` : le blocage finit par s'appliquer et le réveil n'est pas touché. Il reste consigné et affiché, parce qu'une session qui annonçait « blocage à 22:30 » et l'a appliqué à 23:10 ne doit pas prétendre le contraire.
 
 Un incident de gravité `WARNING` ne modifie pas `health`. Un incident `DEGRADED` ou `CRITICAL` fait passer `health` à `DEGRADED`; une session active ne revient pas automatiquement à `HEALTHY`. `CRITICAL` se distingue de `DEGRADED` par son traitement natif: il doit en plus être présenté explicitement dans un diagnostic visible par l'utilisateur, alors qu'un `DEGRADED` peut rester consigné sans interrompre le parcours.
 
@@ -447,6 +483,18 @@ data class AppSelectionSummary(
 ```
 
 Une activation est refusée si `count` est inférieur à 1 ou supérieur à 50. Android conserve ses noms de packages. iOS conserve ses jetons opaques Family Controls.
+
+### 7.5 Début du blocage
+
+```kotlin
+data class BlockingSchedule(
+    val localDateIso: String?,
+    val localTimeIso: String?,
+    val startsAtEpochMillis: Long?
+)
+```
+
+Les trois champs sont tous nuls (blocage immédiat, valeur par défaut) ou tous renseignés (blocage différé) ; tout autre mélange est refusé par `INVALID_BLOCKING_SCHEDULE`. Le fuseau est celui de `WakeSchedule.zoneIdAtActivation` : une session n'a qu'un fuseau d'activation. `startsAtEpochMillis` est l'instant contractuel du début du blocage, calculé selon la section 8.3 ; `blockingAppliedAtEpochMillis` (section 7.1) est l'instant où le moteur a demandé le blocage — l'activation pour un blocage immédiat, la première décision à ou après `startsAtEpochMillis` sinon. Le module commun ne connaît pas la raison d'un blocage différé et n'impose aucune durée minimale entre le début du blocage et le réveil : seule l'antériorité stricte est exigée.
 
 ## 8. Politique commune de date et d'heure
 
@@ -475,6 +523,12 @@ L'interface affiche toujours l'heure de l'**instant obtenu**, jamais l'intention
 - Au-delà de 15 minutes sur Android, l'application produit `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW`, passe à `TRIGGERED_AWAITING_NFC`, dégrade sa santé, conserve le blocage, présente la demande de scan et attend le scan du boîtier.
 
 La fonction de calcul reçoit explicitement `nowEpochMillis` et le fuseau. Aucun test ne dépend de l'horloge réelle.
+
+### 8.3 Début du blocage
+
+Le début d'un blocage différé est calculé à partir d'une heure locale choisie, avec les règles de la section 8.1 : même fuseau IANA et même `nowEpochMillis` que le réveil, jour civil suivant si l'instant obtenu n'est pas strictement futur, mêmes règles de changement d'heure. L'instant obtenu doit être strictement antérieur à `triggerAtEpochMillis` ; sinon le calcul renvoie `NOT_BEFORE_TRIGGER` et la politique commune refuse l'activation par `BLOCKING_START_NOT_BEFORE_TRIGGER`. La règle de « prochaine occurrence » fait donc refuser, à 20:00 pour un réveil à 07:00, un début à 08:00 (demain, après le réveil) comme un début à 19:00 (demain 19:00, après le réveil) : l'utilisateur doit alors choisir un blocage immédiat. L'interface affiche l'instant obtenu, jamais l'intention saisie, comme pour le réveil (section 8.1).
+
+Après `ACTIVATION_SUCCEEDED`, `startsAtEpochMillis` est immuable : un changement d'heure ou de fuseau ne le déplace pas, et les adaptateurs natifs réparent leur programmation au même instant si leur API l'exige. Si l'instant est dépassé lors d'une réconciliation alors que le blocage n'a pas encore été demandé, le coordinateur produit `BLOCKING_START_ELAPSED` immédiatement, quel que soit le retard : un blocage ne se « manque » pas, il s'applique en retard. Android y joint `MISSED_BLOCKING_START_WINDOW` (`WARNING`) au-delà de 15 minutes, en réutilisant `evaluateTriggerDelay` ; iOS n'a pas cette fenêtre. Un instant de début déjà dépassé au moment de `ACTIVATION_REQUESTED` est traité comme un blocage immédiat par le moteur, qui produit alors `APPLY_BLOCKING` au lieu de `SCHEDULE_BLOCKING_START`.
 
 ## 9. Protocole NFC commun
 
@@ -549,7 +603,7 @@ Le coordinateur natif applique cette transaction:
 2. envoyer `ACTIVATION_REQUESTED`;
 3. persister atomiquement l'état `PREPARING`, le reçu de l'événement et l'outbox, puis publier le snapshot natif;
 4. programmer l'alarme native;
-5. appliquer le blocage natif;
+5. appliquer le blocage natif si le blocage est immédiat, ou programmer le début du blocage natif s'il est différé;
 6. vérifier les résultats observables sans prétendre prouver ce que l'OS ne permet pas de lire;
 7. envoyer `ACTIVATION_SUCCEEDED`;
 8. persister `ARMED`, republier le snapshot et confirmer à l'écran.
@@ -557,12 +611,13 @@ Le coordinateur natif applique cette transaction:
 Si une étape échoue:
 
 1. annuler l'alarme éventuellement créée;
-2. retirer uniquement le blocage créé par cette transaction;
-3. envoyer `ACTIVATION_FAILED`;
-4. persister `FAILED` avec `failureCode`;
-5. ne pas conserver de pointeur de session active.
+2. annuler le début du blocage éventuellement programmé;
+3. retirer uniquement le blocage créé par cette transaction;
+4. envoyer `ACTIVATION_FAILED`;
+5. persister `FAILED` avec `failureCode`;
+6. ne pas conserver de pointeur de session active.
 
-Le blocage n'est considéré comme engagé qu'après `ACTIVATION_SUCCEEDED`.
+L'engagement n'est pris qu'après `ACTIVATION_SUCCEEDED`. Pour un blocage différé, le blocage lui-même n'est demandé qu'à `BLOCKING_START_ELAPSED`, mais la session est engagée dès `ARMED` (décision 15) : le scan reste la seule sortie.
 
 À l'étape 1, le coordinateur natif capture aussi le `PairedBoxCredential` courant du dépôt et le fige dans la session. Toute vérification NFC ultérieure pour cette session utilise exclusivement ce credential figé, jamais le boîtier courant du dépôt. Le parcours d'association et le sélecteur d'applications sont désactivés tant qu'une session est active, afin que ce credential et la sélection ne puissent pas changer sous la session.
 
@@ -581,6 +636,12 @@ Le coordinateur lit `try AlarmManager.shared.alarms` avant un scan depuis `ARMED
 `PRESENT_SCAN_REQUEST` se traduit sur iOS par un routage immédiat vers l'écran de réveil dès que le coordinateur observe le fait, sans notification locale: iOS n'observe ce fait qu'application active (lancement, retour au premier plan ou avant un scan). Tant que l'application n'a pas été rouverte, seuls les shields signalent que la session reste active. C'est l'exception native documentée en section 4: le shield doit alors afficher un texte actionnable qui indique explicitement qu'un scan du boîtier termine la session, afin de rester une porte de sortie utilisable plutôt qu'un simple constat.
 
 Le scan Core NFC produit `VALID_NFC_SCANNED` seulement après passage par le parseur et le vérificateur communs, avec la `NfcVerificationProof` opaque retournée par ce dernier.
+
+### 11.3 Début du blocage différé
+
+Android : une alarme exacte distincte du réveil, ciblant `BlockingStartReceiver`, produit `BLOCKING_START_ELAPSED` (`SPEC_ANDROID.md`, section 12.4). Le coordinateur applique la décision et exécute `APPLY_BLOCKING` sur la projection lue par le service d'accessibilité. Toute réconciliation qui trouve une session `ARMED` dont l'instant de début est atteint sans blocage demandé produit le même événement.
+
+iOS : le mécanisme natif pressenti est une planification `DeviceActivitySchedule` observée par une extension `DeviceActivityMonitor`, qui applique les shields à `intervalDidStart` et publie un fait natif immuable, ensuite converti en `BLOCKING_START_ELAPSED` par l'application principale — même patron que `alarmStopped`. Ce mécanisme est `À REVOIR · POC` (`SPEC_IOS.md`, section 1.2). L'invariant de la section 4 tient dans tous les cas grâce au repli du moteur (section 5.1).
 
 ## 12. Libération atomique
 
@@ -627,6 +688,7 @@ SwiftData reste la source persistante canonique de l'application et doit permett
 - les projections utilisent `projectionSchemaVersion`, `domainSchemaVersion` et `domainRevision`;
 - une projection peut être réécrite à `domainRevision` égale, mais jamais avec une révision inférieure;
 - migration testée avant toute montée de version;
+- un snapshot de `schemaVersion` 1 se lit comme un blocage immédiat déjà demandé (`blockingAppliedAtEpochMillis = createdAtEpochMillis`) ; la montée à 2 est testée sur les deux plateformes;
 - corruption traitée explicitement;
 - aucune suppression silencieuse du blocage à cause d'un snapshot illisible;
 - aucune donnée NFC secrète ou sélection d'applications iOS dans les logs.
@@ -665,8 +727,19 @@ class NiumiCoreFacade {
     fun evaluateTriggerDelay(
         input: TriggerDelayInputDto
     ): TriggerDelayResultDto
+
+    fun computeBlockingSchedule(
+        input: BlockingScheduleInputDto
+    ): BlockingScheduleResultDto
 }
 ```
+
+`computeBlockingSchedule` : septième méthode, ajoutée par le contrat 1.3 (section 8.3). Un `localTimeIso` nul décrit un blocage immédiat et renvoie `VALID` avec un `BlockingScheduleDto` aux trois champs nuls ; sinon l'instant est résolu comme un réveil puis comparé à `triggerAtEpochMillis`.
+
+La version du schéma des DTO exposés par la façade, portée par `NiumiCoreVersion.SCHEMA_VERSION`,
+passe de `1` à `2` avec le contrat 1.3 : les valeurs par défaut Kotlin des nouveaux champs ne
+traversent pas la frontière Swift, la rupture est donc réelle pour iOS. Elle est distincte de
+`SessionSnapshot.schemaVersion` (§7.1), qui décrit le snapshot persisté.
 
 `evaluateTriggerDelay` : sixième méthode, ajoutée à l'étape 8 de l'implémentation Android. Elle
 expose la fenêtre de grâce Android de 15 minutes du §8.2 (politique de reprogrammation calculée et
@@ -712,7 +785,28 @@ data class ActivationPolicyInputDto(
     val appSelectionCount: Int,
     val triggerAtEpochMillis: Long,
     val nowEpochMillis: Long,
-    val hasPairedBox: Boolean
+    val hasPairedBox: Boolean,
+    val blockingStartsAtEpochMillis: Long?
+)
+
+data class BlockingScheduleInputDto(
+    val localTimeIso: String?,
+    val zoneId: String,
+    val nowEpochMillis: Long,
+    val triggerAtEpochMillis: Long
+)
+
+enum class BlockingScheduleStatusDto { VALID, INVALID_TIME, UNKNOWN_ZONE, NOT_BEFORE_TRIGGER }
+
+data class BlockingScheduleDto(
+    val localDateIso: String?,
+    val localTimeIso: String?,
+    val startsAtEpochMillis: Long?
+)
+
+data class BlockingScheduleResultDto(
+    val status: BlockingScheduleStatusDto,
+    val schedule: BlockingScheduleDto?
 )
 
 data class ActivationReasonDto(
@@ -729,7 +823,9 @@ data class ActivationPolicyResultDto(
 
 `ActivationReasonDto.code` ne porte jamais de texte affiché à l'utilisateur (§7.3) : uniquement un
 code stable, éventuellement accompagné de `checkId` pour retrouver le contrôle de préparation natif
-en cause. `WakeScheduleResultDto.schedule` et `TriggerDelayResultDto` suivent la même convention que
+en cause. `blockingStartsAtEpochMillis` (contrat 1.3) est `null` pour un blocage immédiat ; renseigné
+et non strictement antérieur à `triggerAtEpochMillis`, il produit la raison bloquante
+`BLOCKING_START_NOT_BEFORE_TRIGGER`, sans `checkId`, comme `TRIGGER_NOT_IN_FUTURE`. `WakeScheduleResultDto.schedule` et `TriggerDelayResultDto` suivent la même convention que
 `BoxPayloadResultDto`/`BoxVerificationResultDto` (§9.3) plutôt qu'un type scellé `Success`/`Failure` :
 uniformité du module et confort d'appel depuis Swift, décision validée avec l'utilisateur le
 2026-09-08.
@@ -888,7 +984,13 @@ Les tests `commonTest` couvrent au minimum:
 - santé inchangée pour `WARNING`, dégradée pour `DEGRADED` et `CRITICAL`;
 - impossibilité de passer une session active à `FAILED`;
 - révisions métier croissantes et refus des révisions obsolètes;
-- `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables de façon idempotente en reprise.
+- `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables de façon idempotente en reprise;
+- `BLOCKING_START_ELAPSED` depuis `ARMED` avant, à et après `startsAtEpochMillis` ; refusé hors de `ARMED`, refusé une seconde fois (`BLOCKING_ALREADY_APPLIED`), refusé pour un blocage immédiat;
+- `ACTIVATION_REQUESTED` produit `APPLY_BLOCKING` pour un blocage immédiat ou dont l'instant de début est déjà dépassé, `SCHEDULE_BLOCKING_START` sinon ; refus d'un `blockingSchedule` incohérent ou non strictement antérieur au réveil (`INVALID_BLOCKING_SCHEDULE`);
+- repli du moteur : `ALARM_FIRED`, `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` depuis `ARMED` sans blocage demandé produisent `APPLY_BLOCKING` avant leurs autres effets et renseignent `blockingAppliedAtEpochMillis` ; aucun effet supplémentaire quand le blocage est déjà demandé;
+- scan valide depuis `ARMED` avant le début du blocage : cible `CANCELLED`, effets `CANCEL_BLOCKING_START` et `REMOVE_BLOCKING` présents;
+- `MISSED_BLOCKING_START_WINDOW` joint à `BLOCKING_START_ELAPSED` ne dégrade pas la santé;
+- lecture d'un snapshot de version 1 comme blocage immédiat déjà demandé.
 
 ### Date et heure
 
@@ -897,7 +999,8 @@ Les tests `commonTest` couvrent au minimum:
 - heure inexistante au printemps;
 - heure répétée à l'automne;
 - changement de fuseau après activation sans changement de l'instant;
-- retards de 0, 15 et plus de 15 minutes, avec `TRIGGER_ELAPSED` et `MISSED_TRIGGER_WINDOW` au-delà de 15 minutes; cette fenêtre de grâce est la politique Android, testée ici pour le calcul mais sans équivalent iOS.
+- retards de 0, 15 et plus de 15 minutes, avec `TRIGGER_ELAPSED` et `MISSED_TRIGGER_WINDOW` au-delà de 15 minutes; cette fenêtre de grâce est la politique Android, testée ici pour le calcul mais sans équivalent iOS;
+- début du blocage : plus tard le même jour, bascule au jour suivant, heure inexistante au printemps, heure répétée à l'automne, instant égal ou postérieur au réveil refusé (`NOT_BEFORE_TRIGGER`), `localTimeIso` nul résolu en blocage immédiat, fuseau inchangé après activation.
 
 ### NFC
 
@@ -914,7 +1017,8 @@ Les tests `commonTest` couvrent au minimum:
 ### Politiques
 
 - sélections de 0, 1, 50 et 51 applications;
-- blocage conservé dans `ARMED`, `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`;
+- blocage conservé dans `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`, et dans `ARMED` dès que `blockingAppliedAtEpochMillis` est renseigné ; non demandé dans `ARMED` tant qu'il est nul;
+- activation refusée par `BLOCKING_START_NOT_BEFORE_TRIGGER` quand l'instant de début n'est pas strictement antérieur au réveil, autorisée avec un instant nul;
 - nettoyage partiel autorisé dans `RELEASING`, sans finalisation avant la réussite des effets requis;
 - reprise de `RECORD_INCIDENT` après interruption avec son code, sa gravité, son horodatage et sa plateforme;
 - aucune fin sans `nfcVerifiedAt`;
@@ -981,6 +1085,12 @@ Une fonctionnalité commune n'est terminée que si:
 | 23. Critères d'acceptation | Modifier | Ajouter l'annulation NFC, `CANCELLED`, le protocole commun, la règle horaire et l'interdiction de finaliser avant nettoyage. |
 | 24. Ordre d'implémentation | Compléter | Ajouter le Lot 0.5 KMP après validation du POC natif. Le Lot 1 remplace ensuite le domaine Swift dupliqué. |
 | 26. Définition de terminé | Compléter | Exiger les tests communs, les mappings et la construction du framework KMP dans Xcode. |
+| 8. NiumiSessionRecord | Compléter (contrat 1.3) | Ajouter `blockingLocalDateISO`, `blockingLocalTimeISO`, `blockingStartsAt` et `blockingAppliedAt` ; lire une version 1 comme blocage immédiat déjà demandé. |
+| 9. Machine à états | Compléter (contrat 1.3) | Ajouter `ARMED -> ARMED` sur `BLOCKING_START_ELAPSED` et le repli du moteur sur `ALARM_FIRED`, `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED`. |
+| 11. Transaction d'activation | Compléter (contrat 1.3) | Appliquer les shields à l'activation ou programmer leur début ; exiger un instant de début strictement antérieur au réveil. |
+| 13. Application des shields | Compléter (contrat 1.3) | Décrire le début différé par `DeviceActivityMonitor`, `À REVOIR · POC`. |
+| 16. Restauration | Compléter (contrat 1.3) | Produire `BLOCKING_START_ELAPSED` quand l'instant de début est atteint sans shields appliqués. |
+| 17. Session active | Compléter (contrat 1.3) | Afficher l'instant de début du blocage tant qu'il n'est pas atteint. |
 
 ## 20. Points qui restent dépendants des POC
 
@@ -990,6 +1100,7 @@ Le présent contrat ne prétend pas résoudre les contraintes système suivantes
 - entitlement Family Controls et distribution App Store;
 - comportement AlarmKit après redémarrage, à l'exception de l'indisponibilité documentée du `secondaryIntent` avant le premier déverrouillage;
 - ouverture de Niumi depuis un shield;
+- exécution d'une extension `DeviceActivityMonitor` à l'instant planifié et application des shields depuis cette extension (début du blocage différé, contrat 1.3);
 - lecture NFC lorsque le téléphone est verrouillé;
 - comportement des surcouches Android sur les services et notifications;
 - choix industriel du tag, écriture, verrouillage et remplacement du boîtier.

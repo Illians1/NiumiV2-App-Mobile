@@ -43,6 +43,20 @@ public data class WakeScheduleDto(
     val triggerAtEpochMillis: Long,
 )
 
+/**
+ * Début du blocage (SPEC_CORE_KMP §7.5). Les valeurs par défaut des champs de blocage, ici et dans
+ * [SessionSnapshotDto], sont **transitoires** : elles décrivent le blocage immédiat du MVP
+ * d'origine, gardent la compatibilité JSON des projections et fixtures de version 1, et laissent
+ * les sites de construction Android compiler tant qu'ils ne renseignent pas encore ces champs
+ * (étape 23 du plan Android).
+ */
+@Serializable
+public data class BlockingScheduleDto(
+    val localDateIso: String? = null,
+    val localTimeIso: String? = null,
+    val startsAtEpochMillis: Long? = null,
+)
+
 @Serializable
 public data class AppSelectionSummaryDto(
     val count: Int,
@@ -52,6 +66,7 @@ public data class AppSelectionSummaryDto(
 public data class ActivationRequestDto(
     val wakeSchedule: WakeScheduleDto,
     val appSelection: AppSelectionSummaryDto,
+    val blockingSchedule: BlockingScheduleDto = BlockingScheduleDto(),
 )
 
 @Serializable
@@ -68,11 +83,13 @@ public data class SessionSnapshotDto(
     val revision: Long,
     val sessionId: String,
     val wakeSchedule: WakeScheduleDto,
+    val blockingSchedule: BlockingScheduleDto = BlockingScheduleDto(),
     val state: SessionStateDto,
     val releaseTarget: ReleaseTargetDto?,
     val health: SessionHealthDto,
     val createdAtEpochMillis: Long,
     val armedAtEpochMillis: Long?,
+    val blockingAppliedAtEpochMillis: Long? = null,
     val ringingAtEpochMillis: Long?,
     val alarmSoundStoppedAtEpochMillis: Long?,
     val triggerElapsedAtEpochMillis: Long?,

@@ -39,6 +39,29 @@ internal fun healthAfter(
     }
 
 /**
+ * Repli du moteur (SPEC_CORE_KMP §5.1, invariant §4) : une session `ARMED` ne quitte jamais cet état
+ * vers `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans que le blocage ait été demandé. Si
+ * le début du blocage n'a pas encore été traité, la transition le demande elle-même — le champ est
+ * renseigné et `APPLY_BLOCKING` ajouté au [builder], à la position où il est appelé. Sinon le
+ * snapshot est renvoyé inchangé et aucun effet n'est ajouté.
+ *
+ * C'est le seul point du moteur qui écrit `blockingAppliedAtEpochMillis` en dehors de
+ * [ActivationReducer] et [BlockingReducer]. Ce filet ne dispense jamais le coordinateur natif de
+ * produire `BLOCKING_START_ELAPSED` à l'heure.
+ */
+internal fun applyPendingBlocking(
+    snapshot: SessionSnapshot,
+    event: SessionEvent,
+    builder: SessionEffectBuilder,
+): SessionSnapshot =
+    if (snapshot.isBlockingPending) {
+        builder.add(SessionEffectKind.APPLY_BLOCKING)
+        snapshot.copy(blockingAppliedAtEpochMillis = event.occurredAtEpochMillis)
+    } else {
+        snapshot
+    }
+
+/**
  * Vérifie que la preuve provient bien de la transition en cours (SPEC_CORE_KMP §6, dernier
  * alinéa) : comparaison champ par champ, jamais par `==` sur la preuve elle-même — voir le KDoc de
  * [NfcVerificationProof] (`equals` structurel volontairement absent).

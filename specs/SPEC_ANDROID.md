@@ -9,10 +9,10 @@ Contrat métier commun: `SPEC_CORE_KMP.md`
 
 Cette spécification décrit l'application Android de Niumi. Elle doit permettre à Codex de créer une première version fonctionnelle, testable sur appareils réels et conforme à la logique produit suivante:
 
-1. l'utilisateur choisit une heure de réveil;
+1. l'utilisateur choisit une heure de réveil, et si le blocage commence tout de suite ou à une heure donnée avant ce réveil;
 2. il sélectionne les applications à bloquer;
 3. il confirme une session;
-4. les applications choisies restent bloquées pendant la session;
+4. les applications choisies restent bloquées pendant la session, dès l'activation ou dès l'instant de début choisi;
 5. l'alarme sonne à l'heure prévue;
 6. seul le scan du boîtier NFC associé termine la session dans le parcours normal;
 7. la fin de session arrête la sonnerie et débloque les applications.
@@ -32,6 +32,7 @@ Le MVP Android comprend:
 - la sonnerie en boucle dans un service au premier plan;
 - un écran de réveil visible au-dessus de l'écran verrouillé lorsque le système l'autorise;
 - le blocage comportemental des applications sélectionnées avec un `AccessibilityService`;
+- le début du blocage à l'activation ou à un instant choisi, strictement antérieur au réveil, porté par une alarme exacte distincte du réveil (Lot 6);
 - la fin de session après validation locale du tag NFC;
 - la reprogrammation après redémarrage, changement d'heure, changement de fuseau ou mise à jour de l'application;
 - un diagnostic avant l'activation de chaque session;
@@ -64,10 +65,11 @@ Codex doit appliquer les décisions suivantes sans ajouter de variante cachée:
 - Le scan NFC valide termine la session même sans réseau.
 - Un scan inconnu, illisible ou mal formé ne change aucun état.
 - Un scan valide place d'abord la session dans `RELEASING`. L'état final n'est écrit qu'après le nettoyage effectif des sous-systèmes.
-- Le blocage commence uniquement après confirmation de la programmation de l'alarme.
-- Le blocage reste actif dans `ARMED`, `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`. Pendant `RELEASING`, il dépend des effets de libération déjà réussis et de la projection native.
+- Le blocage commence uniquement après confirmation de la programmation de l'alarme : à l'activation, ou à l'instant de début choisi par l'utilisateur, strictement antérieur au réveil (Lot 6). L'alarme est programmée dès l'activation dans les deux cas, et l'engagement est pris à l'activation (SPEC_CORE_KMP §2, décision 15).
+- Avant le début d'un blocage différé, la session est déjà engagée : modification et annulation exigent le scan du boîtier, comme après. Aucune action « Bloquer dès maintenant » n'existe dans le Lot 6 (décision du 2026-09-15).
+- Le blocage reste actif dans `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`, et dans `ARMED` dès que `blockingAppliedAtEpochMillis` est renseigné. Pendant `RELEASING`, il dépend des effets de libération déjà réussis et de la projection native.
 - La sélection contient entre 1 et 50 applications.
-- L'instant du réveil est figé après activation. Un changement de fuseau modifie l'affichage local, pas `triggerAtEpochMillis`.
+- Les instants du réveil et du début du blocage sont figés après activation. Un changement de fuseau modifie l'affichage local, pas `triggerAtEpochMillis` ni `blockingStartsAtEpochMillis`.
 - Les applications système nécessaires à la sécurité et aux réglages ne sont jamais proposées dans le sélecteur.
 - Le MVP ne fournit aucun mécanisme logiciel de secours pendant une session active. Si le boîtier est perdu, cassé ou illisible, ou si le NFC tombe en panne, l'utilisateur conserve les mécanismes Android tels que l'arrêt forcé ou l'extinction du téléphone. Cette limite est intentionnelle et doit être expliquée avant la première activation.
 - `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` affichent toujours une notification demandant le scan, y compris lorsque l'alarme n'a jamais sonné. Aucune session bloquante ne reste silencieuse.
@@ -103,7 +105,8 @@ L'application ne peut pas garantir la sonnerie dans les cas suivants:
 - volume d'alarme rendu inaudible après l'activation;
 - mode Ne pas déranger passé en silence total après l'activation: l'alarme est muette et l'écran de réveil ne s'affiche pas; l'incident `ANDROID_ALARM_MUTED_BY_DND` est créé, sans que Niumi puisse rétablir le son;
 - panne du système, du haut-parleur ou du matériel NFC;
-- comportement OEM incompatible non détecté.
+- comportement OEM incompatible non détecté;
+- début d'un blocage différé manqué parce que le téléphone était éteint ou Niumi arrêté de force à cet instant: le blocage s'applique au prochain réveil du processus, avec l'incident `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes (12.4).
 
 **Restriction OEM de démarrage automatique (mesurée à l'étape 19, MIUI/HyperOS).** Sur ces surcouches, une permission par application — « Démarrage automatique en arrière-plan », gérée par le Security Center de Xiaomi et refusée par défaut — décide si un broadcast a le droit de **démarrer le processus** de l'application. Elle ne bloque pas la réception d'un broadcast par un processus déjà vivant.
 
@@ -234,6 +237,7 @@ Transitions autorisées:
 | aucun | `ACTIVATION_REQUESTED` | `PREPARING` | aucune |
 | `PREPARING` | `ACTIVATION_SUCCEEDED` | `ARMED` | aucune |
 | `PREPARING` | `ACTIVATION_FAILED` | `FAILED` | aucune |
+| `ARMED`, blocage non encore demandé | `BLOCKING_START_ELAPSED` | `ARMED`, `blockingAppliedAtEpochMillis` renseigné | aucune |
 | `ARMED` | `ALARM_FIRED` | `RINGING` | aucune |
 | `ARMED` ou `RINGING` | `ALARM_SOUND_STOPPED` | `AWAITING_NFC` | aucune |
 | `ARMED` | `TRIGGER_ELAPSED` | `TRIGGERED_AWAITING_NFC` | aucune |
@@ -245,6 +249,8 @@ Transitions autorisées:
 | état actif | `INVALID_NFC_SCANNED` ou `INCIDENT_REPORTED` | état inchangé | inchangée |
 
 Android ne produit pas `ALARM_SOUND_STOPPED` dans le parcours normal. Cet événement appartient au contrat commun afin de représenter le contrôle Stop imposé par iOS.
+
+`BLOCKING_START_ELAPSED` (Lot 6) est produit par `BlockingStartReceiver` (12.4) ou par `SessionReconciler` dès que `blockingStartsAtEpochMillis` est atteint. Dans `ARMED`, l'état seul ne dit pas si le blocage est appliqué : `blockingAppliedAtEpochMillis` le dit, et la projection de 12.2 le lit. Si l'alarme de début a été manquée, `ALARM_FIRED` ou `TRIGGER_ELAPSED` applique le blocage dans la même décision (repli du moteur, SPEC_CORE_KMP §5.1).
 
 `VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé par le moteur avec la violation `TRIGGER_ALREADY_ELAPSED`. `HandleValidNfcUseCase` (section 11.3) réconcilie systématiquement l'heure avant un scan depuis `ARMED` et envoie d'abord `TRIGGER_ELAPSED` dans ce cas, si bien que ce refus reste un filet de sécurité et ne doit jamais se produire en parcours normal.
 
@@ -326,6 +332,10 @@ localDate: String ISO-8601
 localTime: String ISO-8601
 zoneIdAtActivation: String IANA
 triggerAtEpochMillis: Long
+blockingLocalDate: String? ISO-8601
+blockingLocalTime: String? ISO-8601
+blockingStartsAtEpochMillis: Long?
+blockingAppliedAtEpochMillis: Long?
 state: SessionState
 releaseTarget: ReleaseTarget?
 health: SessionHealth
@@ -394,6 +404,8 @@ Le journal conserve au maximum les 200 derniers événements. Il ne doit conteni
 
 **Version de la base.** La base est en **v2** depuis l'étape 16 : `technical_event` y gagne `deviceModel`, `androidVersion` et `appVersion` (17). `MIGRATION_1_2` est additive et ne touche aucune autre table ; les lignes existantes reçoivent `''`, le journal antérieur est conservé. Chaque schéma reste committé sous `androidApp/core/database/schemas/`, v1 comprise — `MigrationTestHelper` en a besoin pour créer une base v1 avant d'y appliquer la migration. Les trois colonnes sont déclarées `@ColumnInfo(defaultValue = "''")` : SQLite exige une valeur par défaut pour ajouter une colonne `NOT NULL` à une table peuplée, et sans cette annotation le schéma attendu par Room n'en déclarerait aucune, faisant échouer `validateMigration` sur cette seule différence. Aucun `fallbackToDestructiveMigration` : une migration manquante doit faire échouer l'ouverture plutôt qu'effacer une session active et son journal (13, 18).
 
+**v3 (Lot 6, blocage différé).** `alarm_session` gagne les quatre colonnes `blocking*`, toutes nullables (§7.2 ci-dessus), et `MIGRATION_2_3` est additive : les lignes existantes reçoivent `NULL` pour `blockingLocalDate`, `blockingLocalTime` et `blockingStartsAtEpochMillis` (blocage immédiat) et `createdAtEpochMillis` pour `blockingAppliedAtEpochMillis` — une session en cours pendant la mise à jour avait demandé son blocage à l'activation — puis `schemaVersion = 2` (SPEC_CORE_KMP §7.1). Schéma v3 committé sous `androidApp/core/database/schemas/`, migration testée depuis une base v2 peuplée d'une session `ARMED`.
+
 ### 7.3 Snapshot Direct Boot
 
 Room reste dans le stockage protégé par les identifiants. Un snapshot minimal doit être copié dans le stockage protégé de l'appareil avec `createDeviceProtectedStorageContext()`.
@@ -409,6 +421,10 @@ localDate
 localTime
 zoneIdAtActivation
 triggerAtEpochMillis
+blockingLocalDate
+blockingLocalTime
+blockingStartsAtEpochMillis
+blockingAppliedAtEpochMillis
 state
 releaseTarget
 health
@@ -432,6 +448,8 @@ pendingEffects
 ```
 
 `boxTokenSha256Hex` reprend le nom de colonne de `AlarmSessionEntity` (§7.2) plutôt que `tokenSha256` (nom propre à `PairedBoxEntity`) : le snapshot projette la session, pas le boîtier associé. `blockedPackages` conserve la paire `(packageName, displayNameSnapshot)` de `BlockedAppEntity`, pas seulement le nom du package : le libellé figé à l'activation est requis par le texte imposé de l'overlay (§12.2, « {Nom de l'application} reste bloquée… ») et doit rester disponible si le blocage doit être reconstruit avant déverrouillage.
+
+**Projection v2 (Lot 6).** `projectionSchemaVersion` passe à 2 avec les quatre champs `blocking*`. Un fichier de version 1 reste lisible : les champs absents se lisent comme un blocage immédiat dont `blockingAppliedAtEpochMillis` vaut `createdAtEpochMillis`, puis la projection est réécrite depuis Room à la fusion suivante. Un fichier v1 ne se lit jamais « pas de session ».
 
 Ce snapshot est une projection partielle de Room, mais son enveloppe de session active contient tous les champs requis pour reconstruire un `SessionSnapshot` et appeler KMP avant déverrouillage. Chaque effet de `pendingEffects` conserve aussi son payload sérialisé afin de reprendre `RECORD_INCIDENT`. Il permet de reprogrammer et de déclencher l'alarme avant le premier déverrouillage après un redémarrage. Il ne contient aucune donnée de compte. Son écriture doit être atomique. Utiliser un fichier temporaire dans le même répertoire, puis un renommage, ou des préférences synchrones dédiées avec contrôle de version. Une réécriture à `domainRevision` égale, pour la même session, est idempotente; une révision inférieure pour cette même session est refusée. Une nouvelle session (autre `sessionId`) repart légitimement à une révision inférieure : la garde est scopée par `sessionId`, pas globale.
 
@@ -468,6 +486,7 @@ Règles:
 - Si l'instant enregistré se trouve dans le passé, déclencher immédiatement si le retard est inférieur ou égal à 15 minutes, sauf lorsqu'un scan valide est déjà en cours et qu'aucune alarme n'a été observée. Dans ce cas, produire `TRIGGER_ELAPSED` avant le scan.
 - Au-delà de 15 minutes, ne pas faire sonner une alarme tardive. Produire `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW`, passer à `TRIGGERED_AWAITING_NFC`, passer la santé à `DEGRADED` et maintenir le blocage jusqu'au scan du boîtier. Une session déjà armée ne doit jamais passer à `FAILED`.
 - Le calcul initial appartient à `:shared:core` et utilise `kotlinx-datetime`, notamment `TimeZone`. Les conversions éventuelles vers des types JVM de fuseau horaire restent limitées aux adaptateurs Android natifs. AlarmManager reçoit l'instant final en millisecondes Unix.
+- Le début d'un blocage différé suit les mêmes règles (Lot 6) : calculé par `:shared:core` (SPEC_CORE_KMP §8.3, `computeBlockingSchedule`), immuable après `ACTIVATION_SUCCEEDED`, réenregistré au même instant après `TIME_CHANGED` ou `TIMEZONE_CHANGED`. S'il est dépassé lors d'une réconciliation alors que le blocage n'a pas été demandé, produire `BLOCKING_START_ELAPSED` immédiatement, avec `MISSED_BLOCKING_START_WINDOW` (`WARNING`) au-delà de 15 minutes lu via `evaluateTriggerDelay`. Un blocage ne se manque pas, il s'applique en retard.
 
 ## 9. Programmation de l'alarme
 
@@ -492,6 +511,8 @@ Ne pas utiliser WorkManager, `Handler`, `setInexactRepeating()` ou une notificat
 
 Contrepartie annoncée par la documentation — Doze limitant `setExactAndAllowWhileIdle()` à une livraison par application toutes les neuf minutes — **mesurée puis écartée le 2026-09-15**: en Doze profond forcé, cinq tics consécutifs ont été délivrés à l'heure, à 58-62 secondes d'intervalle. La raison tient à `USE_EXACT_ALARM` (`exactAllowReason=policy_permission` dans `dumpsys alarm`), qui affranchit l'alarme des politiques `device_idle` et `app_standby`. `setAlarmClock` n'est donc pas nécessaire ici. Détail de la mesure et réserve résiduelle sur le seau d'App Standby: §4.2.
 
+**Seconde dérogation, de même nature : l'alarme de début du blocage (Lot 6, 12.4).** `BlockingStartScheduler` emploie `setExactAndAllowWhileIdle()` sur un `PendingIntent` explicite et immuable ciblant `BlockingStartReceiver`, avec un code de requête salé comme celui du watchdog, distinct de ceux du réveil. Un début de blocage à 22:30 n'est pas une alarme de l'utilisateur au sens du réglage « prochaine alarme » : l'y afficher ferait croire que Niumi sonnera à cette heure. La mesure ci-dessus vaut pour cette alarme comme pour le watchdog, à confirmer sur appareil dans le protocole du Lot 6 (§20). `setAlarmClock()` reste réservé au réveil.
+
 ### 9.2 Activation en deux phases
 
 `ArmSessionUseCase` orchestre les effets retournés par `NiumiCoreFacade` dans cet ordre:
@@ -501,7 +522,7 @@ Contrepartie annoncée par la documentation — Doze limitant `setExactAndAllowW
 3. envoyer `ACTIVATION_REQUESTED` au moteur commun;
 4. écrire atomiquement dans Room, en une seule transaction SQLite, la session `PREPARING`, ses applications, le reçu de l'événement et l'outbox; copier ensuite le même contenu dans le snapshot Direct Boot;
 5. créer les `PendingIntent` et appeler `setAlarmClock()`;
-6. activer le blocage de la transaction;
+6. activer le blocage de la transaction, ou programmer l'alarme de début du blocage si le blocage est différé (`SCHEDULE_BLOCKING_START`, 12.4);
 7. vérifier les résultats observables;
 8. envoyer `ACTIVATION_SUCCEEDED` au moteur commun;
 9. persister et publier `ARMED`;
@@ -509,7 +530,7 @@ Contrepartie annoncée par la documentation — Doze limitant `setExactAndAllowW
 
 Room et le snapshot Direct Boot sont deux stockages distincts: seule l'écriture Room de l'étape 4 est une transaction unique. La copie Direct Boot qui la suit n'est pas garantie atomique avec elle. Si le processus est interrompu entre les deux, Room fait foi au prochain démarrage et `SessionReconciler` réécrit le snapshot Direct Boot à partir de Room, ce que la section 13 du contrat autorise tant que `domainRevision` n'est pas régressée. Un Direct Boot en retard d'une écriture ne doit jamais faire perdre l'alarme programmée: `SystemEventsReceiver` retombe sur Room dès que `UserManager.isUserUnlocked == true`.
 
-En cas d'exception, annuler le `PendingIntent`, retirer uniquement le blocage créé par la transaction, envoyer `ACTIVATION_FAILED` avec `failureCode`, persister `FAILED` et supprimer le pointeur de session active.
+En cas d'exception, annuler le `PendingIntent` du réveil et celui du début du blocage, retirer uniquement le blocage créé par la transaction, envoyer `ACTIVATION_FAILED` avec `failureCode`, persister `FAILED` et supprimer le pointeur de session active.
 
 Cette transition vers `FAILED` n'est autorisée que pendant `PREPARING`. Une erreur survenue après le passage à `ARMED` crée un `SessionIncident`, dégrade la santé seulement pour une gravité `DEGRADED` ou `CRITICAL` et conserve l'état métier. Pendant `RELEASING`, elle ne restaure pas un blocage déjà retiré.
 
@@ -527,9 +548,9 @@ Créer un `SystemEventsReceiver`, déclaré dans le manifeste pour:
 
 **`USER_UNLOCKED` ne peut pas être déclaré dans le manifeste (constat de l'étape 19).** Android ne délivre `ACTION_USER_UNLOCKED` qu'aux receivers enregistrés à chaud; la documentation Direct Boot demande d'« enregistrer un `BroadcastReceiver` depuis un composant qui tourne ». Déclaré dans le manifeste, le filtre serait mort et la fusion Direct Boot vers Room n'aurait jamais lieu par ce chemin. Il est donc enregistré au démarrage du processus par `SystemEventsRegistrar`, avec `RECEIVER_NOT_EXPORTED`, au même titre que le receveur de filtre d'interruption de §13.1. Les cinq actions du manifeste sont, elles, bien délivrées à un receveur déclaré: quatre figurent dans la liste officielle des exceptions aux restrictions de broadcasts implicites, et `MY_PACKAGE_REPLACED` est explicitement adressé au paquet lui-même.
 
-Le receiver est `directBootAware`. Il lit le snapshot et rappelle le programmateur avec le même `triggerAtEpochMillis`. Il ne recalcule pas l'instant depuis l'heure locale. Si la session est `ARMED` et l'instant est dépassé, il applique la politique de retard dans le coordinateur Direct Boot sous mutex: jusqu'à 15 minutes, il reprogramme une alarme immédiate dont `AlarmReceiver` produira `ALARM_FIRED`; au-delà, il applique `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW` dans le snapshot, le registre et l'outbox, exécute `PRESENT_SCAN_REQUEST` et publie la notification décrite en 10.5 depuis le contexte protégé par appareil, sans démarrer le service de sonnerie.
+Le receiver est `directBootAware`. Il lit le snapshot et rappelle le programmateur avec le même `triggerAtEpochMillis`. Il ne recalcule pas l'instant depuis l'heure locale. Il rappelle de même `BlockingStartScheduler` avec le même `blockingStartsAtEpochMillis` tant que le blocage différé n'a pas été demandé (Lot 6) ; si cet instant est dépassé, il produit `BLOCKING_START_ELAPSED` sous le même mutex, avant la politique de retard du réveil, et exécute `APPLY_BLOCKING` sur la projection Direct Boot — sans objet pour l'utilisateur avant déverrouillage, qui n'atteint aucune application, mais nécessaire pour que Room reçoive à la fusion un état où le blocage est demandé. Si la session est `ARMED` et l'instant est dépassé, il applique la politique de retard dans le coordinateur Direct Boot sous mutex: jusqu'à 15 minutes, il reprogramme une alarme immédiate dont `AlarmReceiver` produira `ALARM_FIRED`; au-delà, il applique `TRIGGER_ELAPSED` avec `MISSED_TRIGGER_WINDOW` dans le snapshot, le registre et l'outbox, exécute `PRESENT_SCAN_REQUEST` et publie la notification décrite en 10.5 depuis le contexte protégé par appareil, sans démarrer le service de sonnerie.
 
-Sur `TIME_CHANGED` et `TIMEZONE_CHANGED`, l'alarme est réenregistrée **sans condition** au même instant, et un incident de gravité `WARNING` est consigné. Le réenregistrement est inconditionnel parce qu'un `PendingIntent` encore présent ne prouve pas que le système l'a conservé au bon instant après avoir déplacé son horloge; il est idempotent (`FLAG_UPDATE_CURRENT`).
+Sur `TIME_CHANGED` et `TIMEZONE_CHANGED`, l'alarme du réveil et, le cas échéant, l'alarme de début du blocage sont réenregistrées **sans condition** au même instant, et un incident de gravité `WARNING` est consigné. Le réenregistrement est inconditionnel parce qu'un `PendingIntent` encore présent ne prouve pas que le système l'a conservé au bon instant après avoir déplacé son horloge; il est idempotent (`FLAG_UPDATE_CURRENT`).
 
 **L'incident, lui, est consigné une seule fois par code et par session (décision de l'étape 19).** `android.intent.action.TIME_SET` n'est pas émis seulement quand l'utilisateur change l'heure: chaque correction d'horloge par le réseau le produit aussi, plusieurs fois par nuit sur certains appareils. Sans cette garde, une seule session accumulerait des dizaines d'incidents identiques sur l'écran de diagnostic — le défaut mesuré et corrigé à l'étape 16. La garde se lit en base, comme celle de §13.1 le fait pour ses propres incidents, et non en mémoire: ces deux raisons n'arrivent que par broadcast, donc parfois dans un processus qui vient de naître. Conséquence assumée: deux changements de fuseau dans la même session ne laissent qu'un incident. Le journal technique, lui, n'est pas dédupliqué.
 
@@ -570,6 +591,8 @@ Les trois règles sont donc :
 | révision **inférieure ou égale** | dispatch de `ALARM_FIRED` avec `expectedRevision = snapshot.revision` |
 
 L'état source n'est pas contrôlé côté Android : `TriggerReducer.onAlarmFired` exige déjà `ARMED` et refuse le reste (SPEC_CORE_KMP 5.1). Le dupliquer contredirait la règle « ne jamais dupliquer une règle commune ».
+
+**Blocage différé (Lot 6).** `AlarmTriggerHandler` ne produit pas `BLOCKING_START_ELAPSED` avant `ALARM_FIRED` : le moteur applique lui-même un blocage encore en attente dans la décision `ALARM_FIRED` (repli, SPEC_CORE_KMP §5.1), et `ApplyBlockingExecutor` s'exécute avant `StartRingingExecutor` dans l'ordre des effets. Un réveil ne sonne donc jamais sur une session dont le blocage n'a pas été demandé, même si l'alarme de début a été manquée.
 
 La fenêtre de `goAsync()` est bornée à 8 s. Au dépassement, la coroutine est annulée et `finish()` appelé ; si l'annulation tombe après le `commit` du coordinateur, les effets restent `PENDING` et la prochaine réconciliation les rejoue (SPEC_CORE_KMP 6.1). **Aucun événement technique n'est journalisé dans ce cas** : 17 est une liste fermée et aucune de ses 26 valeurs ne décrit ce fait. C'est une limite d'observabilité assumée, pas un oubli.
 
@@ -811,7 +834,7 @@ Ordre logique:
 4. envoyer `VALID_NFC_SCANNED` avec cette preuve;
 5. persister atomiquement `nfcVerifiedAtEpochMillis`, `releaseTarget`, `RELEASING`, le reçu et l'outbox;
 6. publier la même `domainRevision` dans le snapshot Direct Boot et Room quand Room est accessible;
-7. annuler l'alarme système et les `PendingIntent` de la session;
+7. annuler l'alarme système, l'alarme de début du blocage si elle existe encore, et les `PendingIntent` de la session;
 8. arrêter le moteur audio, la vibration et le wake lock s'ils sont actifs;
 9. supprimer la notification et arrêter le service;
 10. retirer la liste de blocage active;
@@ -915,7 +938,8 @@ L'état de la session ne suffit pas à décider seul, SPEC_CORE_KMP 4 rappelant 
 | --- | --- | --- |
 | `PREPARING` | `APPLY_BLOCKING` réussi | blocage actif |
 | `PREPARING` | `APPLY_BLOCKING` en attente, échoué ou absent | aucun blocage |
-| `ARMED`, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` | — | blocage actif |
+| `ARMED` | `blockingAppliedAtEpochMillis` nul | aucun blocage : début différé pas encore atteint (Lot 6) |
+| `ARMED` avec `blockingAppliedAtEpochMillis` renseigné, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` | — | blocage actif |
 | `RELEASING` | `REMOVE_BLOCKING` réussi ou satisfait | libération totale, plus aucun package |
 | `RELEASING` | `REMOVE_BLOCKING` en attente, échoué ou absent | blocage maintenu sur tous les packages |
 | `COMPLETED`, `CANCELLED`, `FAILED`, ou pointeur absent | — | aucun blocage |
@@ -924,7 +948,21 @@ La distinction sur `PREPARING` est nécessaire: une activation interrompue laiss
 
 Dans Room, l'absence de ligne d'effet signifie « jamais décidé ». Dans le snapshot Direct Boot, qui ne recopie que les effets rejouables, l'absence signifie au contraire « déjà exécuté ».
 
+Sur `ARMED`, c'est le champ du snapshot et non le statut de l'effet `APPLY_BLOCKING` qui décide (Lot 6) : dans le miroir Direct Boot, une session différée n'a aucun `APPLY_BLOCKING` avant son début, et « absent donc exécuté » y donnerait un blocage actif avant l'heure. Un `APPLY_BLOCKING` encore `PENDING` après `BLOCKING_START_ELAPSED` est rejoué par la réconciliation ; la projection dit déjà « actif », ce que l'utilisateur a demandé.
+
 Un snapshot illisible ne se lit jamais « aucune session »: la lecture le signale comme tel et la projection conserve ce qu'elle savait. Le blocage n'est jamais levé faute de pouvoir lire.
+
+### 12.4 Début du blocage différé
+
+`BlockingStartScheduler` (`:core:system`) programme, à l'exécution de l'effet `SCHEDULE_BLOCKING_START`, une alarme exacte `setExactAndAllowWhileIdle()` (dérogation de 9.1) sur un `PendingIntent` explicite et immuable ciblant `BlockingStartReceiver`, avec `sessionId` et `revision` en extras et un code de requête distinct de ceux du réveil et du watchdog. `CANCEL_BLOCKING_START` l'annule de façon idempotente ; l'effet est best-effort (SPEC_CORE_KMP §6), un déclenchement orphelin étant absorbé ci-dessous.
+
+`BlockingStartReceiver` (`:core:system`, `directBootAware`, `exported="false"`) est une coquille sans décision, comme `AlarmReceiver` : `goAsync()` borné à 8 s, délégation à `BlockingStartHandler`, prouvable en JVM. Le handler applique les mêmes gardes que `AlarmTriggerHandler` — `sessionId` du snapshot actif, révision de l'intent non supérieure à celle du snapshot (monotonie, 10.1), snapshot illisible refusé — puis dispatche `BLOCKING_START_ELAPSED`. Il ne vérifie ni l'état ni `blockingAppliedAtEpochMillis` : le moteur refuse déjà un début hors `ARMED` ou déjà appliqué (SPEC_CORE_KMP §5.2), et dupliquer la règle contredirait 6. Un refus est journalisé et sans effet. Le coordinateur exécute `APPLY_BLOCKING` sur la projection, exactement comme à l'activation d'un blocage immédiat, et journalise `BLOCKING_STARTED` (17).
+
+**Application déjà ouverte à l'instant de début.** L'algorithme de 12.2 ne décide qu'à chaque changement de fenêtre. Une application bloquée déjà au premier plan à 22:30 ne produirait donc aucun événement et resterait ouverte jusqu'au prochain changement de fenêtre. Le service conserve le dernier `packageName` reçu et, quand la projection passe d'inactive à active, rejoue `BlockingDecision.decide` sur ce package : s'il est bloqué, retour à l'accueil et overlay comme pour un événement ordinaire, sous le même anti-rebond. Cette relecture n'emploie que le nom de package déjà reçu par les événements, dans l'usage déclaré à Google Play (12.3) ; elle ne lit ni `windows` ni `rootInActiveWindow`. Le dernier package vu peut être périmé si l'écran est éteint : un `GLOBAL_ACTION_HOME` y est sans effet visible, ce qui est acceptable. Comportement à confirmer sur appareil (§20).
+
+**Réconciliation.** `SessionReconciler` traite une session `ARMED` dont le blocage n'a pas été demandé **avant** la politique de retard du réveil, sur le snapshot relu après la surveillance de 13.1 : instant de début non atteint et alarme de début absente → reprogrammer au même instant (`BLOCKING_START_RESCHEDULED`) ; sur `TIME_CHANGED` et `TIMEZONE_CHANGED`, reprogrammer sans condition (9.3) ; instant atteint → `BLOCKING_START_ELAPSED`, avec `MISSED_BLOCKING_START_WINDOW` (`WARNING`) au-delà de 15 minutes lu via `evaluateTriggerDelay`. La garde de permission de `reconcileArmed` s'applique avant, comme pour le réveil : sans service d'accessibilité, appliquer le blocage n'a pas de sens et l'incident est déjà consigné. Aucun déclenchement de `BlockingStartReceiver` ne produit d'effet sans session `ARMED` en attente : après `CANCELLED`, `COMPLETED` ou `FAILED`, ou si `CANCEL_BLOCKING_START` a échoué, le handler trouve un état où le moteur refuse l'événement.
+
+**Ce que le début différé ne change pas.** La surveillance de 13.1 s'exécute sur `ARMED` quel que soit le statut du blocage : le service d'accessibilité doit être actif avant l'heure de début, sinon `BLOCKING_PERMISSION_REVOKED` est consigné et l'avertissement affiché, même si aucune application n'est encore bloquée — le texte de l'avertissement reste celui de 13.1, la conséquence pour l'utilisateur étant la même le soir venu. Le scan avant l'heure du réveil mène à `CANCELLED` dans les deux cas, et aucune action de l'écran 7 ne touche à la session (15).
 
 ### 12.3 Information et consentement
 
@@ -1013,6 +1051,8 @@ L'écran n'affiche qu'une action principale à la fois, en commençant par le pr
 2. **Les trois contrôles de parcours ne transitent pas par la liste `checks`.** « boîtier associé », « applications choisies » et « date future valide » sont affichés comme les onze autres, mais convertis vers les champs dédiés `hasPairedBox`, `appSelectionCount` et `triggerAtEpochMillis` d'`ActivationPolicyInputDto`. La politique commune les refuse déjà avec `NO_PAIRED_BOX`, `INVALID_APP_SELECTION` et `TRIGGER_NOT_IN_FUTURE` (SPEC_CORE_KMP §7.4, §10) ; les verser aussi dans `checks` ferait remonter deux refus pour une seule cause, l'un précis et l'autre générique. Un diagnostic lancé avant tout choix d'heure reçoit donc `triggerAtEpochMillis = nowEpochMillis` et se voit refuser l'activation par `TRIGGER_NOT_IN_FUTURE`, ce qui est le verdict exact à ce stade.
 
 3. **Le contrôle d'énergie repose sur la confirmation de l'utilisateur, pas sur la détection.** Puisque `isIgnoringBatteryOptimizations()` n'observe que la liste blanche AOSP et reste faux après correction du réglage OEM sur HyperOS, exiger qu'il soit vrai rendrait l'activation impossible sur ces appareils ; s'en contenter laisserait passer un appareil qui gèle Niumi. Le contrôle est donc satisfait quand, et seulement quand, l'utilisateur a confirmé avoir levé les restrictions — confirmation persistée hors Room, réévaluée à chaque diagnostic. La valeur renvoyée par `isIgnoringBatteryOptimizations()` ne décide de rien : elle choisit le recours proposé, demande d'exemption AOSP tant qu'elle est fausse, guide vers le réglage OEM une fois acquise.
+
+4. **Début du blocage (Lot 6) : aucun quinzième contrôle.** L'antériorité du début du blocage au réveil est une règle commune, refusée par `BLOCKING_START_NOT_BEFORE_TRIGGER` (SPEC_CORE_KMP §8.3, §14). `ReadinessInput` transporte `candidateBlockingStartsAtEpochMillis` jusqu'à `ActivationPolicyInputDto.blockingStartsAtEpochMillis`, `null` pour un blocage immédiat, par le même chemin que `candidateTriggerAtEpochMillis`. L'écran 5 refuse de continuer sur ce motif avant même le diagnostic : `computeBlockingSchedule` renvoie `NOT_BEFORE_TRIGGER` et la phrase de confirmation l'explique (15).
 
 **Messages (étape 12b).** §13 n'illustrait que cinq messages pour quatorze contrôles ; les cinq restent identiques et les neuf autres sont fixés ici. Chacun nomme le réglage en cause **et** sa conséquence, en tutoiement (15). Les textes vivent dans `:feature:setup` (`readiness/ReadinessMessages.kt`), jamais dans `:core:system`, qui reste sans interface.
 
@@ -1152,6 +1192,8 @@ Composants:
 | `AlarmActivity` | non | oui | affichage verrouillé et Reader Mode |
 | `AlarmReceiver` | non | oui | cible du `PendingIntent` explicite |
 | `SystemEventsReceiver` | non | oui | broadcasts système et réconciliation après déverrouillage |
+| `RingingWatchdogReceiver` | non | oui | cible du `PendingIntent` de l'alarme de secours (10.2, étape 20) |
+| `BlockingStartReceiver` | non | oui | cible du `PendingIntent` de début du blocage (12.4, Lot 6) |
 | `AlarmRingingService` | non | oui | `mediaPlayback` |
 | `NiumiBlockingAccessibilityService` | oui | non | protégé par `BIND_ACCESSIBILITY_SERVICE` |
 
@@ -1165,7 +1207,7 @@ Tous les composants non destinés à des applications externes restent `exported
 2. diagnostic et onboarding des autorisations;
 3. association du boîtier;
 4. sélection des applications;
-5. choix de la date et de l'heure;
+5. choix de l'heure de réveil et du début du blocage;
 6. récapitulatif d'engagement;
 7. session active;
 8. écran de réveil;
@@ -1180,6 +1222,8 @@ Tous les composants non destinés à des applications externes restent `exported
 Il n'existait pas avant l'étape 21, alors que 4.2 exige depuis l'origine que l'arrêt forcé soit « signalé clairement dans l'aide » et que 21 en fasse un critère d'acceptation: jusque-là, seul l'onboarding portait ces limites, et il n'est présenté qu'une fois, avant la première session. L'aide reprend ses six limites **à l'identique** et y ajoute celles qui ne pouvaient pas être connues avant d'avoir été mesurées: le silence total (étape 6), la restriction OEM de démarrage automatique et sa portée réelle (4.2, étape 19), la notification d'attente de scan écartable depuis Android 14 (10.5, étape 19), le diagnostic NFC brièvement faux après un redémarrage (étape 19), et la perte possible du journal technique écrit avant le premier déverrouillage (17, étape 20).
 
 **Étapes de livraison.** Les écrans n'arrivent pas tous en même temps et l'ordre d'implémentation (22) ne le disait pas explicitement : accueil (1) et diagnostic-onboarding (2) à l'étape 12b ; association (3) et sélection (4) à l'étape 13 ; choix de l'heure (5), récapitulatif (6) et une **version minimale** de la session active (7) à l'étape 14 ; session active complète (7), scan requis (9) et annulée (11) à l'étape 15 ; écran de réveil (8) livré dès l'étape 7 et branché sur l'état réel du moteur à l'étape 17 ; diagnostic d'incident (12) à l'étape 16 ; **session terminée (10) à l'étape 17**.
+
+**Lot 6 (étapes 22 à 25).** La section « Blocage des applications » de l'écran 5, la ligne de l'écran 6 et le libellé dédoublé de l'écran 7 arrivent à l'étape 24 ; l'écran 13 gagne ses limites à l'étape 25.
 
 Cette liste annonçait l'écran 10 à l'étape 15 ; c'était faux, et la contradiction avec le plan avait été relevée à l'étape 16 sans être corrigée. Corrigé ici : l'écran 10 n'est atteint qu'après `COMPLETED`, donc après le scan de libération, et il est livré avec la chaîne du réveil. Comme l'écran 11 à l'étape 15, il est **livré et enregistré mais atteignable seulement à partir de l'étape 18**, qui apporte `HandleValidNfcUseCase` — le livrer maintenant n'annonce donc aucun faux succès.
 
@@ -1226,6 +1270,12 @@ Il reste consultable **sans session active** : le journal technique et les contr
 
 Le bouton d'export est « Exporter le diagnostic ». Il ouvre un `ACTION_SEND` texte, construit par l'écran comme tout `Intent` (13), et n'est jamais émis sans clic.
 
+**Écran 5 — début du blocage (Lot 6).** Sous le cadran, une section « Blocage des applications » propose deux choix exclusifs : « Maintenant » (défaut, comportement d'origine) et « À partir de », suivi d'une heure ; choisir la seconde ouvre un sélecteur d'heure Material 3 dans une boîte de dialogue, et la ligne affiche l'heure retenue. Une phrase de confirmation, calculée par `computeBlockingSchedule` à chaque changement de l'une ou l'autre heure et à chaque `ON_RESUME` (recalcul du fuseau, 8), énonce l'instant obtenu : « Tes applications seront bloquées dès l'activation. » ou « Tes applications seront bloquées aujourd'hui, lundi 15 septembre à 22:30 (Europe/Paris). », avec le même libellé relatif, la même date complète et la même règle de trou d'heure d'été que le réveil (`WakeScheduleFormatter`, écrans 5, 6 et 7). Si l'instant n'est pas strictement antérieur au réveil : « L'heure de début du blocage doit être avant ton réveil. Pour bloquer tout de suite, choisis « Maintenant ». », et « Continuer » reste inactif. La dernière heure de début confirmée est mémorisée comme l'heure de réveil (`SetupPreferences`), « Maintenant » restant le défaut tant qu'aucun début différé n'a été confirmé. Charte : l'Ambre n'apparaît qu'à la confirmation (charte §9) ; aucune couleur d'alerte pour ce refus, qui n'est pas un incident.
+
+**Écran 6 (Lot 6).** Une ligne « Blocage des applications » sous la date du réveil : « Dès l'activation » ou « Aujourd'hui, lundi 15 septembre à 22:30 (Europe/Paris) », instant obtenu et non heure saisie. Le rappel d'engagement reste « Seul le scan du boîtier terminera la session. », valable avant comme après le début du blocage.
+
+**Écran 7 (Lot 6).** Le libellé d'état `ARMED` se dédouble d'après `blockingAppliedAtEpochMillis` : « Réveil programmé · applications bloquées » quand il est renseigné, « Réveil programmé · blocage à 22:30 » sinon, avec l'instant de début affiché comme celui du réveil (fuseau d'activation, et fuseau courant s'il diffère). La liste des applications reste affichée dans les deux cas, sous un titre qui dit la vérité : « Applications bloquées » ou « Applications qui seront bloquées ». `MISSED_BLOCKING_START_WINDOW` s'affiche comme tout incident, en clair suivi de son code : « Le blocage a commencé en retard : Niumi n'était pas en vie à l'heure prévue. (MISSED_BLOCKING_START_WINDOW) ». Aucune action nouvelle : « Bloquer dès maintenant » est hors du périmètre du Lot 6 (décision du 2026-09-15), et le scan reste la seule sortie.
+
 **Écrans 9 et 11 (étape 15).** L'écran 9 ne porte aucune action en dehors du scan : ni bouton d'annulation, ni confirmation, ni chemin de retour qui libérerait quoi que ce soit (3, 10.2). Son texte est :
 
 > Scanne ton boîtier Niumi pour annuler ou modifier ta session. Tes applications resteront bloquées jusqu'au scan.
@@ -1242,6 +1292,7 @@ Règles UI:
 - ne jamais afficher un faux état de fiabilité;
 - **ne jamais affirmer « Aucune session » quand la persistance est illisible (étape 20, défaut mesuré sur appareil).** Room rendue illisible, l'accueil annonçait « Aucune session » alors qu'une session était armée, l'alarme programmée et le blocage en place: l'affirmation la plus rassurante était aussi la seule que Niumi n'était pas en mesure de faire. L'accueil affiche alors « État illisible », dit que le blocage tient et que le scan reste la seule sortie, et son bouton principal mène au diagnostic. Le signal vient de `StorageIntegrityState` (§18) et doit alimenter ce que l'écran **affiche**, pas seulement la destination de son bouton — celle-ci n'est lue qu'au clic, ce qui avait laissé le défaut invisible;
 - afficher la date, l'heure et le fuseau de la session active;
+- afficher l'instant de début du blocage tant qu'il n'est pas atteint, jamais l'heure saisie (Lot 6);
 - afficher la prochaine heure système calculée;
 - ne jamais mettre une action d'arrêt dans l'écran de réveil;
 - toujours afficher une notification de demande de scan tant que la session attend un scan sans sonnerie active, y compris si l'alarme n'a jamais sonné;
@@ -1290,6 +1341,10 @@ NFC_DISABLED
 NFC_SCAN_INVALID
 NFC_SCAN_VALID
 BLOCK_APPLIED
+BLOCKING_SCHEDULED
+BLOCKING_START_RESCHEDULED
+BLOCKING_STARTED
+MISSED_BLOCKING_START_WINDOW
 ACCESSIBILITY_DISABLED
 PROCESS_RECREATED
 OEM_RESTRICTION_SUSPECTED
@@ -1300,6 +1355,8 @@ SNAPSHOT_CORRUPTED
 ```
 
 Chaque événement contient seulement l'heure, le type, l'identifiant de session, le modèle de l'appareil, la version Android, la version de l'application et un code d'erreur contrôlé. Le nom de package est accepté uniquement pour `BLOCK_APPLIED`. Aucun événement n'est envoyé à distance dans le MVP.
+
+**Événements du blocage différé (Lot 6).** `BLOCKING_SCHEDULED` à l'exécution de `SCHEDULE_BLOCKING_START`, `BLOCKING_START_RESCHEDULED` à chaque reprogrammation par le réconciliateur, `BLOCKING_STARTED` à l'exécution réussie de `APPLY_BLOCKING` sur une session différée (les `BLOCK_APPLIED` par package suivent, comme à l'activation), `MISSED_BLOCKING_START_WINDOW` quand l'incident du même nom est produit. Ces quatre types s'ajoutent à la liste fermée ci-dessus ; `packageName` y reste refusé.
 
 **`SNAPSHOT_CORRUPTED` (étape 20).** Journalisé dans deux cas distincts : `sessionId` renseigné, quand la projection Direct Boot est illisible mais que Room permet de retrouver la session concernée (`DirectBootMerger.merge()`, `SessionReconciler`) ; `sessionId` absent, quand aucun stockage lisible ne permet de savoir de quelle session il s'agissait — Direct Boot et Room illisibles à la fois, ou Room seul illisible une fois déverrouillé. Le second cas n'a pas d'équivalent `SessionIncident` : SPEC_CORE_KMP §13 exige une révision pour ouvrir un incident, qu'aucune session lisible ne peut fournir.
 
@@ -1324,6 +1381,7 @@ Principes:
 - une erreur Room pendant la sonnerie s'appuie sur le snapshot Direct Boot;
 - une transition dupliquée est reconnue par le registre idempotent;
 - une erreur pendant le nettoyage conserve `RELEASING`, crée `RELEASE_PARTIAL_FAILURE` et déclenche une reprise idempotente;
+- un échec de `SCHEDULE_BLOCKING_START` pendant `PREPARING` fait échouer l'activation comme un échec de `SCHEDULE_ALARM` (Lot 6) ; après `ARMED`, un échec d'`APPLY_BLOCKING` à l'heure de début reste `PENDING` dans l'outbox et est rejoué à la réconciliation suivante, la session conservant `ARMED` avec `blockingAppliedAtEpochMillis` renseigné;
 - une erreur inconnue reçoit un identifiant local consultable dans le diagnostic.
 
 La réconciliation s'appuie sur `SessionRuntimeStatus` pour comparer l'état métier aux sous-systèmes Android. Elle tente les réparations idempotentes autorisées, puis consigne un incident si l'écart persiste. Elle ne transforme pas une session active en `FAILED` pour simplifier la gestion d'une erreur technique.
@@ -1366,7 +1424,8 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - retard supérieur à 15 minutes vers `TRIGGERED_AWAITING_NFC`, avec santé `DEGRADED` et incident `MISSED_TRIGGER_WINDOW`;
 - `PRESENT_SCAN_REQUEST` produit par `ALARM_SOUND_STOPPED` et par `TRIGGER_ELAPSED`, `CLEAR_SCAN_REQUEST` produit par `VALID_NFC_SCANNED`, tous deux rejouables sans effet en double;
 - sélections de 0, 1, 50 et 51 applications;
-- révisions métier croissantes, refus d'un événement destiné à une autre session et validation de `failureCode`.
+- révisions métier croissantes, refus d'un événement destiné à une autre session et validation de `failureCode`;
+- blocage différé (Lot 6) : les cas de SPEC_CORE_KMP §17 — `BLOCKING_START_ELAPSED` avant, à et après l'instant, refus hors `ARMED` ou en double, repli du moteur sur `ALARM_FIRED` et `TRIGGER_ELAPSED`, effets requis de l'activation selon le `blockingSchedule`, calcul du début et refus `NOT_BEFORE_TRIGGER`, lecture d'un snapshot de version 1.
 
 `core:system` avec adaptateurs simulés:
 
@@ -1384,7 +1443,8 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - publication et retrait idempotents de la notification d'attente de scan, y compris depuis le coordinateur Direct Boot avant déverrouillage;
 - mapping des erreurs Android vers les erreurs métier;
 - registre et outbox atomiques, exécution idempotente des effets KMP et reprise partielle de `RELEASING`;
-- reconstruction du snapshot Direct Boot depuis Room après une interruption entre les deux écritures de l'étape 4 de l'activation.
+- reconstruction du snapshot Direct Boot depuis Room après une interruption entre les deux écritures de l'étape 4 de l'activation;
+- blocage différé (Lot 6) : programmation, annulation et reprogrammation idempotentes du début du blocage, avec un code de requête distinct du réveil et du watchdog ; `BlockingStartHandler` (gardes de session, de révision et d'illisibilité, puis dispatch de `BLOCKING_START_ELAPSED`) ; réconciliation d'une session `ARMED` en attente de blocage (reprogrammation si l'alarme manque, `BLOCKING_START_ELAPSED` à l'heure et au-delà, `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes, y compris depuis le coordinateur Direct Boot) ; projection de blocage inactive sur `ARMED` tant que `blockingAppliedAtEpochMillis` est nul et active ensuite, en Room comme en Direct Boot ; relecture du dernier package au premier plan quand la projection devient active ; migration Room 2→3 et lecture d'une projection Direct Boot v1 comme blocage immédiat ; effets requis de l'activation selon le `blockingSchedule` ; un exécuteur lié pour chaque valeur de `SessionEffectKindDto`.
 
 `feature`:
 
@@ -1395,7 +1455,8 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - retour des réglages et nouveau diagnostic;
 - messages d'erreur NFC;
 - reprise d'un état `RINGING` après recréation;
-- affichage de l'avertissement sur l'absence de mécanisme de secours logiciel avant la première activation.
+- affichage de l'avertissement sur l'absence de mécanisme de secours logiciel avant la première activation;
+- blocage différé (Lot 6) : « Maintenant » par défaut sur l'écran 5, instant de début recalculé à chaque changement et à chaque `ON_RESUME`, continuation refusée si l'instant n'est pas strictement antérieur au réveil ; `ArmSessionUseCase` transmet le `blockingSchedule` calculé, jamais l'heure saisie, et refuse `BLOCKING_START_NOT_BEFORE_TRIGGER` ; écran 6 et écran 7 selon le `blockingSchedule` et `blockingAppliedAtEpochMillis`.
 
 ### 19.2 Tests instrumentés
 
@@ -1405,7 +1466,9 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - affichage de la notification de sonnerie et de son canal;
 - affichage de la notification d'attente de scan et de son canal, sans son, vibration ni full-screen intent;
 - démarrage du service depuis un receiver de test;
-- Reader Mode avec abstraction ou tag de test.
+- Reader Mode avec abstraction ou tag de test;
+- réception de l'intent explicite de début du blocage par `BlockingStartReceiver` (Lot 6);
+- migration Room 2→3 depuis une base v2 peuplée (Lot 6).
 
 Les tests ne doivent pas attendre une vraie heure de réveil. Injecter `Clock`, `AlarmScheduler`, `AlarmAudioEngine`, `NfcVerifier` et `ForegroundAppSource`.
 
@@ -1483,6 +1546,15 @@ Scénarios à exécuter:
 | NFC réactivé pendant la sonnerie | Reader Mode restauré et scan valide accepté |
 | arrêt du FGS depuis le système | limite connue consignée |
 | arrêt forcé de Niumi | alarme annulée par le système, limite connue consignée |
+| blocage différé, heure de début atteinte, écran éteint depuis 30 minutes (Lot 6) | blocage appliqué à l'heure, `BLOCKING_STARTED` journalisé, retard mesuré inférieur à 1 minute |
+| blocage différé, application bloquée déjà au premier plan à l'heure de début (Lot 6) | retour à l'accueil et overlay sans changement de fenêtre |
+| blocage différé, processus tué avant l'heure de début (Lot 6) | alarme de début conservée, blocage appliqué à l'heure |
+| blocage différé, redémarrage avant l'heure de début, aucun déverrouillage (Lot 6) | alarme de début reprogrammée depuis Direct Boot, blocage appliqué à l'heure après déverrouillage |
+| blocage différé, redémarrage après l'heure de début et avant le réveil (Lot 6) | blocage appliqué à la réconciliation, `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes, réveil intact |
+| blocage différé, changement manuel d'heure entre l'activation et le début (Lot 6) | même `blockingStartsAtEpochMillis` réenregistré, un seul incident `TIME_CHANGED` |
+| blocage différé, scan avant l'heure de début (Lot 6) | `RELEASING` puis `CANCELLED`, alarme de début annulée, aucune application jamais bloquée |
+| blocage différé, service d'accessibilité désactivé avant l'heure de début (Lot 6) | incident `BLOCKING_PERMISSION_REVOKED`, session conservée, blocage appliqué à l'heure si le service est réactivé avant |
+| blocage différé, Doze forcé à l'heure de début (Lot 6) | alarme de début délivrée à l'heure, comme le watchdog de §4.2 |
 | `niumi_session.json` corrompu à la main, Room valide (étape 20, debug) | incident `SNAPSHOT_CORRUPTED` unique, projection réécrite, session et blocage conservés |
 | base Room corrompue, appareil déverrouillé (étape 20, debug) | écran de diagnostic affiché, blocage conservé, aucune session perdue |
 
@@ -1519,6 +1591,10 @@ Le MVP est accepté si tous les critères suivants sont vrais:
 - Android Lint, ktlint et detekt passent sans erreur;
 - les limites de l'arrêt forcé, du FGS et du NFC verrouillé sont documentées dans l'application et dans le rapport QA;
 - l'absence de mécanisme logiciel de secours en cas de boîtier ou de NFC indisponible est expliquée avant la première activation;
+- un blocage différé n'applique aucun blocage avant son instant de début, l'applique à cet instant à moins d'une minute près quand Niumi est en vie, et en retard avec `MISSED_BLOCKING_START_WINDOW` sinon (Lot 6);
+- un redémarrage avant l'heure de début reprogramme l'alarme de début avant le premier déverrouillage (Lot 6);
+- aucune session n'atteint `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans blocage demandé (Lot 6);
+- l'annulation d'une session avant le début de son blocage exige le scan du boîtier, et l'écran 5 refuse un début qui n'est pas strictement antérieur au réveil (Lot 6);
 - les scénarios DND, Bluetooth, USB-C et changement de route audio sont consignés sur la matrice P0;
 - le dossier de déclaration Google Play pour l'AccessibilityService est prêt (Lot 0) et a été testé sur une piste interne ou fermée dès que le processus Play le permet, sur l'application complète plutôt que le POC (Lot 5, décision du 2026-09-07, voir `docs/android/implementation-reports/LOT-0.md`).
 
@@ -1622,6 +1698,17 @@ horaire) suit le Lot 0, après la porte de validation manuelle.
 - reprise après mort du processus;
 - diagnostic d'incident;
 - tests OEM.
+
+### Lot 6: blocage différé
+
+Lot ajouté le 2026-09-15, après la livraison du MVP (étape 21). Plan détaillé aux étapes 22 à 25 de
+`docs/superpowers/plans/2026-09-03-mvp-android.md`.
+
+- contrat KMP 1.3 : `BlockingSchedule`, `BLOCKING_START_ELAPSED`, `SCHEDULE_BLOCKING_START`, `CANCEL_BLOCKING_START`, `computeBlockingSchedule`, politique d'activation;
+- Room v3, projection Direct Boot v2, mappings et migrations;
+- `BlockingStartScheduler`, `BlockingStartReceiver`, `BlockingStartHandler`, exécuteurs, réconciliation et projection de blocage (12.4);
+- écrans 5, 6 et 7;
+- résilience (Direct Boot, horloge, processus), matrice physique, aide et limites.
 
 À la fin de chaque lot, Codex doit exécuter les tests concernés et produire un court rapport contenant les fichiers modifiés, les commandes exécutées, les résultats et les limites restantes. Aucun `TODO`, faux service, faux scan ou comportement silencieux ne doit rester dans un lot déclaré terminé.
 

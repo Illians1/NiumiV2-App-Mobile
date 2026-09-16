@@ -2,6 +2,7 @@ package com.niumi.core
 
 import com.niumi.core.domain.ActivationRequest
 import com.niumi.core.domain.AppSelectionSummary
+import com.niumi.core.domain.BlockingSchedule
 import com.niumi.core.domain.DomainViolation
 import com.niumi.core.domain.IncidentSeverity
 import com.niumi.core.domain.Platform
@@ -15,6 +16,8 @@ import com.niumi.core.domain.SessionIncident
 import com.niumi.core.domain.SessionSnapshot
 import com.niumi.core.domain.SessionState
 import com.niumi.core.domain.WakeSchedule
+import com.niumi.core.schedule.BlockingScheduleCalculator
+import com.niumi.core.schedule.BlockingScheduleInput
 import com.niumi.core.schedule.WakeScheduleCalculator
 import com.niumi.core.schedule.WakeScheduleInput
 import kotlinx.serialization.Serializable
@@ -27,7 +30,15 @@ import kotlin.test.assertEquals
 // ses snapshots et événements qu'à partir de constructeurs publics, pour rester indépendant de la
 // visibilité `internal` entre source sets — voir ETAPE-08.md).
 private const val SESSION_ID = "11111111-1111-1111-1111-111111111111"
+private const val CREATED_AT_EPOCH_MILLIS = 1_700_000_000_000L
 private const val TRIGGER_AT_EPOCH_MILLIS = 1_800_000_000_000L
+private const val BLOCKING_STARTS_AT_EPOCH_MILLIS = TRIGGER_AT_EPOCH_MILLIS - 3_600_000L
+private val REFERENCE_BLOCKING_SCHEDULE =
+    BlockingSchedule(
+        localDateIso = "2026-09-08",
+        localTimeIso = "06:00",
+        startsAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS,
+    )
 private val REFERENCE_WAKE_SCHEDULE =
     WakeSchedule(
         localDateIso = "2026-09-08",
@@ -100,6 +111,47 @@ class FixturesTest {
     }
 
     @Serializable
+    private data class BlockingScheduleFixture(
+        val name: String,
+        val localTimeIso: String? = null,
+        val zoneId: String,
+        val nowEpochMillis: Long,
+        val triggerAtEpochMillis: Long,
+        val expectedStatus: String,
+        val expectedLocalDateIso: String? = null,
+        val expectedLocalTimeIso: String? = null,
+        val expectedStartsAtEpochMillis: Long? = null,
+    )
+
+    @Test
+    fun everyBlockingScheduleFixtureMatchesItsExpectedResult() {
+        val json = readFixtureResource("blocking_schedules.json")
+        val fixtures = Json.decodeFromString<List<BlockingScheduleFixture>>(json)
+
+        for (fixture in fixtures) {
+            val result =
+                BlockingScheduleCalculator.compute(
+                    BlockingScheduleInput(
+                        localTimeIso = fixture.localTimeIso,
+                        zoneId = fixture.zoneId,
+                        nowEpochMillis = fixture.nowEpochMillis,
+                        triggerAtEpochMillis = fixture.triggerAtEpochMillis,
+                    ),
+                )
+
+            assertEquals(fixture.expectedStatus, result.status.name, "fixture en échec : ${fixture.name}")
+            val schedule = result.schedule
+            assertEquals(fixture.expectedLocalDateIso, schedule?.localDateIso, "fixture en échec : ${fixture.name}")
+            assertEquals(fixture.expectedLocalTimeIso, schedule?.localTimeIso, "fixture en échec : ${fixture.name}")
+            assertEquals(
+                fixture.expectedStartsAtEpochMillis,
+                schedule?.startsAtEpochMillis,
+                "fixture en échec : ${fixture.name}",
+            )
+        }
+    }
+
+    @Serializable
     private data class EventFixture(
         val kind: String,
         val sessionId: String,
@@ -107,6 +159,7 @@ class FixturesTest {
         val occurredAtEpochMillis: Long,
         val expectedRevision: Long? = null,
         val activationRequestAppCount: Int? = null,
+        val activationRequestDeferredBlocking: Boolean = false,
         val failureCode: String? = null,
         val incidentCode: String? = null,
         val incidentSeverity: String? = null,
@@ -157,17 +210,64 @@ class FixturesTest {
     // contraire de `SessionSnapshotFixtures` (commonTest), volontairement non réutilisé ici.
     private fun resolveSnapshot(name: String): SessionSnapshot? =
         when (name) {
-            "none" -> null
-            "preparing" -> snapshot(SessionState.PREPARING, revision = 1)
-            "armed" -> snapshot(SessionState.ARMED, revision = 2)
-            "ringing" -> snapshot(SessionState.RINGING, revision = 3)
-            "triggeredAwaitingNfc" -> snapshot(SessionState.TRIGGERED_AWAITING_NFC, revision = 3)
-            "releasingCompleted" -> releasingSnapshot(ReleaseTarget.COMPLETED)
-            "releasingCancelled" -> releasingSnapshot(ReleaseTarget.CANCELLED)
-            "completed" -> snapshot(SessionState.COMPLETED, revision = 6)
-            "cancelled" -> snapshot(SessionState.CANCELLED, revision = 4)
-            "failed" -> snapshot(SessionState.FAILED, revision = 2, failureCode = "ANDROID_ALARM_SCHEDULE_FAILED")
-            else -> error("snapshot fixture inconnu : $name")
+            "none" -> {
+                null
+            }
+
+            "preparing" -> {
+                snapshot(SessionState.PREPARING, revision = 1)
+            }
+
+            "armed" -> {
+                snapshot(SessionState.ARMED, revision = 2)
+            }
+
+            // Session à blocage différé : en attente de son instant de début, puis appliquée.
+            "armedBlockingPending" -> {
+                snapshot(SessionState.ARMED, revision = 2).copy(
+                    blockingSchedule = REFERENCE_BLOCKING_SCHEDULE,
+                    blockingAppliedAtEpochMillis = null,
+                )
+            }
+
+            "armedBlockingApplied" -> {
+                snapshot(SessionState.ARMED, revision = 2).copy(
+                    blockingSchedule = REFERENCE_BLOCKING_SCHEDULE,
+                    blockingAppliedAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS,
+                )
+            }
+
+            "ringing" -> {
+                snapshot(SessionState.RINGING, revision = 3)
+            }
+
+            "triggeredAwaitingNfc" -> {
+                snapshot(SessionState.TRIGGERED_AWAITING_NFC, revision = 3)
+            }
+
+            "releasingCompleted" -> {
+                releasingSnapshot(ReleaseTarget.COMPLETED)
+            }
+
+            "releasingCancelled" -> {
+                releasingSnapshot(ReleaseTarget.CANCELLED)
+            }
+
+            "completed" -> {
+                snapshot(SessionState.COMPLETED, revision = 6)
+            }
+
+            "cancelled" -> {
+                snapshot(SessionState.CANCELLED, revision = 4)
+            }
+
+            "failed" -> {
+                snapshot(SessionState.FAILED, revision = 2, failureCode = "ANDROID_ALARM_SCHEDULE_FAILED")
+            }
+
+            else -> {
+                error("snapshot fixture inconnu : $name")
+            }
         }
 
     private fun releasingSnapshot(releaseTarget: ReleaseTarget): SessionSnapshot =
@@ -187,11 +287,13 @@ class FixturesTest {
             revision = revision,
             sessionId = SESSION_ID,
             wakeSchedule = REFERENCE_WAKE_SCHEDULE,
+            blockingSchedule = BlockingSchedule.IMMEDIATE,
             state = state,
             releaseTarget = releaseTarget,
             health = SessionHealth.HEALTHY,
-            createdAtEpochMillis = 1_700_000_000_000L,
+            createdAtEpochMillis = CREATED_AT_EPOCH_MILLIS,
             armedAtEpochMillis = null,
+            blockingAppliedAtEpochMillis = CREATED_AT_EPOCH_MILLIS,
             ringingAtEpochMillis = null,
             alarmSoundStoppedAtEpochMillis = null,
             triggerElapsedAtEpochMillis = null,
@@ -211,7 +313,13 @@ class FixturesTest {
     private fun resolveEvent(fixture: EventFixture): SessionEvent {
         val activationRequest =
             fixture.activationRequestAppCount?.let { count ->
-                ActivationRequest(REFERENCE_WAKE_SCHEDULE, AppSelectionSummary(count))
+                val blockingSchedule =
+                    if (fixture.activationRequestDeferredBlocking) {
+                        REFERENCE_BLOCKING_SCHEDULE
+                    } else {
+                        BlockingSchedule.IMMEDIATE
+                    }
+                ActivationRequest(REFERENCE_WAKE_SCHEDULE, AppSelectionSummary(count), blockingSchedule)
             }
         val incident =
             fixture.incidentCode?.let { code ->

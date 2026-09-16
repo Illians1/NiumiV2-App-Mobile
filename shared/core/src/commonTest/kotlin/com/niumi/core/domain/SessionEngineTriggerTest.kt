@@ -4,6 +4,8 @@ import com.niumi.core.domain.SessionLifecycleEventFixtures.alarmFiredEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.alarmSoundStoppedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.incident
 import com.niumi.core.domain.SessionLifecycleEventFixtures.triggerElapsedEvent
+import com.niumi.core.domain.SessionSnapshotFixtures.armedBlockingAppliedSnapshot
+import com.niumi.core.domain.SessionSnapshotFixtures.armedBlockingPendingSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.armedSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.completedSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.ringingSnapshot
@@ -33,6 +35,93 @@ class SessionEngineTriggerTest {
             decision.effects.map {
                 it.kind
             },
+        )
+    }
+
+    @Test
+    fun alarmFiredOnAPendingBlockingAppliesItBeforeRinging() {
+        // Repli du moteur (SPEC_CORE_KMP §5.1) : aucune sonnerie ne part sans blocage demandé.
+        val pending = armedBlockingPendingSnapshot()
+        val event = alarmFiredEvent(expectedRevision = pending.revision)
+
+        val decision = engine.reduce(snapshot = pending, event = event)
+
+        val snapshot = requireNotNull(decision.snapshot)
+        assertEquals(event.occurredAtEpochMillis, snapshot.blockingAppliedAtEpochMillis)
+        assertEquals(
+            listOf(
+                SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
+                SessionEffectKind.APPLY_BLOCKING,
+                SessionEffectKind.START_RINGING,
+            ),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun alarmSoundStoppedOnAPendingBlockingAppliesItBeforeTheScanRequest() {
+        val pending = armedBlockingPendingSnapshot()
+        val event = alarmSoundStoppedEvent(expectedRevision = pending.revision)
+
+        val decision = engine.reduce(snapshot = pending, event = event)
+
+        assertEquals(event.occurredAtEpochMillis, decision.snapshot?.blockingAppliedAtEpochMillis)
+        assertEquals(
+            listOf(
+                SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
+                SessionEffectKind.APPLY_BLOCKING,
+                SessionEffectKind.PRESENT_SCAN_REQUEST,
+            ),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun triggerElapsedOnAPendingBlockingAppliesItBeforeTheScanRequest() {
+        val pending = armedBlockingPendingSnapshot()
+        val event = triggerElapsedEvent(expectedRevision = pending.revision)
+
+        val decision = engine.reduce(snapshot = pending, event = event)
+
+        assertEquals(event.occurredAtEpochMillis, decision.snapshot?.blockingAppliedAtEpochMillis)
+        assertEquals(
+            listOf(
+                SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
+                SessionEffectKind.APPLY_BLOCKING,
+                SessionEffectKind.PRESENT_SCAN_REQUEST,
+            ),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun anAlreadyAppliedBlockingAddsNoEffectOnTheFallbackPath() {
+        val applied = armedBlockingAppliedSnapshot()
+        val event = alarmFiredEvent(expectedRevision = applied.revision)
+
+        val decision = engine.reduce(snapshot = applied, event = event)
+
+        assertEquals(
+            BLOCKING_STARTS_AT_EPOCH_MILLIS,
+            decision.snapshot?.blockingAppliedAtEpochMillis,
+        )
+        assertEquals(
+            listOf(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT, SessionEffectKind.START_RINGING),
+            decision.effects.map { it.kind },
+        )
+    }
+
+    @Test
+    fun anImmediateSessionAddsNoEffectOnTheFallbackPath() {
+        // Un snapshot de version 1, lu comme un blocage immédiat déjà demandé, suit le même chemin.
+        val armed = armedSnapshot()
+        val event = triggerElapsedEvent(expectedRevision = armed.revision)
+
+        val decision = engine.reduce(snapshot = armed, event = event)
+
+        assertEquals(
+            listOf(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT, SessionEffectKind.PRESENT_SCAN_REQUEST),
+            decision.effects.map { it.kind },
         )
     }
 

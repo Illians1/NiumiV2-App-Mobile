@@ -8,13 +8,24 @@ private const val NOW_EPOCH_MILLIS = 1_800_000_000_000L
 private const val FUTURE_TRIGGER_EPOCH_MILLIS = NOW_EPOCH_MILLIS + 1_000L
 private const val DEFAULT_APP_SELECTION_COUNT = 5
 
+// Un paramètre par champ de `ActivationPolicyInput`, dont le contrat 1.3 porte le sixième : les
+// regrouper masquerait quelle règle commune chaque test fait varier.
+@Suppress("LongParameterList")
 private fun input(
     checks: List<ReadinessCheckInput> = emptyList(),
     appSelectionCount: Int = DEFAULT_APP_SELECTION_COUNT,
     triggerAtEpochMillis: Long = FUTURE_TRIGGER_EPOCH_MILLIS,
     nowEpochMillis: Long = NOW_EPOCH_MILLIS,
     hasPairedBox: Boolean = true,
-) = ActivationPolicyInput(checks, appSelectionCount, triggerAtEpochMillis, nowEpochMillis, hasPairedBox)
+    blockingStartsAtEpochMillis: Long? = null,
+) = ActivationPolicyInput(
+    checks,
+    appSelectionCount,
+    triggerAtEpochMillis,
+    nowEpochMillis,
+    hasPairedBox,
+    blockingStartsAtEpochMillis,
+)
 
 private fun check(
     id: String,
@@ -30,6 +41,56 @@ class ActivationPolicyTest {
         assertTrue(result.allowed)
         assertTrue(result.blockingReasons.isEmpty())
         assertTrue(result.warnings.isEmpty())
+    }
+
+    @Test
+    fun nullBlockingStartIsAllowed() {
+        // Blocage immédiat : aucune contrainte d'antériorité (SPEC_CORE_KMP §8.3).
+        val result = ActivationPolicy.evaluate(input(blockingStartsAtEpochMillis = null))
+
+        assertTrue(result.allowed)
+    }
+
+    @Test
+    fun blockingStartStrictlyBeforeTheWakeUpIsAllowed() {
+        val result =
+            ActivationPolicy.evaluate(
+                input(blockingStartsAtEpochMillis = FUTURE_TRIGGER_EPOCH_MILLIS - 1),
+            )
+
+        assertTrue(result.allowed)
+    }
+
+    @Test
+    fun blockingStartEqualToTheWakeUpIsRefusedWithoutCheckId() {
+        val result =
+            ActivationPolicy.evaluate(input(blockingStartsAtEpochMillis = FUTURE_TRIGGER_EPOCH_MILLIS))
+
+        assertFalseAllowed(result)
+        assertEquals(
+            listOf(ActivationReason(ActivationReasonCode.BLOCKING_START_NOT_BEFORE_TRIGGER, checkId = null)),
+            result.blockingReasons,
+        )
+    }
+
+    @Test
+    fun blockingStartAfterTheWakeUpAccumulatesWithATriggerNotInFuture() {
+        val result =
+            ActivationPolicy.evaluate(
+                input(
+                    triggerAtEpochMillis = NOW_EPOCH_MILLIS,
+                    blockingStartsAtEpochMillis = NOW_EPOCH_MILLIS + 1,
+                ),
+            )
+
+        assertFalseAllowed(result)
+        assertEquals(
+            listOf(
+                ActivationReason(ActivationReasonCode.TRIGGER_NOT_IN_FUTURE, checkId = null),
+                ActivationReason(ActivationReasonCode.BLOCKING_START_NOT_BEFORE_TRIGGER, checkId = null),
+            ),
+            result.blockingReasons,
+        )
     }
 
     @Test
