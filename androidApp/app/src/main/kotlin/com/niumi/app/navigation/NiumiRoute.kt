@@ -39,15 +39,20 @@ sealed interface NiumiRoute {
     data object WakeTime : NiumiRoute
 
     /**
-     * Étape 14. **Seule destination à argument du graphe**, et volontairement : elle transporte le
-     * *choix* de l'utilisateur (« 07:00 »), jamais l'horaire calculé qui en dérive. Transmettre un
-     * `WakeScheduleDto` rendrait structurellement possible d'armer une session sur un horaire
-     * périmé si le fuseau ou la date changent entre les deux écrans ; ne transmettre que l'heure
-     * locale rend le recalcul avant activation impossible à contourner (SPEC_CORE_KMP §8.1, §10).
+     * Étape 14, étendue par le Lot 6 (étape 24). **Seule destination à arguments du graphe**, et
+     * volontairement : elle transporte les *choix* de l'utilisateur (« 07:00 », « 22:30 »), jamais
+     * les horaires calculés qui en dérivent. Transmettre un `WakeScheduleDto` rendrait
+     * structurellement possible d'armer une session sur un horaire périmé si le fuseau ou la date
+     * changent entre les deux écrans ; ne transmettre que les heures locales rend le recalcul avant
+     * activation impossible à contourner (SPEC_CORE_KMP §8.1, §8.3, §10).
+     *
+     * [blockingLocalTimeIso] nul décrit un blocage immédiat, le défaut du produit : l'argument
+     * n'apparaît alors pas dans la route.
      */
     @Serializable
     data class Summary(
         val localTimeIso: String,
+        val blockingLocalTimeIso: String? = null,
     ) : NiumiRoute
 
     /** Étape 14 (version minimale), complétée à l'étape 15. */

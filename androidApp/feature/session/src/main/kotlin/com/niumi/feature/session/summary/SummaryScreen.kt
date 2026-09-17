@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.session.wake.WakeTimeChoice
 
 /**
  * Récapitulatif d'engagement (écran 6, SPEC_ANDROID §15 ; SPEC_CORE_KMP §8.1 « afficher la date
@@ -63,6 +64,14 @@ fun SummaryScreen(
                 }
             }
 
+            // Ligne « Blocage des applications » (Lot 6, §15, écran 6), sous la date du réveil :
+            // l'instant obtenu, jamais l'heure saisie.
+            Text(text = SummaryTexts.BLOCKING_TITLE, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = state.blockingDisplay?.sentence ?: SummaryTexts.BLOCKING_IMMEDIATE_LABEL,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
             TextButton(
                 onClick = onChangeTime,
                 modifier = Modifier.semantics { contentDescription = SummaryTexts.CHANGE_TIME_LABEL },
@@ -98,13 +107,13 @@ fun SummaryScreen(
 }
 
 /**
- * Point d'entrée réel. [localTimeIso] vient de la route : l'écran 5 ne transmet que le **choix**
- * de l'utilisateur, jamais un horaire déjà calculé — le recalcul du fuseau avant activation
- * devient ainsi impossible à contourner (SPEC_CORE_KMP §8.1, §10).
+ * Point d'entrée réel. [choice] vient de la route : l'écran 5 ne transmet que les **choix** de
+ * l'utilisateur, jamais un horaire déjà calculé — le recalcul du fuseau avant activation devient
+ * ainsi impossible à contourner (SPEC_CORE_KMP §8.1, §8.3, §10).
  */
 @Composable
 fun SummaryRoute(
-    localTimeIso: String,
+    choice: WakeTimeChoice,
     onArmed: () -> Unit,
     onChangeTime: () -> Unit,
     onSessionInProgress: () -> Unit,
@@ -117,7 +126,11 @@ fun SummaryRoute(
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    viewModel.refresh(localTimeIso, DateFormat.is24HourFormat(context))
+                    viewModel.refresh(
+                        localTimeIso = choice.localTimeIso,
+                        blockingLocalTimeIso = choice.blockingLocalTimeIso,
+                        use24Hour = DateFormat.is24HourFormat(context),
+                    )
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -136,7 +149,7 @@ fun SummaryRoute(
 
     SummaryScreen(
         state = viewModel.state,
-        onActivate = { viewModel.activate(localTimeIso) },
+        onActivate = { viewModel.activate(choice.localTimeIso, choice.blockingLocalTimeIso) },
         onChangeTime = onChangeTime,
     )
 }

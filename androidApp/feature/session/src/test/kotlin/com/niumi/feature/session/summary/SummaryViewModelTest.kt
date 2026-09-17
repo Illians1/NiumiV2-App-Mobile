@@ -18,6 +18,7 @@ import com.niumi.feature.session.activation.fakes.RecordingPairedBoxStore
 import com.niumi.feature.session.activation.fakes.RecordingReadinessChecker
 import com.niumi.feature.session.activation.fakes.RecordingSessionCoordinator
 import com.niumi.feature.session.activation.fakes.RecordingTimeZoneProvider
+import com.niumi.feature.session.wake.WakeTimeTexts
 import com.niumi.feature.session.wake.fakes.FakeClock
 import com.niumi.system.common.UuidIdGenerator
 import com.niumi.system.readiness.ReadinessAction
@@ -155,8 +156,14 @@ class SummaryViewModelTest {
         return SummaryViewModel(useCase, snapshotPublisher)
     }
 
-    private fun loadedViewModel(): SummaryViewModel =
-        viewModel().also { it.refresh(localTimeIso = "07:00", use24Hour = true) }
+    private fun loadedViewModel(blockingLocalTimeIso: String? = null): SummaryViewModel =
+        viewModel().also {
+            it.refresh(
+                localTimeIso = "07:00",
+                blockingLocalTimeIso = blockingLocalTimeIso,
+                use24Hour = true,
+            )
+        }
 
     @Before
     fun setUp() {
@@ -219,7 +226,7 @@ class SummaryViewModelTest {
         val viewModel = loadedViewModel()
         val callsAfterFirstLoad = readinessCheckCalls
 
-        viewModel.refresh(localTimeIso = "07:00", use24Hour = true)
+        viewModel.refresh(localTimeIso = "07:00", blockingLocalTimeIso = null, use24Hour = true)
 
         assertThat(readinessCheckCalls).isGreaterThan(callsAfterFirstLoad)
     }
@@ -230,7 +237,7 @@ class SummaryViewModelTest {
         coordinator.result = DispatchResult.Applied(snapshot, requiredEffectsSucceeded = true)
         val viewModel = loadedViewModel()
 
-        viewModel.activate("07:00")
+        viewModel.activate("07:00", blockingLocalTimeIso = null)
 
         assertThat(viewModel.armedSnapshot).isEqualTo(snapshot)
         assertThat(viewModel.state.isActivating).isFalse()
@@ -243,7 +250,7 @@ class SummaryViewModelTest {
         }
         val viewModel = loadedViewModel()
 
-        viewModel.activate("07:00")
+        viewModel.activate("07:00", blockingLocalTimeIso = null)
 
         assertThat(coordinator.dispatchCount).isEqualTo(0)
         assertThat(viewModel.armedSnapshot).isNull()
@@ -258,13 +265,13 @@ class SummaryViewModelTest {
             )
         val viewModel = loadedViewModel()
 
-        viewModel.activate("07:00")
+        viewModel.activate("07:00", blockingLocalTimeIso = null)
 
         assertThat(viewModel.state.message).contains("ANDROID_ALARM_SCHEDULE_FAILED")
         assertThat(viewModel.armedSnapshot).isNull()
 
         // `ACTIVATION_FAILED` a effacé le pointeur actif : un nouveau diagnostic redonne la main.
-        viewModel.refresh(localTimeIso = "07:00", use24Hour = true)
+        viewModel.refresh(localTimeIso = "07:00", blockingLocalTimeIso = null, use24Hour = true)
 
         assertThat(viewModel.state.canActivate).isTrue()
     }
@@ -275,7 +282,7 @@ class SummaryViewModelTest {
             DispatchResult.Rejected(listOf(DomainViolationDto("INVALID_STATE_TRANSITION", "Session déjà active")))
         val viewModel = loadedViewModel()
 
-        viewModel.activate("07:00")
+        viewModel.activate("07:00", blockingLocalTimeIso = null)
 
         assertThat(viewModel.state.message).isEqualTo(SummaryTexts.REJECTED_MESSAGE)
     }
@@ -299,6 +306,75 @@ class SummaryViewModelTest {
 
         assertThat(viewModel.state.isSessionInProgress).isFalse()
         assertThat(viewModel.state.canActivate).isTrue()
+    }
+
+    // Blocage différé (Lot 6, SPEC_ANDROID §15 « Écran 6 » ; SPEC_CORE_KMP §8.3).
+
+    @Test
+    fun anImmediateBlockingIsDescribedAsSuch() {
+        val viewModel = loadedViewModel()
+
+        assertThat(viewModel.state.isBlockingImmediate).isTrue()
+        assertThat(viewModel.state.blockingDisplay).isNull()
+        assertThat(viewModel.state.canActivate).isTrue()
+    }
+
+    @Test
+    fun aDeferredBlockingShowsTheObtainedInstantAndNotTheChosenTime() {
+        val viewModel = loadedViewModel(blockingLocalTimeIso = "22:30")
+
+        assertThat(viewModel.state.isBlockingImmediate).isFalse()
+        assertThat(viewModel.state.blockingDisplay?.relativeDayLabel).isEqualTo("Aujourd'hui")
+        assertThat(viewModel.state.blockingDisplay?.timeLabel).isEqualTo("22:30")
+        assertThat(viewModel.state.blockingDisplay?.zoneLabel).isEqualTo("Europe/Paris")
+        assertThat(viewModel.state.canActivate).isTrue()
+    }
+
+    @Test
+    fun aBlockingStartNotBeforeTheWakeUpIsRefusedWithTheSameWordingAsScreenFive() {
+        // La politique commune ne voit rien à refuser — le calcul n'a produit aucun instant — donc
+        // c'est le statut du calcul qui doit parler, sans quoi l'écran resterait muet (§13, point 4).
+        val viewModel = loadedViewModel(blockingLocalTimeIso = "08:00")
+
+        assertThat(viewModel.state.canActivate).isFalse()
+        assertThat(viewModel.state.message).isEqualTo(WakeTimeTexts.BLOCKING_NOT_BEFORE_TRIGGER_MESSAGE)
+        assertThat(viewModel.state.blockingDisplay).isNull()
+    }
+
+    @Test
+    fun activatingADeferredSessionForwardsTheComputedInstantNeverTheChosenTime() {
+        coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+        val viewModel = loadedViewModel(blockingLocalTimeIso = "22:30")
+
+        viewModel.activate("07:00", blockingLocalTimeIso = "22:30")
+
+        val request = coordinator.lastEvent!!.activationRequest!!
+        assertThat(request.blockingSchedule.startsAtEpochMillis).isEqualTo(paris(2026, 9, 3, 22, 30))
+        assertThat(request.blockingSchedule.localTimeIso).isEqualTo("22:30")
+        assertThat(viewModel.armedSnapshot).isNotNull()
+    }
+
+    @Test
+    fun activatingWithARefusedBlockingStartNeverReachesTheCoordinator() {
+        val viewModel = loadedViewModel(blockingLocalTimeIso = "08:00")
+
+        viewModel.activate("07:00", blockingLocalTimeIso = "08:00")
+
+        assertThat(coordinator.dispatchCount).isEqualTo(0)
+        assertThat(viewModel.armedSnapshot).isNull()
+    }
+
+    @Test
+    fun aBlockingScheduleRefusedOnlyAtActivationTimeIsNamedByItsOwnMessage() {
+        // `canActivate` vient de l'aperçu ; ce chemin est celui d'un choix devenu invalide entre
+        // l'aperçu et la confirmation (recalcul du fuseau, SPEC_CORE_KMP §8.1).
+        val viewModel = loadedViewModel()
+        assertThat(viewModel.state.canActivate).isTrue()
+
+        viewModel.activate("07:00", blockingLocalTimeIso = "08:00")
+
+        assertThat(viewModel.state.message).isEqualTo(WakeTimeTexts.BLOCKING_NOT_BEFORE_TRIGGER_MESSAGE)
+        assertThat(viewModel.armedSnapshot).isNull()
     }
 
     @Test

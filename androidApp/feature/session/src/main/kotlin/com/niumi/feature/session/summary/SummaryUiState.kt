@@ -14,6 +14,7 @@ private const val BOX_ID_PREFIX_LENGTH = 8
  */
 data class SummaryUiState(
     val display: WakeScheduleDisplay? = null,
+    val blockingDisplay: WakeScheduleDisplay? = null,
     val blockedPackages: List<BlockedPackage> = emptyList(),
     val boxId: String? = null,
     val isAllowed: Boolean = false,
@@ -29,6 +30,14 @@ data class SummaryUiState(
      */
     val canActivate: Boolean
         get() = isAllowed && !isActivating && !isSessionInProgress && display != null
+
+    /**
+     * Lot 6 : aucun instant de début à afficher signifie « dès l'activation » (SPEC_ANDROID §15,
+     * écran 6). Dérivé de [blockingDisplay] plutôt que porté en propre, pour qu'un affichage et son
+     * libellé ne puissent jamais se contredire.
+     */
+    val isBlockingImmediate: Boolean
+        get() = blockingDisplay == null
 
     /** `boxId` tronqué (§16 : jamais l'identifiant complet à l'écran, jamais l'empreinte du token). */
     val truncatedBoxId: String?

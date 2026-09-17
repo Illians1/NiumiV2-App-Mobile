@@ -237,8 +237,21 @@ Android 17 porte un critère d'acceptation à lui seul et n'a aucun appareil pou
 Le **blocage différé** (l'utilisateur choisit si le blocage commence tout de suite ou à une heure
 donnée avant le réveil) est planifié aux **étapes 22 à 25** du plan
 `docs/superpowers/plans/2026-09-03-mvp-android.md` (Lot 6, décisions du 2026-09-15). Ce n'est pas
-une tâche de publication : le MVP décrit ci-dessus peut être publié sans lui. Le contrat KMP 1.3
-et les spécifications Android et iOS le décrivent déjà ; le code, lui, n'existe pas encore.
+une tâche de publication : le MVP décrit ci-dessus peut être publié sans lui.
+
+**État au 2026-09-17 :** les étapes 22 à 24 sont faites. Le contrat KMP 1.3, le chemin Android
+(Room v3, alarme de début, réconciliation, projection) et l'interface des écrans 5, 6 et 7 existent
+et sont utilisables de bout en bout ; une session différée armée depuis l'interface a été observée
+sur Xiaomi / Android 16, blocage appliqué 43 à 101 ms après l'instant contractuel
+(`ETAPE-24.md`). Reste l'**étape 25** : résilience mesurée (Doze forcé, redémarrages, `am kill`,
+retard `MISSED_BLOCKING_START_WINDOW`), les neuf lignes « blocage différé » de la matrice QA, et les
+limites écrites dans l'aide après mesure seulement.
+
+Les deux constats d'expérience de l'étape 24 sont clos : la ligne d'heure de l'écran 5 fait
+désormais écho à la saisie dans la convention du système (corrigé le 2026-09-17, §15 mise à jour), et
+l'`AlarmActivity` vue naître et mourir pendant un scan d'annulation est le comportement prescrit par
+§10.2 et §10.4 — l'écran de progression du nettoyage, qui dit « Ton scan est validé. Niumi termine la
+session. ».
 
 ## Ce qui n'est pas dans ce document
 

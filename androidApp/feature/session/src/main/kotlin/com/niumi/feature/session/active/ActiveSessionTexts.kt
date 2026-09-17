@@ -17,6 +17,16 @@ object ActiveSessionTexts {
 
     const val BLOCKED_APPS_TITLE = "Applications bloquées"
 
+    /** Ligne du début de blocage tant qu'il n'est pas atteint (Lot 6, §15, écran 7). */
+    const val BLOCKING_START_TITLE = "Début du blocage"
+
+    /**
+     * « Un titre qui dit la vérité » (§15) : avant l'instant de début, la liste décrit ce qui
+     * *sera* bloqué. Elle reste affichée dans les deux cas — l'engagement, lui, est déjà pris.
+     */
+    fun blockedAppsTitle(isBlockingPending: Boolean): String =
+        if (isBlockingPending) "Applications qui seront bloquées" else BLOCKED_APPS_TITLE
+
     const val NO_BLOCKED_APP = "Aucune application bloquée pour cette session."
 
     const val HEALTH_TITLE = "État de la session"
@@ -43,18 +53,55 @@ object ActiveSessionTexts {
     /**
      * Un état métier nommé en clair. `RINGING` et les trois états d'attente de scan ont leur propre
      * écran (§10.4) ; ils ne sont listés ici que pour n'afficher jamais un état inconnu.
+     *
+     * `ARMED` se dédouble depuis le blocage différé (Lot 6, §15) : [blockingTimeLabel] non nul
+     * signifie « le blocage n'a pas encore commencé, et voici quand il commencera ». Aucun autre
+     * état ne porte cette heure — un réveil qui sonne bloque déjà (point de vigilance 13).
      */
-    fun stateLabel(state: SessionStateDto): String =
+    fun stateLabel(
+        state: SessionStateDto,
+        blockingTimeLabel: String? = null,
+    ): String =
         when (state) {
-            SessionStateDto.PREPARING -> "Activation en cours"
-            SessionStateDto.ARMED -> "Réveil programmé"
-            SessionStateDto.RINGING -> "Ton réveil sonne"
-            SessionStateDto.AWAITING_NFC -> "En attente du scan de ton boîtier"
-            SessionStateDto.TRIGGERED_AWAITING_NFC -> "En attente du scan de ton boîtier"
-            SessionStateDto.RELEASING -> "Déblocage en cours"
-            SessionStateDto.COMPLETED -> "Session terminée"
-            SessionStateDto.CANCELLED -> "Session annulée"
-            SessionStateDto.FAILED -> "L'activation a échoué"
+            SessionStateDto.PREPARING -> {
+                "Activation en cours"
+            }
+
+            SessionStateDto.ARMED -> {
+                if (blockingTimeLabel == null) {
+                    "Réveil programmé · applications bloquées"
+                } else {
+                    "Réveil programmé · blocage à $blockingTimeLabel"
+                }
+            }
+
+            SessionStateDto.RINGING -> {
+                "Ton réveil sonne"
+            }
+
+            SessionStateDto.AWAITING_NFC -> {
+                "En attente du scan de ton boîtier"
+            }
+
+            SessionStateDto.TRIGGERED_AWAITING_NFC -> {
+                "En attente du scan de ton boîtier"
+            }
+
+            SessionStateDto.RELEASING -> {
+                "Déblocage en cours"
+            }
+
+            SessionStateDto.COMPLETED -> {
+                "Session terminée"
+            }
+
+            SessionStateDto.CANCELLED -> {
+                "Session annulée"
+            }
+
+            SessionStateDto.FAILED -> {
+                "L'activation a échoué"
+            }
         }
 
     /** Délègue à [IncidentTexts] : l'écran 12 nomme les mêmes incidents (étape 16). */

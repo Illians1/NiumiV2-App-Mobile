@@ -2,6 +2,7 @@ package com.niumi.feature.session.summary
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.diagnostics.ActivationReasonCode
+import com.niumi.feature.session.wake.WakeTimeTexts
 import org.junit.Test
 
 /** Contenu imposé de l'écran 6 (SPEC_ANDROID §15) et tutoiement partout. */
@@ -14,6 +15,8 @@ class SummaryTextsTest {
             SummaryTexts.COMMITMENT_REMINDER,
             SummaryTexts.BLOCKED_APPS_TITLE,
             SummaryTexts.BOX_TITLE,
+            SummaryTexts.BLOCKING_TITLE,
+            SummaryTexts.BLOCKING_IMMEDIATE_LABEL,
             SummaryTexts.SESSION_IN_PROGRESS_MESSAGE,
             SummaryTexts.INVALID_SCHEDULE_MESSAGE,
             SummaryTexts.REJECTED_MESSAGE,
@@ -58,6 +61,23 @@ class SummaryTextsTest {
 
         assertThat(text).contains("02:30")
         assertThat(text).contains("03:00")
+    }
+
+    /** Lot 6 : SPEC_ANDROID §15, « Écran 6 ». */
+    @Test
+    fun theBlockingLineUsesTheWordingOfTheSpecification() {
+        assertThat(SummaryTexts.BLOCKING_TITLE).isEqualTo("Blocage des applications")
+        assertThat(SummaryTexts.BLOCKING_IMMEDIATE_LABEL).isEqualTo("Dès l'activation")
+    }
+
+    /**
+     * §15 impose la même phrase aux écrans 5 et 6 pour le même fait : une seule chaîne existe, et
+     * ce test interdit qu'une seconde copie apparaisse ici.
+     */
+    @Test
+    fun theBlockingStartRefusalIsWordForWordTheOneOfScreenFive() {
+        assertThat(SummaryTexts.blockingReason(ActivationReasonCode.BLOCKING_START_NOT_BEFORE_TRIGGER))
+            .isEqualTo(WakeTimeTexts.BLOCKING_NOT_BEFORE_TRIGGER_MESSAGE)
     }
 
     @Test

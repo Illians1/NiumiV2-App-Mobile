@@ -18,7 +18,8 @@ class FakeTimeZoneProvider(
 }
 
 class FakeSetupPreferences(
-    private var lastWakeTimeIsoValue: String? = null,
+    var lastWakeTimeIsoValue: String? = null,
+    var lastBlockingStartTimeIsoValue: String? = null,
 ) : SetupPreferences {
     private var onboardingAcknowledged = true
     private var batteryExemptionConfirmed = true
@@ -39,5 +40,11 @@ class FakeSetupPreferences(
 
     override suspend fun setLastWakeTimeIso(value: String) {
         lastWakeTimeIsoValue = value
+    }
+
+    override suspend fun lastBlockingStartTimeIso(): String? = lastBlockingStartTimeIsoValue
+
+    override suspend fun setLastBlockingStartTimeIso(value: String?) {
+        lastBlockingStartTimeIsoValue = value
     }
 }

@@ -16,6 +16,7 @@ import com.niumi.feature.session.active.CompletedScreen
 import com.niumi.feature.session.active.ScanToModifyRoute
 import com.niumi.feature.session.diagnostics.IncidentDiagnosticRoute
 import com.niumi.feature.session.summary.SummaryRoute
+import com.niumi.feature.session.wake.WakeTimeChoice
 import com.niumi.feature.session.wake.WakeTimeRoute
 import com.niumi.feature.setup.accessibility.AccessibilityConsentRoute
 import com.niumi.feature.setup.apps.AppPickerRoute
@@ -52,12 +53,15 @@ fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
         setupDestinations(navController)
         composable<NiumiRoute.WakeTime> {
             WakeTimeRoute(
-                onContinue = { localTimeIso -> navController.navigate(NiumiRoute.Summary(localTimeIso)) },
+                onContinue = { choice ->
+                    navController.navigate(NiumiRoute.Summary(choice.localTimeIso, choice.blockingLocalTimeIso))
+                },
             )
         }
         composable<NiumiRoute.Summary> { backStackEntry ->
+            val route = backStackEntry.toRoute<NiumiRoute.Summary>()
             SummaryRoute(
-                localTimeIso = backStackEntry.toRoute<NiumiRoute.Summary>().localTimeIso,
+                choice = WakeTimeChoice(route.localTimeIso, route.blockingLocalTimeIso),
                 onArmed = { navController.navigateToActiveSession() },
                 // Revenir à l'écran 5 plutôt qu'en empiler un second.
                 onChangeTime = { navController.popBackStack() },

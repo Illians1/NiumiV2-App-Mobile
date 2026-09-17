@@ -34,6 +34,10 @@ private class FakeSetupPreferences(
     override suspend fun lastWakeTimeIso(): String? = null
 
     override suspend fun setLastWakeTimeIso(value: String) = Unit
+
+    override suspend fun lastBlockingStartTimeIso(): String? = null
+
+    override suspend fun setLastBlockingStartTimeIso(value: String?) = Unit
 }
 
 /**

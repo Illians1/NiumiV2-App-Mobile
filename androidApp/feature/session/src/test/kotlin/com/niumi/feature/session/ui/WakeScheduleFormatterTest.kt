@@ -160,6 +160,29 @@ class WakeScheduleFormatterTest {
         assertThat(display.shiftedFromLocalTime).isNull()
     }
 
+    // Écho d'une heure saisie, sans instant (écran 5, ligne du début de blocage — constat D1 de
+    // l'étape 24 : « 15:00 » affiché sous un « 7:00 AM »). Même règle de rendu que `format`.
+
+    @Test
+    fun aLocalTimeIsEchoedInTheSystemConvention() {
+        assertThat(WakeScheduleFormatter.formatLocalTime("22:30", use24Hour = true)).isEqualTo("22:30")
+        assertThat(WakeScheduleFormatter.formatLocalTime("22:30", use24Hour = false)).isEqualTo("10:30 PM")
+        assertThat(WakeScheduleFormatter.formatLocalTime("07:05", use24Hour = false)).isEqualTo("7:05 AM")
+    }
+
+    @Test
+    fun anUnreadableLocalTimeHasNoEcho() {
+        assertThat(WakeScheduleFormatter.formatLocalTime("25:00", use24Hour = true)).isNull()
+        assertThat(WakeScheduleFormatter.formatLocalTime("", use24Hour = false)).isNull()
+    }
+
+    @Test
+    fun theEchoKeepsLatinDigitsRegardlessOfTheJvmDefaultLocale() {
+        Locale.setDefault(Locale.forLanguageTag("ar-EG"))
+
+        assertThat(WakeScheduleFormatter.formatLocalTime("22:30", use24Hour = false)).isEqualTo("10:30 PM")
+    }
+
     @Test
     fun digitsStayLatinRegardlessOfTheJvmDefaultLocale() {
         Locale.setDefault(Locale.forLanguageTag("ar-EG"))

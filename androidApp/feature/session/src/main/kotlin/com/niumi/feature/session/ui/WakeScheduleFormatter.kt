@@ -51,6 +51,23 @@ object WakeScheduleFormatter {
     }
 
     /**
+     * Écho d'une heure **saisie**, sans instant : la ligne de l'écran 5 qui ouvre le sélecteur de
+     * début de blocage, comme le cadran du réveil, montre ce que l'utilisateur a choisi (§15,
+     * décision du 2026-09-17). C'est la même règle de rendu de l'heure que [format] — les deux
+     * mêmes formateurs, les mêmes locales explicites — appliquée à une heure locale seule.
+     *
+     * N'énonce jamais un instant : celui-ci vient de [format], seul à lire `triggerAtEpochMillis`
+     * et donc seul à pouvoir corriger un trou d'heure d'été. `null` si l'heure est illisible, cas
+     * où l'écran n'a rien à afficher plutôt qu'une chaîne brute.
+     */
+    fun formatLocalTime(
+        localTimeIso: String,
+        use24Hour: Boolean,
+    ): String? =
+        parseLocalTimeOrNull(localTimeIso)
+            ?.let { localTime -> (if (use24Hour) TIME_FORMATTER_24H else TIME_FORMATTER_12H).format(localTime) }
+
+    /**
      * Non nul seulement quand le fuseau affiché est celui de l'activation : un fuseau d'affichage
      * différent (§8, heure recalculée dans le fuseau courant) n'est pas un trou d'heure d'été et
      * ne doit pas déclencher l'explication.

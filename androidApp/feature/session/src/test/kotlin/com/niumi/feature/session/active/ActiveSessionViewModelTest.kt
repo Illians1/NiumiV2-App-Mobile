@@ -1,6 +1,7 @@
 package com.niumi.feature.session.active
 
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.PlatformDto
 import com.niumi.core.interop.SessionHealthDto
@@ -116,6 +117,22 @@ class ActiveSessionViewModelTest {
             failureCode = null,
         )
 
+    /**
+     * Session à blocage différé (Lot 6). `schemaVersion = 2` : c'est la version du contrat 1.3, et
+     * un snapshot de version 1 ne peut pas porter ces champs (SPEC_CORE_KMP §7.1).
+     */
+    private fun deferredSnapshot(blockingAppliedAtEpochMillis: Long? = null) =
+        snapshot().copy(
+            schemaVersion = 2,
+            blockingSchedule =
+                BlockingScheduleDto(
+                    localDateIso = "2026-09-03",
+                    localTimeIso = "22:30",
+                    startsAtEpochMillis = paris(2026, 9, 3, 22, 30),
+                ),
+            blockingAppliedAtEpochMillis = blockingAppliedAtEpochMillis,
+        )
+
     @Test
     fun anArmedSnapshotShowsItsStateDateTimeAndZone() {
         val viewModel = viewModel()
@@ -181,6 +198,66 @@ class ActiveSessionViewModelTest {
 
         assertThat(viewModel.state.hasSession).isFalse()
         assertThat(viewModel.state.isLoading).isFalse()
+    }
+
+    // Début du blocage (Lot 6, SPEC_ANDROID §15 « Écran 7 » ; point de vigilance 12 : c'est
+    // `blockingAppliedAtEpochMillis` qui dit si les applications sont bloquées, jamais `ARMED`).
+
+    @Test
+    fun aPendingDeferredBlockingAnnouncesItsStartInstant() {
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(deferredSnapshot())
+
+        assertThat(viewModel.state.isBlockingPending).isTrue()
+        assertThat(viewModel.state.blockingDisplayAtActivation?.relativeDayLabel).isEqualTo("Aujourd'hui")
+        assertThat(viewModel.state.blockingDisplayAtActivation?.timeLabel).isEqualTo("22:30")
+        assertThat(viewModel.state.blockingDisplayAtActivation?.zoneLabel).isEqualTo("Europe/Paris")
+        assertThat(viewModel.state.blockingDisplayInCurrentZone).isNull()
+    }
+
+    @Test
+    fun aDifferentCurrentZoneAddsASecondReadingOfTheBlockingStart() {
+        timeZoneProvider.zoneId = "Pacific/Auckland"
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(deferredSnapshot())
+
+        // Europe/Paris 22:30 == Pacific/Auckland 08:30 le lendemain : l'instant ne bouge pas (§8).
+        assertThat(viewModel.state.blockingDisplayAtActivation?.timeLabel).isEqualTo("22:30")
+        assertThat(viewModel.state.blockingDisplayInCurrentZone?.zoneLabel).isEqualTo("Pacific/Auckland")
+        assertThat(viewModel.state.blockingDisplayInCurrentZone?.timeLabel).isEqualTo("08:30")
+    }
+
+    @Test
+    fun anAppliedBlockingHasNoStartLeftToAnnounce() {
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(deferredSnapshot(blockingAppliedAtEpochMillis = paris(2026, 9, 3, 22, 30)))
+
+        assertThat(viewModel.state.isBlockingPending).isFalse()
+        assertThat(viewModel.state.blockingDisplayAtActivation).isNull()
+        assertThat(viewModel.state.blockingDisplayInCurrentZone).isNull()
+    }
+
+    @Test
+    fun anImmediateSessionNeverAnnouncesABlockingStart() {
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        assertThat(viewModel.state.isBlockingPending).isFalse()
+        assertThat(viewModel.state.blockingDisplayAtActivation).isNull()
+    }
+
+    @Test
+    fun aTwelveHourDeviceAlsoRendersTheBlockingStartInAmPm() {
+        val viewModel = viewModel()
+
+        viewModel.refresh(use24Hour = false)
+        snapshotPublisher.publish(deferredSnapshot())
+
+        assertThat(viewModel.state.blockingDisplayAtActivation?.timeLabel).isEqualTo("10:30 PM")
     }
 
     @Test

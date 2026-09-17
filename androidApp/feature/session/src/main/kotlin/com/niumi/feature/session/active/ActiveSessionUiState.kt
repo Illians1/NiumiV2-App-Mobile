@@ -18,6 +18,11 @@ import com.niumi.feature.session.ui.WakeScheduleDisplay
  * de l'affichage : une application désinstallée ou renommée pendant la session doit rester
  * nommable (§12.2, même raison que l'écart de l'étape 5 sur `BlockingController.apply`).
  *
+ * [isBlockingPending] dit si les applications sont déjà bloquées, ce que l'état `ARMED` ne dit plus
+ * depuis le blocage différé (contrat KMP 1.3, point de vigilance 12) : il vient de
+ * `SessionSnapshotDto.isBlockingPending`, jamais d'une règle recopiée. Les deux affichages du début
+ * de blocage suivent la même règle de fuseau que le réveil et ne survivent pas à son application.
+ *
  * [incidents] porte depuis l'étape 16 le recours de chaque incident remédiable
  * ([IncidentPresentation], §15) : un `CRITICAL` présenté sans moyen d'agir laissait l'utilisateur
  * devant un constat qu'il ne pouvait pas lever.
@@ -27,6 +32,9 @@ data class ActiveSessionUiState(
     val displayAtActivation: WakeScheduleDisplay? = null,
     val displayInCurrentZone: WakeScheduleDisplay? = null,
     val blockedApps: List<BlockedPackage> = emptyList(),
+    val isBlockingPending: Boolean = false,
+    val blockingDisplayAtActivation: WakeScheduleDisplay? = null,
+    val blockingDisplayInCurrentZone: WakeScheduleDisplay? = null,
     val health: SessionHealthDto? = null,
     val incidents: List<IncidentPresentation> = emptyList(),
     val isLoading: Boolean = true,

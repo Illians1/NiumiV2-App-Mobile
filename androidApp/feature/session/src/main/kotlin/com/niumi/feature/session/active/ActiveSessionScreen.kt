@@ -59,7 +59,16 @@ fun ActiveSessionScreen(
 
             Text(text = ActiveSessionTexts.TITLE, style = MaterialTheme.typography.headlineSmall)
             state.state?.let { sessionState ->
-                Text(text = ActiveSessionTexts.stateLabel(sessionState), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    // L'heure de début n'est passée que tant que le blocage est en attente : c'est
+                    // ce qui dédouble le libellé `ARMED` (§15, Lot 6).
+                    text =
+                        ActiveSessionTexts.stateLabel(
+                            state = sessionState,
+                            blockingTimeLabel = state.blockingDisplayAtActivation?.timeLabel,
+                        ),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
             state.displayAtActivation?.let { display ->
                 Text(text = display.sentence, style = MaterialTheme.typography.bodyLarge)
@@ -68,6 +77,8 @@ fun ActiveSessionScreen(
                 Text(text = ActiveSessionTexts.CURRENT_ZONE_TITLE, style = MaterialTheme.typography.titleMedium)
                 Text(text = display.sentence, style = MaterialTheme.typography.bodyLarge)
             }
+
+            BlockingStartSection(state)
 
             CriticalIncidents(state.criticalIncidents, onRemediate)
             HealthSection(state)
@@ -147,9 +158,36 @@ private fun HealthSection(state: ActiveSessionUiState) {
     )
 }
 
+/**
+ * Instant de début du blocage, tant qu'il n'est pas atteint (§15, Lot 6), lu dans le fuseau
+ * d'activation et, s'il diffère, dans le fuseau courant — même règle que le réveil (§8). Rien
+ * n'apparaît une fois le blocage appliqué, ni pour une session à blocage immédiat. Charte §10 : une
+ * information secondaire d'une session en cours, atténuée et sans Ambre — rien n'y est « actif ».
+ */
+@Composable
+private fun BlockingStartSection(state: ActiveSessionUiState) {
+    val display = state.blockingDisplayAtActivation ?: return
+    Text(text = ActiveSessionTexts.BLOCKING_START_TITLE, style = MaterialTheme.typography.titleMedium)
+    Text(
+        text = display.sentence,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    state.blockingDisplayInCurrentZone?.let { inCurrentZone ->
+        Text(
+            text = "${ActiveSessionTexts.CURRENT_ZONE_TITLE} : ${inCurrentZone.sentence}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun BlockedAppsSection(state: ActiveSessionUiState) {
-    Text(text = ActiveSessionTexts.BLOCKED_APPS_TITLE, style = MaterialTheme.typography.titleMedium)
+    Text(
+        text = ActiveSessionTexts.blockedAppsTitle(state.isBlockingPending),
+        style = MaterialTheme.typography.titleMedium,
+    )
     if (state.blockedApps.isEmpty()) {
         Text(text = ActiveSessionTexts.NO_BLOCKED_APP, style = MaterialTheme.typography.bodyLarge)
         return

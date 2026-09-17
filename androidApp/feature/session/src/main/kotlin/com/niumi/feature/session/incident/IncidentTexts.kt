@@ -74,6 +74,10 @@ object IncidentTexts {
                 "Le déblocage n'a pas pu être terminé entièrement."
             }
 
+            "MISSED_BLOCKING_START_WINDOW" -> {
+                "Le blocage a commencé en retard : Niumi n'était pas en vie à l'heure prévue."
+            }
+
             "SNAPSHOT_CORRUPTED" -> {
                 "Les données de la session n'étaient pas lisibles."
             }

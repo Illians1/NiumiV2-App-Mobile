@@ -56,6 +56,7 @@ class DataStoreUnlockGuardTest {
             assertThat(preferences.isOnboardingAcknowledged()).isFalse()
             assertThat(preferences.isBatteryExemptionConfirmed()).isFalse()
             assertThat(preferences.lastWakeTimeIso()).isNull()
+            assertThat(preferences.lastBlockingStartTimeIso()).isNull()
         }
 
     @Test
@@ -66,6 +67,10 @@ class DataStoreUnlockGuardTest {
             { preferences.acknowledgeOnboarding() },
             { preferences.setBatteryExemptionConfirmed(confirmed = true) },
             { preferences.setLastWakeTimeIso("07:00") },
+            { preferences.setLastBlockingStartTimeIso("22:30") },
+            // Effacer la clé est une écriture comme une autre : la garde doit la refuser aussi,
+            // sans quoi le chemin `null` du Lot 6 contournerait §7.3.
+            { preferences.setLastBlockingStartTimeIso(null) },
         ).forEach { write ->
             val thrown = assertThrows(IllegalStateException::class.java) { runBlocking { write() } }
             assertThat(thrown).hasMessageThat().isEqualTo("DATASTORE_BEFORE_UNLOCK")

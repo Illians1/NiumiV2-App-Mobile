@@ -24,7 +24,11 @@ import javax.inject.Provider
  *   `isIgnoringBatteryOptimizations()` reste `false` après correction du réglage OEM ;
  * - `lastWakeTimeIso` (étape 14) : dernière heure choisie sur l'écran de choix de l'heure, pour
  *   que le cadran s'ouvre dessus plutôt que sur 07:00 à chaque nouvelle préparation. `null` tant
- *   qu'aucune heure n'a jamais été confirmée.
+ *   qu'aucune heure n'a jamais été confirmée ;
+ * - `lastBlockingStartTimeIso` (étape 24, Lot 6) : dernière heure de début de blocage confirmée,
+ *   mémorisée comme l'heure de réveil (SPEC_ANDROID §15, écran 5). `null` signifie « Maintenant »,
+ *   qui reste le défaut tant qu'aucun début différé n'a été confirmé — d'où une écriture nulle qui
+ *   **retire** la clé plutôt que d'y poser une chaîne vide.
  */
 interface SetupPreferences {
     suspend fun isOnboardingAcknowledged(): Boolean
@@ -38,6 +42,10 @@ interface SetupPreferences {
     suspend fun lastWakeTimeIso(): String?
 
     suspend fun setLastWakeTimeIso(value: String)
+
+    suspend fun lastBlockingStartTimeIso(): String?
+
+    suspend fun setLastBlockingStartTimeIso(value: String?)
 }
 
 private val Context.setupDataStore: DataStore<Preferences> by preferencesDataStore(name = "niumi_setup")
@@ -76,6 +84,10 @@ class DataStoreSetupPreferences(
 
     override suspend fun setLastWakeTimeIso(value: String) = write(LAST_WAKE_TIME_ISO, value)
 
+    override suspend fun lastBlockingStartTimeIso(): String? = preferences()?.get(LAST_BLOCKING_START_TIME_ISO)
+
+    override suspend fun setLastBlockingStartTimeIso(value: String?) = write(LAST_BLOCKING_START_TIME_ISO, value)
+
     private suspend fun read(key: Preferences.Key<Boolean>): Boolean = preferences()?.get(key) ?: false
 
     /** `null` avant déverrouillage : le `DataStore` n'est même pas résolu. */
@@ -88,12 +100,19 @@ class DataStoreSetupPreferences(
             .first()
     }
 
+    /**
+     * Une valeur nulle **retire** la clé, ce dont le Lot 6 a besoin pour revenir à « Maintenant »
+     * (§15). C'est une écriture comme une autre : la garde est la même, sinon ce chemin ferait
+     * naître le `DataStore` avant déverrouillage — précisément ce que l'étape 19 interdit.
+     */
     private suspend fun <T> write(
         key: Preferences.Key<T>,
-        value: T,
+        value: T?,
     ) {
         check(unlockState.isUserUnlocked) { DATASTORE_BEFORE_UNLOCK }
-        contextProvider.get().setupDataStore.edit { preferences -> preferences[key] = value }
+        contextProvider.get().setupDataStore.edit { preferences ->
+            if (value == null) preferences.remove(key) else preferences[key] = value
+        }
     }
 
     private companion object {
@@ -102,5 +121,6 @@ class DataStoreSetupPreferences(
         val ONBOARDING_ACKNOWLEDGED = booleanPreferencesKey("onboarding_acknowledged")
         val BATTERY_EXEMPTION_CONFIRMED = booleanPreferencesKey("battery_exemption_confirmed")
         val LAST_WAKE_TIME_ISO = stringPreferencesKey("last_wake_time_iso")
+        val LAST_BLOCKING_START_TIME_ISO = stringPreferencesKey("last_blocking_start_time_iso")
     }
 }

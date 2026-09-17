@@ -8,8 +8,11 @@ import androidx.lifecycle.viewModelScope
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.BlockedPackage
 import com.niumi.database.incident.SessionIncidentsReader
+import com.niumi.feature.session.ui.BlockingScheduleFormatter
+import com.niumi.feature.session.ui.WakeScheduleDisplay
 import com.niumi.feature.session.ui.WakeScheduleFormatter
 import com.niumi.system.common.Clock
 import com.niumi.system.common.TimeZoneProvider
@@ -109,24 +112,50 @@ class ActiveSessionViewModel
             val nowEpochMillis = clock.nowEpochMillis()
             val currentZoneId = timeZoneProvider.currentZoneId()
             val schedule = snapshot.wakeSchedule
+            val otherZoneId = currentZoneId.takeIf { it != schedule.zoneIdAtActivation }
             return ActiveSessionUiState(
                 state = snapshot.state,
                 displayAtActivation = WakeScheduleFormatter.format(schedule, nowEpochMillis, use24Hour = use24Hour),
                 displayInCurrentZone =
-                    currentZoneId
-                        .takeIf { it != schedule.zoneIdAtActivation }
-                        ?.let {
-                            WakeScheduleFormatter.format(
-                                schedule,
-                                nowEpochMillis,
-                                displayZoneId = it,
-                                use24Hour = use24Hour,
-                            )
-                        },
+                    otherZoneId?.let {
+                        WakeScheduleFormatter.format(
+                            schedule,
+                            nowEpochMillis,
+                            displayZoneId = it,
+                            use24Hour = use24Hour,
+                        )
+                    },
                 blockedApps = details.blockedApps ?: state.blockedApps,
+                // Point de vigilance 12 : c'est `isBlockingPending` qui dit si les applications
+                // sont bloquées, jamais l'état `ARMED`.
+                isBlockingPending = snapshot.isBlockingPending,
+                blockingDisplayAtActivation = blockingDisplay(snapshot, nowEpochMillis),
+                blockingDisplayInCurrentZone =
+                    otherZoneId?.let { blockingDisplay(snapshot, nowEpochMillis, displayZoneId = it) },
                 health = snapshot.health,
                 incidents = details.incidents,
                 isLoading = false,
+            )
+        }
+
+        /**
+         * L'instant de début du blocage, tant qu'il n'est pas atteint (§15 : afficher cet instant
+         * tant qu'il n'est pas atteint, jamais l'heure saisie). Une fois le blocage appliqué, il
+         * n'y a plus rien à annoncer — et il n'a jamais rien à annoncer pour un blocage immédiat.
+         */
+        private fun blockingDisplay(
+            snapshot: SessionSnapshotDto,
+            nowEpochMillis: Long,
+            displayZoneId: String? = null,
+        ): WakeScheduleDisplay? {
+            if (!snapshot.isBlockingPending) return null
+            val zoneIdAtActivation = snapshot.wakeSchedule.zoneIdAtActivation
+            return BlockingScheduleFormatter.format(
+                schedule = snapshot.blockingSchedule,
+                zoneIdAtActivation = zoneIdAtActivation,
+                nowEpochMillis = nowEpochMillis,
+                displayZoneId = displayZoneId ?: zoneIdAtActivation,
+                use24Hour = use24Hour,
             )
         }
 
