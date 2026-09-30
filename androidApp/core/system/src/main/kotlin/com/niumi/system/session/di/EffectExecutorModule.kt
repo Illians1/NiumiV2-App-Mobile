@@ -65,7 +65,7 @@ object EffectExecutorModule {
             SessionEffectKindDto.APPLY_BLOCKING to ApplyBlockingExecutor(blockingController, technicalEventLog),
             SessionEffectKindDto.REMOVE_BLOCKING to RemoveBlockingExecutor(blockingController, clock),
             SessionEffectKindDto.START_RINGING to
-                StartRingingExecutor(ringingController, ringingWatchdog, technicalEventLog),
+                StartRingingExecutor(ringingController, ringingWatchdog),
             SessionEffectKindDto.STOP_RINGING to StopRingingExecutor(ringingController, ringingWatchdog),
             SessionEffectKindDto.PRESENT_SCAN_REQUEST to
                 PresentScanRequestExecutor(scanRequestNotifier, technicalEventLog),

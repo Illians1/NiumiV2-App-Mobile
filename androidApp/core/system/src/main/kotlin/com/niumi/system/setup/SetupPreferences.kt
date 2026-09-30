@@ -15,13 +15,10 @@ import java.io.IOException
 import javax.inject.Provider
 
 /**
- * Deux accusés de réception de la mise en route, persistés hors Room (SPEC_ANDROID §4.5, §13) :
+ * Trois préférences de la mise en route, persistées hors Room (SPEC_ANDROID §4.5, §15) :
  *
  * - `onboardingAcknowledged` : l'utilisateur a lu les limites du produit avant sa première
  *   activation, notamment l'absence de tout secours logiciel pendant une session ;
- * - `batteryExemptionConfirmed` : l'utilisateur confirme avoir levé les restrictions d'énergie.
- *   §13 exige cette confirmation parce que la détection système est partielle : sur HyperOS,
- *   `isIgnoringBatteryOptimizations()` reste `false` après correction du réglage OEM ;
  * - `lastWakeTimeIso` (étape 14) : dernière heure choisie sur l'écran de choix de l'heure, pour
  *   que le cadran s'ouvre dessus plutôt que sur 07:00 à chaque nouvelle préparation. `null` tant
  *   qu'aucune heure n'a jamais été confirmée ;
@@ -29,15 +26,15 @@ import javax.inject.Provider
  *   mémorisée comme l'heure de réveil (SPEC_ANDROID §15, écran 5). `null` signifie « Maintenant »,
  *   qui reste le défaut tant qu'aucun début différé n'a été confirmé — d'où une écriture nulle qui
  *   **retire** la clé plutôt que d'y poser une chaîne vide.
+ *
+ * La confirmation de l'exemption d'énergie (`battery_exemption_confirmed`) a été retirée à
+ * l'étape 25 : le diagnostic détecte désormais l'exemption (§13). La clé déjà écrite chez un
+ * utilisateur reste dans le fichier sans être relue, ce qui est sans effet ; aucune migration.
  */
 interface SetupPreferences {
     suspend fun isOnboardingAcknowledged(): Boolean
 
     suspend fun acknowledgeOnboarding()
-
-    suspend fun isBatteryExemptionConfirmed(): Boolean
-
-    suspend fun setBatteryExemptionConfirmed(confirmed: Boolean)
 
     suspend fun lastWakeTimeIso(): String?
 
@@ -74,11 +71,6 @@ class DataStoreSetupPreferences(
     override suspend fun isOnboardingAcknowledged(): Boolean = read(ONBOARDING_ACKNOWLEDGED)
 
     override suspend fun acknowledgeOnboarding() = write(ONBOARDING_ACKNOWLEDGED, value = true)
-
-    override suspend fun isBatteryExemptionConfirmed(): Boolean = read(BATTERY_EXEMPTION_CONFIRMED)
-
-    override suspend fun setBatteryExemptionConfirmed(confirmed: Boolean) =
-        write(BATTERY_EXEMPTION_CONFIRMED, confirmed)
 
     override suspend fun lastWakeTimeIso(): String? = preferences()?.get(LAST_WAKE_TIME_ISO)
 
@@ -119,7 +111,6 @@ class DataStoreSetupPreferences(
         const val DATASTORE_BEFORE_UNLOCK = "DATASTORE_BEFORE_UNLOCK"
 
         val ONBOARDING_ACKNOWLEDGED = booleanPreferencesKey("onboarding_acknowledged")
-        val BATTERY_EXEMPTION_CONFIRMED = booleanPreferencesKey("battery_exemption_confirmed")
         val LAST_WAKE_TIME_ISO = stringPreferencesKey("last_wake_time_iso")
         val LAST_BLOCKING_START_TIME_ISO = stringPreferencesKey("last_blocking_start_time_iso")
     }

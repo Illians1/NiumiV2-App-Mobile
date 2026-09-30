@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import com.niumi.system.session.ReconcileReason
 import com.niumi.system.session.SESSION_SCAN_STATES
 import com.niumi.system.session.SessionCoordinator
+import com.niumi.system.session.SessionRuntimeReconciler
 import com.niumi.system.session.SessionSnapshotPublisher
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 class SessionReadinessWatcher(
     private val publisher: SessionSnapshotPublisher,
     private val monitor: SessionReadinessMonitor,
+    private val runtimeReconciler: SessionRuntimeReconciler,
     private val coordinator: SessionCoordinator,
     dispatcher: CoroutineDispatcher,
 ) : ForegroundReadinessTrigger {
@@ -67,6 +69,14 @@ class SessionReadinessWatcher(
      * La surveillance de §13.1 est appelée en premier et n'est pas remplacée quand un snapshot est
      * déjà publié : `reconcile` ne rejoue le diagnostic que sur une session `ARMED`, alors que le
      * service d'accessibilité reste surveillé dans tous les états non finaux.
+     *
+     * **Le NFC est rejoué lui aussi (étape 25).** Il n'est pas dans la table du moniteur : c'est
+     * [SessionRuntimeReconciler] qui le juge, avec l'alarme réellement programmée (§7.1, §18), et
+     * il ne tournait qu'en fin de réconciliation complète. Mesuré le 2026-09-27 : NFC coupé pendant
+     * `ARMED`, Niumi ouvert, rien — un NFC coupé le soir n'était signalé qu'au réveil. Rejoué ici
+     * sur le snapshot **relu** (le moniteur a pu dispatcher un incident, donc avancer la révision),
+     * sans réconciliation complète, qui tournerait à chaque ouverture. Les états de scan n'en ont
+     * pas besoin : leur réconciliation complète le rejoue déjà en fin de passe.
      */
     suspend fun evaluate() {
         val snapshot = publisher.snapshot.value
@@ -77,6 +87,10 @@ class SessionReadinessWatcher(
         monitor.evaluate(snapshot) { event -> coordinator.dispatch(event) }
         if (snapshot.state in SESSION_SCAN_STATES) {
             coordinator.reconcile(ReconcileReason.FOREGROUND)
+        } else {
+            publisher.snapshot.value?.let { latest ->
+                runtimeReconciler.reconcile(latest) { event -> coordinator.dispatch(event) }
+            }
         }
     }
 

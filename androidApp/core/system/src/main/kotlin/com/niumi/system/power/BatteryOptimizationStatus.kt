@@ -4,12 +4,11 @@ import android.content.Context
 import android.os.PowerManager
 
 /**
- * Exemption d'optimisation de batterie (SPEC_ANDROID §13). **Détection structurellement
- * partielle** : `isIgnoringBatteryOptimizations()` n'observe que la liste blanche AOSP. La mesure
- * de l'étape 5 sur HyperOS a montré qu'un appareil peut geler Niumi alors que cette méthode
- * renvoie `false` après correction du réglage OEM, et inversement. Cette sonde ne décide donc
- * jamais seule du contrôle de disponibilité : elle sert à savoir s'il reste utile de proposer la
- * demande d'exemption AOSP.
+ * Exemption d'optimisation de batterie (SPEC_ANDROID §13). Cette sonde **décide** du contrôle de
+ * disponibilité. Mesuré le 2026-09-28 sur HyperOS : c'est la liste blanche AOSP qui empêche le
+ * gel du blocage, que Niumi y soit inscrit par la page Android (« Sans restriction ») ou par le
+ * réglage de la surcouche (« Pas de restriction »), qui l'y inscrit aussi. Les autres surcouches
+ * ne sont pas mesurées.
  */
 fun interface BatteryOptimizationStatus {
     fun isIgnoringBatteryOptimizations(): Boolean

@@ -38,6 +38,8 @@ object SessionWarningNotificationSpecs {
                 "Ton réveil ne sonnera pas tant que le silence total est activé.",
             ReadinessCheckId.ACCESSIBILITY_SERVICE to
                 "Le service d'accessibilité de Niumi est désactivé. Tes applications ne sont plus bloquées.",
+            ReadinessCheckId.BATTERY_OPTIMIZATION to
+                "Les restrictions de batterie sont revenues sur Niumi. Le blocage peut s'arrêter tout seul.",
         )
 
     fun forCheck(id: ReadinessCheckId): NotificationSpec =

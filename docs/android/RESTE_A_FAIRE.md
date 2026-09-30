@@ -133,6 +133,30 @@ remettrait en cause le blocage des applications, c'est-à-dire la moitié de la 
 **Fini quand** la date de soumission et la réponse de Google sont consignées dans
 `docs/android/implementation-reports/LOT-0.md`, section « Statut de la porte 0b ».
 
+### A7. Décider du traitement du retrait des récents sur HyperOS
+
+- [x] **Fait** (2026-09-28)
+
+**Pourquoi.** Mesuré le 2026-09-27 puis reproduit délibérément le 28 : un balayage de la carte de
+Niumi dans les applications récentes, ou « Tout effacer », tue Niumi — malgré la priorité que lui
+donne le service d'accessibilité — et HyperOS ne relie plus ce service tant que l'utilisateur ne
+l'a pas réactivé. **Le blocage est coupé**, l'alarme conservée.
+
+**Ce qui a été fait.** Décidé avec l'utilisateur et mesuré sur appareil (`ETAPE-25.md`) :
+
+- **carte cachée pendant la session** (`RecentsCard`, `setExcludeFromRecents`) : plus de carte à
+  balayer ; elle revient à la fin de la session ;
+- **verrou HyperOS exigé par le diagnostic** (contrôle `RECENTS_LOCK`, bloquant sur HyperOS, sans
+  objet ailleurs) : seul moyen mesuré d'échapper à « Tout effacer », qui tue même une tâche cachée
+  et un processus sans tâche. Le verrou est par application et durable : il se pose une fois.
+
+Écartés : supprimer la tâche en quittant Niumi (« Tout effacer » tue même sans tâche, mesuré),
+service de premier plan permanent (même priorité, contraire au MVP), surveillance périodique (ne
+répare rien, troisième dérogation à §9.1).
+
+**Reste** : le cas sans objet (appareil sans verrou HyperOS) n'est pas mesurable sur le Xiaomi ;
+le comportement des récents sur Pixel et Samsung relève de B1 et B2.
+
 ---
 
 ## B. Couverture des appareils
@@ -160,6 +184,13 @@ touchent au réveil et au blocage. Les deux scripts `tools/validate_alarm.sh` et
 `tools/validate_blocking.sh` automatisent les mesures et refusent de tourner si leurs conditions ne
 sont pas réunies.
 
+Y ajouter les **neuf lignes « blocage différé »** de la matrice : `tools/validate_blocking.sh
+--deferred` et `tools/validate_blocking_start.sh` (`reboot`, puis `doze` par adb Wi-Fi, câble
+retiré) les outillent en partie. Deux questions y sont propres au Pixel : la mort du processus
+délie-t-elle aussi le service d'accessibilité, et « Tout effacer » dans les récents coupe-t-il aussi
+le blocage, sachant que la carte est cachée pendant la session et que le contrôle du verrou y est
+sans objet (voir A7) ?
+
 **Fini quand** une colonne Pixel est remplie dans `QA_MATRIX.md`, y compris les lignes en échec.
 
 ### B2. Campagne sur Samsung Galaxy
@@ -168,6 +199,11 @@ sont pas réunies.
 
 **Pourquoi.** Deuxième parc en nombre d'utilisateurs, et surcouche réputée agressive sur la gestion
 de l'énergie, ce qui touche directement la promesse du réveil.
+
+**Comment.** Même déroulé que B1, lignes « blocage différé » comprises, avec les mêmes deux
+questions propres à la surcouche : mort du processus et retrait des récents.
+
+**Fini quand** une colonne Samsung est remplie dans `QA_MATRIX.md`.
 
 ### B3. Trancher la question des démarrages automatiques chez les autres fabricants
 
@@ -229,6 +265,15 @@ Android 17 porte un critère d'acceptation à lui seul et n'a aucun appareil pou
       les a remplis ; seule la deuxième dira s'ils sont relus et combien de temps ils font gagner.
       Si le gain est nul, la clé de cache est probablement mal choisie. Attendu : nettement moins
       de 29 minutes.
+- [x] **C9. Surveiller l'exemption d'énergie pendant une session.** *(Décidé, codé et mesuré le
+      2026-09-29 sur Xiaomi 25080RABDG / Android 16, pendant `ARMED` et pendant `RINGING` : ligne
+      de `QA_MATRIX.md`. La détection par la réconciliation `PACKAGE_REPLACED` n'est pas mesurée.)* Contrôle `BATTERY_OPTIMIZATION` ajouté aux
+      contrôles surveillés de SPEC_ANDROID §13.1 : incident `ANDROID_BATTERY_EXEMPTION_REVOKED`,
+      `CRITICAL`, surveillé dans tous les états non finaux comme le service d'accessibilité, recours
+      « Ouvrir les réglages de batterie » sur l'écran 7, avertissement d'identifiant 9. Aucun
+      broadcast public n'annonce le changement (`ACTION_POWER_SAVE_WHITELIST_CHANGED` est `@hide`) :
+      détection au premier plan, à chaque réconciliation (dont `PACKAGE_REPLACED`) et au réveil.
+      L'aide, l'onboarding et `LIMITES.md` le disent depuis la mesure.
 
 ---
 
@@ -239,19 +284,34 @@ donnée avant le réveil) est planifié aux **étapes 22 à 25** du plan
 `docs/superpowers/plans/2026-09-03-mvp-android.md` (Lot 6, décisions du 2026-09-15). Ce n'est pas
 une tâche de publication : le MVP décrit ci-dessus peut être publié sans lui.
 
-**État au 2026-09-17 :** les étapes 22 à 24 sont faites. Le contrat KMP 1.3, le chemin Android
-(Room v3, alarme de début, réconciliation, projection) et l'interface des écrans 5, 6 et 7 existent
-et sont utilisables de bout en bout ; une session différée armée depuis l'interface a été observée
-sur Xiaomi / Android 16, blocage appliqué 43 à 101 ms après l'instant contractuel
-(`ETAPE-24.md`). Reste l'**étape 25** : résilience mesurée (Doze forcé, redémarrages, `am kill`,
-retard `MISSED_BLOCKING_START_WINDOW`), les neuf lignes « blocage différé » de la matrice QA, et les
-limites écrites dans l'aide après mesure seulement.
+**État au 2026-09-28 : les étapes 22 à 25 sont faites.** Le blocage différé est construit et mesuré
+sur Xiaomi / Android 16 : neuf lignes §20 renseignées dans `QA_MATRIX.md`, les quatre critères §21
+du Lot 6 prouvés sur cet appareil (`RELEASE_REPORT.md`, critères 26 à 29), les limites écrites dans
+l'aide après mesure (`LIMITES.md`). Le début du blocage part à l'heure à moins d'une demi-seconde, y
+compris en Doze profond, téléphone verrouillé ou après un redémarrage ; téléphone éteint, il part au
+redémarrage avec l'avertissement prévu. Détail dans `ETAPE-25.md`.
 
-Les deux constats d'expérience de l'étape 24 sont clos : la ligne d'heure de l'écran 5 fait
-désormais écho à la saisie dans la convention du système (corrigé le 2026-09-17, §15 mise à jour), et
-l'`AlarmActivity` vue naître et mourir pendant un scan d'annulation est le comportement prescrit par
-§10.2 et §10.4 — l'écran de progression du nettoyage, qui dit « Ton scan est validé. Niumi termine la
-session. ».
+Ce qui reste ouvert pour le Lot 6 :
+
+- une **mort du processus** délie le service d'accessibilité sur HyperOS : l'alarme de début est
+  conservée, le blocage attend la réactivation (limite établie, écart 9 de `RELEASE_REPORT.md`) ;
+  même cause que A7, dont les parades couvrent les gestes des récents mais pas les autres morts.
+  Sans parade connue ; limite écrite dans l'aide le 30/09 (`LIMITES.md`) et ligne §20 requalifiée ;
+- la couverture Pixel et Samsung (B1, B2) ;
+- une session différée sur **APK de publication** (A2), impossible sans la clé (A1) ;
+- ~~l'écran 7 ne se rafraîchit pas quand un réglage change depuis le volet rapide~~ : traité et
+  mesuré le 29/09 (écart 10 de `RELEASE_REPORT.md`) ;
+- ~~l'écran 12 ne rejoue ses contrôles qu'à son ouverture~~ : traité et mesuré le 29/09 ;
+- **retrait de l'écran 12 de la version finale** (intention de l'utilisateur, 29/09, non décidé
+  dans la spec) : l'écran porte aujourd'hui la destination du tap des avertissements (§13.1) et
+  l'export du journal (§17) ; les retirer demande d'abord de leur trouver une autre place et de
+  mettre SPEC_ANDROID §13.1, §15 et §17 à jour ;
+- l'annonce d'état du NFC n'est écoutée qu'écran 7 affiché ; l'étendre à toute la session (§13.1)
+  n'est pas décidé ;
+- **seuil du contrôle de volume d'alarme** (question produit, 29/09) : Android borne ce volume à 1
+  (AOSP, et mesuré sur le Xiaomi), si bien que « volume supérieur à zéro » et
+  `ANDROID_ALARM_VOLUME_ZERO` ne se déclenchent pratiquement jamais, et qu'un réveil à 1/15 passe
+  pour audible. À trancher : garder, relever le seuil, ou transformer en avertissement.
 
 ## Ce qui n'est pas dans ce document
 

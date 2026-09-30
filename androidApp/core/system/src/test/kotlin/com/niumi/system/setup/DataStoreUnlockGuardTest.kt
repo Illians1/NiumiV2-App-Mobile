@@ -54,7 +54,6 @@ class DataStoreUnlockGuardTest {
             val preferences = DataStoreSetupPreferences(NO_CONTEXT, locked)
 
             assertThat(preferences.isOnboardingAcknowledged()).isFalse()
-            assertThat(preferences.isBatteryExemptionConfirmed()).isFalse()
             assertThat(preferences.lastWakeTimeIso()).isNull()
             assertThat(preferences.lastBlockingStartTimeIso()).isNull()
         }
@@ -65,7 +64,6 @@ class DataStoreUnlockGuardTest {
 
         listOf<suspend () -> Unit>(
             { preferences.acknowledgeOnboarding() },
-            { preferences.setBatteryExemptionConfirmed(confirmed = true) },
             { preferences.setLastWakeTimeIso("07:00") },
             { preferences.setLastBlockingStartTimeIso("22:30") },
             // Effacer la clé est une écriture comme une autre : la garde doit la refuser aussi,

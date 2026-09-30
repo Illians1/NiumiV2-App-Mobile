@@ -18,7 +18,7 @@ import com.niumi.system.ringing.RingingController
  * en bénéficie (`LongParameterList` de detekt).
  *
  * `AccessibilityServiceStatus` en est sortie à l'étape 12, remplacée par [readinessMonitor] :
- * l'état du service d'accessibilité n'est plus lu isolément, il fait partie des six contrôles
+ * l'état du service d'accessibilité n'est plus lu isolément, il fait partie des contrôles
  * que §13.1 surveille d'un seul tenant.
  *
  * [ringingController] rejoint le groupe à l'étape 17 : une session `RINGING` dont le service a

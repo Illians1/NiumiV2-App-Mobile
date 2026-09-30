@@ -52,7 +52,13 @@ data class ReadinessMonitorResult(
  *
  * - La **notification** suit l'état courant et sa garde vit en mémoire, donc disparaît avec le
  *   processus. Un redémarrage republie un avertissement encore valable, ce qui vaut mieux que de
- *   le taire (§13.1, « l'avertissement est émis au plus tôt, jamais garanti immédiat »).
+ *   le taire (§13.1, « l'avertissement est émis au plus tôt, jamais garanti immédiat »). Son
+ *   **retrait**, lui, ne dépend d'aucune mémoire (étape 25) : un contrôle vert retire son
+ *   avertissement à chaque passe, que ce processus l'ait publié ou non. Mesuré le 2026-09-25 :
+ *   le processus qui avait averti « service d'accessibilité désactivé » est mort avant le retour
+ *   du service, et celui qui l'a constaté ne retirait rien — la notification restait affichée,
+ *   blocage appliqué. Le retrait est idempotent (« Interfaces transverses »), il ne coûte qu'un
+ *   appel par contrôle et par passe.
  * - L'**incident** est un fait métier, pas un état d'affichage : il n'est enregistré qu'une fois
  *   par code et par session. Le réécrire à chaque redémarrage consignerait un basculement qui n'a
  *   pas eu lieu — mesuré sur appareil à l'étape 16, où l'écran 7 présentait deux fois le même
@@ -76,6 +82,7 @@ class SessionReadinessMonitor(
     private val eventFactory: SessionEventFactory,
     private val technicalEventLog: TechnicalEventLog,
     private val incidentsReader: SessionIncidentsReader,
+    private val recheck: ReadinessRecheck,
 ) {
     private val alreadyReported = mutableSetOf<ReadinessCheckId>()
 
@@ -85,16 +92,20 @@ class SessionReadinessMonitor(
     ): ReadinessMonitorResult {
         val monitored = monitoredChecksFor(snapshot.state)
         if (monitored.isEmpty()) {
-            // Session terminée : un avertissement encore affiché deviendrait mensonger.
-            if (alreadyReported.isNotEmpty()) {
-                alreadyReported.clear()
-                warningNotifier.clearAll()
-            }
+            // Session terminée : un avertissement encore affiché deviendrait mensonger — y compris
+            // un avertissement publié par un processus précédent, dont cette instance ne sait rien.
+            alreadyReported.clear()
+            warningNotifier.clearAll()
             return ReadinessMonitorResult(failing = emptySet(), newlyReported = emptyList())
         }
         clearWarningsOutsideScope(monitored)
 
         val report = readinessChecker.check(ReadinessInput(snapshot.wakeSchedule.triggerAtEpochMillis))
+        // Pendant la fenêtre qui suit le déverrouillage (étape 25), l'accessibilité et le NFC ne sont
+        // pas jugés : un re-contrôle est planifié à sa fin, pour qu'un service **réellement** non relié
+        // ou un NFC **réellement** coupé soit tout de même signalé. Sans effet hors fenêtre — avant
+        // déverrouillage notamment — et quand un re-contrôle est déjà en attente.
+        recheck.recheckAfterSettling()
         val failing = mutableSetOf<ReadinessCheckId>()
         val newlyReported = mutableListOf<ReadinessDegradation>()
 
@@ -110,7 +121,8 @@ class SessionReadinessMonitor(
                     newlyReported += degradation
                     current = degradation.snapshotAfter ?: current
                 }
-            } else if (alreadyReported.remove(checkId)) {
+            } else {
+                alreadyReported.remove(checkId)
                 warningNotifier.clear(checkId)
             }
         }
@@ -121,9 +133,10 @@ class SessionReadinessMonitor(
     /**
      * Les cinq contrôles de réveil n'ont de sens qu'en `ARMED` : une fois la sonnerie commencée,
      * avertir d'un volume d'alarme ou d'un plein écran perdu ne décrit plus rien d'actionnable.
-     * Le service d'accessibilité, lui, est surveillé dans **tous** les états non finaux : le
-     * blocage court jusqu'au scan (SPEC_ANDROID §3), et §12.2 exige que sa désactivation pendant
-     * une session soit détectée « à la prochaine exécution » — pas seulement avant le réveil.
+     * Les deux contrôles du blocage — service d'accessibilité et exemption d'énergie (C9) — sont
+     * surveillés dans **tous** les états non finaux : le blocage court jusqu'au scan
+     * (SPEC_ANDROID §3), et §12.2 exige que sa désactivation pendant une session soit détectée
+     * « à la prochaine exécution » — pas seulement avant le réveil.
      *
      * Étape 15 : remplace la sortie anticipée sur `state != ARMED`, qui rendait un service coupé
      * pendant `RINGING` ou `RELEASING` totalement invisible.
@@ -138,10 +151,11 @@ class SessionReadinessMonitor(
     /**
      * Un contrôle qui sort du périmètre surveillé (l'alarme exacte quand la session passe de
      * `ARMED` à `RINGING`) doit voir sa notification retirée : elle resterait affichée sans
-     * qu'aucune passe ne puisse plus la réévaluer.
+     * qu'aucune passe ne puisse plus la réévaluer. Tous les contrôles hors périmètre sont retirés,
+     * pas seulement ceux que cette instance a publiés (étape 25, voir le KDoc de la classe).
      */
     private fun clearWarningsOutsideScope(monitored: Map<ReadinessCheckId, String>) {
-        val outOfScope = alreadyReported - monitored.keys
+        val outOfScope = MonitoredReadinessChecks.incidentCodes.keys - monitored.keys
         outOfScope.forEach { checkId ->
             alreadyReported.remove(checkId)
             warningNotifier.clear(checkId)

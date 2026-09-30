@@ -46,7 +46,8 @@ class OnboardingTextsTest {
     fun warnsThatAnUpdateMayResetTheBatteryExemption() {
         assertThat(OnboardingTexts.limits).contains(
             "Une mise à jour de Niumi peut réinitialiser l'exemption d'énergie. Le diagnostic la " +
-                "revérifie avant chaque session.",
+                "revérifie avant chaque session, et Niumi te prévient s'il la voit disparaître " +
+                "pendant une session.",
         )
     }
 

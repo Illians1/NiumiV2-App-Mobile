@@ -12,7 +12,6 @@ import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.alarm.AlarmPendingIntentSpecs
 import com.niumi.system.audio.AlarmAudioEngine
 import com.niumi.system.common.DefaultDispatcher
-import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
 import com.niumi.system.notification.RingingNotificationAction
@@ -21,6 +20,7 @@ import com.niumi.system.notification.RingingNotificationWatch
 import com.niumi.system.power.WakeLockHolder
 import com.niumi.system.ringing.RingingRecovery
 import com.niumi.system.ringing.RingingServiceRecovery
+import com.niumi.system.ringing.RingingStartJournal
 import com.niumi.system.ringing.ServiceCommand
 import com.niumi.system.ringing.ServiceCommandExtras
 import com.niumi.system.session.LoadResult
@@ -167,10 +167,9 @@ class AlarmRingingService : Service() {
         watchNotification(sessionId)
         // Idempotent : une reprise après mort de processus ne double jamais le son.
         val result = audioEngine.start(ringtoneKey = RINGTONE_KEY, vibrationEnabled = true)
-        technicalEventLog.log(TechnicalEventType.RINGING_STARTED, sessionId = sessionId)
-        if (result is OperationResult.Failure) {
-            technicalEventLog.log(TechnicalEventType.AUDIO_START_FAILED, sessionId = sessionId)
-        }
+        // Le son a-t-il vraiment démarré ? Une relance du chien de garde trouve le son en cours
+        // (`AlreadySatisfied`) et n'écrit rien (SPEC_ANDROID §17, 2026-09-29).
+        RingingStartJournal.eventsFor(result).forEach { technicalEventLog.log(it, sessionId = sessionId) }
     }
 
     /** §10.2 : garantir que l'écran de réveil reste atteignable tant que la session sonne. */

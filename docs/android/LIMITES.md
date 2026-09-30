@@ -17,13 +17,17 @@ principe. Chaque point renvoie à la section de spécification qui l'établit.
 - Le blocage renvoie les applications choisies à l'accueil ; il ne les rend pas impossibles à ouvrir. Désactiver le service, arrêter Niumi ou le désinstaller suffit à le contourner.
 - Le scan sur écran verrouillé n'est pas garanti : ton téléphone peut exiger un déverrouillage avant de lire le boîtier.
 - Il n'existe aucun secours logiciel pendant une session : ni code, ni délai, ni bouton « Arrêter quand même ». Sans ton boîtier, il te reste l'arrêt forcé ou l'extinction du téléphone.
-- Si une permission est retirée ou le volume d'alarme coupé après l'activation, Niumi le signale par un incident. Il ne peut pas le corriger seul.
+- Si une permission est retirée, le volume d'alarme coupé ou l'exemption d'énergie perdue après l'activation, Niumi le signale par un incident. Il ne peut pas le corriger seul.
+- Sur Xiaomi, « Tout effacer » dans les applications récentes arrête le blocage tant que Niumi n'y est pas verrouillé : le diagnostic le demande une fois. Pendant une session, Niumi n'apparaît pas dans les applications récentes, pour qu'aucun geste ne puisse l'en retirer : reviens-y par son icône.
+- Sur Xiaomi, si Niumi est arrêté pendant une session — plantage ou arrêt forcé — le blocage ne reprend pas tant que tu n'as pas réactivé le service d'accessibilité. Niumi te prévient dès qu'il tourne à nouveau, et un blocage différé commence alors en retard.
+- Un blocage différé commence à l'heure choisie tant que le téléphone est allumé, même verrouillé, en veille ou redémarré entre-temps. Si le téléphone est éteint à cette heure-là, le blocage commence dès qu'il redémarre, et la session signale le retard.
+- À l'heure de début, une application choisie déjà ouverte est renvoyée à l'accueil en moins d'une seconde, sans que tu aies à changer d'écran.
 
 ## Après un redémarrage ou une mise à jour
 
 - Un redémarrage ne perd pas ton réveil : Niumi le reprogramme avant même le premier déverrouillage.
 - Sur Xiaomi et les surcouches proches, un réglage « Démarrage automatique en arrière-plan » décide si Niumi peut démarrer seul. Mesuré : il ne bloque pas la reprogrammation du réveil après un redémarrage, mais il empêche Niumi de se remettre à jour tout seul après une mise à jour de l'application.
-- Une mise à jour de Niumi peut réinitialiser l'exemption d'énergie. Le diagnostic la revérifie avant chaque session.
+- Une mise à jour de Niumi peut réinitialiser l'exemption d'énergie. Le diagnostic la revérifie avant chaque session, et Niumi te prévient s'il la voit disparaître pendant une session.
 - Juste après un redémarrage, le diagnostic peut annoncer le NFC désactivé alors qu'il ne l'est pas : la pile NFC du système n'a pas fini de démarrer. Rouvrir Niumi corrige l'affichage.
 
 ## Notifications et avertissements

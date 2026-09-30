@@ -59,11 +59,13 @@ class ReadinessMessagesTest {
     }
 
     @Test
-    fun batteryMessageAsksForAConfirmationRatherThanClaimingDetection() {
-        // §13 : le contrôle est satisfait par la confirmation de l'utilisateur, la détection
-        // AOSP étant structurellement partielle. Le message doit le dire, pas le masquer.
-        assertThat(ReadinessMessages.forCheck(ReadinessCheckId.BATTERY_OPTIMIZATION))
-            .contains("confirme")
+    fun batteryMessageNamesTheSettingWithoutAskingForAConfirmation() {
+        // §13, étape 25 : l'exemption est détectée. Demander une confirmation ferait croire
+        // qu'un mot suffit, alors que seul le réglage compte.
+        val message = ReadinessMessages.forCheck(ReadinessCheckId.BATTERY_OPTIMIZATION)
+
+        assertThat(message).contains("sans restriction")
+        assertThat(message).doesNotContain("confirme")
     }
 
     @Test

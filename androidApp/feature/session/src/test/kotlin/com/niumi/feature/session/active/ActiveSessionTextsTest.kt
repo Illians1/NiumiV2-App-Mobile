@@ -29,6 +29,7 @@ class ActiveSessionTextsTest {
             ActiveSessionTexts.DEGRADED,
             ActiveSessionTexts.INCIDENTS_TITLE,
             ActiveSessionTexts.CRITICAL_INCIDENTS_TITLE,
+            ActiveSessionTexts.INCIDENT_RESOLVED,
             ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON,
             ScanToModifyTexts.INVITATION,
             ScanToModifyTexts.TITLE,
@@ -93,6 +94,14 @@ class ActiveSessionTextsTest {
             .isEqualTo("Seul le scan du boîtier terminera la session.")
     }
 
+    /** §15 (étape 25) : la mention d'un incident rétabli parle du réglage, jamais de la session. */
+    @Test
+    fun theResolvedMarkerIsStatedWordForWordAndPromisesNothingAboutTheSession() {
+        assertThat(ActiveSessionTexts.INCIDENT_RESOLVED).isEqualTo("Rétabli depuis.")
+        assertThat(ActiveSessionTexts.INCIDENT_RESOLVED.lowercase()).doesNotContain("session")
+        assertThat(ActiveSessionTexts.INCIDENT_RESOLVED.lowercase()).doesNotContain("réveil")
+    }
+
     /** §15 : un état dégradé ne doit pas promettre un retour à la normale qui n'arrivera pas. */
     @Test
     fun theDegradedTextPromisesNoRecovery() {
@@ -136,6 +145,7 @@ class ActiveSessionTextsTest {
                 AndroidIncidentCodes.ALARM_VOLUME_ZERO,
                 AndroidIncidentCodes.NOTIFICATIONS_REVOKED,
                 AndroidIncidentCodes.FULL_SCREEN_REVOKED,
+                AndroidIncidentCodes.BATTERY_EXEMPTION_REVOKED,
                 // Lot 6 : un blocage appliqué en retard est un incident comme un autre (§15).
                 IncidentCodes.MISSED_BLOCKING_START_WINDOW,
             )

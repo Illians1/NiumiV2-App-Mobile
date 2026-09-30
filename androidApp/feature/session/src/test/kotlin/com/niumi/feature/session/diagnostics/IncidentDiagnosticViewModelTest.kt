@@ -24,6 +24,7 @@ import com.niumi.system.readiness.ReadinessOutcome
 import com.niumi.system.readiness.ReadinessReport
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.StorageIntegrityState
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -145,6 +146,73 @@ class IncidentDiagnosticViewModelTest {
                 "RELEASE_PARTIAL_FAILURE",
                 "TIME_CHANGED",
             ).inOrder()
+    }
+
+    /**
+     * Écart 10, relevé sur l'écran 12 le 2026-09-29 : relancé à chaque retour, une relecture
+     * dépassée qui aboutit après la suivante ne doit pas réafficher un NFC déjà rallumé — ni se
+     * présenter comme une panne du diagnostic.
+     */
+    @Test
+    fun aSupersededRefreshNeverOverwritesTheLatestChecks() {
+        gateway.result = presentSession(snapshot(), emptyList())
+        snapshotPublisher.publish(snapshot())
+        val supersededGate = CompletableDeferred<Unit>()
+        var calls = 0
+        lateinit var viewModel: IncidentDiagnosticViewModel
+        var failureSeenBySecondRun: String? = null
+        val gatedChecker =
+            DeviceReadinessChecker {
+                calls++
+                if (calls == 2) failureSeenBySecondRun = viewModel.state.storageFailureReason
+                val outcome =
+                    if (calls == 1) {
+                        supersededGate.await()
+                        ReadinessOutcome.FAILED
+                    } else {
+                        ReadinessOutcome.PASSED
+                    }
+                ReadinessReport(
+                    checks =
+                        listOf(
+                            ReadinessCheck(
+                                id = ReadinessCheckId.NFC_ENABLED,
+                                severity = ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+                                outcome = outcome,
+                                action = ReadinessAction.OpenNfcSettings,
+                            ),
+                        ),
+                    appSelectionCount = 1,
+                    hasPairedBox = true,
+                    candidateTriggerAtEpochMillis = null,
+                    nowEpochMillis = now,
+                )
+            }
+        viewModel =
+            IncidentDiagnosticViewModel(
+                sources =
+                    DiagnosticSources(
+                        snapshotPublisher = snapshotPublisher,
+                        gateway = gateway,
+                        incidentsReader = incidentsReader,
+                        technicalEventLog = technicalEventLog,
+                        readinessChecker = gatedChecker,
+                        storageIntegrity = storageIntegrity,
+                    ),
+                deviceContext = deviceContext,
+                timeZoneProvider = FakeTimeZoneProvider(zoneId = "Europe/Paris"),
+            )
+
+        viewModel.refresh()
+        viewModel.refresh()
+        supersededGate.complete(Unit)
+
+        // La relance annulée n'a jamais affiché « diagnostic indisponible », même un instant.
+        assertThat(failureSeenBySecondRun).isNull()
+        assertThat(calls).isEqualTo(2)
+        val presented = viewModel.state.checks.single()
+        assertThat(presented.outcome).isEqualTo(ReadinessOutcome.PASSED)
+        assertThat(viewModel.state.storageFailureReason).isNull()
     }
 
     @Test

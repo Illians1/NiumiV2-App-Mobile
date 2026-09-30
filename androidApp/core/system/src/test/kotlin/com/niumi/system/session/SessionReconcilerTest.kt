@@ -278,6 +278,45 @@ class SessionReconcilerTest {
             assertThat(harness.warningNotifier.presented).hasSize(1)
         }
 
+    /**
+     * C9 (2026-09-29) : une mise à jour de Niumi peut réinitialiser l'exemption d'énergie. La
+     * réconciliation `PACKAGE_REPLACED` la voit, consigne l'incident, et n'interrompt pas la passe :
+     * l'alarme reste programmable, seul le blocage est menacé.
+     */
+    @Test
+    fun aBatteryExemptionLostByAnUpdateIsReportedWithoutStoppingThePass() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.clock.now = 1_000L
+            harness.readinessSources.batteryOptimizationStatus.ignoring = false
+            seed(harness, armedSnapshot())
+
+            harness.coordinator.reconcile(ReconcileReason.PACKAGE_REPLACED)
+
+            assertThat(harness.gateway.incidentsRecorded.map { it.second.code })
+                .contains(AndroidIncidentCodes.BATTERY_EXEMPTION_REVOKED)
+            assertThat(harness.alarmScheduler.isScheduled(SessionDtoFixtures.SESSION_ID)).isTrue()
+            assertThat(harness.technicalEventLog.logged).contains(TechnicalEventType.ALARM_RESCHEDULED)
+        }
+
+    /**
+     * SPEC_ANDROID §17 : un incident publie le snapshot sans changer d'état, et ne doit pas faire
+     * croire à un réarmement. Mesuré le 2026-09-29 : `SESSION_ARMED` réécrit à chaque incident.
+     */
+    @Test
+    fun anIncidentOnAnArmedSessionDoesNotJournalTheArmingAgain() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.clock.now = 1_000L
+            harness.readinessSources.batteryOptimizationStatus.ignoring = false
+            seed(harness, armedSnapshot())
+
+            harness.coordinator.reconcile(ReconcileReason.PROCESS_START)
+
+            assertThat(harness.gateway.incidentsRecorded).isNotEmpty()
+            assertThat(harness.technicalEventLog.logged).doesNotContain(TechnicalEventType.SESSION_ARMED)
+        }
+
     @Test
     fun armedWithExactAlarmPermissionRevokedNeverReschedulesTheAlarm() =
         runTest {

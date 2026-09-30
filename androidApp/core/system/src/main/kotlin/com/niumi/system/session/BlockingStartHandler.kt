@@ -54,7 +54,7 @@ sealed interface BlockingStartOutcome {
  *
  * **Pas de surveillance §13.1 ici**, contrairement à [AlarmTriggerHandler] : celle-ci existe pour
  * créer l'incident `ANDROID_ALARM_MUTED_BY_DND` avant que l'état ne devienne `RINGING`. Le début du
- * blocage laisse la session `ARMED`, état où `SessionReadinessMonitor` continue de surveiller les six
+ * blocage laisse la session `ARMED`, état où `SessionReadinessMonitor` continue de surveiller les sept
  * contrôles à chaque réconciliation. Aucun relevé n'est donc perdu, et aucune relecture de snapshot
  * n'est nécessaire avant le dispatch.
  */

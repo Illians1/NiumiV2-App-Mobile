@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.BlockingScheduleDto
 import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.PlatformDto
+import com.niumi.core.interop.ReadinessSeverityDto
 import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
@@ -16,9 +17,15 @@ import com.niumi.feature.session.active.fakes.RecordingForegroundReadinessTrigge
 import com.niumi.feature.session.active.fakes.presentSession
 import com.niumi.feature.session.wake.fakes.FakeClock
 import com.niumi.feature.session.wake.fakes.FakeTimeZoneProvider
+import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessAction
+import com.niumi.system.readiness.ReadinessCheck
+import com.niumi.system.readiness.ReadinessCheckId
+import com.niumi.system.readiness.ReadinessOutcome
+import com.niumi.system.readiness.ReadinessReport
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionSnapshotPublisher
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -58,6 +65,23 @@ class ActiveSessionViewModelTest {
     private val incidentsReader = FakeSessionIncidentsReader()
     private val readinessTrigger = RecordingForegroundReadinessTrigger()
 
+    /**
+     * Vide par défaut : sans contrôle dans le rapport, aucun incident n'est présumé rétabli, et les
+     * tests antérieurs à l'étape 25 gardent leur sens. Seuls les tests du rétablissement le
+     * remplissent.
+     */
+    private var checks: List<ReadinessCheck> = emptyList()
+    private val readinessChecker =
+        DeviceReadinessChecker {
+            ReadinessReport(
+                checks = checks,
+                appSelectionCount = 1,
+                hasPairedBox = true,
+                candidateTriggerAtEpochMillis = null,
+                nowEpochMillis = now,
+            )
+        }
+
     private val blockedApps =
         listOf(
             BlockedPackage("com.exemple.reseau", "Réseau social"),
@@ -79,10 +103,19 @@ class ActiveSessionViewModelTest {
             clock = clock,
             timeZoneProvider = timeZoneProvider,
             snapshotPublisher = snapshotPublisher,
-            gateway = gateway,
-            incidentsReader = incidentsReader,
+            sources = ActiveSessionSources(gateway, incidentsReader, readinessChecker),
             readinessTrigger = readinessTrigger,
         )
+
+    private fun check(
+        id: ReadinessCheckId,
+        outcome: ReadinessOutcome,
+    ) = ReadinessCheck(
+        id = id,
+        severity = ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+        outcome = outcome,
+        action = ReadinessAction.OpenAccessibilitySettings,
+    )
 
     private fun incident(
         code: String,
@@ -386,6 +419,24 @@ class ActiveSessionViewModelTest {
     }
 
     /**
+     * C9 (2026-09-29) : l'exemption d'énergie est détectée depuis l'étape 25 et surveillée pendant la
+     * session ; son incident mène à la liste système des optimisations de batterie, comme l'écran 2.
+     */
+    @Test
+    fun aLostBatteryExemptionOffersTheBatterySettings() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents =
+            listOf(incident("ANDROID_BATTERY_EXEMPTION_REVOKED", IncidentSeverityDto.CRITICAL))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        val presented = viewModel.state.incidents.single()
+        assertThat(presented.action).isEqualTo(ReadinessAction.OpenBatterySettings)
+        assertThat(presented.actionLabel).isEqualTo("Ouvrir les réglages de batterie")
+    }
+
+    /**
      * Mesuré sur appareil à l'étape 16 : après deux morts du processus, le même fait produisait
      * deux incidents `BLOCKING_PERMISSION_REVOKED` en base — la déduplication de
      * `SessionReadinessMonitor` vit en mémoire (étape 12) et ne survit pas au redémarrage. L'écran 7
@@ -489,6 +540,150 @@ class ActiveSessionViewModelTest {
 
         assertThat(viewModel.state.incidents).isEmpty()
         assertThat(viewModel.state.criticalIncidents).isEmpty()
+    }
+
+    /**
+     * **Défaut mesuré sur appareil le 2026-09-25 (étape 25), corrigé ici.** Service d'accessibilité
+     * réactivé, blocage appliqué, et l'écran demandait encore « Ouvrir les réglages
+     * d'accessibilité » dans « À vérifier maintenant » : le bloc listait les incidents persistés
+     * sans rejouer le diagnostic. Un `CRITICAL` dont le contrôle est repassé vert reste affiché,
+     * avec sa gravité, mais quitte le bloc et perd son recours (§15).
+     */
+    @Test
+    fun aCriticalIncidentWhoseCheckPassesAgainIsPresentedAsResolved() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents = listOf(incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL))
+        checks = listOf(check(ReadinessCheckId.ACCESSIBILITY_SERVICE, ReadinessOutcome.PASSED))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        assertThat(viewModel.state.criticalIncidents).isEmpty()
+        val presented = viewModel.state.incidents.single()
+        assertThat(presented.resolved).isTrue()
+        assertThat(presented.severity).isEqualTo(IncidentSeverityDto.CRITICAL)
+        assertThat(presented.action).isNull()
+        assertThat(presented.actionLabel).isNull()
+    }
+
+    /**
+     * Écart 10 : au retour d'un réglage, `ON_RESUME` et le retour du focus relancent l'écran coup
+     * sur coup. Une relecture dépassée qui aboutit après la suivante ne doit pas réclamer de
+     * nouveau un NFC déjà rallumé. La surveillance de §13.1, elle, part à chaque appel.
+     */
+    @Test
+    fun aSupersededRefreshNeverOverwritesTheLatestIncidentState() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents = listOf(incident("NFC_DISABLED", IncidentSeverityDto.CRITICAL))
+        val supersededGate = CompletableDeferred<Unit>()
+        var calls = 0
+        val gatedChecker =
+            DeviceReadinessChecker {
+                calls++
+                val outcome =
+                    if (calls == 2) {
+                        supersededGate.await()
+                        ReadinessOutcome.FAILED
+                    } else {
+                        ReadinessOutcome.PASSED
+                    }
+                ReadinessReport(
+                    checks = listOf(check(ReadinessCheckId.NFC_ENABLED, outcome)),
+                    appSelectionCount = 1,
+                    hasPairedBox = true,
+                    candidateTriggerAtEpochMillis = null,
+                    nowEpochMillis = now,
+                )
+            }
+        val viewModel =
+            ActiveSessionViewModel(
+                clock = clock,
+                timeZoneProvider = timeZoneProvider,
+                snapshotPublisher = snapshotPublisher,
+                sources = ActiveSessionSources(gateway, incidentsReader, gatedChecker),
+                readinessTrigger = readinessTrigger,
+            )
+        snapshotPublisher.publish(snapshot())
+
+        viewModel.refresh(use24Hour = true)
+        viewModel.refresh(use24Hour = true)
+        supersededGate.complete(Unit)
+
+        assertThat(calls).isEqualTo(3)
+        assertThat(viewModel.state.criticalIncidents).isEmpty()
+        val presented = viewModel.state.incidents.single()
+        assertThat(presented.resolved).isTrue()
+        assertThat(readinessTrigger.evaluations).isEqualTo(2)
+    }
+
+    @Test
+    fun aCriticalIncidentWhoseCheckStillFailsStaysToBeCheckedNow() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents = listOf(incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL))
+        checks = listOf(check(ReadinessCheckId.ACCESSIBILITY_SERVICE, ReadinessOutcome.FAILED))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        val presented = viewModel.state.criticalIncidents.single()
+        assertThat(presented.resolved).isFalse()
+        assertThat(presented.action).isEqualTo(ReadinessAction.OpenAccessibilitySettings)
+    }
+
+    /** `NFC_DISABLED` vient du réconciliateur, pas de §13.1 : c'est `NFC_ENABLED` qui le juge. */
+    @Test
+    fun theNfcIncidentIsResolvedByTheNfcCheck() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents = listOf(incident("NFC_DISABLED", IncidentSeverityDto.CRITICAL))
+        checks = listOf(check(ReadinessCheckId.NFC_ENABLED, ReadinessOutcome.PASSED))
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        assertThat(viewModel.state.criticalIncidents).isEmpty()
+        val presented = viewModel.state.incidents.single()
+        assertThat(presented.resolved).isTrue()
+    }
+
+    /** §15 : rien n'est présumé — ni sans contrôle à rejouer, ni sur un contrôle sans objet. */
+    @Test
+    fun anIncidentIsNeverPresumedResolvedWithoutAPassingCheck() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents =
+            listOf(
+                incident("SNAPSHOT_CORRUPTED", IncidentSeverityDto.CRITICAL),
+                incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL),
+            )
+        checks =
+            listOf(
+                check(ReadinessCheckId.ACCESSIBILITY_SERVICE, ReadinessOutcome.NOT_APPLICABLE),
+                check(ReadinessCheckId.NFC_ENABLED, ReadinessOutcome.PASSED),
+            )
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        assertThat(viewModel.state.criticalIncidents.map { it.code })
+            .containsExactly("SNAPSHOT_CORRUPTED", "BLOCKING_PERMISSION_REVOKED")
+        assertThat(viewModel.state.incidents.none { it.resolved }).isTrue()
+    }
+
+    /** Le réglage revient sans qu'aucune décision ne soit publiée : le retour au premier plan rejoue. */
+    @Test
+    fun comingBackToTheForegroundReplaysTheDiagnosticForResolvedIncidents() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        incidentsReader.incidents = listOf(incident("BLOCKING_PERMISSION_REVOKED", IncidentSeverityDto.CRITICAL))
+        checks = listOf(check(ReadinessCheckId.ACCESSIBILITY_SERVICE, ReadinessOutcome.FAILED))
+        val viewModel = viewModel()
+        snapshotPublisher.publish(snapshot())
+        assertThat(viewModel.state.criticalIncidents).hasSize(1)
+
+        checks = listOf(check(ReadinessCheckId.ACCESSIBILITY_SERVICE, ReadinessOutcome.PASSED))
+        viewModel.refresh(use24Hour = true)
+
+        assertThat(viewModel.state.criticalIncidents).isEmpty()
+        val presented = viewModel.state.incidents.single()
+        assertThat(presented.resolved).isTrue()
     }
 
     /**

@@ -85,11 +85,14 @@ class AlarmChainInstrumentedTest {
         assertThat(awaitState(SessionStateDto.RINGING)).isTrue()
         assertThat(awaitForegroundRingingService()).isNotNull()
 
-        val journal = runBlocking { technicalEventLog.recent() }.map { it.type }
-        assertThat(journal).containsAtLeast(
-            TechnicalEventType.ALARM_RECEIVED,
-            TechnicalEventType.RINGING_STARTED,
-        )
+        // `RINGING_STARTED` est écrit par le service une fois le son réellement démarré, donc après
+        // son passage au premier plan : il faut l'attendre. Un seul pour une sonnerie — l'exécuteur
+        // `START_RINGING` l'écrivait aussi jusqu'au 2026-09-29 (SPEC_ANDROID §17). Seule la session du
+        // test compte : une installation par-dessus conserve le journal des sessions précédentes
+        // (mesuré le 29/09 : 5 débuts de sonnerie hérités, lus avant celui du test).
+        val journal = awaitJournalContaining(TechnicalEventType.RINGING_STARTED)
+        assertThat(journal).contains(TechnicalEventType.ALARM_RECEIVED)
+        assertThat(journal.count { it == TechnicalEventType.RINGING_STARTED }).isEqualTo(1)
     }
 
     /** `effects` vide : la session est déjà armée, il n'y a aucun effet en attente à rejouer. */
@@ -155,6 +158,20 @@ class AlarmChainInstrumentedTest {
             Thread.sleep(POLL_INTERVAL_MS)
         }
         return false
+    }
+
+    private fun awaitJournalContaining(expected: TechnicalEventType): List<TechnicalEventType> {
+        val deadline = System.currentTimeMillis() + CHAIN_TIMEOUT_MS
+        var journal = emptyList<TechnicalEventType>()
+        while (System.currentTimeMillis() < deadline) {
+            journal =
+                runBlocking { technicalEventLog.recent() }
+                    .filter { it.sessionId == SESSION_ID }
+                    .map { it.type }
+            if (expected in journal) return journal
+            Thread.sleep(POLL_INTERVAL_MS)
+        }
+        return journal
     }
 
     private fun awaitForegroundRingingService(): ActivityManager.RunningServiceInfo? {

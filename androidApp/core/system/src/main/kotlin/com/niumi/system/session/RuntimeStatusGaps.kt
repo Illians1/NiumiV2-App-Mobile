@@ -35,7 +35,9 @@ object RuntimeStatusGaps {
     ): Set<RuntimeGap> {
         val gaps = mutableSetOf<RuntimeGap>()
         if (state == SessionStateDto.ARMED && !status.alarmScheduled) gaps += RuntimeGap.ALARM_NOT_SCHEDULED
-        if (state in NFC_MONITORED_STATES && !status.nfcReady) gaps += RuntimeGap.NFC_DISABLED
+        if (state in NFC_MONITORED_STATES && status.nfcEvaluable && !status.nfcReady) {
+            gaps += RuntimeGap.NFC_DISABLED
+        }
         return gaps
     }
 }

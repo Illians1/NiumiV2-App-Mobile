@@ -103,7 +103,7 @@ class BlockingStartReceiverInstrumentedTest {
         // (SPEC_CORE_KMP §6). Attendre `isBlockingPending == false` sortait donc dès le commit, et la
         // lecture du journal courait contre `APPLY_BLOCKING` — course perdue dès que l'appareil est
         // un peu chargé, gagnée quand ce test tourne seul. Défaut trouvé sur appareil le 2026-09-16.
-        assertThat(awaitTechnicalEvent(TechnicalEventType.BLOCKING_STARTED)).isTrue()
+        assertThat(awaitTechnicalEvent(TechnicalEventType.BLOCKING_STARTED, SESSION_ID)).isTrue()
 
         val snapshot = (runBlocking { gateway.load() } as LoadResult.Present).snapshot
         assertThat(snapshot.state).isEqualTo(SessionStateDto.ARMED)
@@ -112,7 +112,7 @@ class BlockingStartReceiverInstrumentedTest {
         assertThat(readProjection()).isEqualTo(
             BlockedPackagesState.Active(SESSION_ID, setOf(BlockedPackage(BLOCKED_PACKAGE, "Exemple"))),
         )
-        val journal = runBlocking { technicalEventLog.recent() }.map { it.type }
+        val journal = runBlocking { technicalEventLog.recent() }.filter { it.sessionId == SESSION_ID }.map { it.type }
         assertThat(journal).containsAtLeast(
             TechnicalEventType.BLOCKING_START_RECEIVED,
             TechnicalEventType.BLOCKING_STARTED,
@@ -193,12 +193,22 @@ class BlockingStartReceiverInstrumentedTest {
     /**
      * Le broadcast est asynchrone et le receveur ouvre `goAsync()` : l'événement attendu est celui de
      * l'**exécution** de l'effet, dernier maillon de la chaîne. Le journal est partagé par tous les
-     * tests du processus, d'où la recherche d'un type plutôt qu'une comparaison de liste.
+     * tests du processus, d'où la recherche d'un type plutôt qu'une comparaison de liste — **et de
+     * cette session** : depuis l'étape 25, `ProcessDeathInstrumentedTest` journalise lui aussi
+     * `BLOCKING_STARTED`. Sans ce filtre, l'attente se terminait sur l'événement d'un autre test
+     * quand il passait avant, et le snapshot était relu avant l'effet (échec mesuré le 2026-09-28,
+     * test terminé en 96 ms).
      */
-    private fun awaitTechnicalEvent(type: TechnicalEventType): Boolean {
+    private fun awaitTechnicalEvent(
+        type: TechnicalEventType,
+        sessionId: String,
+    ): Boolean {
         val deadline = System.currentTimeMillis() + CHAIN_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
-            if (runBlocking { technicalEventLog.recent() }.any { it.type == type }) return true
+            val found =
+                runBlocking { technicalEventLog.recent() }
+                    .any { it.type == type && it.sessionId == sessionId }
+            if (found) return true
             Thread.sleep(POLL_INTERVAL_MS)
         }
         return false

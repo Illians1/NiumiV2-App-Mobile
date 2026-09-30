@@ -18,6 +18,8 @@ import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionSnapshotPublisher
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import javax.inject.Inject
@@ -47,24 +49,33 @@ class IncidentDiagnosticViewModel
 
         private var boxId: String? = null
 
+        private var refreshJob: Job? = null
+
         /**
          * Filet de sécurité (étape 20), en plus des sources elles-mêmes déjà protégées
          * (`RoomTechnicalEventLog.recent()`, `RoomSessionIncidentsReader.incidents()`,
          * `UnlockAwarePersistenceGateway.load()`) : une exception inattendue ne doit jamais laisser
          * l'écran en `isLoading` indéfiniment.
+         *
+         * Rappelé à chaque `ON_RESUME`, retour du focus et état stable du NFC, comme les écrans 2,
+         * 6 et 7 (§13, écart 10) : la relance en cours est annulée, la dernière fait foi.
          */
         fun refresh() {
-            viewModelScope.launch {
-                state =
-                    runCatching { load(sources.snapshotPublisher.snapshot.value) }
-                        .getOrElse {
-                            IncidentDiagnosticUiState(
-                                storageFailureReason =
-                                    sources.storageIntegrity.failure.value ?: "DIAGNOSTIC_UNAVAILABLE",
-                                isLoading = false,
-                            )
-                        }
-            }
+            refreshJob?.cancel()
+            refreshJob =
+                viewModelScope.launch {
+                    state =
+                        runCatching { load(sources.snapshotPublisher.snapshot.value) }
+                            .getOrElse { error ->
+                                // L'annulation par une relance plus récente n'est pas une panne.
+                                if (error is CancellationException) throw error
+                                IncidentDiagnosticUiState(
+                                    storageFailureReason =
+                                        sources.storageIntegrity.failure.value ?: "DIAGNOSTIC_UNAVAILABLE",
+                                    isLoading = false,
+                                )
+                            }
+                }
         }
 
         /**

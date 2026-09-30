@@ -5,6 +5,7 @@ import com.niumi.system.alarm.AlarmScheduler
 import com.niumi.system.alarm.AndroidAlarmScheduler
 import com.niumi.system.alarm.AndroidRingingWatchdog
 import com.niumi.system.alarm.RingingWatchdog
+import com.niumi.system.common.AndroidUptimeClock
 import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.DeviceProtected
@@ -13,6 +14,7 @@ import com.niumi.system.common.IoDispatcher
 import com.niumi.system.common.SystemClock
 import com.niumi.system.common.SystemTimeZoneProvider
 import com.niumi.system.common.TimeZoneProvider
+import com.niumi.system.common.UptimeClock
 import com.niumi.system.common.UuidIdGenerator
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.intent.NiumiComponentResolver
@@ -40,6 +42,10 @@ object SystemModule {
     @Provides
     @Singleton
     fun provideClock(): Clock = SystemClock()
+
+    @Provides
+    @Singleton
+    fun provideUptimeClock(): UptimeClock = AndroidUptimeClock()
 
     @Provides
     @Singleton

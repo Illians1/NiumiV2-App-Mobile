@@ -337,7 +337,7 @@ class SessionReconciler(
     }
 
     /**
-     * La surveillance de §13.1 remplace les deux contrôles ad hoc de l'étape 11 : les six
+     * La surveillance de §13.1 remplace les deux contrôles ad hoc de l'étape 11 : les sept
      * contrôles bloquants sont désormais évalués d'un seul tenant, chacun avec son incident et
      * sa notification. Le comportement d'origine est conservé sur un point clé — une permission
      * perdue interrompt la passe avant toute reprogrammation d'alarme. La condition porte sur
@@ -503,9 +503,9 @@ class SessionReconciler(
         /**
          * Les deux pertes de permission qui rendent toute suite de la passe absurde :
          * reprogrammer une alarme sans accès aux alarmes exactes, ou poursuivre un blocage sans
-         * service d'accessibilité. Les quatre autres contrôles de §13.1 sont signalés sans
-         * interrompre la réconciliation — le réveil reste programmé, seul son audibilité ou son
-         * affichage est compromis.
+         * service d'accessibilité. Les cinq autres contrôles de §13.1 sont signalés sans
+         * interrompre la réconciliation — le réveil reste programmé, seuls son audibilité, son
+         * affichage ou, pour l'exemption d'énergie, la tenue du blocage sont compromis.
          */
         val PERMISSION_CHECKS =
             setOf(ReadinessCheckId.EXACT_ALARM, ReadinessCheckId.ACCESSIBILITY_SERVICE)

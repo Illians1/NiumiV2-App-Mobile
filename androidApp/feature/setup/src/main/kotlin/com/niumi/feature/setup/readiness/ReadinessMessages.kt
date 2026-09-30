@@ -11,7 +11,7 @@ import com.niumi.system.readiness.ReadinessCheckId
  * 12b et ajoutés à §13 dans le même changement, la spec restant la source de vérité. Chacun nomme
  * le réglage en cause **et** sa conséquence, en tutoiement (§15).
  *
- * Les `when` sont exhaustifs sans branche `else` : un quinzième contrôle casserait la compilation
+ * Les `when` sont exhaustifs sans branche `else` : un seizième contrôle casserait la compilation
  * ici plutôt que d'atterrir silencieusement sur un texte générique.
  */
 object ReadinessMessages {
@@ -79,7 +79,13 @@ object ReadinessMessages {
 
             ReadinessCheckId.BATTERY_OPTIMIZATION -> {
                 "Les restrictions de batterie peuvent geler Niumi et désactiver le blocage sans " +
-                    "prévenir. Lève-les, puis confirme ici que c'est fait."
+                    "prévenir. Autorise Niumi à fonctionner sans restriction."
+            }
+
+            ReadinessCheckId.RECENTS_LOCK -> {
+                "Sur ce téléphone, « Tout effacer » dans les applications récentes arrête le blocage, " +
+                    "sauf si Niumi y est verrouillé. Ouvre les applications récentes, appuie longuement " +
+                    "sur Niumi et touche le cadenas. C'est à faire une seule fois."
             }
         }
 
@@ -105,6 +111,7 @@ object ReadinessMessages {
             ReadinessCheckId.ACCESSIBILITY_SERVICE -> "Service d'accessibilité actif"
             ReadinessCheckId.FUTURE_TRIGGER -> "Heure de réveil future"
             ReadinessCheckId.BATTERY_OPTIMIZATION -> "Restrictions de batterie levées"
+            ReadinessCheckId.RECENTS_LOCK -> "Niumi verrouillé dans les applications récentes"
         }
 
     /** Libellé du bouton d'action, lu tel quel par TalkBack (§15). */
@@ -124,6 +131,7 @@ object ReadinessMessages {
             ReadinessCheckId.ACCESSIBILITY_SERVICE -> "Ouvrir les réglages d'accessibilité"
             ReadinessCheckId.FUTURE_TRIGGER -> "Corriger l'heure"
             ReadinessCheckId.BATTERY_OPTIMIZATION -> "Lever les restrictions de batterie"
+            ReadinessCheckId.RECENTS_LOCK -> "J'ai verrouillé Niumi"
         }
 
     const val TITLE = "Vérifions ton appareil"
@@ -139,8 +147,6 @@ object ReadinessMessages {
      * `NOT_APPLICABLE` et filtré.
      */
     const val CHOOSE_WAKE_TIME_LABEL = "Choisir mon heure de réveil"
-
-    const val BATTERY_CONFIRM_LABEL = "J'ai levé les restrictions"
 
     /**
      * Libellés des deux étapes de parcours **déjà satisfaites** (§11.1, §12.1) : l'utilisateur

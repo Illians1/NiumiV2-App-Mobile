@@ -29,7 +29,8 @@ object OnboardingTexts {
                 "bouton « Arrêter quand même ». Sans ton boîtier, il te reste l'arrêt forcé ou " +
                 "l'extinction du téléphone.",
             "Une mise à jour de Niumi peut réinitialiser l'exemption d'énergie. Le diagnostic la " +
-                "revérifie avant chaque session.",
+                "revérifie avant chaque session, et Niumi te prévient s'il la voit disparaître " +
+                "pendant une session.",
             "Si un réglage casse ton réveil après l'activation, Niumi t'avertit au plus tôt, " +
                 "jamais immédiatement : le système peut l'avoir arrêté entre-temps.",
         )

@@ -34,6 +34,7 @@ object IncidentRemediation {
             AndroidIncidentCodes.FULL_SCREEN_REVOKED to ReadinessAction.OpenFullScreenIntentSettings,
             AndroidIncidentCodes.NOTIFICATIONS_REVOKED to
                 ReadinessAction.OpenChannelSettings(NiumiNotificationChannels.alarmRinging.id),
+            AndroidIncidentCodes.BATTERY_EXEMPTION_REVOKED to ReadinessAction.OpenBatterySettings,
         )
 
     fun actionFor(code: String): ReadinessAction? = actions[code]

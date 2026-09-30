@@ -71,9 +71,15 @@ class BlockingStartAlarmVisibilityTest {
         // Le pendant positif : le réveil, lui, **doit** y figurer — c'est le comportement voulu de
         // `setAlarmClock()`. Valable tant qu'aucune alarme horloge plus proche n'existe sur
         // l'appareil de test ; sinon le système n'affiche que celle-là et le cas est sans objet.
+        //
+        // La garde compare les instants (étape 25). Elle testait seulement la présence de `time:`,
+        // toujours vraie dès qu'une alarme horloge existe — y compris la plus proche qu'elle devait
+        // écarter : le 2026-09-27, un rappel de 19:40 posé par une autre application a fait échouer
+        // ce contrôle au lieu de le rendre sans objet.
+        val earlierAlarmClocks = alarmClockInstants(nextAlarmClockSection).filter { it < triggerAt }
         assumeTrue(
             "Une alarme horloge plus proche existe sur cet appareil : contrôle sans objet.",
-            nextAlarmClockSection.contains("time:"),
+            earlierAlarmClocks.isEmpty(),
         )
         assertThat(nextAlarmClockSection).contains("time:$triggerAt")
     }
@@ -87,6 +93,10 @@ class BlockingStartAlarmVisibilityTest {
         dump
             .substringAfter("Next alarm clock information:", "")
             .substringBefore("pending alarms:")
+
+    /** Les instants `time:<epoch>` de la section « Next alarm clock information ». */
+    private fun alarmClockInstants(section: String): List<Long> =
+        Regex("""time:(\d+)""").findAll(section).map { it.groupValues[1].toLong() }.toList()
 
     private fun shell(command: String): String =
         FileInputStream(

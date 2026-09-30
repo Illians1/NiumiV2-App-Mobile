@@ -20,7 +20,7 @@ object IncidentTexts {
 
     /**
      * Les codes d'incident sont des identifiants techniques (SPEC_CORE_KMP §7.1) : sont traduits
-     * les six que la surveillance de §13.1 peut produire pendant une session, plus ceux du
+     * les sept que la surveillance de §13.1 peut produire pendant une session, plus ceux du
      * réconciliateur. Un code inconnu reste affiché tel quel plutôt que masqué — §15 interdit de
      * présenter une session comme saine quand elle ne l'est pas.
      */
@@ -48,6 +48,10 @@ object IncidentTexts {
 
             "ANDROID_FULL_SCREEN_REVOKED" -> {
                 "Niumi ne peut plus ouvrir l'écran de réveil par-dessus l'écran verrouillé."
+            }
+
+            "ANDROID_BATTERY_EXEMPTION_REVOKED" -> {
+                "Les restrictions de batterie sont revenues : le blocage peut s'arrêter en arrière-plan."
             }
 
             "NFC_DISABLED" -> {

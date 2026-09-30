@@ -15,15 +15,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.database.logging.TechnicalEventEntry
+import com.niumi.designsystem.effect.WindowFocusRegainedEffect
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.ReadinessCheck
 
 /**
@@ -183,12 +190,30 @@ private fun EventsSection(events: List<TechnicalEventEntry>) {
 /**
  * Point d'entrée réel. L'`ACTION_SEND` est construit ici, comme tout `Intent` (§13), et n'est émis
  * qu'au clic — §17 : « après action explicite de l'utilisateur ».
+ *
+ * Les contrôles sont rejoués à chaque `ON_RESUME` (y compris le premier affichage), au retour du
+ * focus et sur chaque état stable du NFC, comme sur les écrans 2, 6 et 7 (§13, écart 10). Ils ne
+ * l'étaient qu'à l'ouverture : un réglage rétabli restait affiché en échec (relevé le 2026-09-29).
  */
 @Composable
 fun IncidentDiagnosticRoute(viewModel: IncidentDiagnosticViewModel = hiltViewModel()) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) { viewModel.refresh() }
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    WindowFocusRegainedEffect { viewModel.refresh() }
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            context.nfcAdapterSettledChanges().collect { viewModel.refresh() }
+        }
+    }
 
     IncidentDiagnosticScreen(
         state = viewModel.state,

@@ -12,7 +12,12 @@
       "Skill(git-commit:*)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "WebFetch(domain:brick.frontkb.com)",
+      "WebFetch(domain:support.getbrick.com)",
+      "WebFetch(domain:getbrick.com)",
+      "WebFetch(domain:play.google.com)",
+      "WebFetch(domain:cybernews.com)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -24,20 +29,7 @@
     ]
   },
   "model": "opusplan",
-  "enabledPlugins": {
-    "context7@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "commit-commands@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": false,
-    "security-guidance@claude-plugins-official": true,
-    "github@claude-plugins-official": true,
-    "code-simplifier@claude-plugins-official": true
-  },
-  "language": "French",
-  "autoUpdatesChannel": "latest",
-    "hooks": {
+  "hooks": {
     "PreToolUse": [
       {
         "matcher": "AskUserQuestion",
@@ -89,5 +81,18 @@
         ]
       }
     ]
-  }
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": false,
+    "security-guidance@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true
+  },
+  "language": "French",
+  "autoUpdatesChannel": "latest"
 }

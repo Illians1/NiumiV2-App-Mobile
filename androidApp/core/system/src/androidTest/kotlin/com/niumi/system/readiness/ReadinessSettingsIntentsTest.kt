@@ -31,8 +31,7 @@ class ReadinessSettingsIntentsTest {
             ReadinessAction.OpenDndSettings,
             ReadinessAction.OpenAccessibilitySettings,
             ReadinessAction.FixTime,
-            ReadinessAction.OpenBatterySettings(aospExemptionGranted = false),
-            ReadinessAction.OpenBatterySettings(aospExemptionGranted = true),
+            ReadinessAction.OpenBatterySettings,
             ReadinessAction.Unsupported,
         )
 

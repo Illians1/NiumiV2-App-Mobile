@@ -11,4 +11,11 @@ data class SessionRuntimeStatus(
     val fullScreenReady: Boolean,
     val nfcReady: Boolean,
     val audioReady: Boolean,
+    /**
+     * Le NFC peut-il être jugé honnêtement maintenant ? Faux avant le premier déverrouillage et
+     * pendant les premières secondes après le démarrage : [nfcReady] y dit « désactivé » pour un
+     * NFC dont la pile n'a simplement pas fini de démarrer (étape 25, [SessionNfcEvaluability]).
+     * Distinct de [nfcReady], dont le sens ne change pas : « non jugeable » n'est pas « prêt ».
+     */
+    val nfcEvaluable: Boolean,
 )

@@ -16,9 +16,12 @@ import com.niumi.system.notification.NotificationAvailability
 import com.niumi.system.notification.NotificationChannelStatus
 import com.niumi.system.power.BatteryOptimizationStatus
 import com.niumi.system.readiness.ReadinessSources
+import com.niumi.system.readiness.UnlockSettling
+import com.niumi.system.recents.RecentsLockState
+import com.niumi.system.recents.RecentsLockStatus
 import com.niumi.system.session.fakes.FakeAccessibilityServiceStatus
 import com.niumi.system.session.fakes.FakeAlarmScheduler
-import com.niumi.system.setup.SetupPreferences
+import com.niumi.system.session.fakes.FakeUptimeClock
 
 class FakeNfcReader(
     var availabilityValue: NfcAvailability = NfcAvailability.ENABLED,
@@ -86,41 +89,17 @@ class FakeInterruptionFilterSource(
     override fun currentInterruptionFilter(): Int = filter
 }
 
+/** Verrouillé par défaut : c'est l'état « tout vert » ; `UNSUPPORTED` reproduit un appareil sans ce mécanisme. */
+class FakeRecentsLockStatus(
+    var state: RecentsLockState = RecentsLockState.LOCKED,
+) : RecentsLockStatus {
+    override fun read(): RecentsLockState = state
+}
+
 class FakeBatteryOptimizationStatus(
     var ignoring: Boolean = true,
 ) : BatteryOptimizationStatus {
     override fun isIgnoringBatteryOptimizations(): Boolean = ignoring
-}
-
-class FakeSetupPreferences(
-    var onboardingAcknowledged: Boolean = true,
-    var batteryExemptionConfirmed: Boolean = true,
-    var lastWakeTimeIsoValue: String? = null,
-    var lastBlockingStartTimeIsoValue: String? = null,
-) : SetupPreferences {
-    override suspend fun isOnboardingAcknowledged(): Boolean = onboardingAcknowledged
-
-    override suspend fun acknowledgeOnboarding() {
-        onboardingAcknowledged = true
-    }
-
-    override suspend fun isBatteryExemptionConfirmed(): Boolean = batteryExemptionConfirmed
-
-    override suspend fun setBatteryExemptionConfirmed(confirmed: Boolean) {
-        batteryExemptionConfirmed = confirmed
-    }
-
-    override suspend fun lastWakeTimeIso(): String? = lastWakeTimeIsoValue
-
-    override suspend fun lastBlockingStartTimeIso(): String? = lastBlockingStartTimeIsoValue
-
-    override suspend fun setLastBlockingStartTimeIso(value: String?) {
-        lastBlockingStartTimeIsoValue = value
-    }
-
-    override suspend fun setLastWakeTimeIso(value: String) {
-        lastWakeTimeIsoValue = value
-    }
 }
 
 /**
@@ -142,13 +121,40 @@ class ReadinessTestSources(
     val alarmVolumeSource = FakeAlarmVolumeSource()
     val interruptionFilterSource = FakeInterruptionFilterSource()
     val batteryOptimizationStatus = FakeBatteryOptimizationStatus()
-    val setupPreferences = FakeSetupPreferences()
+    val recentsLockStatus = FakeRecentsLockStatus()
 
     /**
      * Déverrouillé par défaut : c'est l'état de tous les scénarios sauf ceux qui visent
      * explicitement la fenêtre Direct Boot (étape 19).
      */
     val unlockState = FakeUnlockState(isUserUnlocked = true)
+
+    /**
+     * Démarrage lointain par défaut (étape 25). La fenêtre de liaison ne compte qu'à partir de la
+     * première lecture déverrouillée : un test qui ne met pas le service en `PENDING` ne la voit
+     * jamais, et un test qui l'y met avance [uptimeClock] pour en sortir.
+     */
+    val uptimeClock = FakeUptimeClock()
+    val unlockSettling = UnlockSettling(unlockState, uptimeClock)
+
+    init {
+        // Déverrouillé depuis longtemps par défaut : la fenêtre est ouverte puis refermée, pour que
+        // les contrôles soient jugés normalement. Les tests de la fenêtre la rouvrent par [justUnlocked].
+        unlockSettling.isSettling()
+        uptimeClock.elapsedMillis += UnlockSettling.GRACE_MILLIS
+    }
+
+    /**
+     * L'appareil vient d'être déverrouillé : la fenêtre de liaison s'ouvre à l'instant courant de
+     * [uptimeClock], comme pour un processus vivant depuis le démarrage verrouillé qui voit passer
+     * `USER_UNLOCKED`.
+     */
+    fun justUnlocked() {
+        unlockState.isUserUnlocked = false
+        unlockSettling.isSettling()
+        unlockState.isUserUnlocked = true
+        unlockSettling.isSettling()
+    }
 
     fun build(): ReadinessSources =
         ReadinessSources(
@@ -162,7 +168,8 @@ class ReadinessTestSources(
             interruptionFilterSource = interruptionFilterSource,
             accessibilityServiceStatus = accessibilityServiceStatus,
             batteryOptimizationStatus = batteryOptimizationStatus,
-            setupPreferences = setupPreferences,
             unlockState = unlockState,
+            unlockSettling = unlockSettling,
+            recentsLockStatus = recentsLockStatus,
         )
 }

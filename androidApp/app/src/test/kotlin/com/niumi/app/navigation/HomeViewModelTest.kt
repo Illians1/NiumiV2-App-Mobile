@@ -27,10 +27,6 @@ private class FakeSetupPreferences(
         acknowledged = true
     }
 
-    override suspend fun isBatteryExemptionConfirmed(): Boolean = true
-
-    override suspend fun setBatteryExemptionConfirmed(confirmed: Boolean) = Unit
-
     override suspend fun lastWakeTimeIso(): String? = null
 
     override suspend fun setLastWakeTimeIso(value: String) = Unit

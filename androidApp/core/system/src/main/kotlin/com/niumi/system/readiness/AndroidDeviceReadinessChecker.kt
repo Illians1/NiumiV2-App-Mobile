@@ -4,9 +4,11 @@ import android.app.NotificationManager
 import android.os.Build
 import com.niumi.core.domain.AppSelectionSummary
 import com.niumi.core.interop.ReadinessSeverityDto
+import com.niumi.system.blocking.AccessibilityServiceState
 import com.niumi.system.common.Clock
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.notification.NiumiNotificationChannels
+import com.niumi.system.recents.RecentsLockState
 
 /**
  * Implémentation Android du tableau de SPEC_ANDROID §13. Ne décide jamais si l'activation est
@@ -172,8 +174,8 @@ class AndroidDeviceReadinessChecker(
             ),
         )
 
-    /** Contrôles 12 à 14. */
-    private suspend fun sessionChecks(
+    /** Contrôles 12 à 15. */
+    private fun sessionChecks(
         candidateTriggerAtEpochMillis: Long?,
         nowEpochMillis: Long,
     ): List<ReadinessCheck> =
@@ -192,20 +194,14 @@ class AndroidDeviceReadinessChecker(
             // `NOT_APPLICABLE` est la réponse honnête, et elle suffit : le moniteur de §13.1 ne
             // signale que les contrôles `FAILED`. L'écran de diagnostic n'est atteignable
             // qu'appareil déverrouillé, il ne voit donc jamais ce cas.
-            if (!sources.unlockState.isUserUnlocked) {
-                notApplicable(
-                    ReadinessCheckId.ACCESSIBILITY_SERVICE,
-                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
-                    ReadinessAction.OpenAccessibilitySettings,
-                )
-            } else {
-                check(
-                    ReadinessCheckId.ACCESSIBILITY_SERVICE,
-                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
-                    passed = sources.accessibilityServiceStatus.isEnabled(),
-                    action = ReadinessAction.OpenAccessibilitySettings,
-                )
-            },
+            //
+            // Même réponse **juste après** le déverrouillage (étape 25) : Android relie le service
+            // après celui-ci, pas instantanément, et Niumi y reste inscrit sans être relié
+            // ([AccessibilityServiceState.PENDING]). Mesuré le 2026-09-27 : un incident `CRITICAL`
+            // mensonger 0,3 s après le déverrouillage. Passé la fenêtre de liaison, le même état
+            // veut dire que le service ne reviendra pas (mort du processus sur HyperOS) : `FAILED`.
+            // Retiré de la liste, il est jugé tout de suite — c'est le choix de l'utilisateur.
+            accessibilityCheck(),
             if (candidateTriggerAtEpochMillis == null) {
                 // L'écran de diagnostic précède le choix de l'heure : rien à contrôler encore.
                 notApplicable(
@@ -224,18 +220,63 @@ class AndroidDeviceReadinessChecker(
             check(
                 ReadinessCheckId.BATTERY_OPTIMIZATION,
                 ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
-                // §13 : la détection système est partielle (sur HyperOS,
-                // `isIgnoringBatteryOptimizations()` reste faux après correction du réglage OEM,
-                // et vrai n'a jamais prouvé que le processus ne sera pas gelé). Le contrôle ne
-                // peut donc reposer que sur la confirmation explicite de l'utilisateur ; l'état
-                // AOSP ne sert qu'à choisir le recours proposé.
-                passed = sources.setupPreferences.isBatteryExemptionConfirmed(),
-                action =
-                    ReadinessAction.OpenBatterySettings(
-                        aospExemptionGranted = sources.batteryOptimizationStatus.isIgnoringBatteryOptimizations(),
-                    ),
+                // §13, mesuré le 2026-09-28 sur HyperOS : c'est la liste blanche AOSP qui empêche
+                // le gel (blocage en 206 ms après 4 min d'inactivité, réglage HyperOS resté sur
+                // « recommandé »). La détection lit donc ce qui compte vraiment ; elle remplace la
+                // confirmation de l'utilisateur, qui restait vraie après un réglage revenu en
+                // arrière.
+                passed = sources.batteryOptimizationStatus.isIgnoringBatteryOptimizations(),
+                action = ReadinessAction.OpenBatterySettings,
             ),
+            recentsLockCheck(),
         )
+
+    private fun accessibilityCheck(): ReadinessCheck {
+        val settling = sources.unlockSettling.isSettling()
+        val state = sources.accessibilityServiceStatus.read()
+        val judgeable =
+            sources.unlockState.isUserUnlocked && !(state == AccessibilityServiceState.PENDING && settling)
+        return if (!judgeable) {
+            notApplicable(
+                ReadinessCheckId.ACCESSIBILITY_SERVICE,
+                ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+                ReadinessAction.OpenAccessibilitySettings,
+            )
+        } else {
+            check(
+                ReadinessCheckId.ACCESSIBILITY_SERVICE,
+                ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+                passed = state == AccessibilityServiceState.ENABLED,
+                action = ReadinessAction.OpenAccessibilitySettings,
+            )
+        }
+    }
+
+    /**
+     * Étape 25, mesuré le 2026-09-28 sur HyperOS : « Tout effacer » dans les récents tue Niumi et
+     * coupe le blocage, sauf si Niumi y est verrouillé (cadenas). Le verrou est lisible dans un
+     * réglage système, durable, à poser une fois. Sans ce réglage, le contrôle est sans objet :
+     * l'appareil n'a pas ce mécanisme.
+     */
+    private fun recentsLockCheck(): ReadinessCheck =
+        when (val state = sources.recentsLockStatus.read()) {
+            RecentsLockState.UNSUPPORTED -> {
+                notApplicable(
+                    ReadinessCheckId.RECENTS_LOCK,
+                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+                    ReadinessAction.LockInRecents,
+                )
+            }
+
+            RecentsLockState.LOCKED, RecentsLockState.UNLOCKED -> {
+                check(
+                    ReadinessCheckId.RECENTS_LOCK,
+                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
+                    passed = state == RecentsLockState.LOCKED,
+                    action = ReadinessAction.LockInRecents,
+                )
+            }
+        }
 
     private fun check(
         id: ReadinessCheckId,

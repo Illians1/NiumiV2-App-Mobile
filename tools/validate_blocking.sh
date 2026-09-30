@@ -30,8 +30,18 @@
 # Ne jamais lancer `adb shell am force-stop com.niumi.app` pendant ce protocole : Android
 # retirerait le service de la liste des services activés et tous les essais échoueraient.
 #
-# Usage : tools/validate_blocking.sh <package.bloque> [package.non.bloque]
+# Mode « début différé » (Lot 6, étape 25), option --deferred : ajoute un essai préalable qui
+# couvre la ligne §20 « blocage différé, application bloquée déjà au premier plan à l'heure de
+# début » et le paragraphe « Application déjà ouverte » de §12.4. La précondition 5 devient alors :
+# une session armée avec « À partir de » réglé dans 5 à 10 minutes et l'heure de réveil bien
+# au-delà. L'essai ouvre l'application AVANT l'instant de début, la laisse au premier plan, et
+# mesure le retour à l'accueil. Les six essais ordinaires suivent : une fois l'instant passé, la
+# session est exactement dans l'état qu'ils attendent. L'inverse n'est pas vrai, d'où un mode
+# plutôt qu'un septième essai.
+#
+# Usage : tools/validate_blocking.sh [--deferred] <package.bloque> [package.non.bloque]
 # Exemple : tools/validate_blocking.sh com.miui.calculator com.android.deskclock
+# Exemple : tools/validate_blocking.sh --deferred com.miui.calculator
 
 set -u
 
@@ -39,9 +49,26 @@ readonly NIUMI_PACKAGE="com.niumi.app"
 readonly SERVICE_COMPONENT="${NIUMI_PACKAGE}/com.niumi.feature.session.blocking.NiumiBlockingAccessibilityService"
 readonly BLOCK_TIMEOUT_S=5
 readonly OVERLAY_TIMEOUT_S=4
+readonly BLOCKING_START_TAG="${NIUMI_PACKAGE}/com.niumi.system.blocking.BlockingStartReceiver"
+# Marge minimale restante à l'issue des préconditions : en deçà, l'essai n'a pas le temps de se
+# préparer avant l'instant de début.
+readonly DEFERRED_MIN_MARGIN_S=120
+# L'application est ouverte ce nombre de secondes avant l'instant, pour prouver qu'aucun blocage
+# n'a lieu avant l'heure autant que pour être au premier plan quand elle arrive.
+readonly DEFERRED_LEAD_S=60
+# §20 : « retard mesuré inférieur à 1 minute ».
+readonly DEFERRED_GRACE_S=60
+
+DEFERRED=0
+if [ "${1:-}" = "--deferred" ]; then
+    DEFERRED=1
+    shift
+fi
 
 BLOCKED_PACKAGE="${1:-}"
 ALLOWED_PACKAGE="${2:-}"
+stayon_set=0
+DEFERRED_STARTS_AT_MS=0
 failures=0
 
 log_pass() { printf '  \033[32mOK\033[0m   %s\n' "$1"; }
@@ -109,6 +136,49 @@ launch_from_launcher() {
     adb shell monkey -p "$1" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 }
 
+# Bloc `dumpsys` de l'alarme de début du blocage, et rien d'autre : de son en-tête `Alarm{...}`
+# jusqu'à l'alarme suivante. L'en-tête doit précéder IMMÉDIATEMENT la ligne `tag=` — le nom du
+# receveur réapparaît dans les statistiques du dump bien après la délivrance, où un `grep -B`
+# ramasserait l'en-tête d'une autre alarme et ferait croire que celle-ci est toujours en attente.
+blocking_start_block() {
+    adb shell dumpsys alarm 2>/dev/null | tr -d '\r' | awk -v tag="$BLOCKING_START_TAG" '
+        inblk { if (index($0, "Alarm{")) exit; print; next }
+        hdrprev && index($0, tag) { print hdr; print; inblk = 1; next }
+        { hdrprev = index($0, "Alarm{") > 0; if (hdrprev) hdr = $0 }
+    '
+}
+
+# Instant contractuel de l'alarme de début, en millisecondes, ou rien si elle n'existe pas.
+#
+# Lu dans l'en-tête `Alarm{... origWhen 1790240960149 ...}`, qui porte l'epoch brut d'une alarme
+# RTC. La ligne de détail affiche aussi `origWhen=2026-09-24 11:09:20.149`, mais la convertir
+# demande `date -D` sur l'appareil, qui ignore l'heure d'été : mesuré le 2026-09-24, décalage
+# d'une heure pile. Aucune mesure ne repose donc sur une date formatée — c'est la confusion entre
+# les deux formes qui avait laissé un parsing muet dans `tools/validate_alarm.sh` (voir ETAPE-25.md ;
+# corrigé le 2026-09-30 en reprenant cette lecture).
+blocking_start_when_ms() {
+    local raw
+    raw=$(blocking_start_block | head -1 | sed -n 's/.*origWhen \([0-9]\{13\}\) .*/\1/p')
+    [ -n "$raw" ] || return 1
+    printf '%s\n' "$raw"
+}
+
+device_now_ms() {
+    adb shell date +%s%3N 2>/dev/null | tr -d '\r'
+}
+
+# L'horloge de l'appareil doit être lisible à la milliseconde : c'est elle, et jamais celle du
+# poste, qui sert de référence au retard mesuré.
+require_device_clock() {
+    local now_ms
+    now_ms=$(device_now_ms)
+    case "$now_ms" in
+        ''|*[!0-9]*) fatal "l'horloge de l'appareil est illisible (adb shell date +%s%3N)." ;;
+    esac
+    [ "${#now_ms}" -eq 13 ] || fatal "horloge de l'appareil sans millisecondes (${now_ms})."
+    log_pass "horloge de l'appareil lisible à la milliseconde"
+}
+
 require_preconditions() {
     log_step "Préconditions"
 
@@ -149,6 +219,147 @@ require_block_armed() {
     log_info "d'applications (diagnostic, boîtier, applications, heure, activation)."
     printf '       Appuyer sur Entrée une fois la session armée... '
     read -r _
+}
+
+# §9.1, seconde dérogation : le début du blocage ne doit JAMAIS atteindre le réglage « prochaine
+# alarme » du système, sans quoi l'appareil annoncerait une alarme à une heure où Niumi ne sonnera
+# pas. `BlockingStartAlarmVisibilityTest` le prouve en instrumenté sur des alarmes synthétiques ;
+# ici, c'est une vraie session armée par le parcours réel.
+assert_hidden_from_next_alarm_clock() {
+    local starts_at_ms="$1" section
+    section=$(adb shell dumpsys alarm 2>/dev/null | tr -d '\r' |
+        sed -n '/Next alarm clock information:/,/pending alarms:/p')
+    if [ -z "$section" ]; then
+        log_info "section « Next alarm clock information » absente du dump, contrôle §9.1 non concluant."
+        return
+    fi
+    if printf '%s\n' "$section" | grep -q "time:${starts_at_ms}"; then
+        log_fail "l'instant de début figure dans « prochaine alarme » — §9.1 violée, revenir à la spec"
+    else
+        log_pass "l'instant de début n'atteint pas le réglage « prochaine alarme » (§9.1)"
+    fi
+}
+
+require_deferred_session_armed() {
+    log_step "Armement d'une session à blocage différé"
+    log_info "Dans Niumi, parcours complet : ${BLOCKED_PACKAGE} dans la sélection d'applications,"
+    log_info "heure de réveil dans plus d'une heure, section « Blocage des applications » →"
+    log_info "« À partir de » → une heure dans 5 à 10 minutes. Activer."
+    log_info "L'écran 7 doit afficher « Réveil programmé · blocage à HH:MM » et « Début du blocage »."
+    log_info ""
+    log_info "Ensuite, NE PLUS TOUCHER AU TÉLÉPHONE : cet essai prouve un retour à l'accueil sans"
+    log_info "changement de fenêtre (§12.4). Toute interaction l'invalide."
+    printf '       Appuyer sur Entrée une fois la session armée... '
+    read -r _
+
+    local starts_at_ms now_ms margin_s
+    starts_at_ms=$(blocking_start_when_ms) ||
+        fatal "aucune alarme de début en attente : la session n'est pas différée, ou pas armée."
+    log_pass "alarme de début trouvée (origWhen=${starts_at_ms})"
+
+    printf '%s\n' "$(blocking_start_block)" | sed 's/^/       | /'
+
+    if printf '%s\n' "$(blocking_start_block)" | grep -q 'exactAllowReason=policy_permission'; then
+        log_pass "exactAllowReason=policy_permission (l'alarme est affranchie des politiques Doze)"
+    else
+        log_fail "exactAllowReason inattendu — la seconde dérogation de §9.1 repose dessus"
+    fi
+
+    assert_hidden_from_next_alarm_clock "$starts_at_ms"
+
+    now_ms=$(device_now_ms)
+    margin_s=$(( (starts_at_ms - now_ms) / 1000 ))
+    [ "$margin_s" -ge "$DEFERRED_MIN_MARGIN_S" ] ||
+        fatal "il ne reste que ${margin_s} s avant l'instant de début ; réarmer une session plus lointaine."
+    log_pass "marge avant l'instant de début : ${margin_s} s"
+
+    # L'écran doit rester allumé : §12.4 admet que le dernier package vu peut être périmé écran
+    # éteint, et c'est une AUTRE ligne de §20 (« écran éteint depuis 30 minutes »). Cet essai-ci
+    # porte sur l'application au premier plan, écran allumé.
+    adb shell svc power stayon usb >/dev/null 2>&1 && stayon_set=1
+    log_info "écran maintenu allumé pendant l'essai ; il sera rendu au système ensuite."
+
+    DEFERRED_STARTS_AT_MS="$starts_at_ms"
+}
+
+# Attend que le package quitte le premier plan et rend l'instant, en millisecondes de l'appareil.
+# La boucle tourne SUR l'appareil, en un seul `adb shell` : mesurée depuis le poste, chaque tour
+# paierait la traversée USB, qui est du même ordre que le retard à mesurer.
+wait_home_return_ms() {
+    local package="$1" deadline_ms="$2"
+    adb shell "
+        while :; do
+            now=\$(date +%s%3N)
+            if ! dumpsys activity activities | grep -m1 topResumedActivity | grep -q '$package'; then
+                echo \"\$now\"
+                exit 0
+            fi
+            if [ \"\$now\" -gt $deadline_ms ]; then
+                echo TIMEOUT
+                exit 1
+            fi
+        done
+    " 2>/dev/null | tr -d '\r' | tail -1
+}
+
+# Essai différé : aucun blocage avant l'instant, retour à l'accueil à l'instant, sans changement
+# de fenêtre. §20 (« application bloquée déjà au premier plan à l'heure de début ») et §12.4.
+test_deferred_start() {
+    log_step "Essai 0 — début différé, application déjà au premier plan"
+    local starts_at_ms="$DEFERRED_STARTS_AT_MS" now_ms wait_s changed_ms delay_ms
+
+    now_ms=$(device_now_ms)
+    wait_s=$(( (starts_at_ms - now_ms) / 1000 - DEFERRED_LEAD_S ))
+    if [ "$wait_s" -gt 0 ]; then
+        log_info "attente de ${wait_s} s, jusqu'à ${DEFERRED_LEAD_S} s avant l'instant de début..."
+        sleep "$wait_s"
+    fi
+
+    # Dernières interactions autorisées : à partir du lancement, plus aucune commande ne touche
+    # aux fenêtres, ce qui est la seule preuve possible du « sans changement de fenêtre ».
+    adb shell am force-stop "$BLOCKED_PACKAGE" >/dev/null 2>&1
+    adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
+    sleep 2
+    launch_from_launcher "$BLOCKED_PACKAGE"
+    sleep 3
+
+    if ! process_exists "$BLOCKED_PACKAGE"; then
+        log_fail "l'application n'a pas démarré — essai non concluant"
+        return
+    fi
+    if [ "$(top_package)" != "$BLOCKED_PACKAGE" ]; then
+        log_fail "l'application n'est pas au premier plan avant l'instant de début — essai non concluant"
+        return
+    fi
+    log_pass "application au premier plan avant l'instant de début, aucun retour à l'accueil"
+    if [ "$(overlay_window_count)" -eq 0 ]; then
+        log_pass "aucun overlay avant l'instant de début"
+    else
+        log_fail "overlay affiché AVANT l'instant de début — §12.4 interdit tout blocage avant l'heure"
+    fi
+
+    changed_ms=$(wait_home_return_ms "$BLOCKED_PACKAGE" $((starts_at_ms + DEFERRED_GRACE_S * 1000)))
+    if [ "$changed_ms" = "TIMEOUT" ]; then
+        log_fail "application restée au premier plan ${DEFERRED_GRACE_S} s après l'instant de début"
+        return
+    fi
+
+    delay_ms=$((changed_ms - starts_at_ms))
+    if [ "$delay_ms" -lt -1000 ]; then
+        log_fail "blocage prématuré de $(( -delay_ms )) ms — §12.4 interdit tout blocage avant l'instant"
+    else
+        log_pass "retour à l'accueil ${delay_ms} ms après l'instant contractuel (top = $(top_package))"
+    fi
+
+    if [ "$(overlay_window_count)" -ge 1 ]; then
+        log_pass "fenêtre TYPE_ACCESSIBILITY_OVERLAY présente"
+    else
+        log_info "overlay non observé : son minuteur de 3 s a pu l'avoir déjà retiré (§12.2)."
+    fi
+
+    log_info "À reporter dans QA_MATRIX.md : instant ${starts_at_ms}, observé ${changed_ms}, retard ${delay_ms} ms."
+    log_info "Précision bornée par le coût d'un dumpsys activity (~150-300 ms) : le sondage ne peut pas mieux."
+    log_info "« Sans changement de fenêtre » : aucune commande n'a touché aux fenêtres depuis le lancement."
 }
 
 # Essai 1 : tâche neuve. L'application n'existe pas dans les récents, son activité est donc
@@ -247,12 +458,18 @@ test_after_delay() {
 
 main() {
     if [ -z "$BLOCKED_PACKAGE" ]; then
-        printf 'Usage : %s <package.bloque> [package.non.bloque]\n' "$0" >&2
+        printf 'Usage : %s [--deferred] <package.bloque> [package.non.bloque]\n' "$0" >&2
         exit 2
     fi
 
     require_preconditions
-    require_block_armed
+    if [ "$DEFERRED" -eq 1 ]; then
+        require_device_clock
+        require_deferred_session_armed
+        test_deferred_start
+    else
+        require_block_armed
+    fi
     test_fresh_task
     test_existing_task
     test_explicit_intent
@@ -262,6 +479,7 @@ main() {
 
     log_step "Résultat"
     adb shell am force-stop "$BLOCKED_PACKAGE" >/dev/null 2>&1
+    [ "$stayon_set" -eq 1 ] && adb shell svc power stayon false >/dev/null 2>&1
     if [ "$failures" -eq 0 ]; then
         printf '  Tous les essais automatisables sont passés.\n'
         printf '  Restent à vérifier à l'"'"'œil : le texte exact de l'"'"'overlay (§12.2) et le fait\n'

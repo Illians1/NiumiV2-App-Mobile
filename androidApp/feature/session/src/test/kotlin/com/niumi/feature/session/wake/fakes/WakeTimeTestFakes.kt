@@ -22,18 +22,11 @@ class FakeSetupPreferences(
     var lastBlockingStartTimeIsoValue: String? = null,
 ) : SetupPreferences {
     private var onboardingAcknowledged = true
-    private var batteryExemptionConfirmed = true
 
     override suspend fun isOnboardingAcknowledged(): Boolean = onboardingAcknowledged
 
     override suspend fun acknowledgeOnboarding() {
         onboardingAcknowledged = true
-    }
-
-    override suspend fun isBatteryExemptionConfirmed(): Boolean = batteryExemptionConfirmed
-
-    override suspend fun setBatteryExemptionConfirmed(confirmed: Boolean) {
-        batteryExemptionConfirmed = confirmed
     }
 
     override suspend fun lastWakeTimeIso(): String? = lastWakeTimeIsoValue

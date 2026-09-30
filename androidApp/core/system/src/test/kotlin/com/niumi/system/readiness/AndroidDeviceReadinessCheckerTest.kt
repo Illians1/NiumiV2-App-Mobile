@@ -3,9 +3,11 @@ package com.niumi.system.readiness
 import android.app.NotificationManager
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.ReadinessSeverityDto
+import com.niumi.system.blocking.AccessibilityServiceState
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.notification.NiumiNotificationChannels
 import com.niumi.system.readiness.fakes.ReadinessTestSources
+import com.niumi.system.recents.RecentsLockState
 import com.niumi.system.session.fakes.FakeClock
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -284,6 +286,84 @@ class AndroidDeviceReadinessCheckerTest {
             assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
         }
 
+    /**
+     * Étape 25, mesuré le 2026-09-27 : 0,3 s après le déverrouillage, Niumi restait inscrit mais
+     * pas encore relié par Android. Pendant la fenêtre de liaison, le contrôle est sans objet.
+     */
+    @Test
+    fun aServiceStillBeingBoundJustAfterUnlockIsNotApplicable() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.justUnlocked()
+            sources.accessibilityServiceStatus.state = AccessibilityServiceState.PENDING
+
+            val check = report(sources).check(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            assertThat(check.outcome).isEqualTo(ReadinessOutcome.NOT_APPLICABLE)
+        }
+
+    /** Passé la fenêtre, un service toujours non relié ne reviendra pas (mort du processus, essai 3). */
+    @Test
+    fun aServiceStillUnboundAfterTheBindingWindowFails() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.justUnlocked()
+            sources.accessibilityServiceStatus.state = AccessibilityServiceState.PENDING
+            report(sources)
+            sources.uptimeClock.elapsedMillis += UnlockSettling.GRACE_MILLIS
+
+            val check = report(sources).check(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
+        }
+
+    /** Retiré de la liste : le choix de l'utilisateur, jugé tout de suite, fenêtre ou pas. */
+    @Test
+    fun aServiceRemovedFromTheListFailsEvenInsideTheBindingWindow() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.justUnlocked()
+            sources.accessibilityServiceStatus.state = AccessibilityServiceState.DISABLED
+
+            val check = report(sources).check(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
+        }
+
+    /** Étape 25, mesuré le 2026-09-28 : sans verrou, « Tout effacer » sur HyperOS coupe le blocage. */
+    @Test
+    fun anUnlockedNiumiInHyperOsRecentsBlocksTheNiumiExperience() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.recentsLockStatus.state = RecentsLockState.UNLOCKED
+
+            val check = report(sources).check(ReadinessCheckId.RECENTS_LOCK)
+
+            assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
+            assertThat(check.severity).isEqualTo(ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE)
+            assertThat(check.action).isEqualTo(ReadinessAction.LockInRecents)
+        }
+
+    @Test
+    fun aLockedNiumiPassesTheRecentsLockCheck() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.recentsLockStatus.state = RecentsLockState.LOCKED
+
+            assertThat(report(sources).check(ReadinessCheckId.RECENTS_LOCK).outcome).isEqualTo(ReadinessOutcome.PASSED)
+        }
+
+    /** Un appareil sans ce mécanisme n'a rien à verrouiller : le contrôle est sans objet, jamais affiché. */
+    @Test
+    fun aDeviceWithoutRecentsLockIsNotConcerned() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.recentsLockStatus.state = RecentsLockState.UNSUPPORTED
+
+            assertThat(report(sources).check(ReadinessCheckId.RECENTS_LOCK).outcome)
+                .isEqualTo(ReadinessOutcome.NOT_APPLICABLE)
+        }
+
     @Test
     fun theTriggerInstantIsCheckedOnlyOnceAWakeTimeHasBeenChosen() =
         runTest {
@@ -304,30 +384,29 @@ class AndroidDeviceReadinessCheckerTest {
             ).isEqualTo(ReadinessOutcome.PASSED)
         }
 
+    /** Mesuré le 2026-09-28 sur HyperOS : seule « Pas de restriction » inscrit Niumi dans la liste blanche. */
     @Test
-    fun theBatteryExemptionStaysUnsatisfiedUntilTheUserConfirmsItEvenWhenAndroidReportsItGranted() =
+    fun theBatteryExemptionPassesAsSoonAsAndroidReportsIt() =
         runTest {
             val sources = ReadinessTestSources()
             sources.batteryOptimizationStatus.ignoring = true
-            sources.setupPreferences.batteryExemptionConfirmed = false
+
+            assertThat(report(sources).check(ReadinessCheckId.BATTERY_OPTIMIZATION).outcome)
+                .isEqualTo(ReadinessOutcome.PASSED)
+        }
+
+    /** Réglage revenu en arrière, après une mise à jour par exemple : aucune confirmation passée ne le masque. */
+    @Test
+    fun aMissingBatteryExemptionBlocksTheNiumiExperience() =
+        runTest {
+            val sources = ReadinessTestSources()
+            sources.batteryOptimizationStatus.ignoring = false
 
             val check = report(sources).check(ReadinessCheckId.BATTERY_OPTIMIZATION)
 
             assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
             assertThat(check.severity).isEqualTo(ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE)
-            assertThat(check.action).isEqualTo(ReadinessAction.OpenBatterySettings(aospExemptionGranted = true))
-        }
-
-    @Test
-    fun theBatteryActionCarriesTheAospExemptionStateSoTheScreenCanGuideTowardsTheOemSetting() =
-        runTest {
-            val sources = ReadinessTestSources()
-            sources.batteryOptimizationStatus.ignoring = false
-            sources.setupPreferences.batteryExemptionConfirmed = false
-
-            val check = report(sources).check(ReadinessCheckId.BATTERY_OPTIMIZATION)
-
-            assertThat(check.action).isEqualTo(ReadinessAction.OpenBatterySettings(aospExemptionGranted = false))
+            assertThat(check.action).isEqualTo(ReadinessAction.OpenBatterySettings)
         }
 
     @Test

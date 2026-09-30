@@ -9,12 +9,11 @@ import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck
-import com.niumi.system.readiness.ReadinessCheckId
 import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.ReadinessOutcome
 import com.niumi.system.readiness.toActivationPolicyInput
-import com.niumi.system.setup.SetupPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,8 +23,11 @@ import javax.inject.Inject
  * `NiumiCoreFacade.evaluateActivation` trancher. Aucune règle d'activation n'est réimplémentée
  * côté Android (règle d'or de CLAUDE.md, SPEC_CORE_KMP §7.4).
  *
- * `refresh()` est rappelé sur chaque `ON_RESUME` : « recalculer l'état après chaque retour des
- * réglages » (§13).
+ * `refresh()` est rappelé sur chaque `ON_RESUME` et chaque retour du focus de la fenêtre
+ * (fermeture du volet rapide) : « recalculer l'état après chaque retour des réglages » (§13).
+ * C'est aussi ce qui fait passer au vert l'exemption d'énergie, détectée depuis l'étape 25 :
+ * aucune confirmation à donner au retour des réglages. Au retour d'un réglage, les deux
+ * déclencheurs se suivent : la relance en cours est annulée, la dernière fait foi.
  */
 @HiltViewModel
 class ReadinessViewModel
@@ -33,17 +35,7 @@ class ReadinessViewModel
     constructor(
         private val readinessChecker: DeviceReadinessChecker,
         private val facade: NiumiCoreFacade,
-        private val setupPreferences: SetupPreferences,
     ) : ViewModel() {
-        /**
-         * Deux temps pour le contrôle d'énergie : d'abord ouvrir les réglages, puis confirmer.
-         * §13 exige la confirmation de l'utilisateur parce que la détection AOSP est partielle, et
-         * §13 impose une seule action principale à la fois — d'où une bascule plutôt que deux
-         * boutons côte à côte. L'état est volontairement en mémoire : la question doit être reposée
-         * à chaque visite de l'écran.
-         */
-        private var batterySettingsOpened = false
-
         var state by mutableStateOf(ReadinessUiState())
             private set
 
@@ -51,25 +43,11 @@ class ReadinessViewModel
             refresh()
         }
 
+        private var refreshJob: Job? = null
+
         fun refresh() {
-            viewModelScope.launch { state = evaluate() }
-        }
-
-        fun onBatterySettingsOpened() {
-            batterySettingsOpened = true
-            state =
-                state.copy(
-                    items = state.items.map(::withBatteryLabel),
-                    primary = state.primary?.let(::withBatteryLabel),
-                )
-        }
-
-        fun confirmBatteryExemption() {
-            viewModelScope.launch {
-                setupPreferences.setBatteryExemptionConfirmed(confirmed = true)
-                batterySettingsOpened = false
-                state = evaluate()
-            }
+            refreshJob?.cancel()
+            refreshJob = viewModelScope.launch { state = evaluate() }
         }
 
         private suspend fun evaluate(): ReadinessUiState {
@@ -89,17 +67,15 @@ class ReadinessViewModel
         }
 
         private fun toItem(check: ReadinessCheck): ReadinessItem =
-            withBatteryLabel(
-                ReadinessItem(
-                    id = check.id,
-                    message = ReadinessMessages.forCheck(check.id),
-                    label = ReadinessMessages.labelFor(check.id),
-                    severity = check.severity,
-                    outcome = check.outcome,
-                    action = check.action,
-                    actionLabel = ReadinessMessages.actionLabelFor(check.id),
-                    isActionAvailable = check.action !in UNAVAILABLE_ACTIONS,
-                ),
+            ReadinessItem(
+                id = check.id,
+                message = ReadinessMessages.forCheck(check.id),
+                label = ReadinessMessages.labelFor(check.id),
+                severity = check.severity,
+                outcome = check.outcome,
+                action = check.action,
+                actionLabel = ReadinessMessages.actionLabelFor(check.id),
+                isActionAvailable = check.action !in UNAVAILABLE_ACTIONS,
             ).withRevisitLabel()
 
         /**
@@ -109,13 +85,6 @@ class ReadinessViewModel
          */
         private fun ReadinessItem.withRevisitLabel(): ReadinessItem =
             if (isRevisitable) copy(actionLabel = ReadinessMessages.revisitLabelFor(id)) else this
-
-        private fun withBatteryLabel(item: ReadinessItem): ReadinessItem =
-            if (item.id == ReadinessCheckId.BATTERY_OPTIMIZATION && batterySettingsOpened) {
-                item.copy(actionLabel = ReadinessMessages.BATTERY_CONFIRM_LABEL)
-            } else {
-                item
-            }
 
         private companion object {
             /**

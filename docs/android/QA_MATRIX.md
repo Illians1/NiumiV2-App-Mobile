@@ -13,7 +13,7 @@ l'audio, de Doze et des surcouches OEM.
 
 | Fabricant | Modèle | Android | Firmware | État |
 | --- | --- | --- | --- | --- |
-| Xiaomi (Redmi) | 25080RABDG (`lapis`) | 16 / API 36, HyperOS OS3.0 | `BP2A.250605.031.A3` | **couvert**, campagnes des 7-8, 13, 14 et 15 septembre 2026 |
+| Xiaomi (Redmi) | 25080RABDG (`lapis`) | 16 / API 36, HyperOS OS3.0.302.0.WPPEUXM | `BP2A.250605.031.A3` | **couvert**, campagnes des 7-8, 13, 14, 15, 16, 17, 24, 25, 27 et 28 septembre 2026 |
 | Google Pixel | — | 14, 15, 16, 17 | — | **non testé** — aucun appareil disponible |
 | Samsung Galaxy | — | 14, 15, 16 | — | **non testé** — aucun appareil disponible |
 | Oppo / Realme | — | — | — | **non testé** — aucun appareil disponible |
@@ -46,7 +46,7 @@ essais qui en dépendent.
 
 ## Scénarios de §20
 
-Les 41 scénarios du tableau de §20, dans son ordre. « Source » renvoie au rapport qui porte les
+Les 50 scénarios du tableau de §20 — dont les neuf du blocage différé (Lot 6), ajoutés le 2026-09-15 —, dans son ordre. « Source » renvoie au rapport qui porte les
 mesures détaillées, dans `docs/android/implementation-reports/`.
 
 ### Réveil, audio et Doze
@@ -61,8 +61,8 @@ mesures détaillées, dans `docs/android/implementation-reports/`.
 | Ne pas déranger « alarmes seules » (hors §20) | sonnerie audible | **OK** — `zen_mode=3`, `Muted: false`, écran rallumé. Essai ajouté pour délimiter la règle : seul le silence total est en cause | nul | `LOT-0.md` |
 | mode silencieux, volume d'alarme actif | sonnerie audible | **OK** — `mode = SILENT`, volume alarme 12, audibilité confirmée à l'oreille | nul | `LOT-0.md` |
 | volumes média et notification à zéro | sonnerie audible | **OK** — essai plus sévère que prévu : `STREAM_NOTIFICATION` est aliasé vers `STREAM_RING` sur cet appareil, les deux tombent ensemble. Audibilité confirmée à l'oreille | nul | `LOT-0.md` |
-| volume alarme à zéro avant activation | activation refusée | **non testé sur appareil** — le contrôle existe (`DeviceReadinessChecker`, §13) et est couvert en JVM, mais le refus d'activation n'a jamais été rejoué à la main depuis l'étape 12 | — | à exécuter |
-| volume mis à zéro après activation | incident documenté | **non testé** — non exécuté | — | à exécuter |
+| volume alarme à zéro avant activation | activation refusée | **Impossible sur cet appareil** (2026-09-29) — le système borne le volume d'alarme à 1 (`Min: 1`, un 0 forcé est refusé : « should be in [1..15] ») ; c'est aussi le minimum par défaut d'AOSP. Le contrôle ne peut donc pas échouer ici ; question produit ouverte sur le seuil (SPEC_ANDROID §13) | — | `RESTE_A_FAIRE.md` |
+| volume mis à zéro après activation | incident documenté | **Impossible sur cet appareil** (2026-09-29) — même borne à 1 : `ANDROID_ALARM_VOLUME_ZERO` ne peut pas être produit ici | — | `RESTE_A_FAIRE.md` |
 | Android 17, arrière-plan et écran verrouillé > 30 min | FGS démarré, son `USAGE_ALARM` audible | **non testé** — aucun appareil Android 17 | — | — |
 | casque Bluetooth connecté | sortie conforme à la stratégie documentée | **OK** — le flux est **dupliqué** haut-parleur + A2DP (`Devices: speaker(2), bt_a2dp(80)`), confirmé à l'oreille. Un casque appairé ne peut donc pas capter l'alarme seul. Volumes indépendants par sortie | nul | `LOT-0.md` |
 | casque Bluetooth déconnecté pendant la nuit | sonnerie audible sur la nouvelle route | **non testé** — exige un second appareil audio manipulable pendant l'essai | — | — |
@@ -89,6 +89,7 @@ mesures détaillées, dans `docs/android/implementation-reports/`.
 | notifications refusées | activation refusée | **OK** (2026-09-15) — permission refusée : `✗ Active les notifications pour que l'écran du réveil puisse s'afficher.` ; accordée : `✓ Notifications autorisées`. Aucun chemin vers le choix de l'heure tant qu'un contrôle est rouge | `ETAPE-21.md` |
 | plein écran refusé | activation refusée sur Android 14+ | **OK** (2026-09-15) — refusé : `✗ Autorise les alarmes plein écran, sinon l'écran de réveil ne s'ouvrira pas tout seul au moment de sonner.` ; autorisé : `✓ Alarmes plein écran autorisées`. **Le refus doit être posé au niveau UID** (`appops set --uid`) : au seul niveau paquet, le mode UID reste `allow` et `canUseFullScreenIntent()` répond vrai | `ETAPE-21.md` |
 | accessibilité désactivée avant activation | activation refusée | **OK** (2026-09-15) — inactif : `✗ Le service d'accessibilité de Niumi est inactif. Sans lui, les applications choisies ne seront pas bloquées.` ; actif : `✓ Service d'accessibilité actif`, service lié par le système | `ETAPE-21.md` |
+| réglage changé depuis le volet rapide, écran ouvert (hors §20, écart 10) | écrans 2, 6, 7 et 12 à jour sans quitter l'écran | **OK** (2026-09-29) — écran 2 : NFC coupé et rallumé (trois allers-retours), Ne pas déranger « interruptions importantes » → avertissement « autre mode » puis retrait ; écran 6 : bouton grisé et « ton appareil n'est pas prêt » NFC coupé, rétabli NFC rallumé ; écran 7 (session armée) : encadré NFC, puis « Rétabli depuis. », **un seul** `NFC_DISABLED` en base, enregistré 130 ms après la coupure ; écran 12 : « NFC activé » en échec puis « OK ». Le retour du focus seul ne suffisait pas au rallumage : le NFC met ~1,4 s à s'allumer et le focus revenait avant 8 fois sur 9 ; l'annonce `ADAPTER_STATE_CHANGED` a porté la mise à jour dans ces cas. Panneau de volume : ne prend pas le focus, replié comme déplié (curseur « Alarme » déplacé de 10 à 12 puis 10, aucun changement de focus) — un volume changé ainsi n'est vu qu'au retour sur l'écran | `RELEASE_REPORT.md` (écart 10) |
 
 Ces trois lignes étaient hors périmètre de l'étape 6 (`DeviceReadinessChecker` n'existait pas) et
 n'avaient jamais été rejouées depuis. **Les trois sont soldées le 2026-09-15.** Dans les trois cas,
@@ -99,7 +100,7 @@ rouge, ce qui est la forme concrète du refus d'activation de §9.2.
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Source |
 | --- | --- | --- | --- |
-| ouverture depuis l'accueil, hors session | les limites lisibles de bout en bout | **OK** (2026-09-15) — quatre sections et seize limites restituées, comparées une à une à `LIMITES.md` | `ETAPE-21.md` |
+| ouverture depuis l'accueil, hors session | les limites lisibles de bout en bout | **OK** (2026-09-15) — quatre sections et seize limites restituées, comparées une à une à `LIMITES.md`. Trois limites mesurées à l'étape 25 portent le total à dix-neuf ; leur correspondance est verrouillée par `HelpTextsTest`, leur affichage n'a pas été relu à l'œil | `ETAPE-21.md`, `ETAPE-25.md` |
 | actions offertes par l'écran | aucune (§3, §10.2) | **OK** — zéro nœud cliquable dans l'arbre d'accessibilité ; le geste Retour ramène à l'accueil | `ETAPE-21.md` |
 | ouverture pendant une session active | idem | **non testé** — exige une session armée, donc le boîtier et le parcours complet | à exécuter |
 
@@ -113,6 +114,7 @@ rouge, ce qui est la forme concrète du refus d'activation de §9.2.
 | ouverture d'une app autorisée | aucun effet | **OK** | `ETAPE-05.md` |
 | service d'accessibilité tué puis recréé | état rechargé, blocage restauré | **OK** — le service reconstruit sa projection depuis Room à la reconnexion | `ETAPE-05.md`, `ETAPE-15.md` |
 | accessibilité désactivée pendant `ARMED` | incident détecté | **OK** — un seul incident `BLOCKING_PERMISSION_REVOKED` `CRITICAL`, session conservée `ARMED`, santé `DEGRADED`, déduplication confirmée | `ETAPE-20.md` |
+| exemption d'énergie retirée pendant `ARMED` puis pendant l'attente du scan (C9, hors §20) | incident `ANDROID_BATTERY_EXEMPTION_REVOKED` `CRITICAL` et avertissement, un seul incident, « Rétabli depuis. » au retour | **OK** (2026-09-29, HyperOS OS3.0.302.0) — `ARMED` : exemption retirée à 19:12:30, Niumi rouvert, incident `CRITICAL` à 19:12:53, 173 ms après `SESSION_READINESS_DEGRADED`, avertissement 9 au texte exact, santé `DEGRADED`, session conservée ; bouton « Ouvrir les réglages de batterie » → liste système, « Sans restriction » → avertissement retiré, « Rétabli depuis. », un seul incident. `RINGING` (seconde session ; Android n'a pas d'`AWAITING_NFC` dans le parcours normal) : exemption retirée à 20:20:41, retour au premier plan, incident à 20:20:59, avertissement à côté de celui de la sonnerie ; scan → `COMPLETED`, avertissement retiré. Retrait fait par `cmd deviceidle whitelist -com.niumi.app`, rétablissement par l'interface. Détection par `PACKAGE_REPLACED` non mesurée | nul (au retour au premier plan) | `RESTE_A_FAIRE.md` |
 | restriction d'énergie constructeur active (hors §20) | — | **Limite majeure mesurée** — sans exemption constructeur, le blocage devient **silencieusement** inopérant après ~60 s ; avec exemption, < 1 s. C'est le constat qui justifie le contrôle de §13 | `ETAPE-05.md` |
 
 Le texte exact de l'overlay imposé par §12.2 n'est pas vérifiable par `dumpsys` : il reste un
@@ -122,7 +124,7 @@ contrôle visuel, fait à l'œil pendant les campagnes.
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Source |
 | --- | --- | --- | --- |
-| Niumi retiré des récents après armement | alarme et blocage conservés | **OK** | `LOT-0.md` |
+| Niumi retiré des récents après armement | aucune carte à retirer pendant la session ; « Tout effacer » avec Niumi verrouillé : alarme et blocage conservés ; carte rendue à la fin | **OK avec parade** (2026-09-28). Sans parade, limite majeure mesurée deux fois (27/09 involontaire, 28/09 délibéré à 11:49:55) : HyperOS tue Niumi (`SwipeUpClean`, `adj 200` malgré le service lié) et ne relie plus le service d'accessibilité — blocage coupé, alarme conservée ; « Tout effacer » (`OneKeyClean`) tue aussi une tâche cachée (14:18) et un processus sans tâche (14:25). Le cadenas HyperOS ne protège pas d'un balayage individuel. **Parades livrées** : carte retirée des récents pendant la session (`setExcludeFromRecents`, drapeau vérifié dans `dumpsys`, carte rendue après le scan) ; verrou HyperOS exigé par le diagnostic (contrôle `RECENTS_LOCK`). « Tout effacer » avec verrou et carte cachée : Niumi vivant, service lié, Acrobat renvoyé à l'accueil (14:37, puis 14:39 après redémarrage, verrou conservé). Contrôle vérifié à 15:04–15:07 : vert en session, échec bloquant après retrait du cadenas, vert au retour. L'ancien « OK » de `LOT-0.md` ne portait que sur l'alarme, mesurée avec `am kill` | `ETAPE-25.md` |
 | processus tué après armement | alarme conservée, état réconcilié | **OK** — `am kill` ne tue pas le processus quand le service d'accessibilité est lié ; `run-as … kill -9` y parvient. Alarme conservée, réconciliation à la relance | `LOT-0.md`, `ETAPE-20.md` |
 | processus tué pendant `RINGING` | le watchdog réveille le processus, le son reprend | **OK** — son revenu à l'instant du tic déjà armé ; **cinq livraisons consécutives sous Doze profond forcé**, 58 à 62 s d'intervalle. Le quota Doze de 9 minutes ne s'applique pas (`exactAllowReason=policy_permission`) | `ETAPE-20.md` |
 | fermeture de `AlarmActivity` | sonnerie maintenue | **OK** | `ETAPE-03.md` |
@@ -133,6 +135,26 @@ contrôle visuel, fait à l'œil pendant les campagnes.
 | NFC désactivé pendant la sonnerie | instruction de réactivation, sonnerie maintenue | **OK** — incident `NFC_DISABLED` `CRITICAL` unique, session toujours `RINGING` | `ETAPE-04.md`, `ETAPE-20.md` |
 | NFC réactivé pendant la sonnerie | Reader Mode restauré, scan accepté | **OK** | `ETAPE-04.md` |
 | scan sur écran verrouillé | déverrouillage demandé si l'appareil l'exige | **Limite constructeur confirmée** — le boîtier n'est lu qu'après déverrouillage sur cet appareil. `AlarmActivity` s'affiche bien par-dessus le verrouillage (§4.4) | `ETAPE-04.md` |
+
+### Blocage différé (Lot 6)
+
+Neuf lignes ajoutées à §20 le 2026-09-15, mesurées aux étapes 24 et 25 (17, 24, 25, 27 et 28
+septembre). Permission OEM de démarrage automatique **refusée** pour toutes. Les retards sont
+comptés depuis l'instant contractuel `blockingStartsAtEpochMillis` jusqu'à
+`blockingAppliedAtEpochMillis`, lus dans la base de l'appareil ; le journal technique date
+`BLOCKING_STARTED`.
+
+| Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Retard mesuré | Source |
+| --- | --- | --- | --- | --- |
+| heure de début atteinte, écran éteint depuis 30 minutes | blocage appliqué à l'heure, `BLOCKING_STARTED` journalisé, retard < 1 min | **OK** (2026-09-28) — écran éteint depuis 44 min, alarme de début délivrée à 11:30:00.007, `BLOCKING_STARTED` journalisé, santé inchangée. Comme l'essai équivalent du réveil : téléphone branché, donc **pas en Doze profond** (`deep=ACTIVE`) — valide « écran éteint », pas « 30 min en Doze », mesuré à part (dernière ligne) | +245 ms | `ETAPE-25.md` |
+| application bloquée déjà au premier plan à l'heure de début | retour à l'accueil et overlay sans changement de fenêtre | **OK** — aucun blocage avant l'heure, retour à l'accueil sans changement de fenêtre, overlay présent ; mesuré par `tools/validate_blocking.sh --deferred` (2026-09-24) et à la main (2026-09-17) | 222 ms (sondage `dumpsys`), 308 ms | `ETAPE-24.md`, `ETAPE-25.md` |
+| processus tué avant l'heure de début | alarme de début conservée, blocage appliqué à l'heure | **Limite établie** (2026-09-25) — alarme de début **conservée** (relance du processus à 14:30:00.049 pour elle), mais le blocage **n'est pas appliqué** : sur HyperOS, la mort du processus délie le service d'accessibilité, que le système ne relie plus avant réactivation manuelle. Niumi le détecte (incident `BLOCKING_PERMISSION_REVOKED`, avertissement) ; après réactivation, blocage appliqué en retard avec `MISSED_BLOCKING_START_WINDOW`. Mort provoquée par `run-as … kill -9` ; voir aussi la ligne « Niumi retiré des récents » | +24 min après réactivation | `ETAPE-25.md` |
+| redémarrage avant l'heure de début, aucun déverrouillage | alarme de début reprogrammée depuis Direct Boot, blocage appliqué à l'heure après déverrouillage | **OK** — alarme de début reprogrammée 1 s après le démarrage, **au même instant**, avant tout déverrouillage (2026-09-24) ; variante plus dure le 2026-09-27 : téléphone **resté verrouillé** à l'heure de début, Niumi mort entre-temps, blocage appliqué pendant la phase verrouillée | +133 ms ; +465 ms verrouillé | `ETAPE-25.md` |
+| redémarrage après l'heure de début et avant le réveil | blocage appliqué à la réconciliation, `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes, réveil intact | **OK** (2026-09-28) — téléphone éteint à l'heure de début (9:55), rallumé 25 min après : blocage appliqué **pendant la phase verrouillée**, avant le déverrouillage, incident `MISSED_BLOCKING_START_WINDOW` (`WARNING`, santé inchangée), réveil reprogrammé et sonné à l'heure (+99 ms) | 25 min 55 s | `ETAPE-25.md` |
+| changement manuel d'heure entre l'activation et le début | même `blockingStartsAtEpochMillis` réenregistré, un seul incident `TIME_CHANGED` | **OK** (2026-09-27) — horloge reculée de 5 min puis rendue à l'heure automatique : les deux alarmes reprogrammées sans condition, **même epoch** ; un seul `TIME_CHANGED` sur les deux changements ; blocage appliqué à l'heure ensuite | +162 ms | `ETAPE-25.md` |
+| scan avant l'heure de début | `RELEASING` puis `CANCELLED`, alarme de début annulée, aucune application jamais bloquée | **OK** (2026-09-17) — `CANCELLED`, plus aucune alarme Niumi en attente | — | `ETAPE-24.md` |
+| service d'accessibilité désactivé avant l'heure de début | incident `BLOCKING_PERMISSION_REVOKED`, session conservée, blocage appliqué à l'heure si le service est réactivé avant | **OK** (2026-09-25) — incident et avertissement, session conservée `ARMED` ; service réactivé avant l'heure → blocage appliqué à l'heure, avertissement retiré par le processus suivant | +44 ms | `ETAPE-25.md` |
+| Doze forcé à l'heure de début | alarme de début délivrée à l'heure, comme le watchdog de §4.2 | **OK** (2026-09-24) — Doze profond (`deep=IDLE`), téléphone débranché, adb par Wi-Fi ; `exactAllowReason=policy_permission`. **La seconde dérogation de §9.1 tient** sur cet appareil. Réserve : point d'accès Wi-Fi du téléphone actif pendant l'essai | +77 ms (réception), +91 ms (blocage) | `ETAPE-25.md` |
 
 ### Arrêts système et corruption
 
@@ -159,8 +181,8 @@ en fonctionnement.
 
 | | Lignes |
 | --- | --- |
-| Mesurées et conformes | 27 |
-| Mesurées, limite établie et documentée | 4 (silence total, arrêt forcé, NFC verrouillé, restriction d'énergie constructeur) |
+| Mesurées et conformes | 35 (dont 8 des 9 lignes du blocage différé, et le retrait des récents, conforme avec parade) |
+| Mesurées, limite établie et documentée | 5 (silence total, arrêt forcé, NFC verrouillé, restriction d'énergie constructeur, **processus tué avant l'heure de début** — mesurée à l'étape 25 : sur HyperOS, le service d'accessibilité n'est plus relié après la mort du processus) |
 | Non reproductibles sur cet appareil | 1 (arrêt du seul FGS) |
 | Non testées faute d'appareil, de matériel audio ou de second tag | 12 |
 | Non testées sur le build release | 2 |

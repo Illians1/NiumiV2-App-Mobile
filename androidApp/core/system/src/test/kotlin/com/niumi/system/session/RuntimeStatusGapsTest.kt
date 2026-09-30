@@ -18,6 +18,7 @@ class RuntimeStatusGapsTest {
             fullScreenReady = true,
             nfcReady = true,
             audioReady = true,
+            nfcEvaluable = true,
         )
 
     @Test
@@ -58,6 +59,28 @@ class RuntimeStatusGapsTest {
         }
     }
 
+    /**
+     * Étape 25 : un NFC qui ne peut pas être jugé — appareil pas encore déverrouillé, ou démarrage
+     * trop récent — ne produit aucun écart, même lu « désactivé ». « Non jugeable » n'est pas
+     * « prêt » : le champ `nfcReady` garde sa valeur, seule la conclusion est retenue.
+     */
+    @Test
+    fun anNfcThatCannotBeJudgedYetIsNeverAGap() {
+        val status = healthy.copy(nfcReady = false, nfcEvaluable = false)
+
+        SessionStateDto.entries.forEach { state ->
+            assertThat(RuntimeStatusGaps.of(status, state)).doesNotContain(RuntimeGap.NFC_DISABLED)
+        }
+    }
+
+    /** Le drapeau ne concerne que le NFC : une alarme disparue reste un écart. */
+    @Test
+    fun anUnjudgeableNfcDoesNotHideAMissingAlarm() {
+        val status = healthy.copy(alarmScheduled = false, nfcReady = false, nfcEvaluable = false)
+
+        assertThat(RuntimeStatusGaps.of(status, SessionStateDto.ARMED)).containsExactly(RuntimeGap.ALARM_NOT_SCHEDULED)
+    }
+
     /** Une activation interrompue n'a jamais promis de scan : pas d'écart NFC en `PREPARING`. */
     @Test
     fun nfcDisabledIsNotAGapDuringPreparing() {
@@ -68,7 +91,7 @@ class RuntimeStatusGapsTest {
 
     @Test
     fun noGapOutlivesASession() {
-        val status = SessionRuntimeStatus(false, false, false, false, false, false)
+        val status = SessionRuntimeStatus(false, false, false, false, false, false, nfcEvaluable = true)
 
         listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED).forEach { state ->
             assertThat(RuntimeStatusGaps.of(status, state)).isEmpty()
@@ -91,6 +114,7 @@ class RuntimeStatusGapsTest {
                 fullScreenReady = false,
                 nfcReady = true,
                 audioReady = false,
+                nfcEvaluable = true,
             )
 
         SessionStateDto.entries.forEach { state ->

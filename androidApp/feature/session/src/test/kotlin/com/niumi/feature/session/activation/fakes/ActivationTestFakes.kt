@@ -35,7 +35,7 @@ class CallJournal {
 class RecordingReadinessChecker(
     private val journal: CallJournal,
     var reportForNull: ReadinessReport,
-    var reportForCandidate: (candidateTriggerAtEpochMillis: Long) -> ReadinessReport,
+    var reportForCandidate: suspend (candidateTriggerAtEpochMillis: Long) -> ReadinessReport,
 ) : DeviceReadinessChecker {
     /** Dernière entrée reçue : le Lot 6 doit prouver que le début de blocage candidat y parvient. */
     var lastInput: ReadinessInput? = null

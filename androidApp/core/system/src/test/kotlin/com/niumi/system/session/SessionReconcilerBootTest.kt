@@ -9,6 +9,9 @@ import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.EventReceipt
 import com.niumi.database.StoredDecision
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.system.blocking.AccessibilityServiceState
+import com.niumi.system.readiness.ReadinessCheckId
+import com.niumi.system.readiness.UnlockSettling
 import com.niumi.system.session.fakes.SessionDtoFixtures
 import com.niumi.system.session.fakes.TestCoordinatorHarness
 import kotlinx.coroutines.test.runTest
@@ -64,6 +67,138 @@ class SessionReconcilerBootTest {
                 .doesNotContain(IncidentCodes.BLOCKING_PERMISSION_REVOKED)
             assertThat(harness.warningNotifier.presented).isEmpty()
             assertThat(harness.gateway.load().healthOrNull()).isEqualTo(SessionHealthDto.HEALTHY)
+        }
+
+    /**
+     * **Défaut mesuré sur appareil le 2026-09-24 (étape 25), corrigé ici.** Au démarrage, la pile
+     * NFC du système n'a pas fini de s'initialiser : l'adaptateur se lit « désactivé » alors que le
+     * NFC est allumé. Deux passes tournent pendant la fenêtre verrouillée — `PROCESS_START` et
+     * `LOCKED_BOOT` —, et chacune consignait un `NFC_DISABLED` `CRITICAL`, le dédoublonnage étant
+     * aveugle avant déverrouillage : deux faux incidents, une session `DEGRADED` sans retour
+     * possible, et l'écran 7 qui demandait de réactiver un NFC déjà actif. Le NFC n'est désormais
+     * jugé ni avant le premier déverrouillage, ni pendant les premières secondes après le démarrage.
+     */
+    @Test
+    fun aLockedBootNeverReportsTheNfcAsDisabledWhileTheDeviceIsStillLocked() =
+        runTest {
+            val harness = armedSession(nowEpochMillis = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS - TEN_MINUTES)
+            // Ce que voit Niumi en Direct Boot : appareil verrouillé, pile NFC pas encore prête,
+            // incidents illisibles et non inscriptibles avant déverrouillage (SPEC_ANDROID §7.3).
+            harness.readinessSources.unlockState.isUserUnlocked = false
+            harness.runtimeStatusProbe.nfcReady = false
+            harness.reconcilerIncidentsReader.unreadable = true
+            harness.gateway.incidentRecordingAllowed = false
+
+            harness.coordinator.reconcile(ReconcileReason.PROCESS_START)
+            harness.coordinator.reconcile(ReconcileReason.LOCKED_BOOT)
+
+            assertThat(harness.technicalEventLog.logged).doesNotContain(TechnicalEventType.NFC_DISABLED)
+            assertThat(harness.gateway.load().healthOrNull()).isEqualTo(SessionHealthDto.HEALTHY)
+        }
+
+    /**
+     * **Défaut mesuré sur appareil le 2026-09-27 (étape 25), corrigé ici.** Android relie le service
+     * d'accessibilité **après** le déverrouillage, pas instantanément : 0,3 s après celui-ci, Niumi
+     * restait inscrit mais `accessibility_enabled` valait 0, et la passe `USER_UNLOCKED` consignait
+     * un `BLOCKING_PERMISSION_REVOKED` `CRITICAL` mensonger — session `DEGRADED` sans retour, à chaque
+     * redémarrage. L'étape 19 avait neutralisé le contrôle **avant** le déverrouillage, pas la
+     * seconde qui le suit.
+     */
+    @Test
+    fun anUnlockDoesNotReportTheAccessibilityServiceWhileAndroidIsStillBindingIt() =
+        runTest {
+            val harness = armedSession(nowEpochMillis = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS - TEN_MINUTES)
+            harness.alarmScheduler.cancel(SessionDtoFixtures.SESSION_ID)
+            harness.readinessSources.justUnlocked()
+            harness.accessibilityServiceStatus.state = AccessibilityServiceState.PENDING
+
+            val result = harness.coordinator.reconcile(ReconcileReason.USER_UNLOCKED)
+
+            assertThat(result.actions)
+                .contains(ReconcileAction.AlarmRescheduled(SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS))
+            assertThat(harness.gateway.incidentsRecorded.map { it.second.code })
+                .doesNotContain(IncidentCodes.BLOCKING_PERMISSION_REVOKED)
+            assertThat(harness.warningNotifier.presented).isEmpty()
+            assertThat(harness.gateway.load().healthOrNull()).isEqualTo(SessionHealthDto.HEALTHY)
+        }
+
+    /**
+     * Non-régression de l'essai 3 (2026-09-25) : après une mort du processus sur HyperOS, Android ne
+     * relie plus le service tant que l'utilisateur ne l'a pas réactivé. Passé la fenêtre de liaison,
+     * l'incident et l'avertissement arrivent, et la garde de permission s'applique comme avant.
+     */
+    @Test
+    fun aServiceStillUnboundAfterTheBindingWindowIsReportedAsBefore() =
+        runTest {
+            val harness = armedSession(nowEpochMillis = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS - TEN_MINUTES)
+            harness.readinessSources.justUnlocked()
+            harness.accessibilityServiceStatus.state = AccessibilityServiceState.PENDING
+            harness.coordinator.reconcile(ReconcileReason.USER_UNLOCKED)
+            harness.readinessSources.uptimeClock.elapsedMillis += UnlockSettling.GRACE_MILLIS
+
+            harness.coordinator.reconcile(ReconcileReason.FOREGROUND)
+
+            assertThat(harness.gateway.incidentsRecorded.map { it.second.code })
+                .contains(IncidentCodes.BLOCKING_PERMISSION_REVOKED)
+            assertThat(harness.warningNotifier.presented).contains(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+        }
+
+    /**
+     * **Mesuré sur appareil le 2026-09-27 à 19:38, corrigé ici.** Sur ce Xiaomi, le service NFC ne
+     * démarre qu'**après** le déverrouillage : absent jusqu'à 44,2 s de démarrage, stable à 53,6 s,
+     * pour un déverrouillage à 40,4 s. La garde de 30 s **depuis le démarrage** avait expiré avant
+     * le déverrouillage même, et `USER_UNLOCKED` consignait un `NFC_DISABLED` mensonger 1,8 s après.
+     * Le NFC suit désormais la fenêtre qui court à partir du déverrouillage, comme l'accessibilité.
+     */
+    @Test
+    fun anNfcStackStartingAfterTheUnlockIsNotReported() =
+        runTest {
+            val harness = armedSession(nowEpochMillis = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS - TEN_MINUTES)
+            harness.readinessSources.uptimeClock.elapsedMillis = 40_400L
+            harness.readinessSources.justUnlocked()
+            harness.readinessSources.uptimeClock.elapsedMillis = 42_200L
+            harness.runtimeStatusProbe.nfcReady = false
+
+            harness.coordinator.reconcile(ReconcileReason.USER_UNLOCKED)
+
+            assertThat(harness.technicalEventLog.logged).doesNotContain(TechnicalEventType.NFC_DISABLED)
+            assertThat(harness.gateway.load().healthOrNull()).isEqualTo(SessionHealthDto.HEALTHY)
+        }
+
+    /** Juste avant la fin de la fenêtre qui suit le déverrouillage : le NFC n'est toujours pas jugé. */
+    @Test
+    fun aFastUnlockRightAfterBootStillLeavesTheNfcUnjudged() =
+        runTest {
+            val harness = armedSession(nowEpochMillis = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS - TEN_MINUTES)
+            harness.readinessSources.justUnlocked()
+            harness.readinessSources.uptimeClock.elapsedMillis += UnlockSettling.GRACE_MILLIS - 1
+            harness.runtimeStatusProbe.nfcReady = false
+
+            harness.coordinator.reconcile(ReconcileReason.USER_UNLOCKED)
+
+            assertThat(harness.technicalEventLog.logged).doesNotContain(TechnicalEventType.NFC_DISABLED)
+            assertThat(harness.gateway.load().healthOrNull()).isEqualTo(SessionHealthDto.HEALTHY)
+        }
+
+    /**
+     * Contre-épreuve : la garde ne rend pas le NFC muet. Réellement coupé, il est signalé dès qu'il
+     * peut être jugé — et une seule fois sur deux passes, le lecteur d'incidents étant redevenu
+     * lisible après déverrouillage.
+     */
+    @Test
+    fun aReallyDisabledNfcIsReportedOnceItCanBeJudged() =
+        runTest {
+            val harness = armedSession(nowEpochMillis = SessionDtoFixtures.TRIGGER_AT_EPOCH_MILLIS - TEN_MINUTES)
+            harness.readinessSources.justUnlocked()
+            harness.readinessSources.uptimeClock.elapsedMillis += UnlockSettling.GRACE_MILLIS
+            harness.runtimeStatusProbe.nfcReady = false
+
+            harness.coordinator.reconcile(ReconcileReason.USER_UNLOCKED)
+            harness.coordinator.reconcile(ReconcileReason.BOOT)
+
+            val nfcIncidents = harness.gateway.incidentsRecorded.filter { it.second.code == IncidentCodes.NFC_DISABLED }
+            assertThat(nfcIncidents).hasSize(1)
+            assertThat(harness.gateway.load().healthOrNull()).isEqualTo(SessionHealthDto.DEGRADED)
         }
 
     /**

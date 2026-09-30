@@ -39,7 +39,9 @@ campagne sur appareil : chacun de ces points a coûté du temps ou faussé un r�
   l'appareil.
 - **Le diagnostic NFC est brièvement faux après un redémarrage** : la pile NFC du système finit son
   initialisation après le boot. Le contrôle se corrige seul au retour au premier plan
-  (`ForegroundReadinessTrigger`). Ne pas conclure à un défaut sans réessayer.
+  (`ForegroundReadinessTrigger`). Ne pas conclure à un défaut sans réessayer. **Ce n'était pas
+  qu'un affichage** : jusqu'à l'étape 25, le même faux négatif devenait un incident `NFC_DISABLED`
+  persisté, en double, sur toute session armée au moment du redémarrage (point de vigilance 11).
 - **La permission OEM « Démarrage automatique en arrière-plan » a été laissée activée** à l'issue de
   l'étape 19, alors qu'elle est refusée par défaut. **La remettre à « refusé »** avant toute mesure
   qui en dépend, sans quoi le résultat ne vaut pas pour un utilisateur ordinaire.
@@ -72,7 +74,7 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 | AGP | 9.1.1 | Exigé par Compose BOM 2026.08 pour compileSdk 37 ; JDK 17 ; Kotlin intégré (ne pas appliquer `org.jetbrains.kotlin.android`). Était un patch au-dessus du maximum testé par KGP 2.4.10 (9.1.0) ; **désormais bien à l'intérieur** de la matrice de KGP 2.4.20 (max 9.3.1) |
 | Gradle | 9.5.0 | Était le maximum testé par KGP 2.4.10 ; KGP 2.4.20 teste jusqu'à 9.7.0, la marge est donc plus large qu'à l'étape 1 |
 | Compose BOM | 2026.09.00 | Compose 1.12.1, material3 1.4.0 (résolution vérifiée). Montée depuis 2026.08.00 (Compose 1.12.0) le 2026-09-11, voir « Montée de versions » ci-dessous |
-| Navigation Compose | 2.10.1 | Montée depuis 2.10.0 le 2026-09-11 |
+| Navigation Compose | 2.10.2 | Montée depuis 2.10.0 le 2026-09-11, puis depuis 2.10.1 le 2026-09-24 (`:app:lintDebug` en erreur `GradleDependency`). Seul contenu de 2.10.2 selon les notes officielles : dépendance `androidx.lifecycle` portée à 2.10.0 — sans effet ici, le projet déclarant déjà Lifecycle 2.11.0, qui reste la version résolue |
 | Room | 2.8.5 | KSP2. Montée depuis 2.8.4 le 2026-09-11 |
 | DataStore | 1.2.1 | `createInDeviceProtectedStorage()` disponible |
 | Hilt / androidx.hilt | 2.60.1 / 1.4.0 | Reconfirmé à l'étape 1 |
@@ -137,9 +139,11 @@ Signalés ici pour que l'exécutant ne les découvre pas en cours de route.
 8. **Acceptation Google Play de l'AccessibilityService.** Risque produit bloquant (SPEC_ANDROID §12.3, §23). Traité à la porte 0, jamais présumé acquis.
 9. **`kotlinx-datetime` 0.8.** Les types `Instant` et `Clock` sont dans `kotlin.time` ; les tests reçoivent `nowEpochMillis` explicitement (SPEC_CORE_KMP §8.2).
 10. **Tout dépôt en stockage chiffré par les identifiants porte une garde de déverrouillage (étape 19).** La règle de SPEC_ANDROID §7.3 ne vaut pas que pour Room. Mesuré sur appareil : une instance de `DataStore` créée avant le premier déverrouillage continue de servir un état vide **après** celui-ci, pour toute la durée de vie du processus — la sélection d'applications de l'utilisateur devenait invisible. La garde doit empêcher l'instance de **naître** (`Provider<Context>` jamais résolu), pas seulement ignorer son résultat. Tout nouveau dépôt de ce type ajouté aux étapes suivantes doit suivre ce patron : `RoomSessionStore`, `DataStoreAppSelectionStore`, `DataStoreSetupPreferences`.
-11. **Un contrôle de diagnostic ne peut pas être évalué à l'aveugle avant déverrouillage (étape 19).** Le contrôle `ACCESSIBILITY_SERVICE` tombait en échec parce qu'Android remet `accessibility_enabled` à 0 tant qu'aucun service n'est lié — il refuse de lier un service non `directBootAware`. Le résultat : un incident `CRITICAL` mensonger, et surtout la garde de permission du réconciliateur interrompait la passe **avant la reprogrammation de l'alarme**. Avant d'ajouter ou de modifier un contrôle de §13, se demander ce qu'il peut honnêtement dire quand l'appareil est verrouillé : `NOT_APPLICABLE` est une réponse valide.
+11. **Un contrôle de diagnostic ne peut pas être évalué à l'aveugle avant déverrouillage (étape 19).** Le contrôle `ACCESSIBILITY_SERVICE` tombait en échec parce qu'Android remet `accessibility_enabled` à 0 tant qu'aucun service n'est lié — il refuse de lier un service non `directBootAware`. Le résultat : un incident `CRITICAL` mensonger, et surtout la garde de permission du réconciliateur interrompait la passe **avant la reprogrammation de l'alarme**. Avant d'ajouter ou de modifier un contrôle de §13, se demander ce qu'il peut honnêtement dire quand l'appareil est verrouillé : `NOT_APPLICABLE` est une réponse valide. **Le NFC y est tombé à son tour (étape 25) :** `SessionRuntimeReconciler` lisait « NFC désactivé » pendant que la pile NFC s'initialisait au démarrage, consignait un `NFC_DISABLED` `CRITICAL` à chacune des deux passes verrouillées — le dédoublonnage relisant des incidents illisibles avant déverrouillage — et laissait la session `DEGRADED` jusqu'à sa fin. Le NFC n'est désormais jugé qu'une fois refermée la fenêtre de 30 s qui suit le déverrouillage (`SessionNfcEvaluability` sur `UnlockSettling`, SPEC_ANDROID §13.1). Tout nouveau contrôle lu pendant la fenêtre de démarrage se pose aussi la question du temps : « prêt » se mesure, il ne se suppose pas. **Le déverrouillage a lui aussi sa fenêtre (étape 25) :** Android relie le service d'accessibilité après le déverrouillage, et le contrôle le lisait « désactivé » 0,3 s après — d'où `UnlockSettling` et `AccessibilityServiceState.PENDING`.
 12. **`ARMED` ne signifie plus « applications bloquées » (Lot 6, contrat KMP 1.3).** Depuis le blocage différé, une session `ARMED` peut attendre son instant de début sans qu'aucune application soit bloquée ; c'est `blockingAppliedAtEpochMillis` (ou l'aide `isBlockingPending`) qui le dit, jamais l'état seul, et le compilateur ne signale aucun des lecteurs qui supposaient le contraire. Ceux qu'il faut auditer à la main à l'étape 23 : `RoomBlockedPackagesSource` (les deux `when`, Room et Direct Boot), `ActiveSessionTexts.stateLabel` et le titre de la liste d'applications de l'écran 7 (étape 24), et les trois phrases de spec déjà corrigées (SPEC_CORE_KMP §4, SPEC_ANDROID §3 et §12.2). Tout le reste de ce que `ARMED` déclenche — alarme programmée, six contrôles de §13.1, scan avant l'heure vers `CANCELLED`, règles `TRIGGER_ELAPSED` — reste identique, et c'est voulu.
 13. **Le repli du moteur n'est pas une permission de manquer l'alarme de début.** `ALARM_FIRED` et `TRIGGER_ELAPSED` appliquent eux-mêmes un blocage encore en attente (SPEC_CORE_KMP §5.1) : c'est un filet pour qu'aucune sonnerie ne parte sans blocage, pas un chemin normal. Le chemin normal est `BlockingStartReceiver` à l'heure, puis `SessionReconciler` au premier réveil du processus. Un test qui n'observerait le blocage qu'au réveil prouverait le filet, pas la fonctionnalité.
+14. **`niumi_alarm.wav` ne se retire qu'avec le code qui le remplace (constaté le 2026-09-24).** Le fichier avait été supprimé de `androidApp/feature/ringing/src/main/res/raw/` sans changement de code, ce qui cassait le build : `RingingModule` référence `R.raw.niumi_alarm`, `AlarmRingingService` et `NiumiRingtones` portent la clé `"niumi_alarm"` en dur, `NiumiAlarmWavTest` lit le fichier. **Il a été remis le jour même, identique au commit** : le dépôt compile et tous les tests passent. Les quatre nouveaux fichiers (`niumi_bell`, `niumi_energique`, `niumi_oiseaux`, `niumi_piano`) sont présents dans l'arbre de travail, non suivis par git et référencés par aucune ligne de code — mais une ressource `raw` est empaquetée même inutilisée, ce qui alourdit l'APK debug de ~12,6 Mo jusqu'à l'étape 26 (la réduction de ressources de la variante release les retire tant qu'ils ne sont pas référencés). Règle pour l'étape 26 : supprimer `niumi_alarm.wav`, brancher les quatre clés et remplacer `NiumiAlarmWavTest` **dans un seul changement**, jamais le fichier d'abord.
+15. **Une clé de sonnerie inconnue rend le réveil muet.** `MediaPlayerAlarmPlayerFactory` fait `requireNotNull(resolver.resourceId(key))` : une clé sans ressource devient `Failure("ANDROID_AUDIO_START_FAILED")`, `AUDIO_START_FAILED` est journalisé, et aucun son ne sort — la session reste `RINGING` en silence. Toute session armée avec `"niumi_alarm"` avant la mise à jour est dans ce cas, en Room v3 comme dans la projection Direct Boot v2. Deux filets, tous deux obligatoires à l'étape 26 : `MIGRATION_3_4` réécrit la clé en base, et `RingingSoundResolver` replie toute clé que `NiumiRingtones` ne connaît pas sur la sonnerie par défaut. Le second vaut aussi pour la projection Direct Boot, que la migration Room n'atteint pas avant la fusion, et pour toute clé retirée du catalogue à l'avenir.
 
 ## Interfaces transverses
 
@@ -389,6 +393,90 @@ fun interface BlockingActivationListener { fun onBlockingActivated(state: Blocke
 // :app (étapes 23 et 24)
 // NiumiComponent : + BLOCKING_START_RECEIVER, résolu par AppComponentResolver
 // NiumiRoute.Summary(localTimeIso: String, blockingLocalTimeIso: String? = null) — transporte le choix, jamais l'instant calculé
+```
+
+### Ajouts du Lot 7 (étapes 26 à 28)
+
+Définis ici une fois, créés à l'étape indiquée, consommés ensuite sans renommage. Le contrat KMP
+n'est pas touché : la sonnerie est une donnée de plateforme (SPEC_ANDROID §7.2, hors snapshot commun).
+
+```kotlin
+// :core:system — com.niumi.system.audio (étape 26, SPEC_ANDROID §10.2)
+data class Ringtone(val key: String, val label: String)
+object NiumiRingtones {
+    const val DEFAULT_KEY = "niumi_bell"              // était "niumi_alarm" jusqu'au Lot 7
+    const val LEGACY_KEY = "niumi_alarm"              // clé du MVP : réécrite par MIGRATION_3_4, repliée par RingingSoundResolver
+    val ALL: List<Ringtone>                           // ("niumi_bell", "Cloche"), ("niumi_energique", "Énergique"),
+                                                      // ("niumi_oiseaux", "Oiseaux"), ("niumi_piano", "Piano") — ordre d'affichage
+    fun byKey(key: String): Ringtone?                 // null si inconnue
+}
+data class VolumeRamp(val durationMs: Long, val startedAtEpochMillis: Long)   // absent (null) = volume constant
+object VolumeRampDurations { val SECONDS = listOf(30, 60, 120, 300); const val DEFAULT_SECONDS = 60 }
+object VolumeRampPolicy {
+    const val TICK_MS = 250L
+    const val START_AMPLITUDE = 0.01f                 // −40 dB
+    fun amplitudeAt(elapsedMs: Long, durationMs: Long): Float   // 10^(−2·(1−p)), p = elapsed/duration borné à [0, 1] ; 1f si durationMs ≤ 0
+    fun isComplete(elapsedMs: Long, durationMs: Long): Boolean
+}
+data class AlarmSound(val ringtoneKey: String, val vibrationEnabled: Boolean, val volumeRamp: VolumeRamp?)
+interface AlarmAudioEngine {                          // remplace start(ringtoneKey, vibrationEnabled) défini plus haut
+    fun start(sound: AlarmSound): OperationResult     // idempotent (AlreadySatisfied) ; la rampe est pilotée ici, jamais par le service
+    fun stop(): OperationResult                       // annule la rampe
+    val isPlaying: Boolean
+}
+// AlarmAudioConfiguration : + initialAmplitude: Float (1f sans rampe, START_AMPLITUDE avec) ; AlarmPlayer : + fun setVolume(amplitude: Float)
+// DefaultAlarmAudioEngine(playerFactory, focusController, vibrationController, clock: Clock, rampScope: CoroutineScope)
+//   — toutes les TICK_MS : player.setVolume(VolumeRampPolicy.amplitudeAt(clock.nowEpochMillis() − startedAt, durationMs)) jusqu'à isComplete
+interface RingtonePreviewPlayer {                     // écran 14 seulement ; jamais AlarmAudioEngine, jamais le service
+    fun play(ringtoneKey: String): OperationResult    // USAGE_ALARM, looping = false, initialAmplitude 1f, focus transitoire ; remplace une lecture en cours
+    fun stop()                                        // idempotent
+    val isPlaying: Boolean
+}
+// RingtoneResourceResolver inchangé ; RingtoneResources (:feature:ringing) le remplit pour les quatre clés, null sinon
+
+// :core:system — com.niumi.system.ringing (étape 26)
+data class ResolvedAlarmSound(val sound: AlarmSound, val fallback: Boolean)
+object RingingSoundResolver {
+    fun resolve(loaded: LoadResult, sessionId: String, nowEpochMillis: Long): ResolvedAlarmSound
+    // Present et même sessionId : clé des extras si NiumiRingtones la connaît, sinon DEFAULT_KEY et fallback = true ;
+    //   vibrationEnabled des extras ; VolumeRamp(volumeRampSeconds × 1000, snapshot.ringingAtEpochMillis ?: now) si volumeRampSeconds non nul.
+    // Absent, Unreadable, autre sessionId : AlarmSound(DEFAULT_KEY, true, null), fallback = false — le réveil ne se tait jamais.
+}
+// TechnicalEventType : + RINGTONE_FALLBACK (§17, ajouté à la liste fermée à l'étape 26)
+
+// :core:system — com.niumi.system.audio (étape 27)
+data class AlarmSoundSettings(val ringtoneKey: String = NiumiRingtones.DEFAULT_KEY, val volumeRampSeconds: Int? = null)
+interface AlarmSoundPreferences { suspend fun read(): AlarmSoundSettings; suspend fun write(settings: AlarmSoundSettings) }
+// DataStoreAlarmSoundPreferences(contextProvider: Provider<Context>, unlockState: UnlockState) — fichier niumi_alarm_sound,
+//   même garde que DataStoreSetupPreferences : lecture neutre (défauts) avant déverrouillage, écriture refusée (DATASTORE_BEFORE_UNLOCK)
+
+// :core:database (étape 26)
+// AndroidSessionExtras : + volumeRampSeconds: Int? (figé à l'activation par freezeFrom, comme ringtoneKey)
+// AlarmSessionEntity : + volumeRampSeconds: Int? ; NiumiDatabase version = 4 ; MIGRATION_3_4 : ADD COLUMN volumeRampSeconds INTEGER,
+//   puis UPDATE alarm_session SET ringtoneKey = 'niumi_bell' WHERE ringtoneKey = 'niumi_alarm' ; schemas/4.json
+// DirectBootSnapshot.Active : + volumeRampSeconds: Int? = null ; DIRECT_BOOT_PROJECTION_SCHEMA_VERSION = 3 ;
+//   lecture d'un fichier v1 ou v2 : volumeRampSeconds = null, et LEGACY_KEY lue comme DEFAULT_KEY (DirectBootMapper)
+
+// :feature:ringing (étape 26)
+// RingtoneResources.resourceId(key: String): Int? — table des quatre R.raw, liée par RingingModule
+// AlarmRingingService.startRinging(sessionId) : startForeground, wake lock, surveillance, puis dans serviceScope :
+//   audioEngine.start(RingingSoundResolver.resolve(gateway.load(), sessionId, clock.nowEpochMillis()).sound) ;
+//   recover() passe le LoadResult déjà chargé. La constante RINGTONE_KEY disparaît.
+
+// :feature:session (étape 27)
+// ActivationSources : + alarmSoundPreferences: AlarmSoundPreferences
+// ArmSessionUseCase.arm : extras.ringtoneKey = settings.ringtoneKey si NiumiRingtones.byKey != null, sinon DEFAULT_KEY ;
+//   extras.volumeRampSeconds = settings.volumeRampSeconds — lu au moment d'armer, jamais transporté par la route
+// ringtone/RingtoneUiState(settings: AlarmSoundSettings, ringtones: List<Ringtone> = NiumiRingtones.ALL, previewingKey: String?,
+//   isAlarmVolumeZero: Boolean, message: String?, isLoading: Boolean)
+// ringtone/RingtoneViewModel : onRingtoneSelected(key), onPreviewToggled(key), onVolumeRampEnabledChanged(enabled),
+//   onVolumeRampSecondsChanged(seconds), onPause(), refresh()
+// ui/AlarmSoundTexts.summary(settings): "Cloche · volume constant" / "Piano · volume progressif sur 5 min" ;
+//   durationLabel(30) = "30 s", (60) = "1 min", (120) = "2 min", (300) = "5 min"
+// WakeTimeUiState : + alarmSoundSummary: String ; WakeTimeActions : + onOpenRingtone ; SummaryUiState : + alarmSoundSummary: String
+
+// :app (étape 27)
+// NiumiRoute.Ringtone (data object, écran 14), enregistrée dans NiumiNavHost avec son écran ; atteinte depuis WakeTime, retour par la pile
 ```
 
 ---
@@ -790,7 +878,7 @@ l'utilisateur ; le contributeur ne survit que pour la route POC de debug, suppri
 
 **Produit :** `DeviceReadinessChecker`, `ReadinessDtoMapper`, `NiumiNavHost`, écrans 1, 2 et 12.
 
-- [x] **Écrire `AndroidDeviceReadinessCheckerTest`** ligne par ligne du tableau §13, implémenter. Inclure le cas mesuré à l'étape 6 : `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` → `BLOCKING_FOR_ALARM` avec `OpenDndSettings` ; les autres filtres → `WARNING`. *(12a. Quatorze contrôles, pas treize. Trois écarts documentés dans SPEC_ANDROID §13 et `ETAPE-12A.md` : issue à trois valeurs `PASSED`/`FAILED`/`NOT_APPLICABLE` plutôt qu'un booléen ; les trois contrôles de parcours routés vers les champs dédiés d'`ActivationPolicyInputDto` au lieu de sa liste `checks` ; contrôle d'énergie satisfait par la confirmation de l'utilisateur, `isIgnoringBatteryOptimizations()` ne choisissant que le recours proposé.)*
+- [x] **Écrire `AndroidDeviceReadinessCheckerTest`** ligne par ligne du tableau §13, implémenter. Inclure le cas mesuré à l'étape 6 : `currentInterruptionFilter == INTERRUPTION_FILTER_NONE` → `BLOCKING_FOR_ALARM` avec `OpenDndSettings` ; les autres filtres → `WARNING`. *(12a. Quatorze contrôles, pas treize. Trois écarts documentés dans SPEC_ANDROID §13 et `ETAPE-12A.md` : issue à trois valeurs `PASSED`/`FAILED`/`NOT_APPLICABLE` plutôt qu'un booléen ; les trois contrôles de parcours routés vers les champs dédiés d'`ActivationPolicyInputDto` au lieu de sa liste `checks` ; contrôle d'énergie satisfait par la confirmation de l'utilisateur, `isIgnoringBatteryOptimizations()` ne choisissant que le recours proposé. **Révisé le 2026-09-28 (étape 25)** : la mesure montre que la liste blanche AOSP reflète exactement le réglage HyperOS ; le contrôle est désormais détecté et la confirmation retirée, voir `ETAPE-25.md`.)*
 - [x] **Écrire `ReadinessViewModelTest`**, implémenter avec `NiumiCoreFacade.evaluateActivation`. *(12b. Le ViewModel ne décide rien : il rejoue `DeviceReadinessChecker`, convertit par `toActivationPolicyInput()` et laisse la façade trancher — le test passe par la **vraie** `NiumiCoreFacade`, jamais par une politique simulée. Écart : les neuf messages manquants de §13 ont été rédigés et ajoutés à la spec dans le même changement (`ReadinessMessages`, 14 contrôles, exhaustivité prouvée sur `entries`). `ReadinessActionIntents` a été ajouté — non prévu au plan — parce que §13 interdit à `:core:system` de construire des `Intent` ; un test instrumenté énumère les quatorze actions et prouve qu'aucune ne produit `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` ni `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.)*
 - [x] **Implémenter la surveillance de session** (SPEC_ANDROID §13.1, ajoutée à l'étape 6) : `DeviceReadinessChecker` réexécuté à chaque réconciliation, à chaque passage au premier plan, sur `ACTION_INTERRUPTION_FILTER_CHANGED` (receiver enregistré à chaud) et au déclenchement ; tout contrôle bloquant devenu faux pendant `ARMED` produit l'incident correspondant (`ANDROID_ALARM_MUTED_BY_DND`, `ANDROID_ALARM_VOLUME_ZERO`, `ANDROID_NOTIFICATIONS_REVOKED`, `ANDROID_FULL_SCREEN_REVOKED`, ou les codes communs `BLOCKING_PERMISSION_REVOKED` / `ALARM_PERMISSION_REVOKED`), une notification du canal `niumi_session_warning` et l'événement `SESSION_READINESS_DEGRADED`. Ne jamais utiliser l'`AccessibilityService` comme sentinelle (§13.1). Tests : chaque contrôle bloquant qui bascule pendant `ARMED` → un incident et une notification, une seule fois tant que l'état ne change pas. *(12a. `SessionReadinessMonitor` remplace les deux contrôles ad hoc que `SessionReconciler` portait depuis l'étape 11 ; `AccessibilityServiceStatus` sort de `ReconcilerSources` au profit du moniteur. Le déclencheur « au déclenchement, avant la sonnerie » reste à l'étape 17, et `MainActivity.ON_RESUME` à la passe 12b.)*
 - [x] **Écrire `OnboardingScreenTest` et `ReadinessScreenTest`**, implémenter les écrans avec TalkBack (`contentDescription` sur chaque action) et bord à bord. *(12b. Décision validée : ces deux tests sont **instrumentés** (`androidTest`), comme `AccessibilityConsentScreenTest` — aucun test Compose ne tourne en JVM dans ce dépôt et Robolectric n'y est pas introduit. La logique testable sans rendu — textes, ordre des contrôles, action unique — reste couverte en JVM par des objets purs. Décision validée le 2026-09-11 : **onboarding en page unique défilante**, et non un pager — tout le contenu passe devant l'utilisateur dans l'ordre, y compris sous TalkBack, et la case reste l'unique passage. Six points et non quatre : §13 et §13.1 en ajoutent deux, la réinitialisation possible de l'exemption d'énergie par une mise à jour et le caractère jamais immédiat de l'avertissement.)*
@@ -1553,11 +1641,11 @@ la matrice et le rapport.
 
 **Produit :** le Lot 6 prouvé sur appareil dans le périmètre §4.1, documenté dans l'application et dans les documents de release.
 
-- [ ] **Étendre les scripts `tools/`** et `ProcessDeathInstrumentedTest` ; exécuter les scripts sur l'appareil branché (`adb devices` d'abord).
-- [ ] **Dérouler les neuf scénarios « blocage différé » de §20**, un par un, en consignant modèle, version, permissions, retard et logs. Le scénario « Doze forcé à l'heure de début » décide si la seconde dérogation de §9.1 tient : si l'alarme de début est retardée, revenir sur §9.1 (option `setAlarmClock` avec `showPendingIntent` vers l'écran 7, au prix de l'affichage « prochaine alarme ») et arbitrer avec l'utilisateur avant de continuer.
-- [ ] **Écrire les limites mesurées** dans `LIMITES.md` et `HelpTexts` ; `HelpTextsTest` vert.
-- [ ] **Remplir `QA_MATRIX.md`, `RELEASE_REPORT.md` et `RESTE_A_FAIRE.md`.**
-- [ ] **Vérifier :**
+- [x] **Étendre les scripts `tools/`** et `ProcessDeathInstrumentedTest` ; exécuter les scripts sur l'appareil branché (`adb devices` d'abord). *(`validate_blocking.sh --deferred` et le nouveau `validate_blocking_start.sh` exécutés le 2026-09-24 ; deux défauts de lecture de `dumpsys alarm` corrigés avant leur premier usage. `ProcessDeathInstrumentedTest` gagne deux cas Lot 6, via `TestBlockingBindingsModule`. Voir `ETAPE-25.md`.)*
+- [x] **Dérouler les neuf scénarios « blocage différé » de §20**, un par un, en consignant modèle, version, permissions, retard et logs. Le scénario « Doze forcé à l'heure de début » décide si la seconde dérogation de §9.1 tient : si l'alarme de début est retardée, revenir sur §9.1 (option `setAlarmClock` avec `showPendingIntent` vers l'écran 7, au prix de l'affichage « prochaine alarme ») et arbitrer avec l'utilisateur avant de continuer. *(Déroulés du 17 au 28/09 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0.302.0, permission OEM refusée : huit verts, un en limite établie (processus tué avant l'heure : HyperOS délie le service d'accessibilité). **La dérogation §9.1 tient** en Doze profond (+77 ms). Six défauts trouvés et corrigés en chemin. Voir `ETAPE-25.md` et `QA_MATRIX.md`.)*
+- [x] **Écrire les limites mesurées** dans `LIMITES.md` et `HelpTexts` ; `HelpTextsTest` vert. *(Trois limites, chacune adossée à une mesure ; le texte « cela peut prendre quelques secondes » proposé ci-dessus contredisait la mesure (222 et 308 ms) et n'a pas été repris. La troisième, sur les récents de Xiaomi, est née de la campagne ; réécrite le 28/09 une fois les parades mesurées.)*
+- [x] **Remplir `QA_MATRIX.md`, `RELEASE_REPORT.md` et `RESTE_A_FAIRE.md`.** *(Ligne « Niumi retiré des récents » de la matrice requalifiée : `LOT-0.md` n'avait mesuré que l'alarme. La limite trouvée — le retrait coupe le blocage — est traitée le 28/09 (A7) : carte cachée pendant la session et verrou HyperOS exigé par un quinzième contrôle de diagnostic, `RECENTS_LOCK`, tous deux mesurés sur appareil ; SPEC_ANDROID §13, §15 et §20 mises à jour.)*
+- [x] **Vérifier :** *(Toutes vertes le 2026-09-28 après la dernière modification : 1 126 tests JVM, framework iOS, `ktlintCheck`, `detekt`, `:app:lintRelease`, `assembleRelease`, `bundleRelease`, 151 tests instrumentés dont un ignoré par hypothèse.)*
 
 ```bash
 ./gradlew :shared:core:jvmTest
@@ -1569,11 +1657,251 @@ la matrice et le rapport.
 ./gradlew :app:assembleRelease :app:bundleRelease
 ```
 
-- [ ] **Rédiger `ETAPE-25.md`.**
+- [x] **Rédiger `ETAPE-25.md`.**
+
+**Défauts trouvés pendant la campagne du 2026-09-24, corrigés en JVM, à revalider sur appareil.**
+Tous deux étaient invisibles en test instrumenté : l'un parce que le service d'accessibilité n'y
+tourne jamais, l'autre parce qu'aucun test ne redémarre l'appareil.
+1. **`BLOCKING_STARTED` n'était jamais journalisé** (trois sessions différées sur trois). La
+   publication du snapshot, premier effet de la décision, faisait rafraîchir la projection par le
+   service ; `APPLY_BLOCKING` s'exécutait ensuite en `AlreadySatisfied`, que `ApplyBlockingExecutor`
+   ne journalisait pas. Le blocage commençait bien à l'heure, sans laisser de trace. Correctif : un
+   effet satisfait compte comme réussi (SPEC_CORE_KMP §6), SPEC_ANDROID §17 précisée ;
+   `ApplyBlockingExecutorTest` créé, rouge avant sur `AlreadySatisfied`.
+2. **Faux incident `NFC_DISABLED` `CRITICAL` après tout redémarrage**, en double, session `DEGRADED`
+   jusqu'à sa fin, écran 7 demandant de réactiver un NFC allumé. Touche aussi les sessions
+   immédiates, donc le MVP. Correctif décidé avec l'utilisateur : NFC non jugé avant le premier
+   déverrouillage ni dans les 30 s qui le suivent (`SessionNfcEvaluability`, SPEC_ANDROID §7.1,
+   §13.1, §18 ; point de vigilance 11). **Première version, comptée depuis le démarrage, invalidée
+   sur appareil le 27/09 à 19:38** : le service NFC ne démarre qu'après le déverrouillage (stable
+   13,2 s après), la garde avait expiré avant lui, faux incident 1,8 s après. Point de départ
+   ramené au déverrouillage, fenêtre partagée avec l'accessibilité (`UnlockSettling`).
+3. **Avertissement jamais retiré après une mort de processus** (25/09, essai 3). Le moniteur ne
+   retirait une notification que s'il se souvenait, en mémoire, de l'avoir publiée ; le processus
+   qui a vu le service d'accessibilité revenir n'était pas celui qui avait averti. Correctif : le
+   retrait est inconditionnel à chaque passe, il est idempotent (SPEC_ANDROID §13.1 précisée).
+4. **L'écran 7 demandait de vérifier un réglage déjà rétabli** (25/09, même essai) : le bloc « À
+   vérifier maintenant » listait les incidents persistés sans les rejouer. Décidé avec
+   l'utilisateur : l'écran rejoue le diagnostic à chaque affichage, un `CRITICAL` dont le contrôle
+   est repassé vert rejoint la liste des incidents avec la mention « Rétabli depuis. », sans bouton
+   (`IncidentReadinessChecks`, SPEC_ANDROID §15 amendée). Santé `DEGRADED` conservée (KMP §7.3).
+5. **NFC jamais rejugé au premier plan pendant `ARMED`** (27/09). Le NFC est jugé par
+   `SessionRuntimeReconciler`, qui ne tournait qu'en fin de réconciliation complète : un NFC coupé
+   le soir n'était signalé qu'au réveil. Correctif : le déclencheur de premier plan le rejoue après
+   la surveillance §13.1 (SPEC_ANDROID §13.1 précisée).
+6. **Faux `BLOCKING_PERMISSION_REVOKED` juste après le déverrouillage** (27/09, 0,3 s après). Android
+   relie le service d'accessibilité après le déverrouillage ; « inscrit mais non relié » était lu
+   « désactivé ». Et la garde de permission coupait la passe avant la politique de retard du réveil.
+   Correctif décidé avec l'utilisateur : trois états (`AccessibilityServiceState`), fenêtre de
+   liaison de 30 s (`UnlockSettling`, valeur à mesurer), re-contrôle à sa fin (`ReadinessRecheck`)
+   pour qu'un service réellement non relié (mort du processus) soit toujours signalé.
 
 **Tests manuels :** les neuf lignes de §20, plus une session différée complète sur un **APK release signé** (A1 de `RESTE_A_FAIRE.md`) si la clé existe : activation à 18:00 avec début à 22:30 et réveil à 07:00, téléphone posé, blocage observé à 22:30, sonnerie à 07:00, scan.
 
 **Terminé quand :** les neuf lignes de §20 sont renseignées (vert, limite établie ou « non testé » avec la raison) ; les quatre critères §21 du Lot 6 ont chacun une preuve ou un statut ouvert nommé ; aucune limite de l'aide n'est écrite sans mesure ; `HelpTextsTest` vert ; les scripts `tools/` couvrent le début différé ; `RESTE_A_FAIRE.md` dit l'état réel.
+
+## Phase J — Lot 7 : sonneries et volume progressif
+
+**Lot ajouté le 2026-09-24**, après la livraison de l'étape 24, l'étape 25 restant ouverte. Comme le
+Lot 6, il est postérieur au MVP : il n'entre pas dans la porte finale de l'étape 21, ne touche ni à
+l'usage déclaré du service d'accessibilité (12.3) ni à la vidéo de revue, et **ne modifie pas le
+contrat KMP** — la sonnerie est une donnée de plateforme, que SPEC_ANDROID §7.2 porte déjà hors du
+snapshot commun (`ringtoneKey`, `vibrationEnabled`). Il tranche le point §5.3 du brief front-end
+(« Choix de la tonalité de l'alarme — à concevoir »).
+
+**Point de départ (2026-09-24).** Quatre fichiers ont été déposés dans
+`androidApp/feature/ringing/src/main/res/raw/`, sans changement de code ; `niumi_alarm.wav`, supprimé
+en même temps, a été remis à l'identique le jour même (point de vigilance 14). Formats mesurés à la
+réception :
+
+| Fichier | Format | Canaux | Fréquence | Profondeur | Durée | Taille |
+| --- | --- | --- | --- | --- | --- | --- |
+| `niumi_bell.wav` | PCM | 2 | 44,1 kHz | 16 bits | 7,22 s | 1,27 Mo |
+| `niumi_energique.wav` | PCM | 2 | 44,1 kHz | 24 bits | 16,00 s | 4,24 Mo |
+| `niumi_oiseaux.wav` | PCM | 2 | 44,1 kHz | 16 bits | 10,00 s | 1,77 Mo |
+| `niumi_piano.wav` | IEEE flottant | 2 | 44,1 kHz | 32 bits | 15,00 s | 5,29 Mo |
+
+Soit 12,6 Mo bruts dans l'APK, contre 0,5 Mo pour l'ancienne sonnerie. Conséquences immédiates :
+points de vigilance 14 (`niumi_alarm.wav` ne se retire qu'avec le code qui le remplace) et 15 (clé
+inconnue = réveil muet).
+
+**Demande.** Trois fonctions : choisir la sonnerie parmi les quatre ; la jouer en boucle jusqu'au
+scan (déjà le comportement de l'unique sonnerie, `isLooping = true`, §10.2 « boucler jusqu'à la
+validation NFC » — à conserver pour quatre) ; choisir si le volume monte progressivement et, si oui,
+en combien de temps il atteint son maximum.
+
+**Huit décisions proposées, à valider avec l'utilisateur avant d'ouvrir l'étape 26.** Le plan les
+tient pour acquises ; une réponse différente modifie l'étape concernée, pas le découpage.
+
+1. **Un écran dédié, l'écran 14 « Sonnerie », et non une section de plus sur l'écran 5.** Quatre
+   sonneries avec pré-écoute, un interrupteur et une durée : empilés sous le cadran et la section
+   « Blocage des applications », l'écran 5 cesserait d'être lisible le soir (charte §9). L'écran 5
+   gagne une ligne « Sonnerie » qui résume le choix (« Cloche · volume constant ») et ouvre
+   l'écran 14 ; l'écran 6 reprend le même résumé. L'écran 7 ne change pas : la sonnerie n'est pas un
+   terme de l'engagement. Le brief §5.3 appelait précisément « un écran ou une section de réglages
+   du réveil ».
+2. **Défauts : « Cloche » (`niumi_bell`) et volume constant.** Sans préférence enregistrée, une
+   session sonne comme aujourd'hui, à la sonnerie près — non-régression de tout le protocole audio
+   de `QA_MATRIX.md`. La cloche est le son le plus proche d'une alarme classique et le plus court
+   des quatre.
+3. **Durées de montée : 30 s, 1 min, 2 min, 5 min ; 1 min proposée quand l'interrupteur est
+   activé.** Liste fermée, comme les heures : une saisie libre inviterait des durées qu'aucun réveil
+   ne justifie. Courbe exponentielle de −40 dB à 0 dB (`VolumeRampPolicy`, un pas de 250 ms) : une
+   rampe linéaire d'amplitude est perçue comme un saut suivi d'un plateau. Après une mort du
+   processus, la montée reprend là où elle en était, calculée depuis `ringingAtEpochMillis` du
+   snapshot, jamais depuis zéro.
+4. **Le choix est figé à l'activation dans la session — Room v4, projection Direct Boot v3 — et
+   mémorisé hors session dans un `DataStore` dédié.** La sonnerie doit être connue avant le premier
+   déverrouillage (réveil après redémarrage, §7.3), où aucun `DataStore` n'est lisible (point de
+   vigilance 10) : elle vit donc dans la session, comme `ringtoneKey` déjà, et la montée la suit
+   (`volumeRampSeconds: Int?`, `null` = constant). Modifier la préférence pendant une session ne
+   change pas ce qui sonnera : la modification exige le scan, comme l'heure (§3). Un
+   `AlarmSoundPreferences` distinct de `SetupPreferences`, qui est au plafond `TooManyFunctions` de
+   detekt depuis l'étape 24.
+5. **Les quatre fichiers sont normalisés avant d'entrer dans l'APK : PCM 16 bits, mono, 44,1 kHz,
+   crête alignée.** Tels que déposés, un fichier est en 24 bits et un autre en flottant 32 bits :
+   `MediaPlayer` sait les lire, mais rien dans ce dépôt n'a jamais joué autre chose que du PCM
+   16 bits sur appareil (étape 3). Le haut-parleur d'un téléphone est mono ; la stéréo double la
+   taille sans rien apporter. La crête alignée évite qu'une sonnerie soit deux fois plus forte
+   qu'une autre au même réglage. Les originaux restent hors du dépôt ; la commande de conversion
+   est consignée dans le rapport ; `tools/generate_alarm_wav.py` est supprimé avec la sonnerie
+   qu'il produisait.
+6. **Une clé inconnue replie sur la sonnerie par défaut et journalise `RINGTONE_FALLBACK` (§17,
+   ajout à la liste fermée) ; `MIGRATION_3_4` réécrit `"niumi_alarm"` en `"niumi_bell"`.** Les
+   deux filets sont nécessaires : la migration ne touche pas la projection Direct Boot avant la
+   fusion, et un réveil muet n'est jamais acceptable (point de vigilance 15). L'événement rend
+   visible dans le diagnostic qu'un son autre que celui choisi a joué.
+7. **La pré-écoute passe par un lecteur distinct du moteur de sonnerie**, `RingtonePreviewPlayer` :
+   mêmes attributs `USAGE_ALARM` (le volume entendu est celui qui sonnera), une seule lecture sans
+   boucle, sans rampe, sans vibration, sans service ni wake lock ; arrêtée en quittant l'écran ou en
+   lançant une autre. `AlarmAudioEngine` est un singleton d'état dont `start()` est idempotent : y
+   faire passer la pré-écoute rendrait un vrai déclenchement `AlreadySatisfied` pendant qu'elle
+   joue. Volume d'alarme à zéro → message sans couleur d'alerte, pré-écoute inactive.
+8. **Hors périmètre :** l'interrupteur de vibration (le brief §5.3 le mentionne ; non demandé ;
+   `vibrationEnabled` reste `true`) ; tout son système ou fichier de l'utilisateur (§10.2 :
+   sonnerie empaquetée) ; iOS (SPEC_IOS conserve « son système par défaut dans le POC » ; les
+   quatre fichiers pourront y être repris plus tard).
+
+**Ce que chaque étape produit, en une ligne.** 26 : le moteur joue l'une des quatre sonneries en
+boucle, avec ou sans montée progressive, d'après la session persistée, et le dépôt compile de
+nouveau. 27 : l'utilisateur choisit, écoute, règle et relit son choix. 28 : le tout est prouvé sur
+appareil et écrit dans la matrice, l'aide et le rapport.
+
+### Étape 26 : specs, fichiers audio, catalogue, montée progressive, Room v4, Direct Boot v3 et service
+
+**Specs à lire :** SPEC_ANDROID §3, §7.2, §7.3, §10.2, §17, §18, §19.1, §19.2 ; « Ajouts du Lot 7 » des interfaces transverses ; points de vigilance 10, 14 et 15 ; `ETAPE-03.md` (décision « descripteurs purs » du moteur audio), `ETAPE-17.md` (reconstruction du service), `ETAPE-23.md` (migration 2→3 et projection v2, à reproduire à l'identique).
+
+**Fichiers :**
+- Specs, **premier travail de l'étape, dans le même changement** (CLAUDE.md) : SPEC_ANDROID §3 (décision produit : quatre sonneries empaquetées, montée progressive optionnelle, réglages figés à l'activation), §7.2 (`volumeRampSeconds: Int?` dans `AlarmSessionEntity`, alinéa « v4 » sur le modèle de « v3 »), §7.3 (`volumeRampSeconds` dans le snapshot, alinéa « Projection v3 »), §10.2 (catalogue `NiumiRingtones`, boucle, montée progressive et sa courbe, reprise depuis `ringingAtEpochMillis`, repli de clé inconnue, pré-écoute hors service), §15 (ligne « Sonnerie » de l'écran 5, écran 14, ligne de l'écran 6 : textes figés maintenant, interface à l'étape 27), §17 (`RINGTONE_FALLBACK`), §19.1, §19.2, §20 (les neuf lignes listées à l'étape 28), §21 (critères du Lot 7, repris de la recette ci-dessous), §22 (Lot 7). SPEC_CORE_KMP : aucune modification, le dire dans le rapport. `docs/BRIEF_PROPOSITIONS_FRONT_END.md` §5.3 : renvoyer à §15 au lieu de « à concevoir ».
+- Audio : `androidApp/feature/ringing/src/main/res/raw/` — les quatre fichiers normalisés (décision 5) ; supprimer `tools/generate_alarm_wav.py`.
+- `:core:system` — modifier `audio/NiumiRingtones.kt` (catalogue : `Ringtone(key, label)`, `ALL`, `DEFAULT_KEY = "niumi_bell"`, `LEGACY_KEY = "niumi_alarm"`, `byKey`), `audio/AlarmAudioEngine.kt` (`start(sound: AlarmSound)`), `audio/AlarmPlayer.kt` (`setVolume(amplitude: Float)`), `audio/AlarmAudioConfiguration.kt` (`initialAmplitude: Float`), `audio/MediaPlayerAlarmPlayerFactory.kt` (`setVolume(initialAmplitude, initialAmplitude)` après `prepare()` et avant `start()` ; `setVolume` du lecteur), `audio/DefaultAlarmAudioEngine.kt` (rampe pilotée par `Clock` et un `CoroutineScope` injectés), `di/AudioModule.kt` (fournir `Clock`, un scope sur `DefaultDispatcher`, `RingtonePreviewPlayer`) ; créer `audio/AlarmSound.kt`, `audio/VolumeRamp.kt` (`VolumeRamp`, `VolumeRampDurations`), `audio/VolumeRampPolicy.kt`, `audio/RingtonePreviewPlayer.kt`, `audio/AndroidRingtonePreviewPlayer.kt`, `ringing/RingingSoundResolver.kt`.
+- `:core:database` — modifier `AndroidSessionExtras.kt` (`volumeRampSeconds: Int?`), `entity/AlarmSessionEntity.kt`, `NiumiDatabase.kt` (`version = 4`), `migration/Migrations.kt` (`MIGRATION_3_4`), `mapping/SessionSnapshotMapper.kt`, `directboot/DirectBootSnapshot.kt` (`volumeRampSeconds: Int? = null`, `DIRECT_BOOT_PROJECTION_SCHEMA_VERSION = 3`), `directboot/DirectBootMapper.kt` (v1/v2 → `null` ; `LEGACY_KEY` → `DEFAULT_KEY`), `directboot/DirectBootRoomMerge.kt`, `RoomSessionStore.kt` (`freezeFrom` fige aussi `volumeRampSeconds`), `logging/TechnicalEventType.kt` (`RINGTONE_FALLBACK`) ; committer `schemas/4.json`.
+- `:feature:ringing` — créer `RingtoneResources.kt` (table `clé → R.raw`, quatre entrées, `null` sinon) ; modifier `di/RingingModule.kt` (la lie comme `RingtoneResourceResolver`), `AlarmRingingService.kt` (`startRinging` passe au premier plan puis charge la session dans `serviceScope` et démarre `audioEngine.start(...)` ; `recover` réutilise son `LoadResult` ; la constante `RINGTONE_KEY` disparaît ; la résolution vit hors du service, au plafond `TooManyFunctions` de detekt).
+- `:feature:session` — modifier `activation/ArmSessionUseCase.kt` (`volumeRampSeconds = null` ; l'étape 27 y branche la préférence).
+- Tests : créer `VolumeRampPolicyTest`, `NiumiRingtonesTest`, `RingingSoundResolverTest`, `RingtonePreviewPlayerTest` (`:core:system`), `RingtoneResourcesTest` et `NiumiRingtoneWavTest` (`:feature:ringing`, remplace `NiumiAlarmWavTest`) ; étendre `DefaultAlarmAudioEngineTest`, `SessionSnapshotMapperTest`, `DirectBootMapperTest`, `DirectBootSnapshotJsonTest` (fichier v2 lisible), `DirectBootRoomParityTest`, `ExportedSchemaTest`, les fixtures `SessionSnapshotDtoFixtures` et `SessionDtoFixtures`, `AlarmTestFakes` (`:feature:ringing`), `ArmSessionUseCaseTest` ; instrumentés : étendre `NiumiDatabaseSchemaTest` (`migrationThreeToFourRewritesTheLegacyRingtoneAndAddsTheRampColumn`, depuis une base v3 peuplée d'une session `ARMED` en `"niumi_alarm"`), `RoomSessionStoreCommitTest` (`freezeFrom` sur `volumeRampSeconds`), `AlarmChainInstrumentedTest` (`:app` : session écrite en base avec `ringtoneKey = "niumi_piano"` et `volumeRampSeconds = 30` → le service démarre et le lecteur joue ; le moteur réel est lié dans l'APK de test, aucune doublure audio n'existe en instrumentation).
+
+**Produit :** quatre sonneries jouables en boucle, montée progressive fonctionnelle et reprise après mort du processus, réglages persistés et figés dans la session, migration et repli qui interdisent tout réveil muet, dépôt vert. Aucune interface : une session armée à cette étape sonne « Cloche » à volume constant.
+
+- [ ] **Mettre à jour les specs** (liste ci-dessus) avant tout code ; relire §10.2 après modification pour vérifier qu'aucune phrase ne suppose encore une sonnerie unique.
+- [ ] **Normaliser les quatre fichiers et écrire `NiumiRingtoneWavTest`** : pour chacune des quatre clés de `NiumiRingtones.ALL`, le fichier `res/raw/<clé>.wav` existe, en-tête PCM (format 1), 1 canal, 44 100 Hz, 16 bits, durée entre 5 s et 20 s ; et `niumi_alarm.wav` n'existe pas. Le test échoue avant la normalisation (stéréo, 24 bits, flottant) : c'est le test rouge de l'étape. Supprimer `tools/generate_alarm_wav.py`. Écrire `RingtoneResourcesTest` (les quatre clés → identifiants distincts non nuls ; `"niumi_alarm"` et `""` → `null`), implémenter `RingtoneResources`, `RingingModule`. **Le dépôt compile de nouveau à la fin de ce travail** ; ne rien commiter avant.
+- [ ] **Écrire `VolumeRampPolicyTest`** : `amplitudeAt(0, 60_000) == 0.01f` ; `amplitudeAt(60_000, 60_000) == 1f` ; `amplitudeAt(90_000, 60_000) == 1f` ; `amplitudeAt(-5_000, 60_000) == 0.01f` ; strictement croissante sur 240 pas de 250 ms ; `amplitudeAt(30_000, 60_000)` égale `0.1f` à `1e-4` près (−20 dB à mi-parcours, ce qui fixe la courbe) ; `amplitudeAt(x, 0) == 1f` ; `isComplete` vrai à partir de la durée. Implémenter : `10^(−2·(1−p))` avec `p = (elapsed / duration).coerceIn(0, 1)`.
+- [ ] **Étendre `DefaultAlarmAudioEngineTest`** (`runTest`, `StandardTestDispatcher`, `Clock` fake avancé avec le scheduler) : `start(AlarmSound(clé, true, null))` crée le lecteur avec `initialAmplitude = 1f` et n'appelle jamais `setVolume` ; `start` avec `VolumeRamp(60_000, now)` crée le lecteur à `0.01f`, appelle `setVolume` toutes les 250 ms avec `VolumeRampPolicy.amplitudeAt`, atteint `1f` à 60 s puis n'appelle plus rien ; rampe démarrée il y a 45 s → premier `setVolume` à `amplitudeAt(45_000, 60_000)` ; `stop()` annule la rampe (aucun `setVolume` après) ; `start` deux fois → `AlreadySatisfied` et un seul job ; exception de la fabrique → `Failure("ANDROID_AUDIO_START_FAILED")`, aucun job orphelin, `isPlaying` faux. Implémenter le moteur et la traduction `MediaPlayer`. Mettre à jour toutes les doublures (`AlarmTestFakes`, fakes de `:core:system`).
+- [ ] **Écrire `RingingSoundResolverTest`** : `Present` même session, clé connue, `volumeRampSeconds = 60`, `ringingAtEpochMillis = t0` → `AlarmSound(clé, vibration, VolumeRamp(60_000, t0))` ; `ringingAtEpochMillis` nul → `startedAt = now` ; `volumeRampSeconds` nul → rampe nulle ; clé `"niumi_alarm"` → `DEFAULT_KEY` et `fallback = true` ; `Absent`, `Unreadable`, autre `sessionId` → `AlarmSound(DEFAULT_KEY, true, null)`, `fallback = false`. Implémenter, puis modifier `AlarmRingingService` : `RINGTONE_FALLBACK` journalisé quand `fallback` est vrai ; `RINGING_STARTED` et `AUDIO_START_FAILED` inchangés.
+- [ ] **Room v4 et projection v3.** Étendre les tests de mapping (`volumeRampSeconds` aller-retour Room et Direct Boot ; fichier v2 → `null` ; `"niumi_alarm"` lu depuis un fichier v1/v2 → `DEFAULT_KEY`), `ExportedSchemaTest` (`4.json` présent, version 4), `RoomSessionStoreCommitTest`, puis la migration instrumentée. `MIGRATION_3_4` : `ALTER TABLE alarm_session ADD COLUMN volumeRampSeconds INTEGER` puis `UPDATE alarm_session SET ringtoneKey = 'niumi_bell' WHERE ringtoneKey = 'niumi_alarm'` ; aucune autre table touchée, aucun `fallbackToDestructiveMigration`.
+- [ ] **Écrire `RingtonePreviewPlayerTest`** (fabrique et focus fakes) : `play(clé)` demande le focus et crée un lecteur `looping = false`, `initialAmplitude = 1f` ; `play` d'une autre clé libère le premier ; `stop()` libère lecteur et focus, idempotent ; clé inconnue → `Failure("ANDROID_AUDIO_START_FAILED")` sans lecteur. Implémenter et lier dans `AudioModule`. Consommé à l'étape 27.
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :core:system:testDebugUnitTest :core:database:testDebugUnitTest :feature:ringing:testDebugUnitTest :feature:session:testDebugUnitTest
+./gradlew :app:assembleDebug
+./gradlew ktlintCheck detekt :app:lintDebug
+./gradlew :core:database:connectedDebugAndroidTest :feature:ringing:connectedDebugAndroidTest :app:connectedDebugAndroidTest   # appareil requis, avant tout essai manuel
+grep -rn "niumi_alarm" androidApp shared tools --include='*.kt' --include='*.kts' --include='*.py' --include='*.sh'   # attendu : NiumiRingtones.LEGACY_KEY, Migrations.kt, DirectBootMapper.kt et leurs tests, rien d'autre
+```
+
+- [ ] **Valider sur appareil** (protocole ci-dessous) et **rédiger `ETAPE-26.md`** : y consigner la commande de normalisation, les tailles avant et après, et le poids de l'APK debug avant et après.
+
+**Tests manuels :** (1) installer l'APK de l'étape 24 (build du commit `89220b0`), armer une session à +6 min, puis installer l'APK de l'étape 26 par-dessus sans désinstaller → à l'heure, « Cloche » sonne, journal sans `RINGTONE_FALLBACK` (la migration a réécrit la clé), `dumpsys audio` montre un lecteur `USAGE_ALARM` ; (2) session à +2 min, écran éteint → « Cloche » en boucle, écoutée sur trois cycles (≈ 22 s) : aucun blanc ni clic audible à la jonction — consigner l'écoute telle quelle, la boucle `MediaPlayer` n'étant pas garantie sans raccord ; si un blanc est audible, le consigner comme limite et arbitrer avec l'utilisateur avant l'étape 27 (raccord des fichiers en fondu, ou lecteur alternatif — pas de dépendance nouvelle sans accord).
+
+**Terminé quand :** `NiumiRingtoneWavTest` vert sur les quatre fichiers normalisés ; aucune référence à `R.raw.niumi_alarm` ; `AlarmAudioEngine.start` ne prend plus de clé nue ; migration 3→4 prouvée sur une base v3 peuplée ; `RingingSoundResolver` seul décide de ce qui sonne ; le rapport donne la commande de normalisation et les tailles.
+
+### Étape 27 : interface — écran 14 « Sonnerie », lignes des écrans 5 et 6, préférences et activation
+
+**Specs à lire :** SPEC_ANDROID §15 (écran 5 « Sonnerie », écran 14, écran 6, règles UI), §13 (volume à zéro), §7.3 (garde de déverrouillage des `DataStore`) ; `docs/CHARTE_GRAPHIQUE_APP_MOBILE.md` §3 (rôle fonctionnel de l'Ambre), §9 (le soir), §15 (iconographie), §16 (formes et composants) ; « Ajouts du Lot 7 » ; `ETAPE-24.md` (SegmentedButton à rayon 8 dp, décision 1) ; point de vigilance 10.
+
+**Fichiers :**
+- `:core:system` — créer `audio/AlarmSoundPreferences.kt` (`AlarmSoundSettings`, interface, `DataStoreAlarmSoundPreferences` sur le fichier `niumi_alarm_sound`, garde de déverrouillage identique à `DataStoreSetupPreferences` : `Provider<Context>` jamais résolu avant déverrouillage, lecture neutre = défauts, écriture refusée `DATASTORE_BEFORE_UNLOCK`) ; modifier `readiness/di/ReadinessModule.kt` (binding, à côté de `SetupPreferences`).
+- `:feature:session` — créer `ringtone/RingtoneUiState.kt`, `ringtone/RingtoneViewModel.kt`, `ringtone/RingtoneScreen.kt`, `ringtone/RingtoneTexts.kt`, `ui/AlarmSoundTexts.kt` (résumé partagé par les écrans 5 et 6 : `summary(settings)`, `durationLabel(seconds)`) ; modifier `activation/ActivationSources.kt` (`alarmSoundPreferences`), `activation/ArmSessionUseCase.kt` (les extras reprennent la préférence ; clé inconnue de `NiumiRingtones` → `DEFAULT_KEY`), `wake/WakeTimeUiState.kt` (`alarmSoundSummary: String`), `wake/WakeTimeViewModel.kt` (relit la préférence dans `init` et `refresh()`), `wake/WakeTimeActions.kt` (`onOpenRingtone`), `wake/WakeTimeScreen.kt` (ligne « Sonnerie » sous la section blocage : titre, résumé, chevron ; même patron que la ligne d'heure de début), `wake/WakeTimeTexts.kt` (`RINGTONE_ROW_TITLE = "Sonnerie"`), `summary/SummaryUiState.kt`, `summary/SummaryViewModel.kt`, `summary/SummaryScreen.kt` (ligne « Sonnerie » sous « Blocage des applications »), `summary/SummaryTexts.kt` (`RINGTONE_TITLE = "Sonnerie"`).
+- `:app` — modifier `navigation/NiumiRoute.kt` (`data object Ringtone`), `navigation/NiumiNavHost.kt` (enregistrée avec son écran, atteinte depuis `WakeTime`, retour par la pile). `NiumiRoute.Summary` ne gagne aucun argument.
+- Tests : créer `RingtoneViewModelTest` (état initial = préférence lue ; sélection → écrite et reflétée ; pré-écoute : `onPreviewToggled(clé)` démarre, second appel arrête, autre clé bascule, `onPause()` arrête ; interrupteur activé → `volumeRampSeconds = 60` écrit ; désactivé → `null` ; `onVolumeRampSecondsChanged(300)` ; volume d'alarme à zéro → `isAlarmVolumeZero`, pré-écoute refusée sans appel au lecteur ; `Failure` du lecteur → message, état inchangé), `RingtoneTextsTest`, `AlarmSoundTextsTest` (« Cloche · volume constant », « Piano · volume progressif sur 5 min », « 30 s », « 1 min », « 2 min », « 5 min »), `DataStoreAlarmSoundPreferencesInstrumentedTest` (`:core:system`, aller-retour et retour aux défauts) ; étendre `DataStoreUnlockGuardTest` (nouvelle classe soumise à la garde), `ArmSessionUseCaseTest` (extras = préférence ; clé inconnue → `DEFAULT_KEY`), `WakeTimeViewModelTest` (résumé initial et après `refresh`), `SummaryViewModelTest` (ligne), `NiumiRouteTest` (`Ringtone` sérialisable).
+
+**Produit :** écrans 5, 6 et 14 conformes à SPEC_ANDROID §15 pour le Lot 7 ; une session armée depuis l'interface sonne la sonnerie choisie, avec la montée choisie.
+
+- [ ] **Écrire les tests d'`AlarmSoundPreferences`** (garde de déverrouillage et instrumenté), implémenter et lier.
+- [ ] **Écrire `RingtoneViewModelTest`, `RingtoneTextsTest`, `AlarmSoundTextsTest`**, implémenter le ViewModel et l'écran 14. Consulter la charte avant de dessiner : liste sobre de quatre lignes, libellé seul, entrée active en Ambre, bouton de pré-écoute par ligne (icône lecture ou arrêt, `contentDescription` « Écouter Cloche » / « Arrêter l'écoute »), aucune visualisation sonore ; section « Volume » : `Switch` Material 3 « Volume progressif », sous-texte « L'alarme démarre doucement et atteint son volume maximal en 1 min. » recalculé sur la durée, `SingleChoiceSegmentedButtonRow` à rayon 8 dp « 30 s » / « 1 min » / « 2 min » / « 5 min » visible seulement quand l'interrupteur est actif ; message « Le volume des alarmes est à zéro. Monte-le pour entendre la pré-écoute. » sans couleur d'alerte. La pré-écoute est arrêtée sur `ON_PAUSE` par l'écran (même `LifecycleEventObserver` que le `refresh` de l'écran 5), jamais par le ViewModel seul.
+- [ ] **Étendre `WakeTimeViewModelTest` et `NiumiRouteTest`**, implémenter la ligne « Sonnerie » de l'écran 5 et la route. Le résumé se relit à chaque `refresh()` (retour de l'écran 14, `ON_RESUME`), comme les heures.
+- [ ] **Étendre `SummaryViewModelTest` et `ArmSessionUseCaseTest`**, implémenter la ligne de l'écran 6 et le branchement des extras. `ArmSessionUseCase` lit la préférence **au moment d'armer**, jamais un état transporté par la route : même règle que les heures.
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :feature:session:testDebugUnitTest :core:system:testDebugUnitTest :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+./gradlew ktlintCheck detekt :app:lintDebug
+./gradlew :core:system:connectedDebugAndroidTest   # appareil requis
+grep -rn "RingtonePreviewPlayer\|AlarmAudioEngine" androidApp/feature/session/src/main   # attendu : RingtonePreviewPlayer seulement, jamais AlarmAudioEngine
+```
+
+- [ ] **Valider sur appareil** (protocole ci-dessous), **rédiger `ETAPE-27.md`.**
+
+**Tests manuels :** parcours accueil → diagnostic → écran 5 : ligne « Sonnerie · Cloche · volume constant » → écran 14 ; pré-écoute « Piano » → joue au volume d'alarme, s'arrête seule à la fin du fichier ; pré-écoute « Oiseaux » pendant « Piano » → « Piano » se tait ; quitter l'écran pendant une pré-écoute → silence immédiat ; volume d'alarme à zéro → message, boutons de pré-écoute inactifs ; sélectionner « Piano », activer « Volume progressif » (« 1 min » présélectionné), choisir « 5 min », retour → « Piano · volume progressif sur 5 min » sur l'écran 5 puis sur l'écran 6 ; activer ; session à +2 min, écran éteint → « Piano » démarre presque inaudible et atteint son volume plein vers 5 min (chronométrer, consigner l'écoute) ; scan ; nouvelle préparation → le choix est repris ; TalkBack sur l'écran 14 : chaque ligne annonce son libellé et son état sélectionné, chaque bouton de pré-écoute sa description.
+
+**Terminé quand :** chaque texte de §15 (Lot 7) est verrouillé par un test de textes ; `AlarmSoundPreferences` est sous la garde de déverrouillage (test) ; une session armée sans jamais ouvrir l'écran 14 sonne « Cloche » à volume constant (non-régression constatée sur appareil) ; aucune pré-écoute ne passe par `AlarmAudioEngine` ni par `AlarmRingingService` (grep de clôture).
+
+### Étape 28 : validation mesurée des sonneries et de la montée, matrice, aide et rapport
+
+**Specs à lire :** SPEC_ANDROID §4.1, §10.2, §18, §19.2, §20 (lignes du Lot 7), §21 (critères du Lot 7), §23 ; `docs/android/LIMITES.md` (règle « limites mesurées seulement »), `docs/android/QA_MATRIX.md` (règle de remplissage), `docs/android/RELEASE_REPORT.md`, `docs/android/RESTE_A_FAIRE.md` ; « Particularités de l'appareil de test ».
+
+**Fichiers :**
+- Étendre `tools/validate_alarm.sh` : après la détection du démarrage du service, relever l'état du lecteur `USAGE_ALARM` dans `dumpsys audio` à `t0 + 3 × durée du fichier` (boucle : le lecteur est toujours actif) et, pour un essai avec montée, à `t0`, `t0 + durée / 2` et `t0 + durée + 5 s`. `dumpsys` ne montre pas l'amplitude du lecteur : l'audibilité et la progression restent à l'oreille, et le script le dit dans sa sortie plutôt que de le taire.
+- Modifier `docs/android/QA_MATRIX.md` (nouvelle sous-section « Sonneries et volume progressif (Lot 7) » avec les neuf lignes ci-dessous), `docs/android/RELEASE_REPORT.md` (critères §21 du Lot 7, chacun avec sa preuve ou son statut ouvert), `docs/android/RESTE_A_FAIRE.md` (section D : état réel du Lot 7 ; campagnes B1/B2 : ajouter les lignes du Lot 7), `docs/android/LIMITES.md` **et** `androidApp/app/src/main/kotlin/com/niumi/app/help/HelpTexts.kt` ensemble (`HelpTextsTest`), **après mesure seulement** — candidats à confirmer ou à retirer : « Si le système relance Niumi pendant la sonnerie, le volume progressif reprend là où il en était, pas depuis le début. » et « La pré-écoute et l'alarme utilisent le volume des alarmes de ton téléphone, jamais celui des médias. »
+- Rédiger `docs/android/implementation-reports/ETAPE-28.md`.
+
+**Lignes à ajouter à §20 (à l'étape 26) et à dérouler ici :**
+
+| Scénario | Résultat attendu |
+| --- | --- |
+| chacune des quatre sonneries, session à +2 min, écran éteint (Lot 7) | sonnerie choisie audible, en boucle sur trois cycles sans blanc ni clic, jusqu'au scan |
+| montée progressive 30 s, puis 5 min (Lot 7) | départ presque inaudible, plein volume atteint à la durée choisie à ± 5 s à l'oreille, puis constant |
+| volume constant (Lot 7) | plein volume dès la première seconde, comme avant le Lot 7 |
+| mort du processus pendant la montée (`am crash`, cf. étape 17) (Lot 7) | si le service revit, la montée reprend à l'amplitude attendue pour le temps écoulé, jamais depuis zéro ; sinon, limite consignée comme à l'étape 17 |
+| redémarrage sans déverrouillage avant l'heure, sonnerie autre que « Cloche » choisie (Lot 7) | la sonnerie choisie sonne, avec sa montée, depuis la projection Direct Boot v3 |
+| mise à jour par-dessus une session armée en `niumi_alarm` (Lot 7) | « Cloche » sonne, aucun `RINGTONE_FALLBACK` dans le journal |
+| Ne pas déranger « alarmes seules », montée progressive (Lot 7) | montée audible ; non-régression de la ligne DND existante |
+| casque Bluetooth connecté, montée progressive (Lot 7) | flux dupliqué comme mesuré à l'étape 6, montée sur les deux sorties |
+| pré-écoute avec volume d'alarme à zéro (Lot 7) | message affiché, aucun son, aucun lecteur créé |
+
+**Produit :** le Lot 7 prouvé sur appareil, documenté dans l'application et dans les documents de release.
+
+- [ ] **Étendre `tools/validate_alarm.sh`** ; exécuter sur l'appareil branché (`adb devices` d'abord ; les tests instrumentés de l'étape 26 sont rejoués **avant** tout essai manuel, jamais entre deux — ils désinstallent l'application et ses données).
+- [ ] **Dérouler les neuf scénarios du Lot 7**, un par un, en consignant modèle, version, firmware, volume d'alarme réglé, sortie audio, résultat, écoute et logs.
+- [ ] **Écrire les limites mesurées** dans `LIMITES.md` et `HelpTexts` ; `HelpTextsTest` vert ; ne rien écrire qui n'ait été mesuré.
+- [ ] **Remplir `QA_MATRIX.md`, `RELEASE_REPORT.md` et `RESTE_A_FAIRE.md`.**
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :shared:core:jvmTest
+./gradlew testDebugUnitTest
+./gradlew :app:testReleaseUnitTest
+./gradlew connectedDebugAndroidTest         # appareil requis
+./gradlew ktlintCheck detekt :app:lintRelease
+./gradlew :app:assembleRelease :app:bundleRelease
+```
+
+- [ ] **Rédiger `ETAPE-28.md`.**
+
+**Tests manuels :** les neuf lignes ci-dessus, plus une session complète sur un **APK release signé** (A1 de `RESTE_A_FAIRE.md`) si la clé existe : « Oiseaux », montée sur 2 min, activation le soir, sonnerie le matin, scan — R8 doit garder les quatre ressources `raw` (`shrinkResources` ne retire que les ressources non référencées ; `RingtoneResources` les référence toutes, ce que l'essai prouve).
+
+**Terminé quand :** les neuf lignes sont renseignées (vert, limite établie ou « non testé » avec la raison) ; les critères §21 du Lot 7 ont chacun une preuve ou un statut ouvert nommé ; aucune limite de l'aide n'est écrite sans mesure ; `RESTE_A_FAIRE.md` dit l'état réel.
 
 ## Recette et critères d'acceptation
 
@@ -1597,9 +1925,8 @@ résumé. Une case cochée signifie « prouvé », jamais « implémenté ».
 - [x] Changement d'heure ou de fuseau → même instant (étape 19).
 - [x] Aucun appel réseau, aucun `INTERNET` (étape 21). *Manifeste fusionné release lu en DOM par
       `ReleaseHygieneTest` : exactement les neuf permissions de §14.*
-- [ ] Lint, ktlint, detekt, tests unitaires et instrumentés verts (chaque étape, étape 21).
-      **Partiel :** JVM, ktlint, detekt et `:app:lintRelease` verts ; les instrumentés n'ont pas
-      été rejoués depuis l'ajout de `HelpScreenTest`.
+- [x] Lint, ktlint, detekt, tests unitaires et instrumentés verts (chaque étape, étape 21). *Prouvé le
+      2026-09-28 (passe finale de l'étape 25) : 1 126 JVM, 151 instrumentés, `HelpScreenTest` compris.*
 - [x] Limites documentées dans l'application et le rapport QA (étapes 12, 21). *Écran 13
       « Aide et limites » + `LIMITES.md`, correspondance verrouillée par test.*
 - [ ] Dossier Play AccessibilityService préparé (étape 6) et soumis avec réponse de Google traitée (étape 21).
@@ -1609,18 +1936,26 @@ résumé. Une case cochée signifie « prouvé », jamais « implémenté ».
 **Lot 6 — blocage différé (SPEC_ANDROID §21, critères ajoutés le 2026-09-15).** Hors porte finale
 du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
 
-- [ ] Aucun blocage avant l'instant de début ; blocage à l'instant à moins d'une minute près quand Niumi est en vie ; en retard avec `MISSED_BLOCKING_START_WINDOW` sinon (étapes 22, 23, 25).
-      **Partiel :** les deux premiers points sont mesurés sur Xiaomi / Android 16 le 2026-09-17
-      (+101 ms et +43 ms, aucun blocage avant l'heure) ; le retard avec `MISSED_BLOCKING_START_WINDOW`
-      appartient à l'étape 25.
-- [ ] Redémarrage avant l'heure de début → alarme de début reprogrammée avant le premier déverrouillage (étapes 23, 25).
-- [ ] Aucune session n'atteint `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans blocage demandé (étape 22, repli prouvé par test ; étape 25, alarme de début manquée puis réveil).
+- [x] Aucun blocage avant l'instant de début ; blocage à l'instant à moins d'une minute près quand Niumi est en vie ; en retard avec `MISSED_BLOCKING_START_WINDOW` sinon (étapes 22, 23, 25).
+      *Prouvé sur Xiaomi / Android 16 : aucun blocage avant l'heure (17 et 24/09) ; neuf débuts
+      mesurés de +43 à +465 ms, Doze profond et téléphone verrouillé compris ; téléphone éteint,
+      blocage au redémarrage avec `MISSED_BLOCKING_START_WINDOW` (+25 min 55 s, 28/09). Réserve : une
+      mort du processus délie le service d'accessibilité sur HyperOS (`RELEASE_REPORT.md`, écart 9).*
+- [x] Redémarrage avant l'heure de début → alarme de début reprogrammée avant le premier déverrouillage (étapes 23, 25). *Prouvé les 24 et 27/09, dont un début appliqué téléphone resté verrouillé.*
+- [x] Aucune session n'atteint `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans blocage demandé (étape 22, repli prouvé par test ; étape 25, alarme de début manquée puis réveil). *Prouvé par construction et par `SessionEngineTriggerTest` ; sur appareil le 28/09, début manqué puis blocage appliqué à la réconciliation avant la sonnerie. Le repli lui-même n'a pas été provoqué sur appareil.*
 - [x] Annulation avant le début du blocage uniquement par scan ; l'écran 5 refuse un début non strictement antérieur au réveil (étapes 22, 24). *Prouvé le 2026-09-17 : scan avant l'heure → `CANCELLED` et plus aucune alarme Niumi en attente ; 08:00 et un 15:00 devenu postérieur refusés sur l'écran 5, « Continuer » inactif, dans les deux conventions horaires.*
-- [ ] Application déjà ouverte à l'heure de début renvoyée à l'accueil sans changement de fenêtre (étapes 23, 25).
-      **Partiel :** observé le 2026-09-17 sur un appareil (retour à l'accueil 308 ms après l'instant
-      contractuel, sans changement de fenêtre) ; la mesure outillée et la matrice §20 restent à
-      l'étape 25.
-- [ ] Limites du blocage différé mesurées puis écrites dans l'aide et `LIMITES.md` (étape 25).
+- [x] Application déjà ouverte à l'heure de début renvoyée à l'accueil sans changement de fenêtre (étapes 23, 25). *Prouvé : 308 ms (17/09), 222 ms mesurés par `validate_blocking.sh --deferred` (24/09).*
+- [x] Limites du blocage différé mesurées puis écrites dans l'aide et `LIMITES.md` (étape 25). *Trois limites, `HelpTextsTest` vert.*
+
+**Lot 7 — sonneries et volume progressif (SPEC_ANDROID §21, critères à ajouter à l'étape 26).** Hors
+porte finale du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
+
+- [ ] Chacune des quatre sonneries joue en boucle jusqu'au scan, sans blanc audible à la jonction (étapes 26, 28).
+- [ ] Avec la montée progressive, l'alarme démarre à −40 dB et atteint son volume maximal à la durée choisie ; sans, plein volume immédiat, comme avant le Lot 7 (étapes 26, 28).
+- [ ] Le choix est figé à l'activation : un redémarrage sans déverrouillage sonne la sonnerie et la montée choisies ; modifier la préférence pendant une session ne change rien à la session (étapes 26, 27, 28).
+- [ ] Ni une base antérieure à v4, ni une projection Direct Boot antérieure à v3, ni une clé inconnue ne rendent le réveil muet (étape 26 par test ; étape 28 par mise à jour par-dessus une session armée).
+- [ ] La pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (étape 27).
+- [ ] Limites mesurées du Lot 7 écrites dans l'aide et `LIMITES.md` (étape 28).
 
 ## Hypothèses et limites du plan
 
@@ -1630,3 +1965,4 @@ du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
 - Les versions de bibliothèques sont celles vérifiées le 3 septembre 2026 ; l'étape 1 les reconfirme et peut les ajuster à condition de rester dans les plages de compatibilité citées.
 - Aucun commit, push ni publication n'est effectué automatiquement.
 - Le Lot 6 (étapes 22 à 25, blocage différé) est postérieur au MVP et ne conditionne pas la porte finale de l'étape 21. Le mécanisme iOS du début différé (`DeviceActivityMonitor`) est un POC à mener, hors de ce plan ; seul le contrat commun et sa spécification iOS sont livrés ici.
+- Le Lot 7 (étapes 26 à 28, sonneries et volume progressif) est postérieur au MVP et ne conditionne pas la porte finale de l'étape 21. Les quatre fichiers audio sont fournis par l'utilisateur, qui en détient les droits d'usage ; le plan ne vérifie pas cette provenance. Les décisions 1 à 8 de la phase J sont des propositions tant que l'utilisateur ne les a pas confirmées, et l'étape 26 ne s'ouvre pas avant.

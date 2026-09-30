@@ -102,5 +102,6 @@ object IncidentDiagnosticTexts {
             ReadinessCheckId.ACCESSIBILITY_SERVICE -> "Service d'accessibilité actif"
             ReadinessCheckId.FUTURE_TRIGGER -> "Heure de réveil future"
             ReadinessCheckId.BATTERY_OPTIMIZATION -> "Restrictions de batterie levées"
+            ReadinessCheckId.RECENTS_LOCK -> "Niumi verrouillé dans les applications récentes"
         }
 }

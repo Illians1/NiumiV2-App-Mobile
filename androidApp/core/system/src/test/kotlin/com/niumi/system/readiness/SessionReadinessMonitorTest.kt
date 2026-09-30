@@ -3,6 +3,7 @@ package com.niumi.system.readiness
 import android.app.NotificationManager
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.domain.IncidentCodes
+import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.SessionEventDto
 import com.niumi.core.interop.SessionEventKindDto
 import com.niumi.core.interop.SessionHealthDto
@@ -10,8 +11,10 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.system.blocking.AccessibilityServiceState
 import com.niumi.system.readiness.fakes.FakeSessionWarningNotifier
 import com.niumi.system.readiness.fakes.ReadinessTestSources
+import com.niumi.system.readiness.fakes.RecordingReadinessRecheck
 import com.niumi.system.readiness.fakes.RecordingSessionIncidentsReader
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.SessionEventFactory
@@ -34,6 +37,7 @@ class SessionReadinessMonitorTest {
     private val notifier = FakeSessionWarningNotifier()
     private val technicalEventLog = FakeTechnicalEventLog()
     private val incidentsReader = RecordingSessionIncidentsReader()
+    private val recheck = RecordingReadinessRecheck()
     private val dispatched = mutableListOf<SessionEventDto>()
 
     /**
@@ -49,6 +53,7 @@ class SessionReadinessMonitorTest {
             eventFactory = SessionEventFactory(SequentialIdGenerator(), FakeClock(NOW)),
             technicalEventLog = technicalEventLog,
             incidentsReader = incidentsReader,
+            recheck = recheck,
         )
 
     private val monitor = newMonitor()
@@ -107,6 +112,10 @@ class SessionReadinessMonitorTest {
                 sources.accessibilityServiceStatus.enabled = false
             }
 
+            ReadinessCheckId.BATTERY_OPTIMIZATION -> {
+                sources.batteryOptimizationStatus.ignoring = false
+            }
+
             else -> {
                 error("Contrôle non surveillé : $id")
             }
@@ -137,6 +146,10 @@ class SessionReadinessMonitorTest {
 
             ReadinessCheckId.ACCESSIBILITY_SERVICE -> {
                 sources.accessibilityServiceStatus.enabled = true
+            }
+
+            ReadinessCheckId.BATTERY_OPTIMIZATION -> {
+                sources.batteryOptimizationStatus.ignoring = true
             }
 
             else -> {
@@ -222,7 +235,7 @@ class SessionReadinessMonitorTest {
             repairCheck(ReadinessCheckId.DND_TOTAL_SILENCE)
             val recovered = monitor.evaluate(snapshot(), dispatch)
             assertThat(recovered.failing).isEmpty()
-            assertThat(notifier.cleared).containsExactly(ReadinessCheckId.DND_TOTAL_SILENCE)
+            assertThat(notifier.cleared).contains(ReadinessCheckId.DND_TOTAL_SILENCE)
 
             breakCheck(ReadinessCheckId.DND_TOTAL_SILENCE)
             val again = monitor.evaluate(snapshot(), dispatch)
@@ -306,14 +319,14 @@ class SessionReadinessMonitorTest {
 
             assertThat(result.failing).isEmpty()
             assertThat(result.newlyReported).isEmpty()
-            assertThat(notifier.cleared).containsExactly(ReadinessCheckId.ALARM_VOLUME)
+            assertThat(notifier.cleared).contains(ReadinessCheckId.ALARM_VOLUME)
             assertThat(dispatched).hasSize(1)
         }
 
     /**
      * SPEC_ANDROID §12.2 : « si le service est désactivé pendant une session, Niumi doit le
      * détecter à sa prochaine exécution et afficher un incident ». Le blocage court jusqu'au scan
-     * (§3), donc bien après `ARMED` — c'est le seul contrôle qui reste surveillé.
+     * (§3), donc bien après `ARMED` — il reste surveillé, avec l'exemption d'énergie.
      */
     @Test
     fun theAccessibilityServiceIsStillMonitoredAfterArmed() =
@@ -333,6 +346,67 @@ class SessionReadinessMonitorTest {
                 assertThat(result.newlyReported.map { it.incidentCode })
                     .containsExactly(IncidentCodes.BLOCKING_PERMISSION_REVOKED)
             }
+        }
+
+    /**
+     * C9 (2026-09-29) : une exemption d'énergie perdue pendant `ARMED` — une mise à jour de Niumi
+     * peut la réinitialiser — produit son propre incident `CRITICAL` et son avertissement. Sans
+     * elle, HyperOS gèle Niumi et le blocage cesse silencieusement (§13, étape 5).
+     */
+    @Test
+    fun aLostBatteryExemptionDuringArmedIsReportedAsItsOwnCriticalIncident() =
+        runTest {
+            breakCheck(ReadinessCheckId.BATTERY_OPTIMIZATION)
+
+            val result = monitor.evaluate(snapshot(), dispatch)
+
+            assertThat(result.failing).containsExactly(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            assertThat(result.newlyReported.map { it.incidentCode })
+                .containsExactly(AndroidIncidentCodes.BATTERY_EXEMPTION_REVOKED)
+            assertThat(notifier.presented).containsExactly(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            assertThat(dispatched.single().incident?.severity)
+                .isEqualTo(IncidentSeverityDto.CRITICAL)
+        }
+
+    /**
+     * C9 : le gel coupe le blocage, et le blocage court jusqu'au scan (§3). L'exemption suit donc
+     * le périmètre du service d'accessibilité, pas celui des cinq contrôles de réveil.
+     */
+    @Test
+    fun theBatteryExemptionIsStillMonitoredAfterArmed() =
+        runTest {
+            breakCheck(ReadinessCheckId.BATTERY_OPTIMIZATION)
+
+            listOf(
+                SessionStateDto.RINGING,
+                SessionStateDto.AWAITING_NFC,
+                SessionStateDto.TRIGGERED_AWAITING_NFC,
+                SessionStateDto.RELEASING,
+            ).forEach { state ->
+                val monitor = newMonitor()
+                val result = monitor.evaluate(snapshot(state), dispatch)
+
+                assertThat(result.failing).containsExactly(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            }
+            assertThat(notifier.cleared).doesNotContain(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            assertThat(dispatched.mapNotNull { it.incident?.code })
+                .containsExactly(AndroidIncidentCodes.BATTERY_EXEMPTION_REVOKED)
+        }
+
+    @Test
+    fun aRestoredBatteryExemptionWithdrawsItsWarningWithoutASecondIncident() =
+        runTest {
+            breakCheck(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            monitor.evaluate(snapshot(), dispatch)
+
+            repairCheck(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            val repaired = monitor.evaluate(snapshot(), dispatch)
+            breakCheck(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            monitor.evaluate(snapshot(), dispatch)
+
+            assertThat(repaired.failing).isEmpty()
+            assertThat(notifier.cleared).contains(ReadinessCheckId.BATTERY_OPTIMIZATION)
+            assertThat(dispatched).hasSize(1)
         }
 
     @Test
@@ -376,9 +450,105 @@ class SessionReadinessMonitorTest {
 
                 assertThat(result.failing).isEmpty()
                 assertThat(result.newlyReported).isEmpty()
-                // Un seul retrait global : les passes suivantes n'ont plus rien à retirer.
-                assertThat(notifier.clearAllCallCount).isEqualTo(1)
             }
+            // Un retrait global par passe, sans mémoire : le retrait est idempotent, et un
+            // avertissement publié par un processus mort ne se retirerait jamais autrement.
+            assertThat(notifier.clearAllCallCount).isEqualTo(3)
             assertThat(dispatched).hasSize(1)
+        }
+
+    /**
+     * **Défaut mesuré sur appareil le 2026-09-25 (étape 25), corrigé ici.** Le processus qui avait
+     * publié « Le service d'accessibilité de Niumi est désactivé » a été tué par le système ; celui
+     * qui a vu le service revenir ne se souvenait pas de l'avertissement, et ne le retirait donc
+     * pas : la notification restait affichée, service actif et blocage appliqué. Le retrait ne
+     * dépend d'aucune mémoire — il est idempotent, et un contrôle vert le déclenche à chaque passe.
+     */
+    @Test
+    fun aWarningPublishedByAPreviousProcessIsWithdrawnOnceTheCheckPasses() =
+        runTest {
+            breakCheck(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            monitor.evaluate(snapshot(), dispatch)
+            assertThat(notifier.presented).containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+
+            repairCheck(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            val nextProcess = newMonitor()
+            nextProcess.evaluate(snapshot(), dispatch)
+
+            assertThat(notifier.cleared).contains(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+        }
+
+    /** Même défaut, pour un contrôle sorti du périmètre après une mort de processus. */
+    @Test
+    fun aWarningOutOfScopeAfterAProcessDeathIsWithdrawnToo() =
+        runTest {
+            breakCheck(ReadinessCheckId.ALARM_VOLUME)
+            monitor.evaluate(snapshot(), dispatch)
+
+            newMonitor().evaluate(snapshot(SessionStateDto.RINGING), dispatch)
+
+            assertThat(notifier.cleared).contains(ReadinessCheckId.ALARM_VOLUME)
+        }
+
+    /** Même défaut, pour une session terminée dans un processus qui n'a rien publié. */
+    @Test
+    fun aFinishedSessionWithdrawsWarningsEvenInAFreshProcess() =
+        runTest {
+            breakCheck(ReadinessCheckId.ALARM_VOLUME)
+            monitor.evaluate(snapshot(), dispatch)
+
+            newMonitor().evaluate(snapshot(SessionStateDto.COMPLETED), dispatch)
+
+            assertThat(notifier.clearAllCallCount).isEqualTo(1)
+        }
+
+    /**
+     * Étape 25 : pendant la fenêtre de liaison qui suit le déverrouillage, un service inscrit mais
+     * pas encore relié n'est ni signalé ni consigné — Android le relie en quelques secondes. Un
+     * re-contrôle est demandé pour la fin de la fenêtre.
+     */
+    @Test
+    fun aServiceStillBeingBoundAfterUnlockIsNotReportedButRechecked() =
+        runTest {
+            sources.justUnlocked()
+            sources.accessibilityServiceStatus.state = AccessibilityServiceState.PENDING
+
+            val result = monitor.evaluate(snapshot(), dispatch)
+
+            assertThat(result.failing).isEmpty()
+            assertThat(notifier.presented).isEmpty()
+            assertThat(dispatched).isEmpty()
+            assertThat(recheck.requests).isEqualTo(1)
+        }
+
+    /** Passé la fenêtre, le même état veut dire que le service ne reviendra pas : signalé (essai 3). */
+    @Test
+    fun aServiceStillUnboundAfterTheBindingWindowIsReported() =
+        runTest {
+            sources.justUnlocked()
+            sources.accessibilityServiceStatus.state = AccessibilityServiceState.PENDING
+            monitor.evaluate(snapshot(), dispatch)
+            sources.uptimeClock.elapsedMillis += UnlockSettling.GRACE_MILLIS
+
+            val result = monitor.evaluate(snapshot(), dispatch)
+
+            assertThat(result.failing).containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            assertThat(notifier.presented).containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            assertThat(dispatched).hasSize(1)
+        }
+
+    /** Retiré de la liste par l'utilisateur : jugé tout de suite, fenêtre ou pas. */
+    @Test
+    fun aServiceRemovedByTheUserIsReportedEvenInsideTheBindingWindow() =
+        runTest {
+            sources.justUnlocked()
+            sources.accessibilityServiceStatus.state = AccessibilityServiceState.DISABLED
+
+            val result = monitor.evaluate(snapshot(), dispatch)
+
+            // Signalé tout de suite, sans attendre le re-contrôle de fin de fenêtre — lequel reste
+            // demandé : il sert aussi au NFC, qui n'est pas jugé pendant la fenêtre.
+            assertThat(result.failing).containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
+            assertThat(notifier.presented).containsExactly(ReadinessCheckId.ACCESSIBILITY_SERVICE)
         }
 }

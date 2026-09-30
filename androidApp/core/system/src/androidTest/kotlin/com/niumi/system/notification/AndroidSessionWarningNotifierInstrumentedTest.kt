@@ -165,7 +165,7 @@ class AndroidSessionWarningNotifierInstrumentedTest {
      * porte ce drapeau vient du système et n'a rien à voir avec ce qui est vérifié ici.
      *
      * C'est la vraie cause de l'intermittence mesurée à l'étape 13, et elle ne se manifestait
-     * qu'après le test qui publie les six avertissements.
+     * qu'après le test qui publie tous les avertissements.
      */
     private fun warningStatusBarNotifications() =
         notificationManager.activeNotifications

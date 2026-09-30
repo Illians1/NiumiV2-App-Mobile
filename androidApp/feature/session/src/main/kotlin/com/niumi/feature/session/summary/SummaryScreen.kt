@@ -25,8 +25,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.niumi.designsystem.effect.WindowFocusRegainedEffect
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.feature.session.wake.WakeTimeChoice
+import com.niumi.system.nfc.nfcAdapterSettledChanges
 
 /**
  * Récapitulatif d'engagement (écran 6, SPEC_ANDROID §15 ; SPEC_CORE_KMP §8.1 « afficher la date
@@ -122,19 +125,31 @@ fun SummaryRoute(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    val refresh = {
+        viewModel.refresh(
+            localTimeIso = choice.localTimeIso,
+            blockingLocalTimeIso = choice.blockingLocalTimeIso,
+            use24Hour = DateFormat.is24HourFormat(context),
+        )
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    viewModel.refresh(
-                        localTimeIso = choice.localTimeIso,
-                        blockingLocalTimeIso = choice.blockingLocalTimeIso,
-                        use24Hour = DateFormat.is24HourFormat(context),
-                    )
-                }
+                if (event == Lifecycle.Event.ON_RESUME) refresh()
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // Le volet rapide ne met pas l'écran en pause : seul le retour du focus signale sa fermeture
+    // (écart 10 de `RELEASE_REPORT.md`, §13).
+    WindowFocusRegainedEffect(refresh)
+    // Le NFC met plus d'une seconde à s'allumer : au retour du focus il est souvent encore éteint.
+    // Seul son état stable fait foi, annoncé par Android (écart 10).
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            context.nfcAdapterSettledChanges().collect { refresh() }
+        }
     }
 
     LaunchedEffect(viewModel.armedSnapshot) {

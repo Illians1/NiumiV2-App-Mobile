@@ -41,7 +41,7 @@ private val Context.appSelectionDataStore: DataStore<Preferences> by
  * processus. La garde empêche l'instance de naître, elle ne se contente pas d'ignorer son résultat.
  *
  * Une sélection vide avant déverrouillage est sans conséquence : `APP_SELECTION` ne fait pas partie
- * des six contrôles surveillés pendant `ARMED` (SPEC_ANDROID §13.1), et les applications bloquées
+ * des sept contrôles surveillés pendant `ARMED` (SPEC_ANDROID §13.1), et les applications bloquées
  * d'une session active sont figées dans Room et dans la projection Direct Boot (§7.2, §7.3), jamais
  * relues ici.
  */

@@ -46,8 +46,10 @@ data class ActiveSessionUiState(
     /**
      * SPEC_CORE_KMP §7.3 : `CRITICAL` « doit en plus être présenté explicitement dans un
      * diagnostic visible par l'utilisateur », ce qui distingue sa présentation d'un `DEGRADED`
-     * simplement consigné.
+     * simplement consigné. Un `CRITICAL` **rétabli** n'y figure plus (§15, étape 25) : il reste
+     * dans [incidents], avec sa gravité et la mention « rétabli », mais l'écran ne demande plus de
+     * vérifier un réglage déjà revenu.
      */
     val criticalIncidents: List<IncidentPresentation>
-        get() = incidents.filter { it.severity == IncidentSeverityDto.CRITICAL }
+        get() = incidents.filter { it.severity == IncidentSeverityDto.CRITICAL && !it.resolved }
 }

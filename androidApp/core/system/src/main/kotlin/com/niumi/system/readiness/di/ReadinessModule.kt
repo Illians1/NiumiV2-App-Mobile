@@ -12,6 +12,7 @@ import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.blocking.AccessibilityServiceStatus
 import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
+import com.niumi.system.common.UptimeClock
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.notification.InterruptionFilterSource
 import com.niumi.system.notification.NotificationAvailability
@@ -19,13 +20,18 @@ import com.niumi.system.notification.NotificationChannelStatus
 import com.niumi.system.notification.SessionWarningNotifier
 import com.niumi.system.power.BatteryOptimizationStatus
 import com.niumi.system.readiness.AndroidDeviceReadinessChecker
+import com.niumi.system.readiness.CoroutineReadinessRecheck
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ForegroundReadinessTrigger
+import com.niumi.system.readiness.ReadinessRecheck
 import com.niumi.system.readiness.ReadinessSources
 import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.readiness.SessionReadinessWatcher
+import com.niumi.system.readiness.UnlockSettling
+import com.niumi.system.recents.RecentsLockStatus
 import com.niumi.system.session.SessionCoordinator
 import com.niumi.system.session.SessionEventFactory
+import com.niumi.system.session.SessionRuntimeReconciler
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.setup.SetupPreferences
 import dagger.Module
@@ -86,8 +92,9 @@ object ReadinessModule {
         interruptionFilterSource: InterruptionFilterSource,
         accessibilityServiceStatus: AccessibilityServiceStatus,
         batteryOptimizationStatus: BatteryOptimizationStatus,
-        setupPreferences: SetupPreferences,
         unlockState: UnlockState,
+        unlockSettling: UnlockSettling,
+        recentsLockStatus: RecentsLockStatus,
     ): ReadinessSources =
         ReadinessSources(
             nfcReader = nfcReader,
@@ -100,9 +107,27 @@ object ReadinessModule {
             interruptionFilterSource = interruptionFilterSource,
             accessibilityServiceStatus = accessibilityServiceStatus,
             batteryOptimizationStatus = batteryOptimizationStatus,
-            setupPreferences = setupPreferences,
             unlockState = unlockState,
+            unlockSettling = unlockSettling,
+            recentsLockStatus = recentsLockStatus,
         )
+
+    /** `@Singleton` obligatoire : le début de la fenêtre de liaison vit dans l'instance. */
+    @Provides
+    @Singleton
+    fun provideUnlockSettling(
+        unlockState: UnlockState,
+        uptimeClock: UptimeClock,
+    ): UnlockSettling = UnlockSettling(unlockState, uptimeClock)
+
+    /** `@Singleton` : un seul re-contrôle en attente pour tout le processus. */
+    @Provides
+    @Singleton
+    fun provideReadinessRecheck(
+        settling: UnlockSettling,
+        trigger: Provider<ForegroundReadinessTrigger>,
+        @DefaultDispatcher dispatcher: CoroutineDispatcher,
+    ): ReadinessRecheck = CoroutineReadinessRecheck(settling, trigger, dispatcher)
 
     @Provides
     fun provideDeviceReadinessChecker(
@@ -123,6 +148,7 @@ object ReadinessModule {
         eventFactory: SessionEventFactory,
         technicalEventLog: TechnicalEventLog,
         incidentsReader: SessionIncidentsReader,
+        recheck: ReadinessRecheck,
     ): SessionReadinessMonitor =
         SessionReadinessMonitor(
             readinessChecker,
@@ -130,6 +156,7 @@ object ReadinessModule {
             eventFactory,
             technicalEventLog,
             incidentsReader,
+            recheck,
         )
 
     @Provides
@@ -137,9 +164,10 @@ object ReadinessModule {
     fun provideSessionReadinessWatcher(
         publisher: SessionSnapshotPublisher,
         monitor: SessionReadinessMonitor,
+        runtimeReconciler: SessionRuntimeReconciler,
         coordinator: SessionCoordinator,
         @DefaultDispatcher dispatcher: CoroutineDispatcher,
-    ): SessionReadinessWatcher = SessionReadinessWatcher(publisher, monitor, coordinator, dispatcher)
+    ): SessionReadinessWatcher = SessionReadinessWatcher(publisher, monitor, runtimeReconciler, coordinator, dispatcher)
 
     /**
      * Même instance que ci-dessus, vue par son seul contrat utile aux appelants d'interface

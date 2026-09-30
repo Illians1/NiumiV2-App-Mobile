@@ -11,6 +11,7 @@ import com.niumi.system.readiness.AndroidDeviceReadinessChecker
 import com.niumi.system.readiness.SessionReadinessMonitor
 import com.niumi.system.readiness.fakes.FakeSessionWarningNotifier
 import com.niumi.system.readiness.fakes.ReadinessTestSources
+import com.niumi.system.readiness.fakes.RecordingReadinessRecheck
 import com.niumi.system.readiness.fakes.RecordingSessionIncidentsReader
 import com.niumi.system.session.DefaultSessionCoordinator
 import com.niumi.system.session.EffectDispatcher
@@ -19,6 +20,7 @@ import com.niumi.system.session.FacadeSessionReducer
 import com.niumi.system.session.ReconcilerSources
 import com.niumi.system.session.SessionCoordinator
 import com.niumi.system.session.SessionEventFactory
+import com.niumi.system.session.SessionNfcEvaluability
 import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionReconciler
 import com.niumi.system.session.SessionRuntimeReconciler
@@ -78,6 +80,7 @@ class TestCoordinatorHarness {
     val readinessSources = ReadinessTestSources(alarmScheduler, accessibilityServiceStatus)
     val warningNotifier = FakeSessionWarningNotifier()
     val incidentsReader = RecordingSessionIncidentsReader()
+    val readinessRecheck = RecordingReadinessRecheck()
     val readinessMonitor =
         SessionReadinessMonitor(
             readinessChecker = AndroidDeviceReadinessChecker(readinessSources.build(), clock, ANDROID_16),
@@ -85,6 +88,7 @@ class TestCoordinatorHarness {
             eventFactory = eventFactory,
             technicalEventLog = technicalEventLog,
             incidentsReader = incidentsReader,
+            recheck = readinessRecheck,
         )
 
     /**
@@ -101,7 +105,8 @@ class TestCoordinatorHarness {
     val technicalEventFlush = FakeTechnicalEventLogFlush(journal)
 
     /** [SessionRuntimeReconciler] (étape 20) : les deux écarts hors du périmètre du moniteur. */
-    val runtimeStatusProbe = FakeSessionRuntimeStatusProbe(alarmScheduler)
+    val runtimeStatusProbe =
+        FakeSessionRuntimeStatusProbe(alarmScheduler, SessionNfcEvaluability(readinessSources.unlockSettling))
     val runtimeReconciler =
         SessionRuntimeReconciler(
             runtimeStatusProbe,
@@ -147,7 +152,7 @@ class TestCoordinatorHarness {
             SessionEffectKindDto.APPLY_BLOCKING to ApplyBlockingExecutor(blockingController, technicalEventLog),
             SessionEffectKindDto.REMOVE_BLOCKING to RemoveBlockingExecutor(blockingController, clock),
             SessionEffectKindDto.START_RINGING to
-                StartRingingExecutor(ringingController, ringingWatchdog, technicalEventLog),
+                StartRingingExecutor(ringingController, ringingWatchdog),
             SessionEffectKindDto.STOP_RINGING to StopRingingExecutor(ringingController, ringingWatchdog),
             SessionEffectKindDto.PRESENT_SCAN_REQUEST to
                 PresentScanRequestExecutor(scanRequestNotifier, technicalEventLog),

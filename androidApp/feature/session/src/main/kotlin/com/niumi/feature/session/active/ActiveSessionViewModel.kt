@@ -10,17 +10,17 @@ import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.BlockedPackage
-import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.feature.session.ui.BlockingScheduleFormatter
 import com.niumi.feature.session.ui.WakeScheduleDisplay
 import com.niumi.feature.session.ui.WakeScheduleFormatter
 import com.niumi.system.common.Clock
 import com.niumi.system.common.TimeZoneProvider
 import com.niumi.system.readiness.ForegroundReadinessTrigger
+import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.session.LoadResult
-import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionSnapshotPublisher
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -30,10 +30,12 @@ import javax.inject.Inject
  * du téléphone — d'où deux projections quand les deux fuseaux diffèrent, jamais un recalcul de la
  * session.
  *
- * Deux lectures s'ajoutent au snapshot, qui ne les porte pas : les applications bloquées viennent
- * d'`AndroidSessionExtras` via [gateway] (unlock-aware, donc jamais un accès Room brut), les
- * incidents d'[incidentsReader]. Elles sont relues à chaque décision publiée : un incident est
- * précisément ce qui arrive **pendant** une session.
+ * Trois lectures s'ajoutent au snapshot, qui ne les porte pas ([sources]) : les applications
+ * bloquées viennent d'`AndroidSessionExtras` via la passerelle (unlock-aware, donc jamais un accès
+ * Room brut), les incidents du lecteur d'incidents, et depuis l'étape 25 le diagnostic est rejoué
+ * pour dire quels incidents sont rétablis ([IncidentPresentation]). Elles sont relues à chaque
+ * décision publiée et à chaque retour au premier plan : un incident est précisément ce qui arrive
+ * **pendant** une session, et un réglage revient sans qu'aucune décision ne soit publiée.
  */
 @HiltViewModel
 class ActiveSessionViewModel
@@ -42,8 +44,7 @@ class ActiveSessionViewModel
         private val clock: Clock,
         private val timeZoneProvider: TimeZoneProvider,
         private val snapshotPublisher: SessionSnapshotPublisher,
-        private val gateway: SessionPersistenceGateway,
-        private val incidentsReader: SessionIncidentsReader,
+        private val sources: ActiveSessionSources,
         private val readinessTrigger: ForegroundReadinessTrigger,
     ) : ViewModel() {
         var state by mutableStateOf(ActiveSessionUiState())
@@ -54,6 +55,8 @@ class ActiveSessionViewModel
          * trois écrans portent la même heure, ils ne peuvent pas employer deux conventions (§15).
          */
         private var use24Hour = true
+
+        private var refreshJob: Job? = null
 
         init {
             viewModelScope.launch {
@@ -66,30 +69,41 @@ class ActiveSessionViewModel
          * déclenche la surveillance de §13.1 : « passage de l'application au premier plan » y est
          * un déclencheur, qui n'avait jusqu'ici aucun appelant. C'est ce qui rend visible un
          * service d'accessibilité désactivé pendant que Niumi était en arrière-plan.
+         *
+         * Appelé aussi au retour du focus de la fenêtre : un réglage coupé depuis le volet rapide
+         * (NFC) doit apparaître sans quitter l'écran (écart 10). `ON_RESUME` et le retour du focus
+         * se suivent au retour d'un réglage : la relecture en cours est annulée, la dernière fait
+         * foi. La surveillance, elle, n'est jamais annulée ; ses incidents sont dédupliqués par
+         * code et par session (§13.1).
          */
         fun refresh(use24Hour: Boolean) {
             this.use24Hour = use24Hour
             readinessTrigger.evaluateAsync()
-            viewModelScope.launch {
-                val snapshot = snapshotPublisher.snapshot.value
-                state = project(snapshot, loadDetails(snapshot))
-            }
+            refreshJob?.cancel()
+            refreshJob =
+                viewModelScope.launch {
+                    val snapshot = snapshotPublisher.snapshot.value
+                    state = project(snapshot, loadDetails(snapshot))
+                }
         }
 
         private suspend fun loadDetails(snapshot: SessionSnapshotDto?): SessionDetails {
             if (snapshot == null) return SessionDetails()
             val blockedApps =
-                when (val loaded = gateway.load()) {
+                when (val loaded = sources.gateway.load()) {
                     // Un snapshot illisible ne doit pas se présenter comme une session sans
                     // application bloquée (§13) : on n'affirme rien plutôt que d'affirmer « aucune ».
                     is LoadResult.Present -> loaded.extras.blockedPackages
 
                     LoadResult.Absent, is LoadResult.Unreadable -> null
                 }
+            // Rejoué à chaque chargement, sans candidat — l'heure de réveil est figée, comme sur
+            // l'écran 12 : c'est ce rapport qui dit si un incident `CRITICAL` est rétabli.
+            val report = sources.readinessChecker.check(ReadinessInput())
             return SessionDetails(
                 blockedApps = blockedApps,
                 incidents =
-                    incidentsReader
+                    sources.incidentsReader
                         .incidents(snapshot.sessionId)
                         .sortedWith(INCIDENT_ORDER)
                         // L'écran 7 présente l'état, pas l'historique : un code n'y figure qu'une
@@ -100,7 +114,7 @@ class ActiveSessionViewModel
                         // identiques (mesuré sur appareil, étape 16). L'historique complet reste
                         // sur l'écran 12.
                         .distinctBy { it.code }
-                        .map(IncidentPresentation::of),
+                        .map { IncidentPresentation.of(it, report) },
             )
         }
 

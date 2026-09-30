@@ -18,6 +18,7 @@ import com.niumi.feature.session.ui.WakeScheduleFormatter
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.isSessionInProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -51,9 +52,13 @@ class SummaryViewModel
             }
         }
 
+        private var refreshJob: Job? = null
+
         /**
-         * Rejoué à chaque `ON_RESUME` : un réglage a pu changer pendant que l'écran était ouvert
-         * (§13). [blockingLocalTimeIso] est le choix de l'écran 5, nul pour un blocage immédiat —
+         * Rejoué à chaque `ON_RESUME` et à chaque retour du focus de la fenêtre (fermeture du volet
+         * rapide) : un réglage a pu changer pendant que l'écran était ouvert (§13). Les deux se
+         * suivent au retour d'un réglage : la relance en cours est annulée, la dernière fait foi.
+         * [blockingLocalTimeIso] est le choix de l'écran 5, nul pour un blocage immédiat —
          * jamais l'instant calculé, qui est recalculé ici comme l'heure de réveil (§8.3).
          */
         fun refresh(
@@ -61,9 +66,11 @@ class SummaryViewModel
             blockingLocalTimeIso: String?,
             use24Hour: Boolean,
         ) {
-            viewModelScope.launch {
-                applyPreview(armSessionUseCase.preview(localTimeIso, blockingLocalTimeIso), use24Hour)
-            }
+            refreshJob?.cancel()
+            refreshJob =
+                viewModelScope.launch {
+                    applyPreview(armSessionUseCase.preview(localTimeIso, blockingLocalTimeIso), use24Hour)
+                }
         }
 
         fun activate(

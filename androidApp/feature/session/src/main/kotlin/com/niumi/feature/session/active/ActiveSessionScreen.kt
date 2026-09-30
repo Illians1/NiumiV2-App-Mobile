@@ -26,7 +26,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.niumi.designsystem.effect.WindowFocusRegainedEffect
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.settingsIntentFor
 
 /**
@@ -197,7 +200,11 @@ private fun BlockedAppsSection(state: ActiveSessionUiState) {
     }
 }
 
-/** Les `CRITICAL` sont déjà en tête : ce bloc porte le reste, consigné sans alarmer. */
+/**
+ * Les `CRITICAL` encore à vérifier sont déjà en tête : ce bloc porte le reste, consigné sans
+ * alarmer — dont les `CRITICAL` rétablis (§15, étape 25), avec leur gravité et la mention
+ * [ActiveSessionTexts.INCIDENT_RESOLVED], atténuée : une information, pas une alerte (charte §5).
+ */
 @Composable
 private fun OtherIncidents(
     state: ActiveSessionUiState,
@@ -213,6 +220,13 @@ private fun OtherIncidents(
                     ActiveSessionTexts.incidentLabel(incident.code),
             style = MaterialTheme.typography.bodyMedium,
         )
+        if (incident.resolved) {
+            Text(
+                text = ActiveSessionTexts.INCIDENT_RESOLVED,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         RemediationAction(incident, onRemediate)
     }
 }
@@ -221,7 +235,9 @@ private fun OtherIncidents(
  * Point d'entrée réel. La convention 12/24 h vient du réglage système et est relue à chaque
  * `ON_RESUME`, comme sur les écrans 5 et 6 : l'utilisateur peut la changer pendant qu'une session
  * est armée, et trois écrans portant la même heure ne peuvent pas diverger (§15). Le même
- * `ON_RESUME` porte le déclencheur « passage au premier plan » de §13.1.
+ * `ON_RESUME` porte le déclencheur « passage au premier plan » de §13.1, et le retour du focus
+ * de la fenêtre celui de la fermeture du volet rapide, qui ne met pas l'écran en pause (écart 10
+ * de `RELEASE_REPORT.md`).
  */
 @Composable
 fun ActiveSessionRoute(
@@ -241,6 +257,14 @@ fun ActiveSessionRoute(
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    WindowFocusRegainedEffect { viewModel.refresh(DateFormat.is24HourFormat(context)) }
+    // Le NFC met plus d'une seconde à s'allumer : au retour du focus il est souvent encore éteint.
+    // Seul son état stable fait foi, annoncé par Android (écart 10).
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            context.nfcAdapterSettledChanges().collect { viewModel.refresh(DateFormat.is24HourFormat(context)) }
+        }
     }
 
     ActiveSessionScreen(

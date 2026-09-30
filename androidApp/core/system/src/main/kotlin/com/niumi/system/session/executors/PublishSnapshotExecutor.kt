@@ -17,6 +17,13 @@ import com.niumi.system.session.SessionSnapshotPublisher
  * d'état (`SESSION_PREPARING`, `SESSION_ARMED`, `SESSION_RELEASING`, `SESSION_CANCELLED`,
  * `SESSION_COMPLETED`, `SESSION_FAILED`) : aucun autre exécuteur ne connaît systématiquement
  * `snapshot.state` au moment de chaque transition.
+ *
+ * **Une fois par transition effective, pas à chaque publication (2026-09-29).** `INCIDENT_REPORTED`
+ * et le début d'un blocage différé publient le snapshot sans changer d'état ; `SESSION_ARMED` était
+ * alors réécrit comme si la session avait été réarmée (mesuré sur Xiaomi 25080RABDG / Android 16).
+ * L'état déjà publié sert de référence. Dans un processus neuf, la première publication vient de
+ * la réconciliation, qui publie sans journaliser ; si un effet est rejoué avant elle, l'événement
+ * peut réapparaître une fois, ce qui coïncide avec une reprise.
  */
 class PublishSnapshotExecutor(
     private val publisher: SessionSnapshotPublisher,
@@ -27,8 +34,12 @@ class PublishSnapshotExecutor(
         snapshot: SessionSnapshotDto,
         extras: AndroidSessionExtras,
     ): ExecutionOutcome {
+        val previous = publisher.snapshot.value
         publisher.publish(snapshot)
-        stateLogType(snapshot.state)?.let { technicalEventLog.log(it, snapshot.sessionId) }
+        val isTransition = previous?.sessionId != snapshot.sessionId || previous.state != snapshot.state
+        if (isTransition) {
+            stateLogType(snapshot.state)?.let { technicalEventLog.log(it, snapshot.sessionId) }
+        }
         return ExecutionOutcome(OperationResult.Success)
     }
 

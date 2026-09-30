@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -28,8 +29,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.core.interop.ReadinessSeverityDto
+import com.niumi.designsystem.effect.WindowFocusRegainedEffect
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheckId
 import com.niumi.system.readiness.ReadinessOutcome
@@ -121,8 +125,10 @@ private fun statusMarker(item: ReadinessItem): String =
     }
 
 /**
- * Point d'entrée réel. Recalcule le diagnostic à chaque `ON_RESUME` — « recalculer l'état après
- * chaque retour des réglages » (§13) — et n'ouvre jamais un réglage à la place de l'utilisateur.
+ * Point d'entrée réel. Recalcule le diagnostic à chaque `ON_RESUME` et à chaque retour du focus
+ * de la fenêtre — « recalculer l'état après chaque retour des réglages » (§13) : le volet rapide
+ * ne met pas l'écran en pause, seul le retour du focus signale sa fermeture (écart 10). N'ouvre
+ * jamais un réglage à la place de l'utilisateur.
  */
 @Composable
 fun ReadinessRoute(
@@ -147,17 +153,20 @@ fun ReadinessRoute(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    WindowFocusRegainedEffect { viewModel.refresh() }
+    // Le NFC met plus d'une seconde à s'allumer : au retour du focus il est souvent encore éteint.
+    // Seul son état stable fait foi, annoncé par Android (écart 10).
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            context.nfcAdapterSettledChanges().collect { viewModel.refresh() }
+        }
+    }
 
     ReadinessScreen(
         state = viewModel.state,
         onChooseWakeTime = onChooseWakeTime,
         onPrimaryAction = { item ->
             when {
-                item.id == ReadinessCheckId.BATTERY_OPTIMIZATION &&
-                    item.actionLabel == ReadinessMessages.BATTERY_CONFIRM_LABEL -> {
-                    viewModel.confirmBatteryExemption()
-                }
-
                 // Recours internes : une destination de l'application, jamais un réglage système
                 // (`settingsIntentFor` renvoie `null` pour ces deux actions).
                 item.action == ReadinessAction.StartPairing -> {
@@ -174,6 +183,12 @@ fun ReadinessRoute(
                     onChooseWakeTime()
                 }
 
+                // Le verrou se pose dans le panneau des récents, hors de toute application : le
+                // bouton rejoue seulement le diagnostic une fois le cadenas posé (étape 25).
+                item.action == ReadinessAction.LockInRecents -> {
+                    viewModel.refresh()
+                }
+
                 item.action == ReadinessAction.RequestNotificationPermission -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -184,7 +199,6 @@ fun ReadinessRoute(
 
                 else -> {
                     settingsIntentFor(item.action, context.packageName)?.let(context::startActivity)
-                    if (item.id == ReadinessCheckId.BATTERY_OPTIMIZATION) viewModel.onBatterySettingsOpened()
                 }
             }
         },

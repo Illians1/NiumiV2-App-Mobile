@@ -22,6 +22,7 @@ import com.niumi.system.nfc.NfcReader
 import com.niumi.system.notification.NotificationAvailability
 import com.niumi.system.notification.ScanRequestNotifier
 import com.niumi.system.readiness.SessionReadinessMonitor
+import com.niumi.system.readiness.UnlockSettling
 import com.niumi.system.ringing.RingingController
 import com.niumi.system.session.DefaultSessionCoordinator
 import com.niumi.system.session.DefaultSessionRuntimeStatusProbe
@@ -31,6 +32,7 @@ import com.niumi.system.session.FacadeSessionReducer
 import com.niumi.system.session.ReconcilerSources
 import com.niumi.system.session.SessionCoordinator
 import com.niumi.system.session.SessionEventFactory
+import com.niumi.system.session.SessionNfcEvaluability
 import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionReconciler
 import com.niumi.system.session.SessionReducer
@@ -164,6 +166,7 @@ object SessionModule {
         notificationAvailability: NotificationAvailability,
         nfcReader: NfcReader,
         alarmVolumeSource: AlarmVolumeSource,
+        unlockSettling: UnlockSettling,
     ): SessionRuntimeStatusProbe =
         DefaultSessionRuntimeStatusProbe(
             alarmScheduler,
@@ -171,5 +174,6 @@ object SessionModule {
             notificationAvailability,
             nfcReader,
             alarmVolumeSource,
+            SessionNfcEvaluability(unlockSettling),
         )
 }

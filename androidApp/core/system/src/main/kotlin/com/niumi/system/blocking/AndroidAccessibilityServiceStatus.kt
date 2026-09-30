@@ -13,11 +13,18 @@ class AndroidAccessibilityServiceStatus(
     private val contentResolver: ContentResolver,
     private val expectedComponent: String,
 ) : AccessibilityServiceStatus {
-    override fun isEnabled(): Boolean {
+    override fun isEnabled(): Boolean = read() == AccessibilityServiceState.ENABLED
+
+    /**
+     * Les deux réglages sont lus séparément depuis l'étape 25 : Niumi inscrit mais
+     * `accessibility_enabled` à 0 n'est pas « désactivé par l'utilisateur », c'est « pas encore
+     * relié » — voir [AccessibilityServiceState.PENDING].
+     */
+    override fun read(): AccessibilityServiceState {
         val globallyEnabled =
             Settings.Secure.getInt(contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
-        if (!globallyEnabled) return false
         val raw = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        return EnabledAccessibilityServicesParser.isEnabled(raw, expectedComponent)
+        val listed = EnabledAccessibilityServicesParser.isEnabled(raw, expectedComponent)
+        return AccessibilityServiceState.of(globallyEnabled, listed)
     }
 }

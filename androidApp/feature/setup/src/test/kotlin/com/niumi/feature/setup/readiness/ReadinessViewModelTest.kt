@@ -2,13 +2,13 @@ package com.niumi.feature.setup.readiness
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.NiumiCoreFacade
-import com.niumi.feature.setup.readiness.fakes.FakeSetupPreferences
 import com.niumi.feature.setup.readiness.fakes.NOW_EPOCH_MILLIS
 import com.niumi.feature.setup.readiness.fakes.reportWith
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessCheckId
 import com.niumi.system.readiness.ReadinessOutcome
 import com.niumi.system.readiness.ReadinessReport
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,7 +25,6 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReadinessViewModelTest {
-    private val preferences = FakeSetupPreferences()
     private var report: ReadinessReport = reportWith()
 
     @Before
@@ -45,7 +44,6 @@ class ReadinessViewModelTest {
         ReadinessViewModel(
             readinessChecker = DeviceReadinessChecker { report },
             facade = NiumiCoreFacade(),
-            setupPreferences = preferences,
         )
 
     @Test
@@ -213,30 +211,21 @@ class ReadinessViewModelTest {
         assertThat(state.primary?.isActionAvailable).isFalse()
     }
 
+    /**
+     * Étape 25 : l'exemption d'énergie est détectée. Le bouton ouvre les réglages et garde son
+     * libellé ; c'est le rafraîchissement du retour (`ON_RESUME`) qui fait passer la ligne au vert.
+     */
     @Test
-    fun theBatteryActionBecomesAConfirmationOnceTheSettingsHaveBeenOpened() {
+    fun theBatteryExemptionTurnsGreenOnTheNextRefreshWithoutAnyConfirmation() {
         report = reportWith(failing = setOf(ReadinessCheckId.BATTERY_OPTIMIZATION))
         val viewModel = viewModel()
 
         assertThat(viewModel.state.primary?.actionLabel)
             .isEqualTo(ReadinessMessages.actionLabelFor(ReadinessCheckId.BATTERY_OPTIMIZATION))
 
-        viewModel.onBatterySettingsOpened()
-
-        assertThat(viewModel.state.primary?.actionLabel).isEqualTo(ReadinessMessages.BATTERY_CONFIRM_LABEL)
-    }
-
-    @Test
-    fun confirmingTheBatteryExemptionPersistsItAndRecomputesTheDiagnostic() {
-        report = reportWith(failing = setOf(ReadinessCheckId.BATTERY_OPTIMIZATION))
-        val viewModel = viewModel()
-
-        // Le contrôleur relit la confirmation : le rapport suivant en tient compte (§13).
         report = reportWith()
-        viewModel.confirmBatteryExemption()
+        viewModel.refresh()
 
-        assertThat(preferences.batteryExemptionConfirmed).isTrue()
-        assertThat(preferences.batteryWrites).isEqualTo(1)
         assertThat(viewModel.state.primary).isNull()
     }
 
@@ -249,6 +238,38 @@ class ReadinessViewModelTest {
         report = reportWith()
         viewModel.refresh()
 
+        assertThat(viewModel.state.primary).isNull()
+    }
+
+    /**
+     * Écart 10 : au retour d'un réglage, `ON_RESUME` et le retour du focus relancent le diagnostic
+     * coup sur coup. Une relance dépassée qui aboutit après la suivante ne doit pas réafficher un
+     * réglage déjà rétabli.
+     */
+    @Test
+    fun aSupersededRefreshNeverOverwritesTheLatestDiagnostic() {
+        val supersededGate = CompletableDeferred<Unit>()
+        var calls = 0
+        val viewModel =
+            ReadinessViewModel(
+                readinessChecker =
+                    DeviceReadinessChecker {
+                        calls++
+                        if (calls == 2) {
+                            supersededGate.await()
+                            reportWith(failing = setOf(ReadinessCheckId.NFC_ENABLED))
+                        } else {
+                            reportWith()
+                        }
+                    },
+                facade = NiumiCoreFacade(),
+            )
+
+        viewModel.refresh()
+        viewModel.refresh()
+        supersededGate.complete(Unit)
+
+        assertThat(calls).isEqualTo(3)
         assertThat(viewModel.state.primary).isNull()
     }
 

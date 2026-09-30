@@ -1,7 +1,7 @@
 package com.niumi.system.readiness
 
 /**
- * Les quatorze contrôles du tableau de SPEC_ANDROID §13, **dans l'ordre du tableau** : l'écran de
+ * Les quinze contrôles du tableau de SPEC_ANDROID §13, **dans l'ordre du tableau** : l'écran de
  * diagnostic présente le premier blocage d'abord, cet ordre est donc porteur de sens et ne doit
  * pas être réarrangé. Le mode Ne pas déranger en compte deux depuis la mesure de l'étape 6
  * (silence total bloquant, autres modes en avertissement).
@@ -21,4 +21,10 @@ enum class ReadinessCheckId {
     ACCESSIBILITY_SERVICE,
     FUTURE_TRIGGER,
     BATTERY_OPTIMIZATION,
+
+    /**
+     * Verrou de Niumi dans les applications récentes de HyperOS (étape 25) : sans lui, « Tout
+     * effacer » tue Niumi et coupe le blocage. Sans objet sur un appareil sans ce mécanisme.
+     */
+    RECENTS_LOCK,
 }

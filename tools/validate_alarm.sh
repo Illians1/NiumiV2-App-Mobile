@@ -32,6 +32,9 @@ set -u
 
 MAX_WAIT="${1:-900}"
 PACKAGE="com.niumi.app"
+# Receveur de l'alarme de réveil (`:feature:ringing`). Jusqu'au 2026-09-30, le script cherchait
+# `com.niumi.system.alarm.AlarmReceiver`, qui n'existe pas : aucune session n'était jamais trouvée.
+readonly WAKE_ALARM_TAG="$PACKAGE/com.niumi.feature.ringing.AlarmReceiver"
 ADB="${ADB:-adb}"
 
 if ! command -v "$ADB" >/dev/null 2>&1; then
@@ -54,13 +57,29 @@ if ! "$ADB" shell pm list packages | tr -d '\r' | grep -qx "package:$PACKAGE"; t
     exit 1
 fi
 
-# Bloc `dumpsys alarm` de l'alarme de réveil de Niumi. Le watchdog de `RINGING` (§9.1, étape 20)
-# vise `RingingWatchdogReceiver` et ne doit jamais être confondu avec le réveil : on ne retient
-# que les entrées `RTC_WAKEUP` qui portent `AlarmReceiver`.
+# Bloc `dumpsys alarm` d'une seule alarme, de son en-tête `Alarm{...}` à l'alarme suivante. Le
+# watchdog de `RINGING` (§9.1, étape 20) vise `RingingWatchdogReceiver` et ne doit jamais être
+# confondu avec le réveil : seul le tag exact du receveur est retenu. L'en-tête doit précéder
+# IMMÉDIATEMENT la ligne `tag=` — le nom du receveur réapparaît dans les statistiques du dump, où
+# un `grep -B` ramasserait l'en-tête d'une autre alarme (même fonction que validate_blocking.sh et
+# validate_blocking_start.sh).
 alarm_block() {
-    "$ADB" shell dumpsys alarm 2>/dev/null | tr -d '\r' |
-        grep -B4 "$PACKAGE/com.niumi.system.alarm.AlarmReceiver" |
-        grep -m1 "when="
+    "$ADB" shell dumpsys alarm 2>/dev/null | tr -d '\r' | awk -v tag="$1" '
+        inblk { if (index($0, "Alarm{")) exit; print; next }
+        hdrprev && index($0, tag) { print hdr; print; inblk = 1; next }
+        { hdrprev = index($0, "Alarm{") > 0; if (hdrprev) hdr = $0 }
+    '
+}
+
+# Epoch brut de l'en-tête `Alarm{... origWhen 1790240960149 ...}`. `dumpsys alarm` n'affiche pas
+# de `when=<epoch>`, et la date formatée de la ligne de détail (`origWhen=2026-09-24 11:09:20.149`)
+# ne se convertit qu'avec `date -D` sur l'appareil, qui ignore l'heure d'été (décalage d'une heure
+# mesuré le 2026-09-24, voir validate_blocking.sh).
+alarm_when_ms() {
+    local raw
+    raw=$(alarm_block "$1" | head -1 | sed -n 's/.*origWhen \([0-9]\{13\}\) .*/\1/p')
+    [ -n "$raw" ] || return 1
+    printf '%s\n' "$raw"
 }
 
 echo "== Précondition : session armée =="
@@ -69,16 +88,16 @@ echo "  heure de réveil la plus proche possible, activation), puis revenir ici.
 printf '  Appuyer sur Entrée une fois la session armée... '
 read -r _
 
-target_line=$(alarm_block)
+target_line=$(alarm_block "$WAKE_ALARM_TAG" | head -1)
 if [ -z "$target_line" ]; then
     echo "Aucune alarme de réveil Niumi trouvée dans dumpsys alarm : la session n'est pas armée." >&2
     exit 1
 fi
 echo "Alarme programmée : $target_line"
 
-# `when=` donne l'instant cible en millisecondes depuis l'epoch : c'est la référence du retard,
+# `origWhen` donne l'instant cible en millisecondes depuis l'epoch : c'est la référence du retard,
 # et elle vient du système plutôt que d'un délai saisi par l'opérateur.
-target_ms=$(printf '%s\n' "$target_line" | sed -n 's/.*when=\([0-9]\{10,\}\).*/\1/p')
+target_ms=$(alarm_when_ms "$WAKE_ALARM_TAG")
 if [ -z "$target_ms" ]; then
     echo "Instant cible illisible dans dumpsys alarm ; le retard ne pourra pas être mesuré." >&2
 fi

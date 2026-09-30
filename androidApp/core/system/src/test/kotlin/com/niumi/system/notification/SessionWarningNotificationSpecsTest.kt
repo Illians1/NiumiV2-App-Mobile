@@ -70,7 +70,7 @@ class SessionWarningNotificationSpecsTest {
     }
 
     @Test
-    fun onlyTheSixChecksOfTheSpecTableAreMonitored() {
+    fun onlyTheSevenChecksOfTheSpecTableAreMonitored() {
         assertThat(MonitoredReadinessChecks.incidentCodes.keys)
             .containsExactly(
                 ReadinessCheckId.EXACT_ALARM,
@@ -79,7 +79,21 @@ class SessionWarningNotificationSpecsTest {
                 ReadinessCheckId.ALARM_VOLUME,
                 ReadinessCheckId.DND_TOTAL_SILENCE,
                 ReadinessCheckId.ACCESSIBILITY_SERVICE,
-            )
+                ReadinessCheckId.BATTERY_OPTIMIZATION,
+            ).inOrder()
+    }
+
+    /**
+     * C9 : l'exemption d'énergie est ajoutée **en dernier** — l'ordre fixe l'identifiant de
+     * notification, et les avertissements déjà publiés (3 à 8) ne doivent pas changer d'identité.
+     */
+    @Test
+    fun theBatteryExemptionWarningTakesTheNextFreeIdWithoutShiftingTheOthers() {
+        assertThat(SessionWarningNotificationSpecs.notificationId(ReadinessCheckId.EXACT_ALARM)).isEqualTo(3)
+        assertThat(SessionWarningNotificationSpecs.notificationId(ReadinessCheckId.ACCESSIBILITY_SERVICE))
+            .isEqualTo(8)
+        assertThat(SessionWarningNotificationSpecs.notificationId(ReadinessCheckId.BATTERY_OPTIMIZATION))
+            .isEqualTo(9)
     }
 
     /**

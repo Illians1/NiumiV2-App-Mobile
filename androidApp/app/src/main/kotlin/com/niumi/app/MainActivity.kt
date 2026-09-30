@@ -21,7 +21,9 @@ import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.feature.ringing.AlarmActivity
 import com.niumi.system.intent.NiumiDeepLink
 import com.niumi.system.readiness.SessionReadinessWatcher
+import com.niumi.system.recents.RecentsCard
 import com.niumi.system.session.SessionSnapshotPublisher
+import com.niumi.system.session.isSessionInProgress
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -35,6 +37,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var sessionSnapshotPublisher: SessionSnapshotPublisher
+
+    @Inject
+    lateinit var recentsCard: RecentsCard
 
     /**
      * Destination demandée par l'`Intent` qui a ouvert l'activité (SPEC_ANDROID §13.1). Un `State`
@@ -62,6 +67,7 @@ class MainActivity : ComponentActivity() {
             },
         )
         openAlarmScreenWhileSessionAwaitsScan()
+        hideRecentsCardWhileSessionIsInProgress()
         setContent {
             NiumiTheme {
                 NiumiNavHost(deepLinkDestination = deepLinkDestination)
@@ -95,6 +101,27 @@ class MainActivity : ComponentActivity() {
                     .collect { required ->
                         if (required) startActivity(AlarmActivity.intent(this@MainActivity))
                     }
+            }
+        }
+    }
+
+    /**
+     * Pas de carte dans les récents tant qu'une session court (étape 25, `RecentsCard`) : sur HyperOS,
+     * la balayer tue Niumi et coupe le blocage jusqu'à la réactivation manuelle du service
+     * d'accessibilité — mesuré le 2026-09-28, verrou de la carte compris. La carte revient quand la
+     * session atteint un état final.
+     *
+     * `CREATED` et non `RESUMED`, contrairement à la redirection ci-dessus : une session peut se
+     * terminer pendant que l'activité est en arrière-plan, et la carte doit revenir sans attendre son
+     * retour au premier plan. La règle est celle de `isSessionInProgress`, jamais recopiée.
+     */
+    private fun hideRecentsCardWhileSessionIsInProgress() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                sessionSnapshotPublisher.snapshot
+                    .map { it?.state.isSessionInProgress() }
+                    .distinctUntilChanged()
+                    .collect { inProgress -> recentsCard.setHidden(inProgress) }
             }
         }
     }

@@ -29,6 +29,7 @@ import com.niumi.system.readiness.ReadinessReport
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.SessionEventFactory
 import com.niumi.system.session.SessionSnapshotPublisher
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -229,6 +230,33 @@ class SummaryViewModelTest {
         viewModel.refresh(localTimeIso = "07:00", blockingLocalTimeIso = null, use24Hour = true)
 
         assertThat(readinessCheckCalls).isGreaterThan(callsAfterFirstLoad)
+    }
+
+    /**
+     * Écart 10 : au retour d'un réglage, `ON_RESUME` et le retour du focus relancent l'aperçu coup
+     * sur coup. Une relance dépassée qui aboutit après la suivante ne doit pas réafficher un refus
+     * déjà levé.
+     */
+    @Test
+    fun aSupersededRefreshNeverOverwritesTheLatestPreview() {
+        val viewModel = viewModel()
+        val supersededGate = CompletableDeferred<Unit>()
+        var gated = true
+        readinessChecker.reportForCandidate = { candidate ->
+            if (gated) {
+                gated = false
+                supersededGate.await()
+                report(candidateTriggerAtEpochMillis = candidate, checks = listOf(failedCheck()))
+            } else {
+                report(candidateTriggerAtEpochMillis = candidate)
+            }
+        }
+
+        viewModel.refresh(localTimeIso = "07:00", blockingLocalTimeIso = null, use24Hour = true)
+        viewModel.refresh(localTimeIso = "07:00", blockingLocalTimeIso = null, use24Hour = true)
+        supersededGate.complete(Unit)
+
+        assertThat(viewModel.state.canActivate).isTrue()
     }
 
     @Test

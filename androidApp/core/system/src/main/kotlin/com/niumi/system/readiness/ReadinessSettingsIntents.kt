@@ -66,16 +66,11 @@ fun settingsIntentFor(
         }
 
         // Exemption d'énergie sans demander REQUEST_IGNORE_BATTERY_OPTIMIZATIONS : cette
-        // permission est restreinte par Google Play et §13 n'en a pas besoin, l'utilisateur
-        // confirmant lui-même. Tant que la liste blanche AOSP manque, on ouvre la liste système ;
-        // une fois acquise, le réglage qui commande réellement le gel est celui de la surcouche,
-        // sur la fiche de l'application (mesure HyperOS de l'étape 5).
-        is ReadinessAction.OpenBatterySettings -> {
-            if (action.aospExemptionGranted) {
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, appUri(packageName))
-            } else {
-                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-            }
+        // permission est restreinte par Google Play, et §13 n'en a pas besoin. La liste système
+        // suffit : « Sans restriction » y inscrit Niumi dans la liste blanche, qui empêche le gel
+        // même sur HyperOS, et le diagnostic la relit au retour (mesuré le 2026-09-28).
+        ReadinessAction.OpenBatterySettings -> {
+            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
         }
 
         ReadinessAction.StartPairing,
@@ -83,6 +78,7 @@ fun settingsIntentFor(
         ReadinessAction.RequestNotificationPermission,
         ReadinessAction.ShowExactAlarmDiagnostic,
         ReadinessAction.FixTime,
+        ReadinessAction.LockInRecents,
         ReadinessAction.Unsupported,
         -> {
             null

@@ -44,6 +44,13 @@ object ActiveSessionTexts {
 
     const val CRITICAL_INCIDENTS_TITLE = "À vérifier maintenant"
 
+    /**
+     * Sous un incident dont le contrôle est repassé vert (§15, étape 25). Le fait reste énoncé au
+     * passé par son libellé ; cette ligne dit seulement que le réglage est revenu, sans promettre
+     * que la session n'en a pas souffert — la santé, elle, ne revient jamais (SPEC_CORE_KMP §7.3).
+     */
+    const val INCIDENT_RESOLVED = "Rétabli depuis."
+
     /** Écran 9 : le seul chemin de sortie d'une session active (SPEC_CORE_KMP §2, points 3 et 4). */
     const val MODIFY_OR_CANCEL_BUTTON = "Modifier ou annuler"
 
@@ -118,6 +125,10 @@ object ActiveSessionTexts {
      * qu'une explication à offrir. Le libellé de l'incident la porte déjà.
      *
      * « Ouvrir les réglages d'accessibilité » est imposé mot pour mot par §15.
+     *
+     * « Ouvrir les réglages de batterie » (C9, 2026-09-29) : n'avait pas de bouton tant que le
+     * contrôle d'énergie reposait sur une confirmation de l'utilisateur ; détecté depuis l'étape 25,
+     * il se répare dans la liste système des optimisations et l'écran 7 le voit au retour.
      */
     fun actionLabel(action: ReadinessAction): String? =
         when (action) {
@@ -133,13 +144,15 @@ object ActiveSessionTexts {
 
             ReadinessAction.OpenNfcSettings -> "Ouvrir les réglages NFC"
 
+            ReadinessAction.OpenBatterySettings -> "Ouvrir les réglages de batterie"
+
             ReadinessAction.ShowExactAlarmDiagnostic,
             ReadinessAction.StartPairing,
             ReadinessAction.OpenAppPicker,
             ReadinessAction.RequestNotificationPermission,
             ReadinessAction.FixTime,
+            ReadinessAction.LockInRecents,
             ReadinessAction.Unsupported,
-            is ReadinessAction.OpenBatterySettings,
             -> null
         }
 }

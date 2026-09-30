@@ -35,13 +35,18 @@ sealed interface ReadinessAction {
     data object FixTime : ReadinessAction
 
     /**
-     * Exemption d'énergie. [aospExemptionGranted] indique si la liste blanche AOSP est déjà
-     * acquise : l'écran propose alors le guide OEM plutôt que la demande d'exemption standard
-     * (§13, détection partielle mesurée sur HyperOS).
+     * Exemption d'énergie : ouvrir la liste système des optimisations de batterie (§13), où
+     * l'utilisateur choisit « Sans restriction ». C'est cette liste blanche qui empêche le gel,
+     * y compris sur HyperOS (mesuré le 2026-09-28).
      */
-    data class OpenBatterySettings(
-        val aospExemptionGranted: Boolean,
-    ) : ReadinessAction
+    data object OpenBatterySettings : ReadinessAction
+
+    /**
+     * Verrouiller Niumi dans les applications récentes (étape 25). Aucun réglage système à ouvrir :
+     * le geste se fait dans le panneau des récents lui-même, et le bouton ne sert qu'à rejouer le
+     * diagnostic une fois le cadenas posé.
+     */
+    data object LockInRecents : ReadinessAction
 
     /** Aucun recours : l'appareil ne possède pas le matériel requis. */
     data object Unsupported : ReadinessAction

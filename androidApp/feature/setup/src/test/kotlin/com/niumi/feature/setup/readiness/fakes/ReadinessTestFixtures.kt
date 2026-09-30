@@ -40,7 +40,8 @@ fun actionOf(id: ReadinessCheckId): ReadinessAction =
         ReadinessCheckId.DND_TOTAL_SILENCE, ReadinessCheckId.DND_OTHER_MODE -> ReadinessAction.OpenDndSettings
         ReadinessCheckId.ACCESSIBILITY_SERVICE -> ReadinessAction.OpenAccessibilitySettings
         ReadinessCheckId.FUTURE_TRIGGER -> ReadinessAction.FixTime
-        ReadinessCheckId.BATTERY_OPTIMIZATION -> ReadinessAction.OpenBatterySettings(aospExemptionGranted = false)
+        ReadinessCheckId.BATTERY_OPTIMIZATION -> ReadinessAction.OpenBatterySettings
+        ReadinessCheckId.RECENTS_LOCK -> ReadinessAction.LockInRecents
     }
 
 const val NOW_EPOCH_MILLIS = 1_800_000_000_000L
@@ -81,24 +82,13 @@ fun reportWith(
 
 class FakeSetupPreferences(
     private var onboardingAcknowledged: Boolean = true,
-    var batteryExemptionConfirmed: Boolean = false,
     private var lastWakeTimeIsoValue: String? = null,
     private var lastBlockingStartTimeIsoValue: String? = null,
 ) : SetupPreferences {
-    var batteryWrites = 0
-        private set
-
     override suspend fun isOnboardingAcknowledged(): Boolean = onboardingAcknowledged
 
     override suspend fun acknowledgeOnboarding() {
         onboardingAcknowledged = true
-    }
-
-    override suspend fun isBatteryExemptionConfirmed(): Boolean = batteryExemptionConfirmed
-
-    override suspend fun setBatteryExemptionConfirmed(confirmed: Boolean) {
-        batteryExemptionConfirmed = confirmed
-        batteryWrites++
     }
 
     override suspend fun lastWakeTimeIso(): String? = lastWakeTimeIsoValue
