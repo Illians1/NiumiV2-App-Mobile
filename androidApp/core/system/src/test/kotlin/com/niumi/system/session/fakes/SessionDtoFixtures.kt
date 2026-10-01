@@ -41,12 +41,16 @@ object SessionDtoFixtures {
 
     fun extras(
         blockedPackages: List<BlockedPackage> = listOf(BlockedPackage("com.example.app", "Exemple")),
+        ringtoneKey: String = "niumi_default",
+        vibrationEnabled: Boolean = true,
+        volumeRampSeconds: Int? = null,
     ): AndroidSessionExtras =
         AndroidSessionExtras(
             boxId = BOX_ID,
             boxTokenSha256Hex = "a".repeat(64),
-            ringtoneKey = "niumi_default",
-            vibrationEnabled = true,
+            ringtoneKey = ringtoneKey,
+            vibrationEnabled = vibrationEnabled,
+            volumeRampSeconds = volumeRampSeconds,
             blockedPackages = blockedPackages,
         )
 

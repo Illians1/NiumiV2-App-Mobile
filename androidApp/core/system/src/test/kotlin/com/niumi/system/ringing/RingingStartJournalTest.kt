@@ -30,4 +30,27 @@ class RingingStartJournalTest {
         assertThat(RingingStartJournal.eventsFor(OperationResult.Failure("ANDROID_AUDIO_START_FAILED")))
             .containsExactly(TechnicalEventType.AUDIO_START_FAILED)
     }
+
+    /** Lot 7 : une clé hors catalogue a été remplacée, et le son de remplacement démarre. */
+    @Test
+    fun aFallbackRingtoneIsJournaledBeforeTheStart() {
+        assertThat(RingingStartJournal.eventsFor(OperationResult.Success, ringtoneFallback = true))
+            .containsExactly(TechnicalEventType.RINGTONE_FALLBACK, TechnicalEventType.RINGING_STARTED)
+            .inOrder()
+    }
+
+    @Test
+    fun aFallbackRingtoneThatFailsIsJournaledWithTheFailure() {
+        val failure = OperationResult.Failure("ANDROID_AUDIO_START_FAILED")
+
+        assertThat(RingingStartJournal.eventsFor(failure, ringtoneFallback = true))
+            .containsExactly(TechnicalEventType.RINGTONE_FALLBACK, TechnicalEventType.AUDIO_START_FAILED)
+            .inOrder()
+    }
+
+    /** Relance du chien de garde : le repli a déjà été journalisé au vrai démarrage. */
+    @Test
+    fun aFallbackIsNotJournaledAgainWhileTheSoundIsAlreadyPlaying() {
+        assertThat(RingingStartJournal.eventsFor(OperationResult.AlreadySatisfied, ringtoneFallback = true)).isEmpty()
+    }
 }

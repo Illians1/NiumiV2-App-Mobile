@@ -62,7 +62,12 @@ class RoomSessionStoreCommitTest {
                 ),
             )
 
-            val tamperedExtras = RoomTestFixtures.extras(boxId = "different-box-should-be-ignored")
+            val tamperedExtras =
+                RoomTestFixtures.extras(
+                    boxId = "different-box-should-be-ignored",
+                    ringtoneKey = "niumi_oiseaux",
+                    volumeRampSeconds = 30,
+                )
             store.commitDecision(
                 StoredDecision(
                     RoomTestFixtures.preparingSnapshot(sessionId, revision = 2),
@@ -74,6 +79,10 @@ class RoomSessionStoreCommitTest {
 
             val active = store.activeSession()
             assertThat(active?.extras?.boxId).isEqualTo("original-box")
+            // Lot 7 : une décision ne réécrit jamais sonnerie ni montée — seul
+            // `RoomSessionAlarmSoundStore` le peut, en `ARMED`.
+            assertThat(active?.extras?.ringtoneKey).isEqualTo(originalExtras.ringtoneKey)
+            assertThat(active?.extras?.volumeRampSeconds).isEqualTo(originalExtras.volumeRampSeconds)
         }
 
     @Test

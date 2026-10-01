@@ -234,14 +234,19 @@ class ArmSessionUseCaseTest {
             assertThat(coordinator.lastExtras?.boxTokenSha256Hex).isEqualTo(credential.tokenSha256Hex)
         }
 
+    /**
+     * Lot 7 : sans préférence (l'écran 14 arrive à l'étape 27), une session sonne « Piano » avec une
+     * montée sur 2 min — le défaut décidé le 2026-09-30.
+     */
     @Test
-    fun theExtrasCarryTheProductionRingtoneVibrationAndFrozenLabels() =
+    fun theExtrasCarryTheDefaultRingtoneRampVibrationAndFrozenLabels() =
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
             useCase().arm("07:00", blockingLocalTimeIso = null)
 
-            assertThat(coordinator.lastExtras?.ringtoneKey).isEqualTo("niumi_alarm")
+            assertThat(coordinator.lastExtras?.ringtoneKey).isEqualTo("niumi_piano")
+            assertThat(coordinator.lastExtras?.volumeRampSeconds).isEqualTo(120)
             assertThat(coordinator.lastExtras?.vibrationEnabled).isTrue()
             assertThat(coordinator.lastExtras?.blockedPackages).containsExactlyElementsIn(selection).inOrder()
         }

@@ -10,6 +10,7 @@ import com.niumi.system.common.TimeZoneProvider
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.ReadinessReport
+import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.ReconcileReason
 import com.niumi.system.session.ReconcileResult
@@ -126,4 +127,9 @@ class RecordingSessionCoordinator(
 
     override suspend fun reconcile(reason: ReconcileReason): ReconcileResult =
         throw UnsupportedOperationException("Non utilisé par ArmSessionUseCase")
+
+    override suspend fun updateAlarmSound(
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult = throw UnsupportedOperationException("Non utilisé par ArmSessionUseCase")
 }

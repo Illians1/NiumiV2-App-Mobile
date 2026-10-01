@@ -15,6 +15,7 @@ import com.niumi.core.interop.WakeScheduleResultDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
 import com.niumi.system.audio.NiumiRingtones
+import com.niumi.system.audio.VolumeRampDurations
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.toActivationPolicyInput
@@ -163,8 +164,11 @@ class ArmSessionUseCase
                 AndroidSessionExtras(
                     boxId = credential.boxId,
                     boxTokenSha256Hex = credential.tokenSha256Hex,
+                    // Défauts du Lot 7 tant que l'écran 14 n'existe pas (étape 27, qui y branche la
+                    // préférence lue au moment d'armer).
                     ringtoneKey = NiumiRingtones.DEFAULT_KEY,
                     vibrationEnabled = true,
+                    volumeRampSeconds = VolumeRampDurations.DEFAULT_SECONDS,
                     blockedPackages = selection,
                 )
 

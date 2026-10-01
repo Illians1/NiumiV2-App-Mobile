@@ -2,12 +2,14 @@ package com.niumi.system.session.fakes
 
 import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
 import com.niumi.database.StoredDecision
 import com.niumi.system.common.OperationResult
+import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionPersistenceGateway
 
@@ -32,6 +34,9 @@ class InMemoryPersistenceGateway(
     val incidentsRecorded = mutableListOf<Pair<String, SessionIncidentDto>>()
     var incidentRecordingAllowed: Boolean = true
     var forceUnreadable: String? = null
+
+    /** Simule l'appareil verrouillé pour [updateAlarmSound] seulement (Lot 7). */
+    var locked: Boolean = false
 
     override suspend fun load(): LoadResult {
         val unreadableReason = forceUnreadable
@@ -85,4 +90,35 @@ class InMemoryPersistenceGateway(
         effectsById.values
             .filter { it.sessionId == sessionId && it.status in REPLAYABLE_STATUSES }
             .sortedWith(compareBy({ it.revision }, { it.ordinal }))
+
+    /** Même contrat que `RoomSessionAlarmSoundStore` : session active pointée et `ARMED`, sinon rien. */
+    override suspend fun updateAlarmSound(
+        sessionId: String,
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult {
+        journal.record("gateway.updateAlarmSound")
+        val session = active?.takeIf { it.snapshot.sessionId == sessionId }
+        return when {
+            locked -> {
+                AlarmSoundUpdateResult.DeferredUntilUnlock
+            }
+
+            session == null -> {
+                AlarmSoundUpdateResult.NoActiveSession
+            }
+
+            session.snapshot.state != SessionStateDto.ARMED -> {
+                AlarmSoundUpdateResult.NotArmed
+            }
+
+            else -> {
+                active =
+                    session.copy(
+                        extras = session.extras.copy(ringtoneKey = ringtoneKey, volumeRampSeconds = volumeRampSeconds),
+                    )
+                AlarmSoundUpdateResult.Updated
+            }
+        }
+    }
 }

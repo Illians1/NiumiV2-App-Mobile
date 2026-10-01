@@ -13,6 +13,7 @@ import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
 import com.niumi.database.StoredDecision
 import com.niumi.system.common.OperationResult
+import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionPersistenceGateway
 
@@ -47,6 +48,12 @@ class FakeSessionPersistenceGateway(
         sessionId: String,
         incident: SessionIncidentDto,
     ): OperationResult = error("RECORD_INCIDENT_FROM_SCREEN")
+
+    override suspend fun updateAlarmSound(
+        sessionId: String,
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult = error("UPDATE_ALARM_SOUND_FROM_RINGING_SCREEN")
 }
 
 fun snapshotInState(
@@ -85,6 +92,7 @@ fun presentSession(
                 boxTokenSha256Hex = "a".repeat(64),
                 ringtoneKey = "niumi_default",
                 vibrationEnabled = true,
+                volumeRampSeconds = null,
                 blockedPackages = listOf(BlockedPackage("com.example.app", "Exemple")),
             ),
         pendingEffects = pendingEffects,

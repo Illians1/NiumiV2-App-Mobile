@@ -58,9 +58,10 @@ Codex doit appliquer les décisions suivantes sans ajouter de variante cachée:
 - Une seule session peut être active.
 - Le moteur `NiumiCore` est l'unique autorité pour les transitions métier communes à Android et iOS.
 - Une session active ne peut pas être annulée ou modifiée depuis un bouton ordinaire.
-- Toute modification ou annulation après activation exige le scan du boîtier associé.
+- Toute modification ou annulation après activation exige le scan du boîtier associé. **Une seule exception (Lot 7, décision du 2026-09-30) : la sonnerie et la montée progressive du volume.** Elles ne sont pas des termes de l'engagement — elles ne touchent ni l'heure du réveil, ni le blocage, ni la sortie par scan — et restent modifiables sans scan tant que la session est `ARMED` ; dès `RINGING`, elles sont figées (7.2, 10.2).
 - Une annulation avant la sonnerie place la session dans l'état `CANCELLED`. Elle ne compte pas comme une session terminée au réveil.
 - L'alarme ne propose ni arrêt, ni répétition, ni délai.
+- L'alarme joue l'une des quatre sonneries empaquetées dans l'APK (« Cloche », « Énergique », « Oiseaux », « Piano »), en boucle jusqu'au scan, avec ou sans montée progressive du volume (30 s, 1 min, 2 min ou 5 min). Défaut : « Piano », volume progressif sur 2 min (Lot 7, décision du 2026-09-30). Le choix est copié dans la session à l'activation (7.2, 7.3, 10.2).
 - Le bouton Retour, le passage à l'accueil, le verrouillage de l'écran et la fermeture de l'activité ne terminent pas la session.
 - Le scan NFC valide termine la session même sans réseau.
 - Un scan inconnu, illisible ou mal formé ne change aucun état.
@@ -345,6 +346,7 @@ boxId: String
 boxTokenSha256Hex: String
 ringtoneKey: String
 vibrationEnabled: Boolean
+volumeRampSeconds: Int?
 createdAtEpochMillis: Long
 armedAtEpochMillis: Long?
 ringingAtEpochMillis: Long?
@@ -360,6 +362,8 @@ failureCode: String?
 `failureCode` n'est renseigné que lorsqu'une session termine son activation dans l'état `FAILED`. Les incidents postérieurs à l'armement sont stockés séparément.
 
 `boxId` et `boxTokenSha256Hex` sont copiés depuis `PairedBoxEntity` à l'étape `ACTIVATION_REQUESTED` et figés pour la durée de la session. `HandleValidNfcUseCase` vérifie toujours le scan contre ces deux valeurs de la session active, jamais contre `PairedBoxEntity` directement, afin qu'une ré-association ne puisse pas changer le boîtier attendu d'une session en cours.
+
+`ringtoneKey`, `vibrationEnabled` et `volumeRampSeconds` (`null` = volume constant) sont eux aussi copiés à `ACTIVATION_REQUESTED`, et aucune décision du moteur ne les réécrit : la session déjà persistée fait foi, jamais l'appelant (`RoomSessionStore.freezeFrom`). **Lot 7 :** `ringtoneKey` et `volumeRampSeconds` ont un unique chemin d'écriture hors activation, `SessionCoordinator.updateAlarmSound`, refusé hors de `ARMED` et avant déverrouillage (3, 10.2). `vibrationEnabled` n'en a aucun.
 
 `BlockedAppEntity`:
 
@@ -408,6 +412,8 @@ Le journal conserve au maximum les 200 derniers événements. Il ne doit conteni
 
 **v3 (Lot 6, blocage différé).** `alarm_session` gagne les quatre colonnes `blocking*`, toutes nullables (§7.2 ci-dessus), et `MIGRATION_2_3` est additive : les lignes existantes reçoivent `NULL` pour `blockingLocalDate`, `blockingLocalTime` et `blockingStartsAtEpochMillis` (blocage immédiat) et `createdAtEpochMillis` pour `blockingAppliedAtEpochMillis` — une session en cours pendant la mise à jour avait demandé son blocage à l'activation — puis `schemaVersion = 2` (SPEC_CORE_KMP §7.1). Schéma v3 committé sous `androidApp/core/database/schemas/`, migration testée depuis une base v2 peuplée d'une session `ARMED`.
 
+**v4 (Lot 7, sonneries et volume progressif).** `alarm_session` gagne `volumeRampSeconds INTEGER`, nullable. `MIGRATION_3_4` ajoute la colonne (`NULL` pour les lignes existantes : volume constant, puisqu'une session armée avant la mise à jour n'a pas choisi de montée), puis réécrit `ringtoneKey = 'niumi_alarm'` — la sonnerie unique du MVP, retirée de l'APK — en `'niumi_piano'`, sonnerie par défaut. Aucune autre table n'est touchée. Sans cette réécriture, une session armée avant la mise à jour sonnerait avec une clé sans ressource ; le repli de 10.2 la rattraperait, mais journaliserait à tort `RINGTONE_FALLBACK`. Schéma v4 committé, migration testée depuis une base v3 peuplée d'une session `ARMED` en `niumi_alarm`.
+
 ### 7.3 Snapshot Direct Boot
 
 Room reste dans le stockage protégé par les identifiants. Un snapshot minimal doit être copié dans le stockage protégé de l'appareil avec `createDeviceProtectedStorageContext()`.
@@ -442,6 +448,7 @@ cancelledAtEpochMillis
 failureCode
 ringtoneKey
 vibrationEnabled
+volumeRampSeconds
 boxId
 boxTokenSha256Hex
 blockedPackages
@@ -452,6 +459,8 @@ pendingEffects
 `boxTokenSha256Hex` reprend le nom de colonne de `AlarmSessionEntity` (§7.2) plutôt que `tokenSha256` (nom propre à `PairedBoxEntity`) : le snapshot projette la session, pas le boîtier associé. `blockedPackages` conserve la paire `(packageName, displayNameSnapshot)` de `BlockedAppEntity`, pas seulement le nom du package : le libellé figé à l'activation est requis par le texte imposé de l'overlay (§12.2, « {Nom de l'application} reste bloquée… ») et doit rester disponible si le blocage doit être reconstruit avant déverrouillage.
 
 **Projection v2 (Lot 6).** `projectionSchemaVersion` passe à 2 avec les quatre champs `blocking*`. Un fichier de version 1 reste lisible : les champs absents se lisent comme un blocage immédiat dont `blockingAppliedAtEpochMillis` vaut `createdAtEpochMillis`, puis la projection est réécrite depuis Room à la fusion suivante. Un fichier v1 ne se lit jamais « pas de session ».
+
+**Projection v3 (Lot 7).** `projectionSchemaVersion` passe à 3 avec `volumeRampSeconds`. Un fichier v1 ou v2 reste lisible : `volumeRampSeconds` s'y lit `null` (volume constant) et une `ringtoneKey` égale à `niumi_alarm` s'y lit comme la sonnerie par défaut, `niumi_piano` — même règle que `MIGRATION_3_4`, que la projection n'atteint pas avant la fusion. C'est ce qui permet à un réveil après redémarrage, avant tout déverrouillage, de sonner la sonnerie et la montée choisies.
 
 Ce snapshot est une projection partielle de Room, mais son enveloppe de session active contient tous les champs requis pour reconstruire un `SessionSnapshot` et appeler KMP avant déverrouillage. Chaque effet de `pendingEffects` conserve aussi son payload sérialisé afin de reprendre `RECORD_INCIDENT`. Il permet de reprogrammer et de déclencher l'alarme avant le premier déverrouillage après un redémarrage. Il ne contient aucune donnée de compte. Son écriture doit être atomique. Utiliser un fichier temporaire dans le même répertoire, puis un renommage, ou des préférences synchrones dédiées avec contrôle de version. Une réécriture à `domainRevision` égale, pour la même session, est idempotente; une révision inférieure pour cette même session est refusée. Une nouvelle session (autre `sessionId`) repart légitimement à une révision inférieure : la garde est scopée par `sessionId`, pas globale.
 
@@ -596,7 +605,7 @@ L'état source n'est pas contrôlé côté Android : `TriggerReducer.onAlarmFire
 
 **Blocage différé (Lot 6).** `AlarmTriggerHandler` ne produit pas `BLOCKING_START_ELAPSED` avant `ALARM_FIRED` : le moteur applique lui-même un blocage encore en attente dans la décision `ALARM_FIRED` (repli, SPEC_CORE_KMP §5.1), et `ApplyBlockingExecutor` s'exécute avant `StartRingingExecutor` dans l'ordre des effets. Un réveil ne sonne donc jamais sur une session dont le blocage n'a pas été demandé, même si l'alarme de début a été manquée.
 
-La fenêtre de `goAsync()` est bornée à 8 s. Au dépassement, la coroutine est annulée et `finish()` appelé ; si l'annulation tombe après le `commit` du coordinateur, les effets restent `PENDING` et la prochaine réconciliation les rejoue (SPEC_CORE_KMP 6.1). **Aucun événement technique n'est journalisé dans ce cas** : 17 est une liste fermée et aucune de ses 26 valeurs ne décrit ce fait. C'est une limite d'observabilité assumée, pas un oubli.
+La fenêtre de `goAsync()` est bornée à 8 s. Au dépassement, la coroutine est annulée et `finish()` appelé ; si l'annulation tombe après le `commit` du coordinateur, les effets restent `PENDING` et la prochaine réconciliation les rejoue (SPEC_CORE_KMP 6.1). **Aucun événement technique n'est journalisé dans ce cas** : 17 est une liste fermée et aucune de ses valeurs ne décrit ce fait. C'est une limite d'observabilité assumée, pas un oubli.
 
 ### 10.2 AlarmRingingService
 
@@ -608,9 +617,10 @@ Le service doit:
 - reconstruire son état depuis le snapshot si le processus est recréé;
 - exécuter l'effet KMP `START_RINGING` de façon idempotente, sans écrire directement `RINGING`;
 - acquérir un `PARTIAL_WAKE_LOCK` avec un délai de sécurité renouvelable et le libérer à la fin;
-- lire une sonnerie locale empaquetée dans l'APK;
+- lire la sonnerie de la session, choisie parmi les sonneries locales empaquetées dans l'APK;
 - boucler jusqu'à la validation NFC;
-- activer une vibration répétée si l'option est active;
+- appliquer la montée progressive du volume si la session en porte une;
+- activer une vibration répétée si l'option de la session est active;
 - maintenir une notification persistante sans action d'arrêt;
 - arrêter le son, la vibration et le wake lock dans `onDestroy()` comme filet de sécurité;
 - journaliser les erreurs audio sans terminer silencieusement la session.
@@ -625,6 +635,30 @@ AudioAttributes.Builder()
 ```
 
 Demander le focus audio avec les mêmes attributs. Ne pas dépendre d'un fichier distant, d'une URI réseau ou d'un fournisseur de documents.
+
+**Sonneries et volume progressif (Lot 7, décisions du 2026-09-30).**
+
+*Catalogue.* `NiumiRingtones` (`:core:system`) est la seule liste des sonneries : `niumi_bell` « Cloche », `niumi_energique` « Énergique », `niumi_oiseaux` « Oiseaux », `niumi_piano` « Piano », dans cet ordre d'affichage. Clé par défaut : `niumi_piano`. Chaque clé correspond à une ressource `res/raw/<clé>.wav` de `:feature:ringing` (`RingtoneResources`), et à aucune autre : une clé hors catalogue n'a pas de ressource. `niumi_alarm`, la sonnerie unique du MVP, est retirée de l'APK ; sa clé ne subsiste que comme `LEGACY_KEY`, réécrite par `MIGRATION_3_4` (7.2) et à la lecture d'une projection v1 ou v2 (7.3).
+
+*Fichiers.* Les quatre fichiers sont normalisés avant d'entrer dans l'APK : PCM 16 bits, mono, 44,1 kHz, volume perçu aligné à −16 LUFS (EBU R128), crête plafonnée à −1,5 dBFS par un limiteur. L'alignement du volume perçu, et non de la crête, est la règle : mesurés à la réception, les fichiers s'étalaient de −13,0 à −25,0 LUFS, et un alignement des crêtes laissait encore 9 dB d'écart entre « Cloche » et « Piano » — au même réglage de volume, une sonnerie aurait été presque deux fois moins forte qu'une autre. Le haut-parleur d'un téléphone est mono : la stéréo doublait la taille sans rien apporter. Commande et mesures : `docs/android/implementation-reports/ETAPE-26.md`. Les 0,3 s de résonance quasi silencieuse qui terminent « Cloche » sont conservées : c'est le rythme d'une cloche, pas un blanc de boucle.
+
+*Boucle.* Toutes les sonneries bouclent jusqu'à la validation NFC (`MediaPlayer.isLooping`).
+
+*Montée progressive.* `volumeRampSeconds` vaut `null` (volume constant, plein volume dès le départ) ou l'une des durées 30, 60, 120 ou 300 secondes. L'amplitude du lecteur suit `10^(−2·(1−p))`, `p` étant la fraction écoulée de la durée bornée à [0, 1] : de −40 dB au départ à 0 dB à la durée choisie, soit −20 dB à mi-parcours. Une rampe linéaire d'amplitude est écartée : l'oreille la perçoit comme un saut suivi d'un plateau. Le lecteur démarre directement à l'amplitude initiale, puis `AlarmAudioEngine` la réajuste toutes les 250 ms jusqu'à la durée, et plus ensuite. Le point de départ est `ringingAtEpochMillis` du snapshot, jamais l'instant où le son démarre : après une mort du processus (reconstruction ci-dessous, watchdog), la montée reprend à l'amplitude qui correspond au temps écoulé, jamais depuis zéro. L'amplitude ne module que le lecteur de Niumi ; le volume des alarmes du système reste le plafond, et Niumi n'y touche pas.
+
+*Ce qui sonne : `RingingSoundResolver` seul en décide.* Le service charge la session (`SessionPersistenceGateway.load()`, Room ou Direct Boot) et passe le résultat au résolveur :
+
+| Session lue | Son joué |
+| --- | --- |
+| présente, même `sessionId`, clé du catalogue | sa clé, sa vibration, sa montée |
+| présente, même `sessionId`, clé hors catalogue | `niumi_piano`, sa vibration, sa montée ; `RINGTONE_FALLBACK` journalisé (17) |
+| absente, illisible, ou autre `sessionId` | `niumi_piano`, vibration, **volume constant** |
+
+Une clé inconnue ne rend donc jamais le réveil muet : avant le Lot 7, elle devenait `AUDIO_START_FAILED` et une sonnerie silencieuse. Le chemin dégradé ne démarre jamais bas : ne sachant pas ce qui a été choisi, il préfère le plein volume.
+
+*Modification pendant `ARMED` (3).* `SessionCoordinator.updateAlarmSound(ringtoneKey, volumeRampSeconds)` s'exécute sous le verrou du coordinateur, pour ne jamais croiser un `ALARM_FIRED`. Il refuse une clé hors catalogue, une durée hors liste, une session absente ou qui n'est pas `ARMED`, et tout appel avant déverrouillage — Room fait foi, et l'interface n'est de toute façon pas atteignable avant. Il écrit Room, puis recopie la session dans la projection Direct Boot, pour qu'un redémarrage suivant sonne le nouveau choix. Il ne dispatche aucun événement KMP et ne change pas la révision : la sonnerie est une donnée de plateforme, hors du snapshot commun.
+
+*Pré-écoute.* L'écran 14 (15) fait écouter une sonnerie par `RingtonePreviewPlayer`, distinct d'`AlarmAudioEngine` : mêmes attributs `USAGE_ALARM` — le volume entendu est celui qui sonnera —, une seule lecture sans boucle, sans montée, sans vibration, sans service ni wake lock. `AlarmAudioEngine` est un singleton dont `start()` est idempotent : y faire passer la pré-écoute rendrait un vrai déclenchement sans effet pendant qu'elle joue.
 
 Règle Android 17: le son du réveil doit toujours utiliser `USAGE_ALARM`. L'application doit conserver son éligibilité et son accès aux alarmes exactes afin de rester dans le comportement prévu par Android pour l'audio d'alarme en arrière-plan.
 
@@ -1244,7 +1278,8 @@ Tous les composants non destinés à des applications externes restent `exported
 10. session terminée;
 11. session annulée;
 12. diagnostic d'incident;
-13. aide et limites.
+13. aide et limites;
+14. sonnerie (Lot 7).
 
 **Écran 13 — aide et limites (étape 21).** Écran de **consultation**, atteignable depuis l'accueil, en session comme hors session. Il ne porte aucune action: le scan du boîtier reste la seule sortie (3, 10.2), et un bouton y serait précisément le recours logiciel que 4.5 exclut. Son contenu est celui de `docs/android/LIMITES.md`, mot pour mot — le document est la version lisible hors de l'application, à laquelle renvoie la politique de confidentialité publiée sur la fiche Play, et l'écran en est la restitution, jamais une reformulation. Un test compare les deux à chaque build.
 
@@ -1307,6 +1342,15 @@ Le bouton d'export est « Exporter le diagnostic ». Il ouvre un `ACTION_SEND` t
 
 **Écran 7 (Lot 6).** Le libellé d'état `ARMED` se dédouble d'après `blockingAppliedAtEpochMillis` : « Réveil programmé · applications bloquées » quand il est renseigné, « Réveil programmé · blocage à 22:30 » sinon, avec l'instant de début affiché comme celui du réveil (fuseau d'activation, et fuseau courant s'il diffère). La liste des applications reste affichée dans les deux cas, sous un titre qui dit la vérité : « Applications bloquées » ou « Applications qui seront bloquées ». `MISSED_BLOCKING_START_WINDOW` s'affiche comme tout incident, en clair suivi de son code : « Le blocage a commencé en retard : Niumi n'était pas en vie à l'heure prévue. (MISSED_BLOCKING_START_WINDOW) ». Aucune action nouvelle : « Bloquer dès maintenant » est hors du périmètre du Lot 6 (décision du 2026-09-15), et le scan reste la seule sortie.
 
+**Lot 7 — sonnerie (écran 14, lignes des écrans 5, 6 et 7 ; textes figés à l'étape 26, interface à l'étape 27).** Décisions du 2026-09-30.
+
+- **Résumé partagé.** Les écrans 5, 6 et 7 résument le réglage par une même phrase : « {Sonnerie} · volume constant » ou « {Sonnerie} · volume progressif sur {durée} », les durées s'écrivant « 30 s », « 1 min », « 2 min », « 5 min ». Défaut : « Piano · volume progressif sur 2 min ».
+- **Écran 5.** Sous la section « Blocage des applications », une ligne « Sonnerie » (titre, résumé de la préférence, chevron) ouvre l'écran 14 ; le résumé est relu au retour et à chaque `ON_RESUME`, comme les heures.
+- **Écran 6.** Une ligne « Sonnerie » sous « Blocage des applications », même résumé. Ce n'est pas un terme de l'engagement : le rappel « Seul le scan du boîtier terminera la session. » ne change pas.
+- **Écran 7.** Une ligne « Sonnerie » donne le résumé **de la session** (7.2), pas de la préférence. En `ARMED`, elle ouvre l'écran 14 ; dans tout autre état, elle n'est qu'affichée. **C'est la seule action de l'écran 7 qui touche à la session sans scan**, dérogation décidée le 2026-09-30 à la règle « aucune autre action qui touche à la session » de cet écran (3) : elle ne termine rien, ne modifie ni l'heure ni le blocage, et le scan reste la seule sortie.
+- **Écran 14 « Sonnerie ».** Une liste sobre des quatre sonneries de `NiumiRingtones`, libellé seul, l'entrée choisie en Ambre ; un bouton de pré-écoute par ligne (icône lecture ou arrêt, description « Écouter {Sonnerie} » / « Arrêter l'écoute »), aucune visualisation sonore. Section « Volume » : interrupteur « Volume progressif », sous-texte « L'alarme démarre doucement et atteint son volume maximal en {durée}. », puis, seulement quand l'interrupteur est actif, un choix segmenté « 30 s » / « 1 min » / « 2 min » / « 5 min » ; activer l'interrupteur propose « 2 min ». Volume des alarmes à zéro : « Le volume des alarmes est à zéro. Monte-le pour entendre la pré-écoute. », sans couleur d'alerte, boutons de pré-écoute inactifs. La pré-écoute s'arrête en quittant l'écran ou en lançant une autre sonnerie. Atteint depuis l'écran 7 pendant `ARMED`, l'écran ajoute sous son titre « Ce choix s'applique aussi au réveil déjà programmé. », et chaque changement met à jour la préférence **et** la session (10.2). Si la session a quitté `ARMED` entre-temps, la préférence est enregistrée et l'écran dit : « Le réveil a déjà commencé : ce choix s'appliquera à ta prochaine session. »
+- **Préférence.** Le dernier choix est mémorisé hors session dans un `DataStore` dédié (`AlarmSoundPreferences`), sous la garde de déverrouillage de 7.3, et relu **au moment d'armer**, jamais transporté par la navigation. Sans préférence : le défaut.
+
 **Écrans 9 et 11 (étape 15).** L'écran 9 ne porte aucune action en dehors du scan : ni bouton d'annulation, ni confirmation, ni chemin de retour qui libérerait quoi que ce soit (3, 10.2). Son texte est :
 
 > Scanne ton boîtier Niumi pour annuler ou modifier ta session. Tes applications resteront bloquées jusqu'au scan.
@@ -1361,6 +1405,7 @@ ALARM_RESCHEDULED
 ALARM_RECEIVED
 RINGING_STARTED
 AUDIO_START_FAILED
+RINGTONE_FALLBACK
 FULL_SCREEN_DENIED
 EXACT_ALARM_LOST
 MISSED_TRIGGER_WINDOW
@@ -1391,6 +1436,8 @@ Chaque événement contient seulement l'heure, le type, l'identifiant de session
 **Un événement par fait, pas par publication ni par relance (2026-09-29).** Les six événements d'état (`SESSION_PREPARING` … `SESSION_FAILED`) sont écrits par `PublishSnapshotExecutor` à chaque **transition effective** : une publication qui ne change ni la session ni l'état — `INCIDENT_REPORTED`, début d'un blocage différé — n'en écrit pas. `RINGING_STARTED` a un seul producteur, le service de sonnerie, et n'est écrit que si le son vient réellement de démarrer (`RingingStartJournal`) : pas pour une relance du chien de garde (10.2), qui trouve le son en cours, ni pour un son qui échoue, journalisé par `AUDIO_START_FAILED` seul ; une reprise après mort du processus redémarre le son et l'écrit donc de nouveau, après `PROCESS_RECREATED`. Mesuré le 2026-09-29 sur Xiaomi 25080RABDG / Android 16 avant correction : `SESSION_ARMED` réécrit à chaque incident, `RINGING_STARTED` écrit deux fois au départ puis une fois par minute de sonnerie — une trentaine d'entrées pour 30 minutes, dans un journal limité à 200. **Après correction, même appareil, le même jour** : exemption d'énergie retirée pendant `ARMED`, incident enregistré, un seul `SESSION_ARMED` ; 4 min 37 s de sonnerie, 4 déclenchements du chien de garde, un seul `RINGING_STARTED`.
 
 **Événements du blocage différé (Lot 6).** `BLOCKING_SCHEDULED` à l'exécution de `SCHEDULE_BLOCKING_START`, `BLOCKING_START_RESCHEDULED` à chaque reprogrammation par le réconciliateur, `BLOCKING_START_RECEIVED` à chaque déclenchement reçu par `BlockingStartReceiver`, `BLOCKING_STARTED` à l'exécution réussie de `APPLY_BLOCKING` sur une session différée (les `BLOCK_APPLIED` par package suivent, comme à l'activation), `MISSED_BLOCKING_START_WINDOW` quand l'incident du même nom est produit. Ces cinq types s'ajoutent à la liste fermée ci-dessus ; `packageName` y reste refusé.
+
+**`RINGTONE_FALLBACK` (Lot 7).** Journalisé par le service de sonnerie quand la session porte une clé de sonnerie hors du catalogue et que `RingingSoundResolver` lui substitue la sonnerie par défaut (10.2). Il rend visible dans le diagnostic qu'un son autre que celui choisi a joué. Même règle que `RINGING_STARTED` (`RingingStartJournal`) : écrit à une vraie tentative de démarrage, juste avant `RINGING_STARTED` ou `AUDIO_START_FAILED`, jamais aux relances du chien de garde qui trouvent le son en cours. Il n'est pas écrit pour le chemin dégradé (session absente ou illisible), dont la cause est déjà journalisée ailleurs, ni pour une session migrée depuis `niumi_alarm` (7.2, 7.3), réécrite avant d'être lue.
 
 **`BLOCKING_START_RECEIVED` est journalisé avant toute décision** (étape 23), y compris quand le handler ou le moteur refusent ensuite d'appliquer le blocage — même convention qu'`ALARM_RECEIVED` pour le réveil. `BLOCKING_STARTED` ne peut pas y servir : il désigne l'exécution **réussie** d'`APPLY_BLOCKING`, et l'employer pour un refus ferait lire au journal qu'un blocage a commencé alors qu'il n'a rien commencé. « Réussie » s'entend au sens de SPEC_CORE_KMP §6 : `SUCCEEDED` **ou** `SATISFIED`, un effet satisfait comptant comme réussi (étape 25). Mesuré le 2026-09-24 sur trois sessions différées sur trois : quand le service d'accessibilité tourne, `PUBLISH_PLATFORM_SNAPSHOT`, premier effet de la même décision, fait rafraîchir la projection (`BlockingProjectionRefresher`), qui lit déjà le blocage actif dans le snapshot commité ; `APPLY_BLOCKING` s'exécute ensuite en `SATISFIED`. Ne journaliser que sur `SUCCEEDED` perdait donc `BLOCKING_STARTED` et les `BLOCK_APPLIED` qui le suivent, alors que le blocage avait commencé à l'heure. Aucun doublon n'en résulte : un effet `SUCCEEDED` ou `SATISFIED` n'est jamais rejoué. Ce type existe pour rendre visible le seul cas réaliste de refus : une alarme de début ayant survécu à la fin de sa session, `CANCEL_BLOCKING_START` étant un effet best-effort dont l'échec ne bloque pas la libération (SPEC_CORE_KMP §6). Sans lui, ce déclenchement orphelin ne laisserait aucune trace exportable — l'échec de l'annulation n'apparaît que dans l'outbox, que §17 n'exporte pas. Décision validée avec l'utilisateur le 2026-09-16, voir `docs/android/implementation-reports/ETAPE-23.md`.
 
@@ -1480,6 +1527,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - mapping des erreurs Android vers les erreurs métier;
 - registre et outbox atomiques, exécution idempotente des effets KMP et reprise partielle de `RELEASING`;
 - reconstruction du snapshot Direct Boot depuis Room après une interruption entre les deux écritures de l'étape 4 de l'activation;
+- sonneries et volume progressif (Lot 7) : catalogue et clé par défaut ; courbe de montée (−40 dB au départ, −20 dB à mi-parcours, 0 dB à la durée, bornée avant et après) ; moteur audio qui crée le lecteur à l'amplitude initiale, la réajuste toutes les 250 ms jusqu'à la durée, reprend une montée déjà entamée à l'amplitude du temps écoulé et annule la rampe à l'arrêt ; `RingingSoundResolver` sur les trois cas de 10.2 ; `updateAlarmSound` accepté en `ARMED` et refusé ailleurs, hors catalogue ou avant déverrouillage ; migration Room 3→4 et lecture d'une projection Direct Boot v1 ou v2 ; pré-écoute distincte du moteur de sonnerie ; en-tête de chaque fichier de sonnerie (PCM 16 bits, mono, 44,1 kHz) ;
 - blocage différé (Lot 6) : programmation, annulation et reprogrammation idempotentes du début du blocage, avec un code de requête distinct du réveil et du watchdog ; `BlockingStartHandler` (gardes de session, de révision et d'illisibilité, puis dispatch de `BLOCKING_START_ELAPSED`) ; réconciliation d'une session `ARMED` en attente de blocage (reprogrammation si l'alarme manque, `BLOCKING_START_ELAPSED` à l'heure et au-delà, `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes, y compris depuis le coordinateur Direct Boot) ; projection de blocage inactive sur `ARMED` tant que `blockingAppliedAtEpochMillis` est nul et active ensuite, en Room comme en Direct Boot ; relecture du dernier package au premier plan quand la projection devient active ; migration Room 2→3 et lecture d'une projection Direct Boot v1 comme blocage immédiat ; effets requis de l'activation selon le `blockingSchedule` ; un exécuteur lié pour chaque valeur de `SessionEffectKindDto`.
 
 `feature`:
@@ -1504,7 +1552,9 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - démarrage du service depuis un receiver de test;
 - Reader Mode avec abstraction ou tag de test;
 - réception de l'intent explicite de début du blocage par `BlockingStartReceiver` (Lot 6);
-- migration Room 2→3 depuis une base v2 peuplée (Lot 6).
+- migration Room 2→3 depuis une base v2 peuplée (Lot 6);
+- migration Room 3→4 depuis une base v3 peuplée d'une session en `niumi_alarm`, et modification de la sonnerie d'une session `ARMED` relue dans Room et dans la projection Direct Boot (Lot 7);
+- démarrage du service et lecture réelle d'une sonnerie autre que celle par défaut, avec montée progressive (Lot 7).
 
 Les tests ne doivent pas attendre une vraie heure de réveil. Injecter `Clock`, `AlarmScheduler`, `AlarmAudioEngine`, `NfcVerifier` et `ForegroundAppSource`.
 
@@ -1591,6 +1641,17 @@ Scénarios à exécuter:
 | blocage différé, scan avant l'heure de début (Lot 6) | `RELEASING` puis `CANCELLED`, alarme de début annulée, aucune application jamais bloquée |
 | blocage différé, service d'accessibilité désactivé avant l'heure de début (Lot 6) | incident `BLOCKING_PERMISSION_REVOKED`, session conservée, blocage appliqué à l'heure si le service est réactivé avant |
 | blocage différé, Doze forcé à l'heure de début (Lot 6) | alarme de début délivrée à l'heure, comme le watchdog de §4.2 |
+| chacune des quatre sonneries, session à +2 min, écran éteint (Lot 7) | sonnerie choisie audible, en boucle sur trois cycles sans blanc ni clic (la résonance finale de « Cloche » n'est pas un blanc), jusqu'au scan |
+| montée progressive 30 s, puis 5 min (Lot 7) | départ presque inaudible, plein volume atteint à la durée choisie à ± 5 s à l'oreille, puis constant |
+| volume constant (Lot 7) | plein volume dès la première seconde, comme avant le Lot 7 |
+| réglage par défaut, jamais modifié (Lot 7) | « Piano », départ presque inaudible, plein volume vers 2 min ; relire les lignes audio ci-dessus mesurées à volume constant |
+| mort du processus pendant la montée (`am crash`) (Lot 7) | si le service revit, la montée reprend à l'amplitude attendue pour le temps écoulé, jamais depuis zéro ; sinon, limite consignée comme à l'étape 17 |
+| redémarrage sans déverrouillage avant l'heure, sonnerie autre que la sonnerie par défaut (Lot 7) | la sonnerie choisie sonne, avec sa montée, depuis la projection Direct Boot v3 |
+| sonnerie modifiée pendant `ARMED`, puis redémarrage sans déverrouillage (Lot 7) | la nouvelle sonnerie sonne, avec sa nouvelle montée |
+| mise à jour par-dessus une session armée en `niumi_alarm` (Lot 7) | « Piano » à volume constant, aucun `RINGTONE_FALLBACK` dans le journal |
+| Ne pas déranger « alarmes seules », montée progressive (Lot 7) | montée audible ; non-régression de la ligne DND existante |
+| casque Bluetooth connecté, montée progressive (Lot 7) | flux dupliqué comme mesuré à l'étape 6, montée sur les deux sorties |
+| pré-écoute avec volume d'alarme à zéro (Lot 7) | message affiché, aucun son, aucun lecteur créé |
 | `niumi_session.json` corrompu à la main, Room valide (étape 20, debug) | incident `SNAPSHOT_CORRUPTED` unique, projection réécrite, session et blocage conservés |
 | base Room corrompue, appareil déverrouillé (étape 20, debug) | écran de diagnostic affiché, blocage conservé, aucune session perdue |
 
@@ -1631,6 +1692,12 @@ Le MVP est accepté si tous les critères suivants sont vrais:
 - un redémarrage avant l'heure de début reprogramme l'alarme de début avant le premier déverrouillage (Lot 6);
 - aucune session n'atteint `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans blocage demandé (Lot 6);
 - l'annulation d'une session avant le début de son blocage exige le scan du boîtier, et l'écran 5 refuse un début qui n'est pas strictement antérieur au réveil (Lot 6);
+- chacune des quatre sonneries joue en boucle jusqu'au scan, sans blanc audible à la jonction (Lot 7);
+- avec la montée progressive, l'alarme démarre à −40 dB et atteint son volume maximal à la durée choisie ; sans, plein volume immédiat (Lot 7);
+- le réglage est copié dans la session à l'activation : un redémarrage sans déverrouillage sonne la sonnerie et la montée de la session ; modifié pendant `ARMED`, c'est le nouveau réglage qui sonne ; il ne peut plus changer à partir de `RINGING` (Lot 7);
+- ni une base antérieure à v4, ni une projection Direct Boot antérieure à v3, ni une clé inconnue ne rendent le réveil muet (Lot 7);
+- la pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (Lot 7);
+- les limites mesurées du Lot 7 sont écrites dans l'aide et `LIMITES.md` (Lot 7);
 - les scénarios DND, Bluetooth, USB-C et changement de route audio sont consignés sur la matrice P0;
 - le dossier de déclaration Google Play pour l'AccessibilityService est prêt (Lot 0) et a été testé sur une piste interne ou fermée dès que le processus Play le permet, sur l'application complète plutôt que le POC (Lot 5, décision du 2026-09-07, voir `docs/android/implementation-reports/LOT-0.md`).
 
@@ -1745,6 +1812,14 @@ Lot ajouté le 2026-09-15, après la livraison du MVP (étape 21). Plan détaill
 - `BlockingStartScheduler`, `BlockingStartReceiver`, `BlockingStartHandler`, exécuteurs, réconciliation et projection de blocage (12.4);
 - écrans 5, 6 et 7;
 - résilience (Direct Boot, horloge, processus), matrice physique, aide et limites.
+
+### Lot 7: sonneries et volume progressif
+
+Lot ajouté le 2026-09-24, décisions validées avec l'utilisateur le 2026-09-30. Plan détaillé aux étapes 26 à 28 de `docs/superpowers/plans/2026-09-03-mvp-android.md`. Aucune modification du contrat KMP : la sonnerie est une donnée de plateforme.
+
+- quatre sonneries normalisées, catalogue `NiumiRingtones`, montée progressive pilotée par `AlarmAudioEngine`, `RingingSoundResolver`, Room v4, projection Direct Boot v3, modification pendant `ARMED` (étape 26);
+- écran 14, lignes des écrans 5, 6 et 7, préférence `AlarmSoundPreferences`, pré-écoute (étape 27);
+- matrice physique, aide et limites, rapport de release (étape 28).
 
 À la fin de chaque lot, Codex doit exécuter les tests concernés et produire un court rapport contenant les fichiers modifiés, les commandes exécutées, les résultats et les limites restantes. Aucun `TODO`, faux service, faux scan ou comportement silencieux ne doit rester dans un lot déclaré terminé.
 

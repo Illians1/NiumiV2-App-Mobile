@@ -50,3 +50,24 @@ val MIGRATION_2_3 =
             )
         }
     }
+
+/**
+ * v3 → v4 (Lot 7, sonneries et volume progressif) : la colonne `volumeRampSeconds` de SPEC_ANDROID
+ * §7.2, puis la réécriture de la sonnerie retirée de l'APK.
+ *
+ * Colonne nullable, sans clause `DEFAULT`, pour la même raison que [MIGRATION_2_3]. Les lignes
+ * existantes reçoivent `NULL` — volume constant : une session armée avant la mise à jour n'a pas
+ * choisi de montée, et on ne lui impose pas un départ presque inaudible. `niumi_alarm` devient
+ * `niumi_piano` ([LegacyRingtone]) : sans cette réécriture, la session sonnerait par le repli de
+ * `RingingSoundResolver`, qui journaliserait à tort `RINGTONE_FALLBACK`. Aucune autre table touchée.
+ */
+val MIGRATION_3_4 =
+    object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE alarm_session ADD COLUMN volumeRampSeconds INTEGER")
+            db.execSQL(
+                "UPDATE alarm_session SET ringtoneKey = '${LegacyRingtone.REPLACEMENT_KEY}' " +
+                    "WHERE ringtoneKey = '${LegacyRingtone.KEY}'",
+            )
+        }
+    }

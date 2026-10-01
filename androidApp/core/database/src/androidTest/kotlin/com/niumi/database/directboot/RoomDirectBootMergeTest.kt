@@ -191,7 +191,7 @@ class RoomDirectBootMergeTest {
             assertThat(store.pendingEffects(SESSION_ID).map { it.effectId }).contains(effect.effectId)
         }
 
-    /** §7.2 : les quatre champs figés à l'activation viennent toujours de Room. */
+    /** §7.2 : les champs figés à l'activation viennent toujours de Room, sonnerie et montée comprises (Lot 7). */
     @Test
     fun frozenActivationFieldsAreNeverOverwrittenByTheProjection() =
         runTest {
@@ -201,6 +201,7 @@ class RoomDirectBootMergeTest {
                     boxTokenSha256Hex = "f".repeat(64),
                     ringtoneKey = "autre_sonnerie",
                     vibrationEnabled = false,
+                    volumeRampSeconds = 5,
                 )
 
             merge.merge(tampered)
@@ -210,6 +211,7 @@ class RoomDirectBootMergeTest {
             assertThat(entity.boxTokenSha256Hex).isEqualTo(RoomTestFixtures.extras().boxTokenSha256Hex)
             assertThat(entity.ringtoneKey).isEqualTo(RoomTestFixtures.extras().ringtoneKey)
             assertThat(entity.vibrationEnabled).isEqualTo(RoomTestFixtures.extras().vibrationEnabled)
+            assertThat(entity.volumeRampSeconds).isEqualTo(RoomTestFixtures.extras().volumeRampSeconds)
         }
 
     /**

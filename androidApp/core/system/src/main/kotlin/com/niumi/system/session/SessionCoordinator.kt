@@ -20,4 +20,15 @@ interface SessionCoordinator {
     ): DispatchResult
 
     suspend fun reconcile(reason: ReconcileReason): ReconcileResult
+
+    /**
+     * Seule modification de la session sans scan (Lot 7, SPEC_ANDROID §3, §10.2) : sonnerie et
+     * montée progressive, tant que la session est `ARMED`. Sous le même verrou que [dispatch] :
+     * jamais entrelacée avec `ALARM_FIRED`. N'émet aucun événement KMP et ne change pas la
+     * révision — la sonnerie est une donnée de plateforme, hors du snapshot commun.
+     */
+    suspend fun updateAlarmSound(
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult
 }

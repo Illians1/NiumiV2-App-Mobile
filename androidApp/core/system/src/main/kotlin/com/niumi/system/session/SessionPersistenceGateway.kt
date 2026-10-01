@@ -57,4 +57,16 @@ interface SessionPersistenceGateway {
         sessionId: String,
         incident: SessionIncidentDto,
     ): OperationResult
+
+    /**
+     * Sonnerie et montée d'une session `ARMED` (Lot 7) : Room, puis recopie dans Direct Boot pour
+     * qu'un redémarrage suivant sonne le nouveau choix. Avant déverrouillage :
+     * `DeferredUntilUnlock`, rien n'est écrit. Aucune validation du catalogue ici : c'est le
+     * coordinateur qui valide.
+     */
+    suspend fun updateAlarmSound(
+        sessionId: String,
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult
 }

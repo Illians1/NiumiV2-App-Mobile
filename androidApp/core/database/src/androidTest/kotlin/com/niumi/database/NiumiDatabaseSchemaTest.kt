@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import com.niumi.database.migration.MIGRATION_1_2
 import com.niumi.database.migration.MIGRATION_2_3
+import com.niumi.database.migration.MIGRATION_3_4
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,7 +17,8 @@ private const val TEST_DATABASE_NAME = "niumi-migration-test.db"
  * Prouve que les schémas exportés sont lisibles par `MigrationTestHelper` depuis les assets du
  * module de test, que `MIGRATION_1_2` (étape 16) amène une base v1 peuplée en v2 sans perdre
  * son journal, et que `MIGRATION_2_3` (Lot 6) ajoute les quatre colonnes du début de blocage à
- * une base v2 portant une session `ARMED`. `ExportedSchemaTest` (JVM, sans appareil) couvre le
+ * une base v2 portant une session `ARMED`, et que `MIGRATION_3_4` (Lot 7) réécrit la sonnerie retirée
+ * de l'APK et ajoute la colonne de montée. `ExportedSchemaTest` (JVM, sans appareil) couvre le
  * reste. Voir `ETAPE-09.md`.
  *
  * L'API `SupportSQLiteDatabase` est utilisée plutôt que celle rendant un `SQLiteConnection` : le
@@ -124,6 +126,53 @@ class NiumiDatabaseSchemaTest {
             assertThat(cursor.getString(1)).isEqualTo("Pixel")
             assertThat(cursor.count).isEqualTo(1)
         }
+        migrated.close()
+    }
+
+    /**
+     * SPEC_ANDROID §7.2 (v4, Lot 7) : une session `ARMED` sur la sonnerie du MVP — retirée de l'APK —
+     * passe sur `niumi_piano` à volume constant (`volumeRampSeconds` nul), sans quoi elle sonnerait
+     * par le repli et journaliserait à tort `RINGTONE_FALLBACK`. Une autre clé n'est pas touchée,
+     * ni aucune autre colonne ou table.
+     */
+    @Test
+    fun migrationThreeToFourRewritesTheLegacyRingtoneAndAddsTheRampColumn() {
+        migrationTestHelper.createDatabase(TEST_DATABASE_NAME, 3).use { v3 ->
+            listOf("session-1" to "niumi_alarm", "session-2" to "autre_sonnerie").forEach { (id, ringtone) ->
+                v3.execSQL(
+                    "INSERT INTO alarm_session (id, schemaVersion, revision, localDate, localTime, " +
+                        "zoneIdAtActivation, triggerAtEpochMillis, blockingLocalDate, blockingLocalTime, " +
+                        "blockingStartsAtEpochMillis, blockingAppliedAtEpochMillis, state, releaseTarget, " +
+                        "health, boxId, boxTokenSha256Hex, ringtoneKey, vibrationEnabled, createdAtEpochMillis, " +
+                        "armedAtEpochMillis, ringingAtEpochMillis, alarmSoundStoppedAtEpochMillis, " +
+                        "triggerElapsedAtEpochMillis, nfcVerifiedAtEpochMillis, releasingAtEpochMillis, " +
+                        "completedAtEpochMillis, cancelledAtEpochMillis, failureCode) " +
+                        "VALUES ('$id', 2, 2, '2026-09-30', '07:00', 'Europe/Paris', 1800000000000, " +
+                        "'2026-09-29', '22:30', 1790000000000, NULL, 'ARMED', NULL, 'HEALTHY', 'box-1', '" +
+                        "a".repeat(64) + "', '$ringtone', 1, 1700000000000, 1700000001000, NULL, NULL, NULL, " +
+                        "NULL, NULL, NULL, NULL, NULL)",
+                )
+            }
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(TEST_DATABASE_NAME, 4, true, MIGRATION_3_4)
+
+        migrated
+            .query(
+                "SELECT id, ringtoneKey, volumeRampSeconds, blockingStartsAtEpochMillis, " +
+                    "blockingAppliedAtEpochMillis, revision FROM alarm_session ORDER BY id",
+            ).use { cursor ->
+                assertThat(cursor.count).isEqualTo(2)
+                assertThat(cursor.moveToFirst()).isTrue()
+                assertThat(cursor.getString(1)).isEqualTo("niumi_piano")
+                assertThat(cursor.isNull(2)).isTrue()
+                assertThat(cursor.getLong(3)).isEqualTo(1_790_000_000_000L)
+                assertThat(cursor.isNull(4)).isTrue()
+                assertThat(cursor.getLong(5)).isEqualTo(2)
+                assertThat(cursor.moveToNext()).isTrue()
+                assertThat(cursor.getString(1)).isEqualTo("autre_sonnerie")
+                assertThat(cursor.isNull(2)).isTrue()
+            }
         migrated.close()
     }
 }

@@ -9,7 +9,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import java.io.File
 
-private const val CURRENT_VERSION = 3
+private const val CURRENT_VERSION = 4
 
 /**
  * Garde-fou contre un `exportSchema` désactivé ou un schéma non committé (SPEC_CORE_KMP §13 :
@@ -120,5 +120,23 @@ class ExportedSchemaTest {
                     .startsWith("blocking")
             }
         assertThat(blockingColumns.none { it["notNull"]?.jsonPrimitive?.content == "true" }).isTrue()
+    }
+
+    /** SPEC_ANDROID §7.2 (v4, Lot 7) : `volumeRampSeconds`, nullable — `null` vaut volume constant. */
+    @Test
+    fun alarmSessionCarriesANullableRampColumnSinceVersionFour() {
+        val rampColumn =
+            database(CURRENT_VERSION)
+                .getValue("entities")
+                .jsonArray
+                .map { it.jsonObject }
+                .single { it.getValue("tableName").jsonPrimitive.content == "alarm_session" }
+                .getValue("fields")
+                .jsonArray
+                .map { it.jsonObject }
+                .single { it.getValue("fieldPath").jsonPrimitive.content == "volumeRampSeconds" }
+
+        assertThat(rampColumn.getValue("affinity").jsonPrimitive.content).isEqualTo("INTEGER")
+        assertThat(rampColumn["notNull"]?.jsonPrimitive?.content).isNotEqualTo("true")
     }
 }

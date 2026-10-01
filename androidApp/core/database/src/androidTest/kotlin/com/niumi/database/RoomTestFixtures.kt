@@ -54,14 +54,25 @@ internal object RoomTestFixtures {
         failureCode = null,
     )
 
+    // Une valeur par défaut par champ d'`AndroidSessionExtras` : chaque test ne nomme que ce qu'il
+    // fait varier, ce qui vaut mieux ici que la limite de paramètres.
+    @Suppress("LongParameterList")
     internal fun extras(
         boxId: String = "550e8400-e29b-41d4-a716-446655440000",
         boxTokenSha256Hex: String = "a".repeat(64),
         ringtoneKey: String = "niumi_default",
         vibrationEnabled: Boolean = true,
+        volumeRampSeconds: Int? = 120,
         blockedPackages: List<BlockedPackage> =
             listOf(BlockedPackage("com.example.first", "Première application")),
-    ) = AndroidSessionExtras(boxId, boxTokenSha256Hex, ringtoneKey, vibrationEnabled, blockedPackages)
+    ) = AndroidSessionExtras(
+        boxId,
+        boxTokenSha256Hex,
+        ringtoneKey,
+        vibrationEnabled,
+        volumeRampSeconds,
+        blockedPackages,
+    )
 
     internal fun receipt(
         eventId: String,

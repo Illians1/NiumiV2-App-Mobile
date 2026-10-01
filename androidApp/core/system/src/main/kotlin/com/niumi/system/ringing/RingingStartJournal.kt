@@ -16,10 +16,21 @@ import com.niumi.system.common.OperationResult
  * son échec.
  */
 object RingingStartJournal {
-    fun eventsFor(result: OperationResult): List<TechnicalEventType> =
-        when (result) {
-            OperationResult.Success -> listOf(TechnicalEventType.RINGING_STARTED)
-            OperationResult.AlreadySatisfied -> emptyList()
-            is OperationResult.Failure -> listOf(TechnicalEventType.AUDIO_START_FAILED)
-        }
+    /**
+     * [ringtoneFallback] (Lot 7) : `RingingSoundResolver` a remplacé une clé hors catalogue.
+     * `RINGTONE_FALLBACK` suit la même règle que `RINGING_STARTED` — écrit à une vraie tentative de
+     * démarrage, jamais aux relances du chien de garde — et précède l'issue de cette tentative.
+     */
+    fun eventsFor(
+        result: OperationResult,
+        ringtoneFallback: Boolean = false,
+    ): List<TechnicalEventType> {
+        val outcome =
+            when (result) {
+                OperationResult.Success -> TechnicalEventType.RINGING_STARTED
+                OperationResult.AlreadySatisfied -> return emptyList()
+                is OperationResult.Failure -> TechnicalEventType.AUDIO_START_FAILED
+            }
+        return listOfNotNull(TechnicalEventType.RINGTONE_FALLBACK.takeIf { ringtoneFallback }, outcome)
+    }
 }

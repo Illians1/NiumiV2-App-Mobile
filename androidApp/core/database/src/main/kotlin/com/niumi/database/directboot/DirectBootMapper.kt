@@ -7,6 +7,7 @@ import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
+import com.niumi.database.migration.LegacyRingtone
 
 /**
  * Aller-retour `(SessionSnapshotDto, AndroidSessionExtras, receipts, effects) ↔
@@ -53,6 +54,7 @@ object DirectBootMapper {
             failureCode = snapshot.failureCode,
             ringtoneKey = extras.ringtoneKey,
             vibrationEnabled = extras.vibrationEnabled,
+            volumeRampSeconds = extras.volumeRampSeconds,
             boxId = extras.boxId,
             boxTokenSha256Hex = extras.boxTokenSha256Hex,
             blockedPackages = extras.blockedPackages.map { it.toProjection() },
@@ -67,8 +69,8 @@ object DirectBootMapper {
  * elle se relit donc en `IMMEDIATE` avec `blockingAppliedAtEpochMillis = createdAtEpochMillis`. Sans
  * cette traduction, les quatre champs vaudraient `null` et `isBlockingPending` resterait faux —
  * correct par chance pour un schedule immédiat, mais l'instant d'application serait perdu. La
- * projection est réécrite en v2 à la fusion suivante. Un fichier v1 ne se lit jamais « pas de
- * session ».
+ * projection est réécrite dans la version courante à la fusion suivante. Un fichier v1 ne se lit
+ * jamais « pas de session ».
  */
 fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
     SessionSnapshotDto(
@@ -109,12 +111,20 @@ fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
         failureCode = failureCode,
     )
 
+/**
+ * **Lecture d'un fichier v1 ou v2 (Lot 7, SPEC_ANDROID §7.3).** `volumeRampSeconds` y est absent et
+ * se lit `null` (valeur par défaut du champ) : volume constant. La sonnerie du MVP, retirée de l'APK,
+ * se lit comme sa remplaçante — même règle que `MIGRATION_3_4`, que la projection n'atteint pas
+ * avant la fusion. Sans elle, un réveil après redémarrage, avant tout déverrouillage, sonnerait par
+ * le repli de `RingingSoundResolver`.
+ */
 fun DirectBootSnapshot.Active.toExtras(): AndroidSessionExtras =
     AndroidSessionExtras(
         boxId = boxId,
         boxTokenSha256Hex = boxTokenSha256Hex,
-        ringtoneKey = ringtoneKey,
+        ringtoneKey = if (hasRingtoneCatalog) ringtoneKey else LegacyRingtone.migrate(ringtoneKey),
         vibrationEnabled = vibrationEnabled,
+        volumeRampSeconds = volumeRampSeconds,
         blockedPackages = blockedPackages.map { it.toDomain() },
     )
 
@@ -146,4 +156,7 @@ private fun DirectBootEffect.toDomain(): PendingEffect =
  * avec `createdAtEpochMillis` à chaque relecture.
  */
 private val DirectBootSnapshot.Active.isLegacyProjection: Boolean
-    get() = projectionSchemaVersion < DIRECT_BOOT_PROJECTION_SCHEMA_VERSION
+    get() = projectionSchemaVersion < PROJECTION_VERSION_WITH_BLOCKING_SCHEDULE
+
+private val DirectBootSnapshot.Active.hasRingtoneCatalog: Boolean
+    get() = projectionSchemaVersion >= PROJECTION_VERSION_WITH_RINGTONE_CATALOG

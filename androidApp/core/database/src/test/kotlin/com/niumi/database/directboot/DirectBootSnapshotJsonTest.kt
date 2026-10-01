@@ -5,9 +5,11 @@ import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionEffectKind
 import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
+import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.EffectStatus
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -114,6 +116,7 @@ class DirectBootSnapshotJsonTest {
                 "failureCode",
                 "ringtoneKey",
                 "vibrationEnabled",
+                "volumeRampSeconds",
                 "boxId",
                 "boxTokenSha256Hex",
                 "blockedPackages",
@@ -149,6 +152,49 @@ class DirectBootSnapshotJsonTest {
         assertThrows(SerializationException::class.java) {
             json.decodeFromString(DirectBootSnapshot.Active.serializer(), truncated)
         }
+    }
+
+    /**
+     * Lot 7, SPEC_ANDROID §7.3 : un fichier écrit en v2 — sans `volumeRampSeconds`, avec la sonnerie
+     * du MVP — se lit en volume constant et sur la sonnerie qui la remplace. Et surtout, un blocage
+     * différé encore en attente y reste en attente : la v2 porte déjà les champs `blocking*`, et la
+     * relire comme un fichier v1 lèverait le blocage de la session.
+     */
+    @Test
+    fun `a version two file stays readable, pending blocking included`() {
+        val versionTwo =
+            reference.copy(
+                projectionSchemaVersion = 2,
+                blockingLocalDate = "2026-09-07",
+                blockingLocalTime = "22:30",
+                blockingStartsAtEpochMillis = 1_750_000_000_000L,
+                blockingAppliedAtEpochMillis = null,
+                ringtoneKey = "niumi_alarm",
+            )
+        val encoded = json.encodeToJsonElement(DirectBootSnapshot.Active.serializer(), versionTwo).jsonObject
+        val file = JsonObject(encoded - "volumeRampSeconds").toString()
+
+        val decoded = json.decodeFromString(DirectBootSnapshot.Active.serializer(), file)
+
+        assertThat(decoded.toExtras().volumeRampSeconds).isNull()
+        assertThat(decoded.toExtras().ringtoneKey).isEqualTo("niumi_piano")
+        assertThat(decoded.toSnapshotDto().blockingSchedule.startsAtEpochMillis).isEqualTo(1_750_000_000_000L)
+        assertThat(decoded.toSnapshotDto().isBlockingPending).isTrue()
+    }
+
+    @Test
+    fun `a version three file keeps its ramp and ringtone`() {
+        val versionThree = reference.copy(ringtoneKey = "niumi_oiseaux", volumeRampSeconds = 300)
+
+        val decoded =
+            json.decodeFromString(
+                DirectBootSnapshot.Active.serializer(),
+                json.encodeToString(DirectBootSnapshot.Active.serializer(), versionThree),
+            )
+
+        assertThat(decoded.projectionSchemaVersion).isEqualTo(3)
+        assertThat(decoded.toExtras().ringtoneKey).isEqualTo("niumi_oiseaux")
+        assertThat(decoded.toExtras().volumeRampSeconds).isEqualTo(300)
     }
 
     private fun kotlinx.serialization.json.JsonElement.jsonObjectKeys(): Set<String> = (this as JsonObject).keys

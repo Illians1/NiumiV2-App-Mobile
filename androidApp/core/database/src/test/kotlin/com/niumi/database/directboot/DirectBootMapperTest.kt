@@ -203,7 +203,7 @@ class DirectBootMapperTest {
         assertThat(active.toSnapshotDto().isBlockingPending).isFalse()
     }
 
-    /** Toute écriture se fait en v2, quelle que soit la session projetée (SPEC_ANDROID §7.3). */
+    /** Toute écriture se fait en v3, quelle que soit la session projetée (SPEC_ANDROID §7.3, Lot 7). */
     @Test
     fun theProjectionIsAlwaysWrittenAtTheCurrentVersion() {
         val active =
@@ -214,7 +214,60 @@ class DirectBootMapperTest {
                 effects,
             )
 
-        assertThat(active.projectionSchemaVersion).isEqualTo(2)
+        assertThat(active.projectionSchemaVersion).isEqualTo(3)
+    }
+
+    @Test
+    fun theRampRoundTripsAndANullRampStaysConstant() {
+        val snapshot = SessionSnapshotDtoFixtures.preparingSnapshot()
+
+        val ramped = DirectBootMapper.projectionOf(snapshot, extras.copy(volumeRampSeconds = 30), receipts, effects)
+        val constant = DirectBootMapper.projectionOf(snapshot, extras.copy(volumeRampSeconds = null), receipts, effects)
+
+        assertThat(ramped.toExtras()).isEqualTo(extras.copy(volumeRampSeconds = 30))
+        assertThat(constant.toExtras().volumeRampSeconds).isNull()
+    }
+
+    /** Lot 7 : la sonnerie retirée de l'APK se relit comme sa remplaçante dans un fichier v1 ou v2. */
+    @Test
+    fun theLegacyRingtoneOfAnOlderProjectionReadsAsItsReplacement() {
+        listOf(1, 2).forEach { version ->
+            val legacy =
+                DirectBootMapper
+                    .projectionOf(SessionSnapshotDtoFixtures.preparingSnapshot(), extras, receipts, effects)
+                    .copy(projectionSchemaVersion = version, ringtoneKey = "niumi_alarm", volumeRampSeconds = null)
+
+            assertThat(legacy.toExtras().ringtoneKey).isEqualTo("niumi_piano")
+            assertThat(legacy.toExtras().volumeRampSeconds).isNull()
+        }
+    }
+
+    /** Une v3 n'est jamais réécrite : une clé hors catalogue y est laissée au repli de `RingingSoundResolver`. */
+    @Test
+    fun aCurrentProjectionKeepsItsRingtoneAsWritten() {
+        val current =
+            DirectBootMapper.projectionOf(
+                SessionSnapshotDtoFixtures.preparingSnapshot(),
+                extras.copy(ringtoneKey = "niumi_alarm"),
+                receipts,
+                effects,
+            )
+
+        assertThat(current.toExtras().ringtoneKey).isEqualTo("niumi_alarm")
+    }
+
+    /**
+     * La v2 porte déjà les champs `blocking*` : la montée en v3 ne doit pas la faire relire comme un
+     * fichier v1, ce qui ferait d'un blocage en attente un blocage déjà appliqué.
+     */
+    @Test
+    fun aVersionTwoProjectionKeepsItsPendingBlocking() {
+        val snapshot = SessionSnapshotDtoFixtures.armedBlockingPendingSnapshot()
+        val versionTwo =
+            DirectBootMapper.projectionOf(snapshot, extras, receipts, effects).copy(projectionSchemaVersion = 2)
+
+        assertThat(versionTwo.toSnapshotDto()).isEqualTo(snapshot)
+        assertThat(versionTwo.toSnapshotDto().isBlockingPending).isTrue()
     }
 
     /**

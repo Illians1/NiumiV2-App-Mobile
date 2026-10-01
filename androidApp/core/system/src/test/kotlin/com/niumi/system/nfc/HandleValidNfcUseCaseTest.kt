@@ -9,6 +9,7 @@ import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.EventReceipt
 import com.niumi.system.common.IdGenerator
 import com.niumi.system.common.OperationResult
+import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.ReconcileReason
@@ -399,4 +400,9 @@ private class ProgrammableCoordinator(
         reconcileReasons += reason
         return ReconcileResult(sessionId = null, actions = emptyList())
     }
+
+    override suspend fun updateAlarmSound(
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult = throw UnsupportedOperationException("Non utilisé par le scan")
 }

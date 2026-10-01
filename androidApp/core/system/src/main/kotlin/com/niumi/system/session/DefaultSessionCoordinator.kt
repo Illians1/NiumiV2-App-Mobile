@@ -7,6 +7,7 @@ import com.niumi.core.interop.SessionEventDto
 import com.niumi.core.interop.SessionEventKindDto
 import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
@@ -15,6 +16,8 @@ import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.database.mapping.EventFingerprint
 import com.niumi.database.mapping.SessionEffectMapper.toPendingEffects
+import com.niumi.system.audio.NiumiRingtones
+import com.niumi.system.audio.VolumeRampDurations
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -44,6 +47,35 @@ class DefaultSessionCoordinator(
 
     override suspend fun reconcile(reason: ReconcileReason): ReconcileResult =
         mutex.withLock { reconciler.reconcile(reason) { locked -> dispatchLocked(locked, extras = null) } }
+
+    override suspend fun updateAlarmSound(
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult =
+        mutex.withLock {
+            val present = gateway.load() as? LoadResult.Present
+            when {
+                NiumiRingtones.byKey(ringtoneKey) == null -> {
+                    AlarmSoundUpdateResult.UnknownRingtone
+                }
+
+                volumeRampSeconds != null && volumeRampSeconds !in VolumeRampDurations.SECONDS -> {
+                    AlarmSoundUpdateResult.InvalidRampDuration
+                }
+
+                present == null -> {
+                    AlarmSoundUpdateResult.NoActiveSession
+                }
+
+                present.snapshot.state != SessionStateDto.ARMED -> {
+                    AlarmSoundUpdateResult.NotArmed
+                }
+
+                else -> {
+                    gateway.updateAlarmSound(present.snapshot.sessionId, ringtoneKey, volumeRampSeconds)
+                }
+            }
+        }
 
     /**
      * Non verrouillante : appelée uniquement sous [mutex] déjà pris, par [dispatch] ou par

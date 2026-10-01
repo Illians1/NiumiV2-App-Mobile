@@ -20,6 +20,7 @@ import com.niumi.system.nfc.NfcReader
 import com.niumi.system.nfc.NfcScanHandler
 import com.niumi.system.nfc.ScanOutcome
 import com.niumi.system.readiness.ForegroundReadinessTrigger
+import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionPersistenceGateway
 import kotlinx.coroutines.CompletableDeferred
@@ -71,6 +72,12 @@ class FakeSessionPersistenceGateway(
         sessionId: String,
         incident: SessionIncidentDto,
     ): OperationResult = error("RECORD_INCIDENT_FROM_SCREEN")
+
+    override suspend fun updateAlarmSound(
+        sessionId: String,
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult = error("UPDATE_ALARM_SOUND_FROM_GATEWAY")
 }
 
 fun presentSession(
@@ -83,8 +90,9 @@ fun presentSession(
             AndroidSessionExtras(
                 boxId = "550e8400-e29b-41d4-a716-446655440000",
                 boxTokenSha256Hex = "a".repeat(64),
-                ringtoneKey = "niumi_alarm",
+                ringtoneKey = "niumi_piano",
                 vibrationEnabled = true,
+                volumeRampSeconds = 120,
                 blockedPackages = blockedPackages,
             ),
         pendingEffects = emptyList(),

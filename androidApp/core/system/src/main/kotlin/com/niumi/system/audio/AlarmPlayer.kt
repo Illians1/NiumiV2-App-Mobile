@@ -2,6 +2,9 @@ package com.niumi.system.audio
 
 /** Poignée sur un lecteur audio en cours, abstraite du framework Android sous-jacent. */
 interface AlarmPlayer {
+    /** Amplitude du lecteur, de 0 à 1 (montée progressive, SPEC_ANDROID §10.2). */
+    fun setVolume(amplitude: Float)
+
     fun release()
 }
 

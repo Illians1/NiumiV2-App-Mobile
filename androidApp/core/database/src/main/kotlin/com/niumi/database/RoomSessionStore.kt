@@ -124,10 +124,11 @@ private suspend fun toStoredSession(
     )
 
 /**
- * `boxId`, `boxTokenSha256Hex`, `ringtoneKey` et `vibrationEnabled` sont figés à l'activation
- * (SPEC_ANDROID §7.2, dernier alinéa) : une session déjà présente en base fait toujours foi sur
- * ces quatre champs, jamais l'appelant. `blockedPackages` n'est pas concerné par cette garantie à
- * cette étape (voir ETAPE-09.md).
+ * `boxId`, `boxTokenSha256Hex`, `ringtoneKey`, `vibrationEnabled` et `volumeRampSeconds` sont
+ * figés à l'activation (SPEC_ANDROID §7.2) : une session déjà présente en base fait toujours foi sur
+ * ces champs, jamais l'appelant d'une décision. Sonnerie et montée ont un seul autre chemin
+ * d'écriture, `RoomSessionAlarmSoundStore`, hors décision (Lot 7). `blockedPackages` n'est pas
+ * concerné par cette garantie à cette étape (voir ETAPE-09.md).
  */
 private fun AndroidSessionExtras.freezeFrom(existing: AlarmSessionEntity?): AndroidSessionExtras =
     if (existing == null) {
@@ -138,5 +139,6 @@ private fun AndroidSessionExtras.freezeFrom(existing: AlarmSessionEntity?): Andr
             boxTokenSha256Hex = existing.boxTokenSha256Hex,
             ringtoneKey = existing.ringtoneKey,
             vibrationEnabled = existing.vibrationEnabled,
+            volumeRampSeconds = existing.volumeRampSeconds,
         )
     }

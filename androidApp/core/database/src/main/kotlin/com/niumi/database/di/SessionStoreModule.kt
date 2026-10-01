@@ -1,7 +1,9 @@
 package com.niumi.database.di
 
 import com.niumi.database.NiumiDatabase
+import com.niumi.database.RoomSessionAlarmSoundStore
 import com.niumi.database.RoomSessionStore
+import com.niumi.database.SessionAlarmSoundStore
 import com.niumi.database.SessionStore
 import com.niumi.database.directboot.DirectBootRoomMerge
 import com.niumi.database.directboot.RoomDirectBootMerge
@@ -42,4 +44,12 @@ object SessionStoreModule {
         databaseProvider: Provider<NiumiDatabase>,
         unlockState: UnlockState,
     ): DirectBootRoomMerge = RoomDirectBootMerge(unlockState, databaseProvider)
+
+    /** Sonnerie d'une session `ARMED` (Lot 7) ; même garde de déverrouillage que [provideSessionStore]. */
+    @Provides
+    @Singleton
+    fun provideSessionAlarmSoundStore(
+        databaseProvider: Provider<NiumiDatabase>,
+        unlockState: UnlockState,
+    ): SessionAlarmSoundStore = RoomSessionAlarmSoundStore(databaseProvider, unlockState)
 }

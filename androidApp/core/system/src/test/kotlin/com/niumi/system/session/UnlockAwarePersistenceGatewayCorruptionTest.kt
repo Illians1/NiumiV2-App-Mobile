@@ -56,6 +56,7 @@ class UnlockAwarePersistenceGatewayCorruptionTest {
             sessionStore = sessionStore,
             directBootStore = InMemoryDirectBootStore(),
             unlockState = FakeUnlockState(isUserUnlocked = true),
+            alarmSoundStore = { _, _, _ -> throw UnsupportedOperationException() },
         )
 
     @Test

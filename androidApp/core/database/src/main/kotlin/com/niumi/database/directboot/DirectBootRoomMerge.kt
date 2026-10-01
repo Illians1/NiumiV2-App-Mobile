@@ -112,10 +112,12 @@ class RoomDirectBootMerge(
             // tables enfants et effacerait le journal de la session (régression mesurée à
             // l'étape 11, couverte par `RoomSessionStoreHistoryTest`).
             //
-            // Les quatre champs figés à l'activation (SPEC_ANDROID §7.2) sont repris de Room et
-            // non de la projection : c'est Room qui les a figés, et la fenêtre Direct Boot ne
-            // peut pas les modifier. Les applications bloquées ne sont pas réécrites non plus —
-            // elles sont figées de la même façon et les réécrire ferait du bruit de CASCADE.
+            // Les champs figés à l'activation (SPEC_ANDROID §7.2) sont repris de Room et non de la
+            // projection : c'est Room qui les a figés, et la fenêtre Direct Boot ne peut pas les
+            // modifier. Sonnerie et montée comprises (Lot 7) : leur seul chemin d'écriture hors
+            // activation exige le déverrouillage, donc Room les porte toujours à jour. Les
+            // applications bloquées ne sont pas réécrites non plus — elles sont figées de la même
+            // façon et les réécrire ferait du bruit de CASCADE.
             database.sessionDao().upsert(
                 projection.toSnapshotDto().toEntity(
                     projection.toExtras().copy(
@@ -123,6 +125,7 @@ class RoomDirectBootMerge(
                         boxTokenSha256Hex = existing.boxTokenSha256Hex,
                         ringtoneKey = existing.ringtoneKey,
                         vibrationEnabled = existing.vibrationEnabled,
+                        volumeRampSeconds = existing.volumeRampSeconds,
                     ),
                 ),
             )

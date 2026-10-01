@@ -29,6 +29,11 @@ class SessionStartupReconcilerTest {
             reasons += reason
             return ReconcileResult(sessionId = null, actions = emptyList())
         }
+
+        override suspend fun updateAlarmSound(
+            ringtoneKey: String,
+            volumeRampSeconds: Int?,
+        ): AlarmSoundUpdateResult = throw UnsupportedOperationException("Non utilisé au démarrage")
     }
 
     @Test

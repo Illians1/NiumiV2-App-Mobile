@@ -8,7 +8,17 @@ import com.niumi.database.EffectStatus
 import kotlinx.serialization.Serializable
 
 /** Version du format de projection lui-même, indépendante de [DirectBootSnapshot.Active.domainSchemaVersion]. */
-public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 2
+public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 3
+
+/**
+ * Première version portant les champs `blocking*` (Lot 6). Seuil figé, jamais dérivé de
+ * [DIRECT_BOOT_PROJECTION_SCHEMA_VERSION] : une projection v2 a bien ces champs, et la relire comme
+ * « sans blocage différé » lèverait un blocage en attente.
+ */
+internal const val PROJECTION_VERSION_WITH_BLOCKING_SCHEDULE: Int = 2
+
+/** Première version portant `volumeRampSeconds` et un catalogue de sonneries (Lot 7). */
+internal const val PROJECTION_VERSION_WITH_RINGTONE_CATALOG: Int = 3
 
 /**
  * Projection partielle de Room dans le stockage protégé de l'appareil (SPEC_ANDROID §7.3,
@@ -33,7 +43,11 @@ public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 2
  * précisément pour qu'un champ absent y signifie « ancien fichier » et non « écrit à null ». La
  * traduction d'un fichier v1 en blocage immédiat appartient à `DirectBootMapper.toSnapshotDto`, qui
  * seul dispose de `createdAtEpochMillis` pour renseigner `blockingAppliedAtEpochMillis`
- * (SPEC_ANDROID §7.3). L'écriture est toujours en v2.
+ * (SPEC_ANDROID §7.3).
+ *
+ * **Projection v3 (Lot 7).** `volumeRampSeconds` porte lui aussi une valeur par défaut, `null` —
+ * volume constant, ce qu'avait choisi toute session écrite avant. `DirectBootMapper.toExtras`
+ * y réécrit la sonnerie retirée de l'APK (`LegacyRingtone`). L'écriture est toujours en v3.
  *
  * Seul [Active] est jamais sérialisé (directement, via son propre sérialiseur) : [Corrupted]
  * représente un état de lecture, jamais écrit. L'interface scellée n'est donc pas elle-même
@@ -70,6 +84,7 @@ public sealed interface DirectBootSnapshot {
         val failureCode: String?,
         val ringtoneKey: String,
         val vibrationEnabled: Boolean,
+        val volumeRampSeconds: Int? = null,
         val boxId: String,
         val boxTokenSha256Hex: String,
         val blockedPackages: List<DirectBootBlockedPackage>,

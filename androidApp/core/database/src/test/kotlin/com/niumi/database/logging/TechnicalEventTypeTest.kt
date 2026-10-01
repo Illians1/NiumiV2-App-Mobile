@@ -22,6 +22,7 @@ class TechnicalEventTypeTest {
                 "ALARM_RECEIVED",
                 "RINGING_STARTED",
                 "AUDIO_START_FAILED",
+                "RINGTONE_FALLBACK",
                 "FULL_SCREEN_DENIED",
                 "EXACT_ALARM_LOST",
                 "MISSED_TRIGGER_WINDOW",

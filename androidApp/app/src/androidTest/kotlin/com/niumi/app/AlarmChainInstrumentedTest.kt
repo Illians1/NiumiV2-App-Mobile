@@ -18,6 +18,7 @@ import com.niumi.database.directboot.DirectBootStore
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.alarm.AlarmScheduler
+import com.niumi.system.audio.AlarmAudioEngine
 import com.niumi.system.common.Clock
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionPersistenceGateway
@@ -67,6 +68,9 @@ class AlarmChainInstrumentedTest {
     @Inject
     lateinit var clock: Clock
 
+    @Inject
+    lateinit var audioEngine: AlarmAudioEngine
+
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Before
@@ -93,6 +97,10 @@ class AlarmChainInstrumentedTest {
         val journal = awaitJournalContaining(TechnicalEventType.RINGING_STARTED)
         assertThat(journal).contains(TechnicalEventType.ALARM_RECEIVED)
         assertThat(journal.count { it == TechnicalEventType.RINGING_STARTED }).isEqualTo(1)
+        // Lot 7 : la clé de la session est au catalogue, et le moteur réel — aucune doublure audio
+        // n'existe en instrumentation — joue.
+        assertThat(journal).doesNotContain(TechnicalEventType.RINGTONE_FALLBACK)
+        assertThat(audioEngine.isPlaying).isTrue()
     }
 
     /** `effects` vide : la session est déjà armée, il n'y a aucun effet en attente à rejouer. */
@@ -114,8 +122,11 @@ class AlarmChainInstrumentedTest {
                         AndroidSessionExtras(
                             boxId = BOX_ID,
                             boxTokenSha256Hex = "a".repeat(64),
-                            ringtoneKey = "niumi_alarm",
+                            // Lot 7 : une sonnerie autre que celle par défaut, avec montée, pour
+                            // prouver que c'est bien le réglage de la session qui joue.
+                            ringtoneKey = "niumi_oiseaux",
                             vibrationEnabled = false,
+                            volumeRampSeconds = 30,
                             blockedPackages = listOf(BlockedPackage("com.example.app", "Exemple")),
                         ),
                 ),

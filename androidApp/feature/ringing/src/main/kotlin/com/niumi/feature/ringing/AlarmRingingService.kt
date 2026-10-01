@@ -11,6 +11,7 @@ import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.alarm.AlarmPendingIntentSpecs
 import com.niumi.system.audio.AlarmAudioEngine
+import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
@@ -20,6 +21,7 @@ import com.niumi.system.notification.RingingNotificationWatch
 import com.niumi.system.power.WakeLockHolder
 import com.niumi.system.ringing.RingingRecovery
 import com.niumi.system.ringing.RingingServiceRecovery
+import com.niumi.system.ringing.RingingSoundResolver
 import com.niumi.system.ringing.RingingStartJournal
 import com.niumi.system.ringing.ServiceCommand
 import com.niumi.system.ringing.ServiceCommandExtras
@@ -48,6 +50,11 @@ import javax.inject.Inject
  * premier plan avec une notification silencieuse — `startForeground()` doit être appelé sans
  * attendre, alors que la lecture du snapshot est suspendue — puis applique la décision de
  * [RingingServiceRecovery].
+ *
+ * Ce qui sonne (Lot 7) : la session est lue puis confiée à [RingingSoundResolver], seul à décider ;
+ * le son démarre donc dans [serviceScope], après `startForeground()`. [soundLock] et [destroyed]
+ * interdisent qu'un `start` tardif passe après le `stop` de [onDestroy] : ce serait une sonnerie
+ * sans service ni bouton d'arrêt, que plus rien ne ferait taire.
  */
 @AndroidEntryPoint
 class AlarmRingingService : Service() {
@@ -75,6 +82,9 @@ class AlarmRingingService : Service() {
     @Inject
     lateinit var coordinator: SessionCoordinator
 
+    @Inject
+    lateinit var clock: Clock
+
     @DefaultDispatcher
     @Inject
     lateinit var defaultDispatcher: CoroutineDispatcher
@@ -90,6 +100,8 @@ class AlarmRingingService : Service() {
     private val keyguardManager by lazy { getSystemService(KeyguardManager::class.java) }
     private var wakeLockRenewalJob: Job? = null
     private var notificationWatchJob: Job? = null
+    private val soundLock = Any()
+    private var destroyed = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -142,7 +154,7 @@ class AlarmRingingService : Service() {
 
         when (val recovery = RingingServiceRecovery.decide(loaded)) {
             is RingingRecovery.ResumeRinging -> {
-                startRinging(recovery.sessionId)
+                startRinging(recovery.sessionId, loaded)
             }
 
             RingingRecovery.ReconcileAndStop, RingingRecovery.StopOnCorruptedSnapshot -> {
@@ -156,7 +168,11 @@ class AlarmRingingService : Service() {
         }
     }
 
-    private fun startRinging(sessionId: String) {
+    /** [alreadyLoaded] : la session déjà lue par [recover], pour ne pas la relire. */
+    private fun startRinging(
+        sessionId: String,
+        alreadyLoaded: LoadResult? = null,
+    ) {
         startForeground(
             NOTIFICATION_ID,
             alarmNotification(sessionId, fullScreen = true),
@@ -165,11 +181,19 @@ class AlarmRingingService : Service() {
         wakeLockHolder.acquire()
         scheduleWakeLockRenewal()
         watchNotification(sessionId)
-        // Idempotent : une reprise après mort de processus ne double jamais le son.
-        val result = audioEngine.start(ringtoneKey = RINGTONE_KEY, vibrationEnabled = true)
-        // Le son a-t-il vraiment démarré ? Une relance du chien de garde trouve le son en cours
-        // (`AlreadySatisfied`) et n'écrit rien (SPEC_ANDROID §17, 2026-09-29).
-        RingingStartJournal.eventsFor(result).forEach { technicalEventLog.log(it, sessionId = sessionId) }
+        serviceScope.launch {
+            val loaded = alreadyLoaded ?: gateway.load()
+            val resolved = RingingSoundResolver.resolve(loaded, sessionId, clock.nowEpochMillis())
+            // Idempotent : une reprise après mort de processus ne double jamais le son.
+            val result = synchronized(soundLock) { if (destroyed) null else audioEngine.start(resolved.sound) }
+            // Le son a-t-il vraiment démarré ? Une relance du chien de garde trouve le son en cours
+            // (`AlreadySatisfied`) et n'écrit rien (SPEC_ANDROID §17, 2026-09-29).
+            result?.let { started ->
+                RingingStartJournal
+                    .eventsFor(started, ringtoneFallback = resolved.fallback)
+                    .forEach { technicalEventLog.log(it, sessionId = sessionId) }
+            }
+        }
     }
 
     /** §10.2 : garantir que l'écran de réveil reste atteignable tant que la session sonne. */
@@ -225,14 +249,16 @@ class AlarmRingingService : Service() {
         wakeLockRenewalJob?.cancel()
         notificationWatchJob?.cancel()
         serviceJob.cancel()
-        audioEngine.stop()
+        synchronized(soundLock) {
+            destroyed = true
+            audioEngine.stop()
+        }
         wakeLockHolder.release()
         super.onDestroy()
     }
 
     private companion object {
         const val NOTIFICATION_ID = 1
-        const val RINGTONE_KEY = "niumi_alarm"
         const val WAKE_LOCK_RENEWAL_INTERVAL_MS = 8 * 60 * 1000L
     }
 }

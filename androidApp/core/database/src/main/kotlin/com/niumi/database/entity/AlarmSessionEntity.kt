@@ -18,6 +18,10 @@ import com.niumi.core.interop.SessionStateDto
  * renseignées pour un blocage différé, sauf `blockingAppliedAtEpochMillis`, qui porte l'instant où le
  * moteur a demandé le blocage — l'activation pour un blocage immédiat, la première décision à ou
  * après `blockingStartsAtEpochMillis` sinon (SPEC_CORE_KMP §7.5).
+ *
+ * `volumeRampSeconds` (v4, Lot 7) : durée de la montée progressive, nulle pour un volume constant.
+ * Avec `ringtoneKey`, seule colonne modifiable après l'activation hors décision du moteur, par
+ * `RoomSessionAlarmSoundStore`, et seulement en `ARMED` (SPEC_ANDROID §3, §7.2).
  */
 @Entity(tableName = "alarm_session")
 data class AlarmSessionEntity(
@@ -39,6 +43,7 @@ data class AlarmSessionEntity(
     val boxTokenSha256Hex: String,
     val ringtoneKey: String,
     val vibrationEnabled: Boolean,
+    val volumeRampSeconds: Int?,
     val createdAtEpochMillis: Long,
     val armedAtEpochMillis: Long?,
     val ringingAtEpochMillis: Long?,

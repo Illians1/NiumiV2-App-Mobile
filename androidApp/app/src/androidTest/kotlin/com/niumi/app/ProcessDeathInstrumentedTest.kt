@@ -283,8 +283,9 @@ class ProcessDeathInstrumentedTest {
                         AndroidSessionExtras(
                             boxId = BOX_ID,
                             boxTokenSha256Hex = "a".repeat(64),
-                            ringtoneKey = "niumi_alarm",
+                            ringtoneKey = "niumi_piano",
                             vibrationEnabled = false,
+                            volumeRampSeconds = null,
                             blockedPackages = listOf(BlockedPackage("com.example.app", "Exemple")),
                         ),
                 ),
@@ -351,8 +352,9 @@ class ProcessDeathInstrumentedTest {
                         AndroidSessionExtras(
                             boxId = BOX_ID,
                             boxTokenSha256Hex = "a".repeat(64),
-                            ringtoneKey = "niumi_alarm",
+                            ringtoneKey = "niumi_piano",
                             vibrationEnabled = false,
+                            volumeRampSeconds = null,
                             blockedPackages = listOf(BlockedPackage(BLOCKED_PACKAGE, "Exemple")),
                         ),
                 ),

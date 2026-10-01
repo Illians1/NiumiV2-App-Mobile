@@ -2,7 +2,7 @@ package com.niumi.feature.ringing.di
 
 import android.content.Context
 import com.niumi.feature.ringing.AndroidRingingController
-import com.niumi.feature.ringing.R
+import com.niumi.feature.ringing.RingtoneResources
 import com.niumi.system.audio.RingtoneResourceResolver
 import com.niumi.system.common.DeviceProtected
 import com.niumi.system.ringing.RingingController
@@ -13,8 +13,8 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * `:core:system` ne peut pas référencer le `R` de `:feature:ringing`, propriétaire du fichier
- * audio empaqueté ([RingtoneResourceResolver]) ni des classes cibles des `PendingIntent`
+ * `:core:system` ne peut pas référencer le `R` de `:feature:ringing`, propriétaire des fichiers
+ * audio empaquetés ([RingtoneResourceResolver]) ni des classes cibles des `PendingIntent`
  * ([RingingController]) : ces bindings vivent ici, module downstream (SPEC_ANDROID §6).
  */
 @Module
@@ -22,10 +22,7 @@ import javax.inject.Singleton
 object RingingModule {
     @Provides
     @Singleton
-    fun provideRingtoneResourceResolver(): RingtoneResourceResolver =
-        RingtoneResourceResolver { ringtoneKey ->
-            if (ringtoneKey == "niumi_alarm") R.raw.niumi_alarm else null
-        }
+    fun provideRingtoneResourceResolver(): RingtoneResourceResolver = RingtoneResources
 
     @Provides
     @Singleton

@@ -35,6 +35,9 @@ import com.niumi.database.entity.TechnicalEventEntity
  * v3 (Lot 6, blocage différé) ajoute à `alarm_session` les quatre colonnes `blocking*` de
  * SPEC_ANDROID §7.2, toutes nullables. Migration additive elle aussi :
  * voir [com.niumi.database.migration.MIGRATION_2_3].
+ *
+ * v4 (Lot 7, sonneries) ajoute à `alarm_session` la colonne nullable `volumeRampSeconds` et réécrit
+ * la sonnerie retirée de l'APK : voir [com.niumi.database.migration.MIGRATION_3_4].
  */
 @Database(
     entities = [
@@ -47,7 +50,7 @@ import com.niumi.database.entity.TechnicalEventEntity
         SessionEffectOutboxEntity::class,
         ActiveSessionPointerEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(SessionEnumConverters::class, EffectEnumConverters::class, IncidentEnumConverters::class)

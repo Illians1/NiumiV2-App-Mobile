@@ -38,6 +38,7 @@ fun SessionSnapshotDto.toEntity(extras: AndroidSessionExtras): AlarmSessionEntit
         boxTokenSha256Hex = extras.boxTokenSha256Hex,
         ringtoneKey = extras.ringtoneKey,
         vibrationEnabled = extras.vibrationEnabled,
+        volumeRampSeconds = extras.volumeRampSeconds,
         createdAtEpochMillis = createdAtEpochMillis,
         armedAtEpochMillis = armedAtEpochMillis,
         ringingAtEpochMillis = ringingAtEpochMillis,
@@ -91,5 +92,6 @@ fun AlarmSessionEntity.toExtras(blockedPackages: List<BlockedPackage>): AndroidS
         boxTokenSha256Hex = boxTokenSha256Hex,
         ringtoneKey = ringtoneKey,
         vibrationEnabled = vibrationEnabled,
+        volumeRampSeconds = volumeRampSeconds,
         blockedPackages = blockedPackages,
     )

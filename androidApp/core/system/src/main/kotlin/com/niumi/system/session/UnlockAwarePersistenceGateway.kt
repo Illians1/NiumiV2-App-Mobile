@@ -1,9 +1,11 @@
 package com.niumi.system.session
 
 import com.niumi.core.interop.SessionIncidentDto
+import com.niumi.database.AlarmSoundStoreResult
 import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
+import com.niumi.database.SessionAlarmSoundStore
 import com.niumi.database.SessionStore
 import com.niumi.database.SessionStoreUnreadableException
 import com.niumi.database.StoredDecision
@@ -33,6 +35,7 @@ class UnlockAwarePersistenceGateway(
     private val sessionStore: SessionStore,
     private val directBootStore: DirectBootStore,
     private val unlockState: UnlockState,
+    private val alarmSoundStore: SessionAlarmSoundStore,
 ) : SessionPersistenceGateway {
     override suspend fun load(): LoadResult =
         if (unlockState.isUserUnlocked) {
@@ -75,14 +78,15 @@ class UnlockAwarePersistenceGateway(
         if (unlockState.isUserUnlocked) {
             sessionStore.findReceipt(eventId)
         } else {
-            activeDirectBootSnapshot()?.toReceipts()?.firstOrNull { it.eventId == eventId }
+            directBootStore.activeSnapshot()?.toReceipts()?.firstOrNull { it.eventId == eventId }
         }
 
     override suspend fun pendingEffects(sessionId: String): List<PendingEffect> =
         if (unlockState.isUserUnlocked) {
             sessionStore.pendingEffects(sessionId)
         } else {
-            activeDirectBootSnapshot()
+            directBootStore
+                .activeSnapshot()
                 ?.takeIf { it.sessionId == sessionId }
                 ?.let { replayableEffectsOf(it) }
                 .orEmpty()
@@ -120,15 +124,34 @@ class UnlockAwarePersistenceGateway(
             OperationResult.Failure(INCIDENT_DEFERRED_CODE)
         }
 
-    private fun activeDirectBootSnapshot(): DirectBootSnapshot.Active? =
-        directBootStore.read() as? DirectBootSnapshot.Active
+    override suspend fun updateAlarmSound(
+        sessionId: String,
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    ): AlarmSoundUpdateResult {
+        if (!unlockState.isUserUnlocked) return AlarmSoundUpdateResult.DeferredUntilUnlock
+        return when (alarmSoundStore.update(sessionId, ringtoneKey, volumeRampSeconds)) {
+            AlarmSoundStoreResult.Updated -> {
+                mirrorActiveSession()
+                AlarmSoundUpdateResult.Updated
+            }
+
+            AlarmSoundStoreResult.NoActiveSession -> {
+                AlarmSoundUpdateResult.NoActiveSession
+            }
+
+            AlarmSoundStoreResult.NotArmed -> {
+                AlarmSoundUpdateResult.NotArmed
+            }
+        }
+    }
 
     private suspend fun mirrorActiveSession() {
         mirrorActiveSessionToDirectBoot(sessionStore, directBootStore)
     }
 
     private fun writeDirectBoot(decision: StoredDecision) {
-        val existing = activeDirectBootSnapshot()?.takeIf { it.sessionId == decision.snapshot.sessionId }
+        val existing = directBootStore.activeSnapshot()?.takeIf { it.sessionId == decision.snapshot.sessionId }
         val existingReceipts = existing?.toReceipts().orEmpty()
         val existingEffects = existing?.toPendingEffects().orEmpty()
         val mergedEffects =
@@ -148,7 +171,7 @@ class UnlockAwarePersistenceGateway(
         status: EffectStatus,
         error: String?,
     ) {
-        val existing = activeDirectBootSnapshot() ?: return
+        val existing = directBootStore.activeSnapshot() ?: return
         val updatedEffects =
             existing.toPendingEffects().map { effect ->
                 if (effect.effectId == effectId) effect.copy(status = status, lastError = error) else effect
@@ -168,3 +191,7 @@ class UnlockAwarePersistenceGateway(
 // depuis l'ajout de `recordIncident` à l'étape 11.
 private fun replayableEffectsOf(snapshot: DirectBootSnapshot.Active): List<PendingEffect> =
     snapshot.toPendingEffects().filter { it.status in DIRECT_BOOT_REPLAYABLE_STATUSES }
+
+// Fonction de fichier plutôt que membre : la classe est au plafond detekt `TooManyFunctions` (11)
+// depuis `updateAlarmSound` (Lot 7).
+private fun DirectBootStore.activeSnapshot(): DirectBootSnapshot.Active? = read() as? DirectBootSnapshot.Active

@@ -2,6 +2,7 @@ package com.niumi.system.session.di
 
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.SessionEffectKindDto
+import com.niumi.database.SessionAlarmSoundStore
 import com.niumi.database.SessionStore
 import com.niumi.database.directboot.DirectBootStore
 import com.niumi.database.directboot.UnlockState
@@ -81,7 +82,9 @@ object SessionModule {
         sessionStore: SessionStore,
         directBootStore: DirectBootStore,
         unlockState: UnlockState,
-    ): SessionPersistenceGateway = UnlockAwarePersistenceGateway(sessionStore, directBootStore, unlockState)
+        alarmSoundStore: SessionAlarmSoundStore,
+    ): SessionPersistenceGateway =
+        UnlockAwarePersistenceGateway(sessionStore, directBootStore, unlockState, alarmSoundStore)
 
     /**
      * `@JvmSuppressWildcards` : Kotlin compile ce paramètre en

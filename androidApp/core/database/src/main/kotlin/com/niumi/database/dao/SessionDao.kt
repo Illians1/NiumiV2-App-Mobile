@@ -22,4 +22,19 @@ interface SessionDao {
      */
     @Upsert
     suspend fun upsert(entity: AlarmSessionEntity)
+
+    /**
+     * Seule écriture de la session hors décision du moteur (Lot 7, SPEC_ANDROID §7.2) : sonnerie et
+     * montée, rien d'autre. `UPDATE` ciblé plutôt qu'un `upsert` de l'entité relue : aucune autre
+     * colonne ne peut être réécrite par ce chemin, même avec une entité périmée.
+     */
+    @Query(
+        "UPDATE alarm_session SET ringtoneKey = :ringtoneKey, volumeRampSeconds = :volumeRampSeconds " +
+            "WHERE id = :sessionId",
+    )
+    suspend fun updateAlarmSound(
+        sessionId: String,
+        ringtoneKey: String,
+        volumeRampSeconds: Int?,
+    )
 }
