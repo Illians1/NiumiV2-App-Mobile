@@ -6,9 +6,12 @@ import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleDto
+import com.niumi.feature.session.ui.AlarmSoundTexts
+import com.niumi.feature.session.wake.fakes.FakeAlarmSoundPreferences
 import com.niumi.feature.session.wake.fakes.FakeClock
 import com.niumi.feature.session.wake.fakes.FakeSetupPreferences
 import com.niumi.feature.session.wake.fakes.FakeTimeZoneProvider
+import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.session.SessionSnapshotPublisher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,8 +57,18 @@ class WakeTimeViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(setupPreferences: FakeSetupPreferences = FakeSetupPreferences()): WakeTimeViewModel =
-        WakeTimeViewModel(NiumiCoreFacade(), clock, timeZoneProvider, setupPreferences, snapshotPublisher)
+    private fun viewModel(
+        setupPreferences: FakeSetupPreferences = FakeSetupPreferences(),
+        alarmSoundPreferences: FakeAlarmSoundPreferences = FakeAlarmSoundPreferences(),
+    ): WakeTimeViewModel =
+        WakeTimeViewModel(
+            NiumiCoreFacade(),
+            clock,
+            timeZoneProvider,
+            setupPreferences,
+            alarmSoundPreferences,
+            snapshotPublisher,
+        )
 
     @Test
     fun aTimeChosenBeforeTheCurrentHourIsScheduledForTomorrow() {
@@ -442,6 +455,35 @@ class WakeTimeViewModelTest {
         viewModel.continueToSummary { _, _ -> called = true }
 
         assertThat(called).isFalse()
+    }
+
+    // Ligne « Sonnerie » (§15, Lot 7) : résumé de la préférence, relu comme les heures.
+
+    @Test
+    fun theAlarmSoundSummaryReflectsThePreferenceAtInit() {
+        val viewModel =
+            viewModel(alarmSoundPreferences = FakeAlarmSoundPreferences(AlarmSoundSettings("niumi_oiseaux", 300)))
+
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Oiseaux · volume progressif sur 5 min")
+    }
+
+    @Test
+    fun theAlarmSoundSummaryDefaultsToPianoWithATwoMinuteRamp() {
+        val viewModel = viewModel()
+
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo(AlarmSoundTexts.summary(AlarmSoundSettings()))
+    }
+
+    @Test
+    fun refreshRereadsTheAlarmSoundPreferenceLikeTheReturnFromScreenFourteen() {
+        val alarmSoundPreferences = FakeAlarmSoundPreferences()
+        val viewModel = viewModel(alarmSoundPreferences = alarmSoundPreferences)
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo(AlarmSoundTexts.summary(AlarmSoundSettings()))
+
+        alarmSoundPreferences.settings = AlarmSoundSettings("niumi_bell", null)
+        viewModel.refresh(use24Hour = true)
+
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Cloche · volume constant")
     }
 
     private fun armedSnapshot() =

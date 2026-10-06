@@ -710,4 +710,38 @@ class ActiveSessionViewModelTest {
         assertThat(viewModel.state.blockedApps).isEmpty()
         assertThat(viewModel.state.incidents).isEmpty()
     }
+
+    // Ligne « Sonnerie » (§15, Lot 7) : résumé de la session, pas de la préférence.
+
+    @Test
+    fun theAlarmSoundSummaryReflectsTheSessionsFrozenSettings() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot())
+
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Piano · volume progressif sur 2 min")
+    }
+
+    @Test
+    fun theLineIsEditableOnlyWhileArmed() {
+        gateway.result = presentSession(snapshot(SessionStateDto.RINGING), blockedApps)
+        val viewModel = viewModel()
+
+        snapshotPublisher.publish(snapshot(SessionStateDto.RINGING))
+
+        assertThat(viewModel.state.canEditAlarmSound).isFalse()
+    }
+
+    @Test
+    fun anUnreadablePersistenceKeepsTheAlarmSoundSummaryAlreadyShown() {
+        gateway.result = presentSession(snapshot(), blockedApps)
+        val viewModel = viewModel()
+        snapshotPublisher.publish(snapshot())
+
+        gateway.result = LoadResult.Unreadable("json")
+        viewModel.refresh(use24Hour = true)
+
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Piano · volume progressif sur 2 min")
+    }
 }

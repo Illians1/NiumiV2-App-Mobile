@@ -19,7 +19,9 @@ import com.niumi.feature.session.activation.fakes.RecordingReadinessChecker
 import com.niumi.feature.session.activation.fakes.RecordingSessionCoordinator
 import com.niumi.feature.session.activation.fakes.RecordingTimeZoneProvider
 import com.niumi.feature.session.wake.WakeTimeTexts
+import com.niumi.feature.session.wake.fakes.FakeAlarmSoundPreferences
 import com.niumi.feature.session.wake.fakes.FakeClock
+import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.common.UuidIdGenerator
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck
@@ -86,6 +88,7 @@ class SummaryViewModelTest {
     private val appSelectionStore = RecordingAppSelectionStore(journal, selection)
     private val coordinator = RecordingSessionCoordinator(journal)
     private val snapshotPublisher = SessionSnapshotPublisher()
+    private val alarmSoundPreferences = FakeAlarmSoundPreferences()
 
     private fun report(
         candidateTriggerAtEpochMillis: Long?,
@@ -152,9 +155,9 @@ class SummaryViewModelTest {
                 facade = NiumiCoreFacade(),
                 coordinator = coordinator,
                 eventFactory = SessionEventFactory(UuidIdGenerator(), FakeClock(now)),
-                sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider),
+                sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider, alarmSoundPreferences),
             )
-        return SummaryViewModel(useCase, snapshotPublisher)
+        return SummaryViewModel(useCase, alarmSoundPreferences, snapshotPublisher)
     }
 
     private fun loadedViewModel(blockingLocalTimeIso: String? = null): SummaryViewModel =
@@ -184,6 +187,16 @@ class SummaryViewModelTest {
         assertThat(viewModel.state.blockedPackages).containsExactlyElementsIn(selection)
         assertThat(viewModel.state.truncatedBoxId).isEqualTo("b0c1d2e3")
         assertThat(viewModel.state.canActivate).isTrue()
+    }
+
+    /** Ligne « Sonnerie » de l'écran 6 (§15, Lot 7) : résumé de la préférence, relu sur `refresh`. */
+    @Test
+    fun theAlarmSoundSummaryReflectsThePreference() {
+        alarmSoundPreferences.settings = AlarmSoundSettings("niumi_bell", null)
+
+        val viewModel = loadedViewModel()
+
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Cloche · volume constant")
     }
 
     @Test

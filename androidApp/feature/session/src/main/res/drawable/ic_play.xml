@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Pré-écoute (écran 14, SPEC_ANDROID §15, Lot 7) : triangle plein, forme géométrique simple,
+         conforme à la charte §15 (contours simples, peu de détails). -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M8,5v14l11,-7z" />
+</vector>

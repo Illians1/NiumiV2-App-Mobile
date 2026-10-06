@@ -1,5 +1,7 @@
 package com.niumi.feature.session.wake.fakes
 
+import com.niumi.system.audio.AlarmSoundPreferences
+import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.common.Clock
 import com.niumi.system.common.TimeZoneProvider
 import com.niumi.system.setup.SetupPreferences
@@ -39,5 +41,15 @@ class FakeSetupPreferences(
 
     override suspend fun setLastBlockingStartTimeIso(value: String?) {
         lastBlockingStartTimeIsoValue = value
+    }
+}
+
+class FakeAlarmSoundPreferences(
+    var settings: AlarmSoundSettings = AlarmSoundSettings(),
+) : AlarmSoundPreferences {
+    override suspend fun read(): AlarmSoundSettings = settings
+
+    override suspend fun write(settings: AlarmSoundSettings) {
+        this.settings = settings
     }
 }

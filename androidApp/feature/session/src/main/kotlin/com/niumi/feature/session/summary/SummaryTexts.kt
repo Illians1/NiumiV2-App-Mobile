@@ -26,6 +26,9 @@ object SummaryTexts {
 
     const val BLOCKING_IMMEDIATE_LABEL = "Dès l'activation"
 
+    /** Ligne « Sonnerie » sous « Blocage des applications » (§15, Lot 7) : affichée, pas cliquable. */
+    const val RINGTONE_TITLE = "Sonnerie"
+
     /**
      * Explication de l'écart entre l'heure saisie et l'heure programmée lors d'un trou d'heure
      * d'été (SPEC_CORE_KMP §8.1, point 3). Affichée seulement dans ce cas : sans elle, l'écart

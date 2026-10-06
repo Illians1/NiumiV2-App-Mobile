@@ -23,6 +23,7 @@ class WakeTimeTextsTest {
             WakeTimeTexts.BLOCKING_DISMISS_LABEL,
             WakeTimeTexts.BLOCKING_IMMEDIATE_SENTENCE,
             WakeTimeTexts.BLOCKING_NOT_BEFORE_TRIGGER_MESSAGE,
+            WakeTimeTexts.RINGTONE_ROW_TITLE,
         )
 
     @Test
@@ -51,6 +52,12 @@ class WakeTimeTextsTest {
                 "L'heure de début du blocage doit être avant ton réveil. " +
                     "Pour bloquer tout de suite, choisis « Maintenant ».",
             )
+    }
+
+    /** Ligne « Sonnerie » de l'écran 5 (§15, Lot 7). */
+    @Test
+    fun theRingtoneRowTitleMatchesTheSpecification() {
+        assertThat(WakeTimeTexts.RINGTONE_ROW_TITLE).isEqualTo("Sonnerie")
     }
 
     /**

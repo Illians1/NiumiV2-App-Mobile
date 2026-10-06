@@ -38,6 +38,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.session.ui.AlarmSoundRow
 import java.time.LocalTime
 
 /**
@@ -76,6 +77,11 @@ fun WakeTimeScreen(
                 state = state,
                 onModeChanged = actions.onBlockingModeChanged,
                 onTimeChanged = actions.onBlockingTimeChanged,
+            )
+            AlarmSoundRow(
+                title = WakeTimeTexts.RINGTONE_ROW_TITLE,
+                summary = state.alarmSoundSummary,
+                onClick = actions.onOpenRingtone,
             )
             Button(
                 onClick = actions.onContinue,
@@ -216,6 +222,7 @@ private val BLOCKING_ITEM_SHAPE = RoundedCornerShape(8.dp)
 @Composable
 fun WakeTimeRoute(
     onContinue: (WakeTimeChoice) -> Unit,
+    onOpenRingtone: () -> Unit,
     viewModel: WakeTimeViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -252,6 +259,7 @@ fun WakeTimeRoute(
                 },
                 onBlockingModeChanged = viewModel::onBlockingModeChanged,
                 onBlockingTimeChanged = viewModel::onBlockingTimeChanged,
+                onOpenRingtone = onOpenRingtone,
             ),
         pickerContent = { TimePicker(state = pickerState) },
     )
@@ -264,7 +272,13 @@ private fun WakeTimeScreenPreview() {
     NiumiTheme {
         WakeTimeScreen(
             state = WakeTimeUiState(),
-            actions = WakeTimeActions(onContinue = {}, onBlockingModeChanged = {}, onBlockingTimeChanged = { _, _ -> }),
+            actions =
+                WakeTimeActions(
+                    onContinue = {},
+                    onBlockingModeChanged = {},
+                    onBlockingTimeChanged = { _, _ -> },
+                    onOpenRingtone = {},
+                ),
             pickerContent = {
                 val default = LocalTime.parse(DEFAULT_LOCAL_TIME_ISO)
                 TimePicker(state = rememberTimePickerState(default.hour, default.minute, is24Hour = true))

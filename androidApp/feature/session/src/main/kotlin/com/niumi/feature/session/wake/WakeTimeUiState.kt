@@ -1,7 +1,9 @@
 package com.niumi.feature.session.wake
 
+import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.WakeScheduleDisplay
 import com.niumi.feature.session.ui.WakeScheduleFormatter
+import com.niumi.system.audio.AlarmSoundSettings
 
 /** Heure par défaut du cadran tant qu'aucune heure n'a jamais été confirmée (décision utilisateur). */
 const val DEFAULT_LOCAL_TIME_ISO = "07:00"
@@ -33,6 +35,8 @@ data class WakeTimeUiState(
     val message: String? = null,
     val isSessionInProgress: Boolean = false,
     val isLoading: Boolean = true,
+    /** Résumé de la préférence de sonnerie (§15, Lot 7), relu comme les heures à chaque `ON_RESUME`. */
+    val alarmSoundSummary: String = AlarmSoundTexts.summary(AlarmSoundSettings()),
 ) {
     val isBlockingImmediate: Boolean get() = blockingLocalTimeIso == null
 

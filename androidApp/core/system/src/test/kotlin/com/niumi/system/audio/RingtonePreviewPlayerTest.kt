@@ -61,6 +61,7 @@ class RingtonePreviewPlayerTest {
         assertThat(lastConfiguration?.vibrationEnabled).isFalse()
         assertThat(lastConfiguration?.initialAmplitude).isEqualTo(1f)
         assertThat(preview.isPlaying).isTrue()
+        assertThat(preview.playingKey.value).isEqualTo("niumi_piano")
     }
 
     @Test
@@ -70,6 +71,7 @@ class RingtonePreviewPlayerTest {
 
         assertThat(created.map { it.released }).containsExactly(true, false).inOrder()
         assertThat(preview.isPlaying).isTrue()
+        assertThat(preview.playingKey.value).isEqualTo("niumi_oiseaux")
     }
 
     @Test
@@ -81,16 +83,18 @@ class RingtonePreviewPlayerTest {
         assertThat(created.single().released).isTrue()
         assertThat(focus.releases).isEqualTo(1)
         assertThat(preview.isPlaying).isFalse()
+        assertThat(preview.playingKey.value).isNull()
     }
 
     @Test
-    fun theEndOfThePlaybackReleasesEverything() {
+    fun theEndOfThePlaybackReleasesEverythingAndClearsThePlayingKey() {
         preview.play("niumi_bell")
         created.single().onCompletion()
 
         assertThat(created.single().released).isTrue()
         assertThat(focus.releases).isEqualTo(1)
         assertThat(preview.isPlaying).isFalse()
+        assertThat(preview.playingKey.value).isNull()
     }
 
     @Test
@@ -101,6 +105,7 @@ class RingtonePreviewPlayerTest {
 
         assertThat(created.last().released).isFalse()
         assertThat(preview.isPlaying).isTrue()
+        assertThat(preview.playingKey.value).isEqualTo("niumi_piano")
     }
 
     @Test
@@ -112,5 +117,6 @@ class RingtonePreviewPlayerTest {
         assertThat(created).isEmpty()
         assertThat(focus.releases).isEqualTo(focus.requests)
         assertThat(preview.isPlaying).isFalse()
+        assertThat(preview.playingKey.value).isNull()
     }
 }

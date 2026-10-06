@@ -1,6 +1,7 @@
 package com.niumi.system.audio
 
 import com.niumi.system.common.OperationResult
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Pré-écoute d'une sonnerie sur l'écran 14 (SPEC_ANDROID §10.2, §15, Lot 7). Jamais
@@ -15,6 +16,13 @@ interface RingtonePreviewPlayer {
     fun stop()
 
     val isPlaying: Boolean
+
+    /**
+     * Clé en cours de lecture, ou `null`. Contrairement à [isPlaying], une simple consultation
+     * ponctuelle, ce flux notifie aussi la fin naturelle du fichier : sans lui, l'écran 14
+     * garderait l'icône « arrêt » affichée après la fin d'une pré-écoute sans boucle (étape 27).
+     */
+    val playingKey: StateFlow<String?>
 }
 
 /**

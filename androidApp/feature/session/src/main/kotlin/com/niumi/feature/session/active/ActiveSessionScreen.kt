@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.designsystem.effect.WindowFocusRegainedEffect
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.session.ui.AlarmSoundRow
 import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.settingsIntentFor
 
@@ -36,14 +37,15 @@ import com.niumi.system.readiness.settingsIntentFor
  * Écran de session active (écran 7, SPEC_ANDROID §15), complet depuis l'étape 15. La seule action
  * est « Modifier ou annuler », qui mène au scan : ni arrêt, ni annulation directe — le scan du
  * boîtier est le seul chemin de sortie (SPEC_CORE_KMP §2, points 3 et 4 ; SPEC_ANDROID §3).
+ *
+ * La ligne « Sonnerie » (Lot 7) est la seule exception : elle ouvre l'écran 14 sans passer par le
+ * scan, et seulement en `ARMED` — la sonnerie n'est pas un terme de l'engagement (§3, §15).
  */
 @Composable
 fun ActiveSessionScreen(
     state: ActiveSessionUiState,
-    onModifyOrCancel: () -> Unit,
+    actions: ActiveSessionActions,
     modifier: Modifier = Modifier,
-    onRemediate: (IncidentPresentation) -> Unit = {},
-    onOpenDiagnostic: () -> Unit = {},
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -82,19 +84,26 @@ fun ActiveSessionScreen(
             }
 
             BlockingStartSection(state)
+            state.alarmSoundSummary?.let { summary ->
+                AlarmSoundRow(
+                    title = ActiveSessionTexts.RINGTONE_TITLE,
+                    summary = summary,
+                    onClick = actions.onOpenRingtone.takeIf { state.canEditAlarmSound },
+                )
+            }
 
-            CriticalIncidents(state.criticalIncidents, onRemediate)
+            CriticalIncidents(state.criticalIncidents, actions.onRemediate)
             HealthSection(state)
             BlockedAppsSection(state)
-            OtherIncidents(state, onRemediate)
+            OtherIncidents(state, actions.onRemediate)
 
             Text(text = ActiveSessionTexts.COMMITMENT_REMINDER, style = MaterialTheme.typography.bodyLarge)
-            Button(onClick = onModifyOrCancel, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = actions.onModifyOrCancel, modifier = Modifier.fillMaxWidth()) {
                 Text(text = ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON)
             }
             // Consultation seule (écran 12) : ne termine ni ne modifie la session, au même titre
             // que les recours ci-dessus. Le scan du boîtier reste le seul chemin de sortie (§3).
-            TextButton(onClick = onOpenDiagnostic, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = actions.onOpenDiagnostic, modifier = Modifier.fillMaxWidth()) {
                 Text(text = ActiveSessionTexts.OPEN_DIAGNOSTIC_BUTTON)
             }
         }
@@ -243,6 +252,7 @@ private fun OtherIncidents(
 fun ActiveSessionRoute(
     onModifyOrCancel: () -> Unit,
     onOpenDiagnostic: () -> Unit,
+    onOpenRingtone: () -> Unit,
     viewModel: ActiveSessionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -269,16 +279,21 @@ fun ActiveSessionRoute(
 
     ActiveSessionScreen(
         state = viewModel.state,
-        onModifyOrCancel = onModifyOrCancel,
-        onOpenDiagnostic = onOpenDiagnostic,
-        // §13 : les `Intent` de réglages sont construits par l'écran, jamais par le ViewModel ni
-        // par `DeviceReadinessChecker`. Un recours sans `Intent` n'a de toute façon pas de bouton
-        // (`IncidentPresentation`), d'où le `?.let` plutôt qu'un repli silencieux.
-        onRemediate = { incident ->
-            incident.action
-                ?.let { settingsIntentFor(it, context.packageName) }
-                ?.let(context::startActivity)
-        },
+        actions =
+            ActiveSessionActions(
+                onModifyOrCancel = onModifyOrCancel,
+                onOpenDiagnostic = onOpenDiagnostic,
+                onOpenRingtone = onOpenRingtone,
+                // §13 : les `Intent` de réglages sont construits par l'écran, jamais par le
+                // ViewModel ni par `DeviceReadinessChecker`. Un recours sans `Intent` n'a de toute
+                // façon pas de bouton (`IncidentPresentation`), d'où le `?.let` plutôt qu'un repli
+                // silencieux.
+                onRemediate = { incident ->
+                    incident.action
+                        ?.let { settingsIntentFor(it, context.packageName) }
+                        ?.let(context::startActivity)
+                },
+            ),
     )
 }
 
@@ -286,6 +301,9 @@ fun ActiveSessionRoute(
 @Composable
 private fun ActiveSessionScreenPreview() {
     NiumiTheme {
-        ActiveSessionScreen(state = ActiveSessionUiState(isLoading = false), onModifyOrCancel = {})
+        ActiveSessionScreen(
+            state = ActiveSessionUiState(isLoading = false),
+            actions = ActiveSessionActions(onModifyOrCancel = {}),
+        )
     }
 }

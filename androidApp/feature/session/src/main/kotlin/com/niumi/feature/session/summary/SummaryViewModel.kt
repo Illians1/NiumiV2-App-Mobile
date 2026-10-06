@@ -13,8 +13,10 @@ import com.niumi.feature.session.activation.ActivationFailure
 import com.niumi.feature.session.activation.ActivationPreview
 import com.niumi.feature.session.activation.ArmSessionResult
 import com.niumi.feature.session.activation.ArmSessionUseCase
+import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.BlockingScheduleFormatter
 import com.niumi.feature.session.ui.WakeScheduleFormatter
+import com.niumi.system.audio.AlarmSoundPreferences
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.isSessionInProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +35,7 @@ class SummaryViewModel
     @Inject
     constructor(
         private val armSessionUseCase: ArmSessionUseCase,
+        private val alarmSoundPreferences: AlarmSoundPreferences,
         snapshotPublisher: SessionSnapshotPublisher,
     ) : ViewModel() {
         var state by mutableStateOf(SummaryUiState())
@@ -69,7 +72,9 @@ class SummaryViewModel
             refreshJob?.cancel()
             refreshJob =
                 viewModelScope.launch {
-                    applyPreview(armSessionUseCase.preview(localTimeIso, blockingLocalTimeIso), use24Hour)
+                    val preview = armSessionUseCase.preview(localTimeIso, blockingLocalTimeIso)
+                    val alarmSoundSummary = AlarmSoundTexts.summary(alarmSoundPreferences.read().sanitized())
+                    applyPreview(preview, use24Hour, alarmSoundSummary)
                 }
         }
 
@@ -96,6 +101,7 @@ class SummaryViewModel
         private fun applyPreview(
             preview: ActivationPreview,
             use24Hour: Boolean,
+            alarmSoundSummary: String,
         ) {
             val schedule = preview.scheduleResult.schedule
             val display =
@@ -124,6 +130,7 @@ class SummaryViewModel
                     isAllowed = preview.canActivate,
                     isLoading = false,
                     message = previewMessage(preview),
+                    alarmSoundSummary = alarmSoundSummary,
                 )
         }
 

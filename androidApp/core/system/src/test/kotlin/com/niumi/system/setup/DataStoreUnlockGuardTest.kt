@@ -3,6 +3,10 @@ package com.niumi.system.setup
 import com.google.common.truth.Truth.assertThat
 import com.niumi.database.BlockedPackage
 import com.niumi.system.apps.DataStoreAppSelectionStore
+import com.niumi.system.audio.AlarmSoundSettings
+import com.niumi.system.audio.DataStoreAlarmSoundPreferences
+import com.niumi.system.audio.NiumiRingtones
+import com.niumi.system.audio.VolumeRampDurations
 import com.niumi.system.boot.fakes.FakeUnlockState
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertThrows
@@ -73,6 +77,26 @@ class DataStoreUnlockGuardTest {
             val thrown = assertThrows(IllegalStateException::class.java) { runBlocking { write() } }
             assertThat(thrown).hasMessageThat().isEqualTo("DATASTORE_BEFORE_UNLOCK")
         }
+    }
+
+    @Test
+    fun alarmSoundPreferencesReadTheDefaultsBeforeUnlockWithoutResolvingTheDataStore() =
+        runBlocking {
+            val preferences = DataStoreAlarmSoundPreferences(NO_CONTEXT, locked)
+
+            assertThat(preferences.read())
+                .isEqualTo(AlarmSoundSettings(NiumiRingtones.DEFAULT_KEY, VolumeRampDurations.DEFAULT_SECONDS))
+        }
+
+    @Test
+    fun writingAlarmSoundPreferencesIsRefusedBeforeUnlock() {
+        val preferences = DataStoreAlarmSoundPreferences(NO_CONTEXT, locked)
+
+        val thrown =
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking { preferences.write(AlarmSoundSettings("niumi_oiseaux", 60)) }
+            }
+        assertThat(thrown).hasMessageThat().isEqualTo("DATASTORE_BEFORE_UNLOCK")
     }
 
     private companion object {

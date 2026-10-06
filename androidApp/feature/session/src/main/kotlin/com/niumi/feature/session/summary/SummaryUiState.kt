@@ -1,7 +1,9 @@
 package com.niumi.feature.session.summary
 
 import com.niumi.database.BlockedPackage
+import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.WakeScheduleDisplay
+import com.niumi.system.audio.AlarmSoundSettings
 
 /** Nombre de caractères du `boxId` affichés : jamais l'identifiant complet, jamais le token (§16). */
 private const val BOX_ID_PREFIX_LENGTH = 8
@@ -22,6 +24,8 @@ data class SummaryUiState(
     val isSessionInProgress: Boolean = false,
     val isLoading: Boolean = true,
     val message: String? = null,
+    /** Ligne « Sonnerie » (§15, Lot 7) : résumé de la préférence, pas de la session future. */
+    val alarmSoundSummary: String = AlarmSoundTexts.summary(AlarmSoundSettings()),
 ) {
     /**
      * [isActivating] désactive le bouton pendant l'appel : `dispatch` et `reconcile` partagent un

@@ -431,6 +431,7 @@ interface RingtonePreviewPlayer {                     // écran 14 seulement ; j
     fun play(ringtoneKey: String): OperationResult    // USAGE_ALARM, looping = false, initialAmplitude 1f, focus transitoire ; remplace une lecture en cours
     fun stop()                                        // idempotent
     val isPlaying: Boolean
+    val playingKey: StateFlow<String?>                // étape 27 : notifie aussi la fin naturelle du fichier, sans quoi l'écran garderait l'icône « arrêt »
 }
 // Livré à l'étape 26 : fun interface PreviewPlayerFactory { create(key, configuration, onCompletion) } ;
 //   DefaultRingtonePreviewPlayer(playerFactory, focusController) — nom aligné sur DefaultAlarmAudioEngine
@@ -484,20 +485,35 @@ interface AlarmSoundPreferences { suspend fun read(): AlarmSoundSettings; suspen
 //   audioEngine.start(RingingSoundResolver.resolve(gateway.load(), sessionId, clock.nowEpochMillis()).sound) ;
 //   recover() passe le LoadResult déjà chargé. La constante RINGTONE_KEY disparaît.
 
+// :core:system (étape 27)
+// audio/AlarmSoundPreferences.kt : fun decodeAlarmSoundSettings(ringtoneKey: String?, volumeRampSeconds: Int?): AlarmSoundSettings
+//   — ringtoneKey absent signifie « jamais écrit » (défauts complets, montée comprise), jamais « clé inconnue » (que
+//   sanitized() corrige déjà vers le défaut) ; write() écrit toujours les deux clés ensemble, donc ringtoneKey ne peut
+//   être absent qu'avant toute écriture. Défaut mesuré sur appareil le 2026-10-02 : les confondre faisait lire
+//   « Piano · volume constant » au lieu du vrai défaut « Piano · volume progressif sur 2 min » à la toute première
+//   lecture de la préférence.
+
 // :feature:session (étape 27)
 // ActivationSources : + alarmSoundPreferences: AlarmSoundPreferences
-// ArmSessionUseCase.arm : extras.ringtoneKey = settings.ringtoneKey si NiumiRingtones.byKey != null, sinon DEFAULT_KEY ;
-//   extras.volumeRampSeconds = settings.volumeRampSeconds — lu au moment d'armer, jamais transporté par la route
+// ArmSessionUseCase.arm : extras.ringtoneKey/volumeRampSeconds = alarmSoundPreferences.read().sanitized() —
+//   lu au moment d'armer, jamais transporté par la route
 // ringtone/RingtoneUiState(settings: AlarmSoundSettings, ringtones: List<Ringtone> = NiumiRingtones.ALL, previewingKey: String?,
-//   isAlarmVolumeZero: Boolean, message: String?, isLoading: Boolean)
+//   isAlarmVolumeZero: Boolean, isSessionArmed: Boolean, message: String?, isLoading: Boolean)
 // ringtone/RingtoneViewModel : onRingtoneSelected(key), onPreviewToggled(key), onVolumeRampEnabledChanged(enabled),
-//   onVolumeRampSecondsChanged(seconds), onPause(), refresh()
+//   onVolumeRampSecondsChanged(seconds), onPause(), refresh() — deux modes selon sources.gateway.load() : ARMED → session,
+//   sinon → préférence. Messages ajoutés hors spec : SAVE_FAILED, PREVIEW_FAILED, SESSION_UPDATE_FAILED (RingtoneTexts)
 // ui/AlarmSoundTexts.summary(settings): "Cloche · volume constant" / "Piano · volume progressif sur 2 min" (défaut) ;
-//   durationLabel(30) = "30 s", (60) = "1 min", (120) = "2 min", (300) = "5 min"
+//   durationLabel(30) = "30 s", (60) = "1 min", (120) = "2 min", (300) = "5 min" — tables associées à
+//   VolumeRampDurations.SECONDS et NiumiRingtones.ALL par position, aucun nombre magique
+// ui/AlarmSoundRow(title, summary, onClick: (() -> Unit)?) : composable partagé des écrans 5, 6, 7
 // WakeTimeUiState : + alarmSoundSummary: String ; WakeTimeActions : + onOpenRingtone ; SummaryUiState : + alarmSoundSummary: String
+// ActiveSessionUiState : + alarmSoundSummary: String? (résumé de la session, pas de la préférence), canEditAlarmSound = (state == ARMED)
+// active/ActiveSessionActions(onModifyOrCancel, onRemediate, onOpenDiagnostic, onOpenRingtone) — regroupe les callbacks
+//   de l'écran 7 pour tenir sous LongParameterList de detekt (5 paramètres sinon)
 
 // :app (étape 27)
-// NiumiRoute.Ringtone (data object, écran 14), enregistrée dans NiumiNavHost avec son écran ; atteinte depuis WakeTime, retour par la pile
+// NiumiRoute.Ringtone (data object, écran 14, quinzième destination), enregistrée dans NiumiNavHost avec son écran ;
+//   atteinte depuis WakeTime et, en ARMED, depuis ActiveSession ; retour par la pile
 ```
 
 ---
@@ -1882,11 +1898,11 @@ grep -rn "niumi_alarm" androidApp shared tools --include='*.kt' --include='*.kts
 
 **Produit :** écrans 5, 6, 7 et 14 conformes à SPEC_ANDROID §15 pour le Lot 7 ; une session armée depuis l'interface sonne la sonnerie choisie, avec la montée choisie, y compris modifiée pendant `ARMED`.
 
-- [ ] **Écrire les tests d'`AlarmSoundPreferences`** (garde de déverrouillage et instrumenté), implémenter et lier.
-- [ ] **Écrire `RingtoneViewModelTest`, `RingtoneTextsTest`, `AlarmSoundTextsTest`**, implémenter le ViewModel et l'écran 14. Consulter la charte avant de dessiner : liste sobre de quatre lignes, libellé seul, entrée active en Ambre, bouton de pré-écoute par ligne (icône lecture ou arrêt, `contentDescription` « Écouter Cloche » / « Arrêter l'écoute »), aucune visualisation sonore ; section « Volume » : `Switch` Material 3 « Volume progressif », sous-texte « L'alarme démarre doucement et atteint son volume maximal en 2 min. » recalculé sur la durée, `SingleChoiceSegmentedButtonRow` à rayon 8 dp « 30 s » / « 1 min » / « 2 min » / « 5 min » visible seulement quand l'interrupteur est actif ; message « Le volume des alarmes est à zéro. Monte-le pour entendre la pré-écoute. » sans couleur d'alerte. La pré-écoute est arrêtée sur `ON_PAUSE` par l'écran (même `LifecycleEventObserver` que le `refresh` de l'écran 5), jamais par le ViewModel seul.
-- [ ] **Étendre `WakeTimeViewModelTest` et `NiumiRouteTest`**, implémenter la ligne « Sonnerie » de l'écran 5 et la route. Le résumé se relit à chaque `refresh()` (retour de l'écran 14, `ON_RESUME`), comme les heures.
-- [ ] **Étendre `SummaryViewModelTest` et `ArmSessionUseCaseTest`**, implémenter la ligne de l'écran 6 et le branchement des extras. `ArmSessionUseCase` lit la préférence **au moment d'armer**, jamais un état transporté par la route : même règle que les heures.
-- [ ] **Vérifier :**
+- [x] **Écrire les tests d'`AlarmSoundPreferences`** (garde de déverrouillage et instrumenté), implémenter et lier.
+- [x] **Écrire `RingtoneViewModelTest`, `RingtoneTextsTest`, `AlarmSoundTextsTest`**, implémenter le ViewModel et l'écran 14. Consulter la charte avant de dessiner : liste sobre de quatre lignes, libellé seul, entrée active en Ambre, bouton de pré-écoute par ligne (icône lecture ou arrêt, `contentDescription` « Écouter Cloche » / « Arrêter l'écoute »), aucune visualisation sonore ; section « Volume » : `Switch` Material 3 « Volume progressif », sous-texte « L'alarme démarre doucement et atteint son volume maximal en 2 min. » recalculé sur la durée, `SingleChoiceSegmentedButtonRow` à rayon 8 dp « 30 s » / « 1 min » / « 2 min » / « 5 min » visible seulement quand l'interrupteur est actif ; message « Le volume des alarmes est à zéro. Monte-le pour entendre la pré-écoute. » sans couleur d'alerte. La pré-écoute est arrêtée sur `ON_PAUSE` par l'écran (même `LifecycleEventObserver` que le `refresh` de l'écran 5), jamais par le ViewModel seul.
+- [x] **Étendre `WakeTimeViewModelTest` et `NiumiRouteTest`**, implémenter la ligne « Sonnerie » de l'écran 5 et la route. Le résumé se relit à chaque `refresh()` (retour de l'écran 14, `ON_RESUME`), comme les heures.
+- [x] **Étendre `SummaryViewModelTest` et `ArmSessionUseCaseTest`**, implémenter la ligne de l'écran 6 et le branchement des extras. `ArmSessionUseCase` lit la préférence **au moment d'armer**, jamais un état transporté par la route : même règle que les heures.
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :feature:session:testDebugUnitTest :core:system:testDebugUnitTest :app:testDebugUnitTest
@@ -1896,7 +1912,7 @@ grep -rn "niumi_alarm" androidApp shared tools --include='*.kt' --include='*.kts
 grep -rn "RingtonePreviewPlayer\|AlarmAudioEngine" androidApp/feature/session/src/main   # attendu : RingtonePreviewPlayer seulement, jamais AlarmAudioEngine
 ```
 
-- [ ] **Valider sur appareil** (protocole ci-dessous), **rédiger `ETAPE-27.md`.**
+- [x] **Valider sur appareil** (protocole ci-dessous), **rédiger `ETAPE-27.md`** — *fait le 2026-10-02 sur Xiaomi 25080RABDG / Android 16 : 27 tests instrumentés verts (deux passes), écran 14 conforme, pré-écoutes prouvées par `dumpsys audio`, message de volume à zéro, résumés cohérents sur les écrans 5, 6, 7, modification en `ARMED` vérifiée en base. Un défaut réel trouvé et corrigé en cours de route (voir « Ajouts du Lot 7 »). Restent non faits : chronométrage à l'oreille d'une sonnerie choisie, TalkBack, redémarrage sans déverrouillage après modification en `ARMED` — reportés à l'étape 28 ou à une validation ultérieure, voir `ETAPE-27.md`.*
 
 **Tests manuels :** parcours accueil → diagnostic → écran 5 : ligne « Sonnerie · Piano · volume progressif sur 2 min » → écran 14 ; pré-écoute « Piano » → joue au volume d'alarme, s'arrête seule à la fin du fichier ; pré-écoute « Oiseaux » pendant « Piano » → « Piano » se tait ; quitter l'écran pendant une pré-écoute → silence immédiat ; volume d'alarme à zéro → message, boutons de pré-écoute inactifs ; sélectionner « Oiseaux », désactiver puis réactiver « Volume progressif » (« 2 min » présélectionné), choisir « 5 min », retour → « Oiseaux · volume progressif sur 5 min » sur l'écran 5 puis sur l'écran 6 ; activer ; session à +2 min, écran éteint → « Oiseaux » démarre presque inaudible et atteint son volume plein vers 5 min (chronométrer, consigner l'écoute) ; scan ; nouvelle préparation → le choix est repris ; TalkBack sur l'écran 14 : chaque ligne annonce son libellé et son état sélectionné, chaque bouton de pré-écoute sa description.
 

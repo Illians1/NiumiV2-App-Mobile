@@ -1,13 +1,16 @@
 package com.niumi.system.di
 
 import android.content.Context
+import com.niumi.database.directboot.UnlockState
 import com.niumi.system.audio.AlarmAudioEngine
 import com.niumi.system.audio.AlarmPlayerFactory
+import com.niumi.system.audio.AlarmSoundPreferences
 import com.niumi.system.audio.AlarmVolumeSource
 import com.niumi.system.audio.AndroidAlarmVolumeSource
 import com.niumi.system.audio.AndroidAudioFocusController
 import com.niumi.system.audio.AndroidVibrationController
 import com.niumi.system.audio.AudioFocusController
+import com.niumi.system.audio.DataStoreAlarmSoundPreferences
 import com.niumi.system.audio.DefaultAlarmAudioEngine
 import com.niumi.system.audio.DefaultRingtonePreviewPlayer
 import com.niumi.system.audio.MediaPlayerAlarmPlayerFactory
@@ -25,6 +28,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import javax.inject.Provider
 import javax.inject.Singleton
 
 /**
@@ -94,4 +98,15 @@ object AudioModule {
     fun provideAlarmVolumeSource(
         @ApplicationContext context: Context,
     ): AlarmVolumeSource = AndroidAlarmVolumeSource(context)
+
+    /**
+     * Préférence de sonnerie (écran 14, étape 27) : binding séparé de `ReadinessModule`, déjà au
+     * plafond `TooManyFunctions` de detekt (`ETAPE-24.md`).
+     */
+    @Provides
+    @Singleton
+    fun provideAlarmSoundPreferences(
+        @ApplicationContext contextProvider: Provider<Context>,
+        unlockState: UnlockState,
+    ): AlarmSoundPreferences = DataStoreAlarmSoundPreferences(contextProvider, unlockState)
 }

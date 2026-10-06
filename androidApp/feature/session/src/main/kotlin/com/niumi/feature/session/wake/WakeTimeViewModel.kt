@@ -10,8 +10,10 @@ import com.niumi.core.interop.BlockingScheduleStatusDto
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.WakeScheduleInputDto
 import com.niumi.core.interop.WakeScheduleStatusDto
+import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.BlockingScheduleFormatter
 import com.niumi.feature.session.ui.WakeScheduleFormatter
+import com.niumi.system.audio.AlarmSoundPreferences
 import com.niumi.system.common.Clock
 import com.niumi.system.common.TimeZoneProvider
 import com.niumi.system.session.SessionSnapshotPublisher
@@ -41,6 +43,7 @@ class WakeTimeViewModel
         private val clock: Clock,
         private val timeZoneProvider: TimeZoneProvider,
         private val setupPreferences: SetupPreferences,
+        private val alarmSoundPreferences: AlarmSoundPreferences,
         snapshotPublisher: SessionSnapshotPublisher,
     ) : ViewModel() {
         var state by mutableStateOf(WakeTimeUiState())
@@ -64,6 +67,7 @@ class WakeTimeViewModel
                     )
                 recompute()
             }
+            viewModelScope.launch { refreshAlarmSoundSummary() }
             // Garde de session : préparer un second réveil pendant une session en cours mènerait
             // à un refus garanti par `ActivationReducer.onRequested` (SPEC_CORE_KMP §4).
             viewModelScope.launch {
@@ -87,6 +91,12 @@ class WakeTimeViewModel
         fun refresh(use24Hour: Boolean) {
             state = state.copy(use24Hour = use24Hour)
             recompute()
+            viewModelScope.launch { refreshAlarmSoundSummary() }
+        }
+
+        /** Relu à chaque `ON_RESUME`, comme les heures (§15) : retour de l'écran 14 compris. */
+        private suspend fun refreshAlarmSoundSummary() {
+            state = state.copy(alarmSoundSummary = AlarmSoundTexts.summary(alarmSoundPreferences.read().sanitized()))
         }
 
         fun onTimeChanged(

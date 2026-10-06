@@ -10,9 +10,11 @@ import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.BlockedPackage
+import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.BlockingScheduleFormatter
 import com.niumi.feature.session.ui.WakeScheduleDisplay
 import com.niumi.feature.session.ui.WakeScheduleFormatter
+import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.common.Clock
 import com.niumi.system.common.TimeZoneProvider
 import com.niumi.system.readiness.ForegroundReadinessTrigger
@@ -89,19 +91,27 @@ class ActiveSessionViewModel
 
         private suspend fun loadDetails(snapshot: SessionSnapshotDto?): SessionDetails {
             if (snapshot == null) return SessionDetails()
+            val loaded = sources.gateway.load()
             val blockedApps =
-                when (val loaded = sources.gateway.load()) {
+                when (loaded) {
                     // Un snapshot illisible ne doit pas se présenter comme une session sans
                     // application bloquée (§13) : on n'affirme rien plutôt que d'affirmer « aucune ».
                     is LoadResult.Present -> loaded.extras.blockedPackages
 
                     LoadResult.Absent, is LoadResult.Unreadable -> null
                 }
+            // Résumé **de la session** (§15, Lot 7), pas de la préférence : c'est ce qui sonnera,
+            // figé à l'activation, jamais ce que l'utilisateur a réglé depuis.
+            val alarmSoundSummary =
+                (loaded as? LoadResult.Present)?.let {
+                    AlarmSoundTexts.summary(AlarmSoundSettings(it.extras.ringtoneKey, it.extras.volumeRampSeconds))
+                }
             // Rejoué à chaque chargement, sans candidat — l'heure de réveil est figée, comme sur
             // l'écran 12 : c'est ce rapport qui dit si un incident `CRITICAL` est rétabli.
             val report = sources.readinessChecker.check(ReadinessInput())
             return SessionDetails(
                 blockedApps = blockedApps,
+                alarmSoundSummary = alarmSoundSummary,
                 incidents =
                     sources.incidentsReader
                         .incidents(snapshot.sessionId)
@@ -149,6 +159,7 @@ class ActiveSessionViewModel
                 health = snapshot.health,
                 incidents = details.incidents,
                 isLoading = false,
+                alarmSoundSummary = details.alarmSoundSummary ?: state.alarmSoundSummary,
             )
         }
 
@@ -181,6 +192,7 @@ class ActiveSessionViewModel
         private data class SessionDetails(
             val blockedApps: List<BlockedPackage>? = null,
             val incidents: List<IncidentPresentation> = emptyList(),
+            val alarmSoundSummary: String? = null,
         )
 
         private companion object {

@@ -2,6 +2,9 @@ package com.niumi.system.audio
 
 import android.media.AudioAttributes
 import com.niumi.system.common.OperationResult
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * [RingtonePreviewPlayer] : mêmes attributs `USAGE_ALARM` que le réveil — le volume entendu est
@@ -14,9 +17,12 @@ class DefaultRingtonePreviewPlayer(
 ) : RingtonePreviewPlayer {
     private val lock = Any()
     private var player: AlarmPlayer? = null
+    private val mutablePlayingKey = MutableStateFlow<String?>(null)
 
     override val isPlaying: Boolean
         get() = synchronized(lock) { player != null }
+
+    override val playingKey: StateFlow<String?> = mutablePlayingKey.asStateFlow()
 
     override fun play(ringtoneKey: String): OperationResult =
         synchronized(lock) {
@@ -38,6 +44,7 @@ class DefaultRingtonePreviewPlayer(
                 lateinit var created: AlarmPlayer
                 created = playerFactory.create(ringtoneKey, configuration) { onFinished(created) }
                 player = created
+                mutablePlayingKey.value = ringtoneKey
                 OperationResult.Success
             } catch (error: RuntimeException) {
                 focusController.release()
@@ -60,5 +67,6 @@ class DefaultRingtonePreviewPlayer(
         player = null
         current.release()
         focusController.release()
+        mutablePlayingKey.value = null
     }
 }

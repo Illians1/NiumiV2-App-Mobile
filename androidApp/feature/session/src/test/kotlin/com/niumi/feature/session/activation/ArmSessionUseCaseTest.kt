@@ -21,7 +21,10 @@ import com.niumi.feature.session.activation.fakes.RecordingPairedBoxStore
 import com.niumi.feature.session.activation.fakes.RecordingReadinessChecker
 import com.niumi.feature.session.activation.fakes.RecordingSessionCoordinator
 import com.niumi.feature.session.activation.fakes.RecordingTimeZoneProvider
+import com.niumi.feature.session.wake.fakes.FakeAlarmSoundPreferences
 import com.niumi.feature.session.wake.fakes.FakeClock
+import com.niumi.system.audio.AlarmSoundSettings
+import com.niumi.system.audio.NiumiRingtones
 import com.niumi.system.common.UuidIdGenerator
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck
@@ -109,13 +112,15 @@ class ArmSessionUseCaseTest {
             action = ReadinessAction.OpenSoundSettings,
         )
 
-    private fun useCase(): ArmSessionUseCase =
+    private fun useCase(
+        alarmSoundPreferences: FakeAlarmSoundPreferences = FakeAlarmSoundPreferences(),
+    ): ArmSessionUseCase =
         ArmSessionUseCase(
             readinessChecker = readinessChecker,
             facade = NiumiCoreFacade(),
             coordinator = coordinator,
             eventFactory = SessionEventFactory(idGenerator = UuidIdGenerator(), clock = FakeClock(now)),
-            sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider),
+            sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider, alarmSoundPreferences),
         )
 
     private fun armedSnapshot(
@@ -249,6 +254,31 @@ class ArmSessionUseCaseTest {
             assertThat(coordinator.lastExtras?.volumeRampSeconds).isEqualTo(120)
             assertThat(coordinator.lastExtras?.vibrationEnabled).isTrue()
             assertThat(coordinator.lastExtras?.blockedPackages).containsExactlyElementsIn(selection).inOrder()
+        }
+
+    /** Étape 27 : la préférence est lue **au moment d'armer**, jamais transportée par la route. */
+    @Test
+    fun theExtrasReflectTheAlarmSoundPreferenceReadAtArmingTime() =
+        runTest {
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+            val preferences = FakeAlarmSoundPreferences(AlarmSoundSettings("niumi_oiseaux", 30))
+
+            useCase(preferences).arm("07:00", blockingLocalTimeIso = null)
+
+            assertThat(coordinator.lastExtras?.ringtoneKey).isEqualTo("niumi_oiseaux")
+            assertThat(coordinator.lastExtras?.volumeRampSeconds).isEqualTo(30)
+        }
+
+    /** Une clé hors catalogue (sonnerie retirée depuis) replie sur le défaut (étape 27). */
+    @Test
+    fun anUnknownRingtoneKeyInThePreferenceFallsBackToTheDefaultKey() =
+        runTest {
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+            val preferences = FakeAlarmSoundPreferences(AlarmSoundSettings("niumi_alarm", 60))
+
+            useCase(preferences).arm("07:00", blockingLocalTimeIso = null)
+
+            assertThat(coordinator.lastExtras?.ringtoneKey).isEqualTo(NiumiRingtones.DEFAULT_KEY)
         }
 
     @Test

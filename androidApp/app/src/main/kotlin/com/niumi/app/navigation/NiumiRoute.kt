@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * parce que lui seul voit l'ensemble du graphe : les modules `feature` ne peuvent pas dépendre de
  * `:app` (SPEC_ANDROID §6) et exposent donc des lambdas de navigation, jamais des routes.
  *
- * Les quatorze destinations de §15 sont déclarées ici, et toutes sont enregistrées dans
+ * Les quinze destinations de §15 sont déclarées ici, et toutes sont enregistrées dans
  * [NiumiNavHost] depuis l'étape 21. La règle qui a présidé à leur arrivée reste valable pour
  * toute destination future : ne l'enregistrer qu'avec son écran, puisque naviguer vers une route
  * non enregistrée lève — ce qui est préférable à un écran vide qui laisserait croire à une
@@ -78,4 +78,13 @@ sealed interface NiumiRoute {
     /** Écran 13, étape 21. Consultation seule, atteignable depuis l'accueil. */
     @Serializable
     data object Help : NiumiRoute
+
+    /**
+     * Écran 14, Lot 7, étape 27. Sans argument : le `ViewModel` lit lui-même la session (mode
+     * préférence hors `ARMED`, mode session sinon) — transporter un indicateur de mode par la route
+     * créerait un second état susceptible de diverger de la persistance pendant que l'écran est
+     * ouvert. Atteinte depuis l'écran 5 et, en `ARMED`, depuis l'écran 7 ; retour par la pile.
+     */
+    @Serializable
+    data object Ringtone : NiumiRoute
 }

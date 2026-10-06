@@ -38,10 +38,15 @@ data class ActiveSessionUiState(
     val health: SessionHealthDto? = null,
     val incidents: List<IncidentPresentation> = emptyList(),
     val isLoading: Boolean = true,
+    /** Résumé de la sonnerie **de la session** (§15, Lot 7), `null` sans session lisible. */
+    val alarmSoundSummary: String? = null,
 ) {
     val hasSession: Boolean get() = state != null
 
     val isDegraded: Boolean get() = health == SessionHealthDto.DEGRADED
+
+    /** Seule action de l'écran 7 qui touche à la session sans scan (§3, §15, Lot 7). */
+    val canEditAlarmSound: Boolean get() = state == SessionStateDto.ARMED
 
     /**
      * SPEC_CORE_KMP §7.3 : `CRITICAL` « doit en plus être présenté explicitement dans un

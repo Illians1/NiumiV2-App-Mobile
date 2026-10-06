@@ -33,6 +33,9 @@ class NiumiRouteTest {
         assertThat(serializer<NiumiRoute.WakeTime>().descriptor.elementsCount).isEqualTo(0)
         assertThat(serializer<NiumiRoute.ActiveSession>().descriptor.elementsCount).isEqualTo(0)
         assertThat(serializer<NiumiRoute.Home>().descriptor.elementsCount).isEqualTo(0)
+        // Écran 14 (Lot 7, étape 27) : le ViewModel lit lui-même la session, aucun indicateur de
+        // mode à transporter par la route.
+        assertThat(serializer<NiumiRoute.Ringtone>().descriptor.elementsCount).isEqualTo(0)
     }
 
     @Test

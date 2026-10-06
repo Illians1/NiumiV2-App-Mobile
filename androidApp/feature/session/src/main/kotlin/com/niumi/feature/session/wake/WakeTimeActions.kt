@@ -8,4 +8,5 @@ data class WakeTimeActions(
     val onContinue: () -> Unit,
     val onBlockingModeChanged: (Boolean) -> Unit,
     val onBlockingTimeChanged: (Int, Int) -> Unit,
+    val onOpenRingtone: () -> Unit,
 )

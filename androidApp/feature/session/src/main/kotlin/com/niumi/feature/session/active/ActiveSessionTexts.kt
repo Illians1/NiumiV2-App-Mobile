@@ -17,6 +17,13 @@ object ActiveSessionTexts {
 
     const val BLOCKED_APPS_TITLE = "Applications bloquées"
 
+    /**
+     * Ligne « Sonnerie » (§15, Lot 7) : résumé **de la session**, pas de la préférence. Seule
+     * action de l'écran 7 qui touche à la session sans scan, et seulement en `ARMED` (§3,
+     * dérogation décidée le 2026-09-30 : la sonnerie n'est pas un terme de l'engagement).
+     */
+    const val RINGTONE_TITLE = "Sonnerie"
+
     /** Ligne du début de blocage tant qu'il n'est pas atteint (Lot 6, §15, écran 7). */
     const val BLOCKING_START_TITLE = "Début du blocage"
 

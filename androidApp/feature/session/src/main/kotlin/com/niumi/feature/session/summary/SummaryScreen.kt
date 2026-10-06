@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.designsystem.effect.WindowFocusRegainedEffect
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.session.ui.AlarmSoundRow
 import com.niumi.feature.session.wake.WakeTimeChoice
 import com.niumi.system.nfc.nfcAdapterSettledChanges
 
@@ -74,6 +75,8 @@ fun SummaryScreen(
                 text = state.blockingDisplay?.sentence ?: SummaryTexts.BLOCKING_IMMEDIATE_LABEL,
                 style = MaterialTheme.typography.bodyMedium,
             )
+            // Ligne « Sonnerie » (Lot 6→7, §15) : résumé de la préférence, pas de l'engagement.
+            AlarmSoundRow(title = SummaryTexts.RINGTONE_TITLE, summary = state.alarmSoundSummary, onClick = null)
 
             TextButton(
                 onClick = onChangeTime,
