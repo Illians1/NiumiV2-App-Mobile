@@ -46,3 +46,6 @@ keystore.properties
 
 # Logs
 *.log
+
+# Images des maquettes du dossier de design (4 Mo, gardées en local)
+design-plan/maquettes/images/
