@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390">
+<title>Écran 3 · 3. Le choix de la pièce</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0E0E10}a:hover{color:#0E0E10}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+</style>
+</head>
+<body>
+<div style="position: relative; overflow: hidden; width: 390px; height: 844px; box-sizing: border-box; padding: 56px 24px 34px; display: flex; flex-direction: column; background: #FAFAF8; color: #0E0E10; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.35">
+<div style="height: 44px; display: flex; align-items: center; justify-content: center">
+<img src="../../logo/niumi-logo-sur-fond-clair.png" alt="niumi" style="width: 98px; height: 24px">
+</div>
+<div aria-hidden="true" style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center">
+<svg viewBox="0 0 342 250" width="300" height="220" style="fill: none; stroke: #0E0E10; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round">
+<circle cx="171" cy="125" r="120" style="stroke: #E8E8E4; stroke-width: 2"></circle>
+<circle cx="171" cy="125" r="100" style="stroke: #C6C6C2; stroke-width: 2"></circle>
+<rect x="98" y="52" width="146" height="146" rx="32" style="fill: #FAFAF8"></rect>
+<circle cx="210" cy="86" r="10" style="fill: #E9A23B; stroke: none"></circle>
+</svg>
+<div style="max-width: 320px; font-size: 20px; font-weight: 500; line-height: 1.3">Pose ton Niumi Point là où tu veux te rendre en premier le matin, hors de ta chambre.</div>
+</div>
+<div aria-hidden="true" style="position: absolute; left: 0; top: 0; width: 390px; height: 844px; background: rgba(0, 0, 0, 0.45)"></div>
+<div role="dialog" aria-label="Choix de la pièce" style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 10px 24px 34px; border-radius: 28px 28px 0 0; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center">
+<div aria-hidden="true" style="width: 40px; height: 4px; border-radius: 2px; background: #C6C6C2"></div>
+<div style="font-size: 24px; font-weight: 600; line-height: 1.2; letter-spacing: -0.5px">Où est ton Niumi Point ?</div>
+<div role="radiogroup" aria-label="Pièce du Niumi Point" style="width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button role="radio" aria-checked="true" style="height: 96px; border-radius: 16px; background: #0E0E10; color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-weight: 600">
+<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" style="fill: none; stroke: #FAFAF8; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round"><path d="M3 12h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"></path><path d="M6 12V6a2 2 0 0 1 4 0"></path><path d="M7 19l-1 2M17 19l1 2"></path></svg>
+<span>Salle de bain</span>
+</button>
+<button role="radio" aria-checked="false" style="height: 96px; box-sizing: border-box; border: 1px solid #85858A; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" style="fill: none; stroke: #0E0E10; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round"><path d="M5 10h14v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"></path><path d="M3 10h18"></path><path d="M9 6V5M12 6V3M15 6V5"></path></svg>
+<span>Cuisine</span>
+</button>
+<button role="radio" aria-checked="false" style="height: 96px; box-sizing: border-box; border: 1px solid #85858A; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" style="fill: none; stroke: #0E0E10; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round"><path d="M6 11V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"></path><path d="M3 13a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z"></path></svg>
+<span>Salon</span>
+</button>
+<button role="radio" aria-checked="false" style="height: 96px; box-sizing: border-box; border: 1px solid #85858A; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" style="fill: none; stroke: #0E0E10; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round"><path d="M7 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17"></path><path d="M4 21h16"></path><path d="M14 12v1"></path></svg>
+<span>Entrée</span>
+</button>
+<button style="grid-column: 1 / -1; height: 52px; box-sizing: border-box; border: 1px solid #85858A; border-radius: 16px; text-align: center">Une autre pièce</button>
+</div>
+<button style="width: 100%; height: 56px; border-radius: 14px; background: #0E0E10; color: #FFFFFF; font-size: 17px; font-weight: 500; text-align: center">Continuer</button>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,265 @@
+{
+  "_lire": "Valeurs relevées dans les 58 maquettes validées de Niumi (9 octobre 2026). Unité : points sur iPhone, dp sur Android. Explications dans VALEURS-DE-DESIGN.md.",
+  "theme": {
+    "regle": "L'app ne suit pas le réglage clair ou sombre du téléphone. Clair quand aucune session n'est en cours, sombre du coucher jusqu'au scan.",
+    "clair": {
+      "fond": "#FAFAF8",
+      "surface": "#FFFFFF",
+      "encre": "#0E0E10",
+      "texteSecondaire": "#5C5C60",
+      "bordure": "#85858A",
+      "separateur": "#DCDCD8",
+      "piste": "#E8E8E4",
+      "desactive": "#C6C6C2",
+      "tuileGrise": "#EFEFEB",
+      "caseGrisee": "#F1F1EE",
+      "ambre": "#E9A23B",
+      "teinteAmbre": "#FCF1DF",
+      "texteSecondaireSurEncre": "#A9A9AE",
+      "voile": "rgba(0, 0, 0, 0.45)",
+      "degradeSoleil": [
+        {
+          "position": 0.0,
+          "couleur": "#E9A23B"
+        },
+        {
+          "position": 0.26,
+          "couleur": "#EFB65F"
+        },
+        {
+          "position": 0.58,
+          "couleur": "#F8DDB0"
+        }
+      ],
+      "texteSurBoutonPrincipal": "#FFFFFF",
+      "texteSurCarteNoire": "#FAFAF8"
+    },
+    "sombre": {
+      "fond": "#0E0E10",
+      "surface": "#1B1B1F",
+      "texte": "#FAFAF8",
+      "texteSecondaire": "#A9A9AE",
+      "bordure": "#74747B",
+      "texteDesactive": "#74747B",
+      "separateur": "#2E2E33",
+      "piste": "#2A2A2F",
+      "fondDesactive": "#4A4A50",
+      "bordMenu": "#3A3A40",
+      "boutonGris": "#34343A",
+      "ambre": "#E9A23B",
+      "teinteMotSignale": "#3D2C0E",
+      "texteSurBoutonPrincipal": "#0E0E10",
+      "voile": "rgba(0, 0, 0, 0.6)",
+      "lisereFeuille": "#2E2E33",
+      "bordCarte": "#74747B"
+    }
+  },
+  "logo": {
+    "ambre": "#E9A23B",
+    "noirSurFondBlanc": "#0B0B0B",
+    "fondNoir": "#0E0E10",
+    "lettresSurFondNoir": "#FAFAF8"
+  },
+  "police": {
+    "famille": "IBM Plex Sans",
+    "graisses": {
+      "normal": 400,
+      "moyen": 500,
+      "demiGras": 600
+    },
+    "licence": "SIL Open Font License 1.1",
+    "chiffres": "Tous de même largeur sans réglage"
+  },
+  "tailles": {
+    "heureReveil": {
+      "taille": 112,
+      "graisse": 500,
+      "interligne": 1.0,
+      "interlettrage": -4
+    },
+    "chiffresCadran": {
+      "taille": 42,
+      "graisse": 500,
+      "interlettrage": -1
+    },
+    "titreReussite": {
+      "taille": 40,
+      "graisse": 600,
+      "interligne": 1.1,
+      "interlettrage": -1
+    },
+    "consigneReveil": {
+      "taille": 30,
+      "graisse": 600,
+      "interligne": 1.15,
+      "interlettrage": -0.5
+    },
+    "titreEcran": {
+      "taille": 28,
+      "graisse": 600,
+      "interligne": 1.15,
+      "interlettrage": -0.5,
+      "note": "26 sur l'écran 2 dans la maquette : écart non tranché"
+    },
+    "titreFeuilleScan": {
+      "taille": 26,
+      "graisse": 400
+    },
+    "titreFeuille": {
+      "taille": 24,
+      "graisse": 600,
+      "interligne": 1.2,
+      "interlettrage": -0.5
+    },
+    "titreAlerte": {
+      "taille": 22,
+      "graisse": 600,
+      "interligne": 1.2,
+      "interlettrage": -0.3
+    },
+    "consigneEcran3": {
+      "taille": 22,
+      "graisse": 500,
+      "interligne": 1.3
+    },
+    "titreCarte": {
+      "taille": 20,
+      "graisse": 600
+    },
+    "sousTitre": {
+      "taille": 20,
+      "graisse": 500
+    },
+    "boutonPrincipal": {
+      "taille": 17,
+      "graisse": 500
+    },
+    "heureAutourDuCadran": {
+      "taille": 17,
+      "graisse": 600
+    },
+    "texteSousTitre": {
+      "taille": 17,
+      "graisse": 400
+    },
+    "libelleFort": {
+      "taille": 16,
+      "graisse": 600
+    },
+    "libelleMoyen": {
+      "taille": 16,
+      "graisse": 500
+    },
+    "texteCourant": {
+      "taille": 16,
+      "graisse": 400,
+      "interligne": 1.35
+    },
+    "pastille": {
+      "taille": 15,
+      "graisse": 400,
+      "graisseChoisie": 500
+    },
+    "texteSecondaire": {
+      "taille": 14,
+      "graisse": 400,
+      "interligne": 1.35
+    },
+    "legendeEtMention": {
+      "taille": 13,
+      "graisse": 400
+    },
+    "nomSousIcone": {
+      "taille": 12,
+      "graisse": 400,
+      "graisseCochee": 600
+    }
+  },
+  "formes": {
+    "ecranDeReference": {
+      "largeur": 390,
+      "hauteur": 844
+    },
+    "marges": {
+      "cotes": 24,
+      "bas": 34,
+      "haut": 56
+    },
+    "zoneDeToucherMinimale": 44,
+    "boutonPrincipal": {
+      "hauteur": 56,
+      "rayon": 14
+    },
+    "boutonAlerteOuScan": {
+      "hauteur": 52,
+      "rayon": 14
+    },
+    "boutonRecopie": {
+      "hauteur": 48,
+      "rayon": 14
+    },
+    "boutonAutoriser": {
+      "hauteur": 46,
+      "rayon": 12
+    },
+    "boutonPilule": {
+      "hauteurs": [
+        44,
+        48
+      ],
+      "rayon": "moitié de la hauteur"
+    },
+    "pastilleJour": {
+      "diametre": 44
+    },
+    "carte": {
+      "rayon": 14
+    },
+    "tuile": {
+      "rayon": 16
+    },
+    "feuilleDuBas": {
+      "rayonHaut": 28
+    },
+    "emplacementIcone": {
+      "cote": 28,
+      "rayon": 7
+    },
+    "interrupteur": {
+      "largeur": 52,
+      "hauteur": 32,
+      "pastille": 26
+    }
+  },
+  "cadran": {
+    "heures": 24,
+    "degresParHeure": 15,
+    "minuit": "en haut",
+    "sens": "horaire",
+    "dansLesMaquettes": {
+      "zone": [
+        366,
+        290
+      ],
+      "centre": [
+        183,
+        158
+      ],
+      "rayon": 112,
+      "epaisseur": 28,
+      "bouts": "ronds"
+    },
+    "session": {
+      "arc": "#FAFAF8",
+      "rempli": "#E9A23B du coucher jusqu'au point de l'heure actuelle",
+      "fonduDevantLePoint": {
+        "degres": 34,
+        "courbe": "demi-cosinus"
+      },
+      "pointHeureActuelle": {
+        "couleur": "#0E0E10",
+        "rayon": 4
+      }
+    }
+  }
+}
