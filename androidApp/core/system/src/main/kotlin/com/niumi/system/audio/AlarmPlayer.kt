@@ -6,6 +6,15 @@ interface AlarmPlayer {
     fun setVolume(amplitude: Float)
 
     fun release()
+
+    /**
+     * Vrai si la boucle recolle la fin du son au début sans silence (`AudioTrack` statique à points
+     * de boucle) ; faux pour `MediaPlayer`, qui arrête puis relance la piste à chaque tour — 70 à
+     * 430 ms de blanc mesurés le 2026-10-15 sur « Oiseaux » (SPEC_ANDROID §10.2). Faux par défaut :
+     * un lecteur qui ne dit rien ne prétend pas boucler sans blanc.
+     */
+    val gaplessLoop: Boolean
+        get() = false
 }
 
 /**

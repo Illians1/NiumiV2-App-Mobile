@@ -13,6 +13,7 @@ import com.niumi.system.alarm.AlarmPendingIntentSpecs
 import com.niumi.system.audio.AlarmAudioEngine
 import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
+import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
 import com.niumi.system.notification.RingingNotificationAction
@@ -189,8 +190,11 @@ class AlarmRingingService : Service() {
             // Le son a-t-il vraiment démarré ? Une relance du chien de garde trouve le son en cours
             // (`AlreadySatisfied`) et n'écrit rien (SPEC_ANDROID §17, 2026-09-29).
             result?.let { started ->
+                // Lu après `start` : seul un son réellement démarré peut l'être par le repli
+                // `MediaPlayer`, avec un blanc à chaque tour (SPEC_ANDROID §10.2, 2026-10-15).
+                val loopFallback = started == OperationResult.Success && !audioEngine.isGaplessLoop
                 RingingStartJournal
-                    .eventsFor(started, ringtoneFallback = resolved.fallback)
+                    .eventsFor(started, ringtoneFallback = resolved.fallback, loopFallback = loopFallback)
                     .forEach { technicalEventLog.log(it, sessionId = sessionId) }
             }
         }

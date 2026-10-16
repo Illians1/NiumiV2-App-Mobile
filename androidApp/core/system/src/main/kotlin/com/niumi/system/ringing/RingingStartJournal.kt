@@ -18,12 +18,15 @@ import com.niumi.system.common.OperationResult
 object RingingStartJournal {
     /**
      * [ringtoneFallback] (Lot 7) : `RingingSoundResolver` a remplacé une clé hors catalogue.
-     * `RINGTONE_FALLBACK` suit la même règle que `RINGING_STARTED` — écrit à une vraie tentative de
-     * démarrage, jamais aux relances du chien de garde — et précède l'issue de cette tentative.
+     * [loopFallback] (2026-10-15) : le son joue par le lecteur `MediaPlayer` de repli, avec un blanc
+     * à chaque tour de boucle. Les deux suivent la même règle que `RINGING_STARTED` — écrits à une
+     * vraie tentative de démarrage, jamais aux relances du chien de garde — et précèdent l'issue de
+     * cette tentative, la sonnerie d'abord, le lecteur ensuite.
      */
     fun eventsFor(
         result: OperationResult,
         ringtoneFallback: Boolean = false,
+        loopFallback: Boolean = false,
     ): List<TechnicalEventType> {
         val outcome =
             when (result) {
@@ -31,6 +34,10 @@ object RingingStartJournal {
                 OperationResult.AlreadySatisfied -> return emptyList()
                 is OperationResult.Failure -> TechnicalEventType.AUDIO_START_FAILED
             }
-        return listOfNotNull(TechnicalEventType.RINGTONE_FALLBACK.takeIf { ringtoneFallback }, outcome)
+        return listOfNotNull(
+            TechnicalEventType.RINGTONE_FALLBACK.takeIf { ringtoneFallback },
+            TechnicalEventType.AUDIO_LOOP_FALLBACK.takeIf { loopFallback },
+            outcome,
+        )
     }
 }

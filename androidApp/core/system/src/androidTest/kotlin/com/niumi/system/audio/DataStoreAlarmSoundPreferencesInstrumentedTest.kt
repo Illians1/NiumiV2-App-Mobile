@@ -51,7 +51,7 @@ class DataStoreAlarmSoundPreferencesInstrumentedTest {
     @Test
     fun aConstantVolumeRoundTripsAsNull() =
         runTest {
-            preferences.write(AlarmSoundSettings("niumi_bell", 60))
+            preferences.write(AlarmSoundSettings("niumi_bell", 900))
 
             preferences.write(AlarmSoundSettings("niumi_bell", null))
 
@@ -63,9 +63,9 @@ class DataStoreAlarmSoundPreferencesInstrumentedTest {
         runTest {
             preferences.write(AlarmSoundSettings("niumi_oiseaux", 300))
 
-            preferences.write(AlarmSoundSettings("niumi_piano", 30))
+            preferences.write(AlarmSoundSettings("niumi_piano", 600))
 
-            assertThat(preferences.read()).isEqualTo(AlarmSoundSettings("niumi_piano", 30))
+            assertThat(preferences.read()).isEqualTo(AlarmSoundSettings("niumi_piano", 600))
         }
 }
 

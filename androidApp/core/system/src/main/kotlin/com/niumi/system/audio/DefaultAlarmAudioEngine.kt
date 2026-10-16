@@ -35,6 +35,9 @@ class DefaultAlarmAudioEngine(
     override val isPlaying: Boolean
         get() = synchronized(lock) { player != null }
 
+    override val isGaplessLoop: Boolean
+        get() = synchronized(lock) { player?.gaplessLoop == true }
+
     override fun start(sound: AlarmSound): OperationResult =
         synchronized(lock) {
             if (player != null) return OperationResult.AlreadySatisfied

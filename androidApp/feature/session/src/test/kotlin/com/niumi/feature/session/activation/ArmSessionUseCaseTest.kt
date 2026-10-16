@@ -261,12 +261,12 @@ class ArmSessionUseCaseTest {
     fun theExtrasReflectTheAlarmSoundPreferenceReadAtArmingTime() =
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
-            val preferences = FakeAlarmSoundPreferences(AlarmSoundSettings("niumi_oiseaux", 30))
+            val preferences = FakeAlarmSoundPreferences(AlarmSoundSettings("niumi_oiseaux", 600))
 
             useCase(preferences).arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(coordinator.lastExtras?.ringtoneKey).isEqualTo("niumi_oiseaux")
-            assertThat(coordinator.lastExtras?.volumeRampSeconds).isEqualTo(30)
+            assertThat(coordinator.lastExtras?.volumeRampSeconds).isEqualTo(600)
         }
 
     /** Une clé hors catalogue (sonnerie retirée depuis) replie sur le défaut (étape 27). */

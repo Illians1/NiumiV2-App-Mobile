@@ -48,8 +48,8 @@ class RingtoneTextsTest {
     fun theRampDescriptionNamesTheChosenDuration() {
         assertThat(RingtoneTexts.rampDescription(120))
             .isEqualTo("L'alarme démarre doucement et atteint son volume maximal en 2 min.")
-        assertThat(RingtoneTexts.rampDescription(30))
-            .isEqualTo("L'alarme démarre doucement et atteint son volume maximal en 30 s.")
+        assertThat(RingtoneTexts.rampDescription(900))
+            .isEqualTo("L'alarme démarre doucement et atteint son volume maximal en 15 min.")
     }
 
     @Test

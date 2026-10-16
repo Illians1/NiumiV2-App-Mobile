@@ -13,4 +13,11 @@ interface AlarmAudioEngine {
     fun stop(): OperationResult
 
     val isPlaying: Boolean
+
+    /**
+     * Vrai si le son en cours boucle sans blanc (lecteur `AudioTrack`), faux s'il joue par le repli
+     * `MediaPlayer` ou si rien ne joue (SPEC_ANDROID §10.2, 2026-10-15). Lu par le service pour
+     * journaliser `AUDIO_LOOP_FALLBACK`.
+     */
+    val isGaplessLoop: Boolean
 }

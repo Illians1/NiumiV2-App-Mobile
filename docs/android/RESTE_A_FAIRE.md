@@ -191,6 +191,12 @@ délie-t-elle aussi le service d'accessibilité, et « Tout effacer » dans les 
 le blocage, sachant que la carte est cachée pendant la session et que le contrôle du verrou y est
 sans objet (voir A7) ?
 
+Y ajouter les **onze lignes « sonneries et volume progressif »** (Lot 7) : la montée se mesure au
+logcat sur le Xiaomi (`AudioTrack::setVolume`), rien ne garantit que le Pixel journalise de même —
+à défaut, montée à l'oreille et `dumpsys audio`. Question propre au Pixel : l'`AudioTrack` statique
+du réveil y est-il accepté, ou le repli `MediaPlayer` joue-t-il (`AUDIO_LOOP_FALLBACK` dans le
+journal) ?
+
 **Fini quand** une colonne Pixel est remplie dans `QA_MATRIX.md`, y compris les lignes en échec.
 
 ### B2. Campagne sur Samsung Galaxy
@@ -200,7 +206,7 @@ sans objet (voir A7) ?
 **Pourquoi.** Deuxième parc en nombre d'utilisateurs, et surcouche réputée agressive sur la gestion
 de l'énergie, ce qui touche directement la promesse du réveil.
 
-**Comment.** Même déroulé que B1, lignes « blocage différé » comprises, avec les mêmes deux
+**Comment.** Même déroulé que B1, lignes « blocage différé » et « sonneries » comprises, avec les mêmes deux
 questions propres à la surcouche : mort du processus et retrait des récents.
 
 **Fini quand** une colonne Samsung est remplie dans `QA_MATRIX.md`.
@@ -312,6 +318,30 @@ Ce qui reste ouvert pour le Lot 6 :
   (AOSP, et mesuré sur le Xiaomi), si bien que « volume supérieur à zéro » et
   `ANDROID_ALARM_VOLUME_ZERO` ne se déclenchent pratiquement jamais, et qu'un réveil à 1/15 passe
   pour audible. À trancher : garder, relever le seuil, ou transformer en avertissement.
+
+Les **sonneries et le volume progressif** (Lot 7) sont planifiés aux étapes 26 à 28 du même plan.
+
+**État au 2026-10-15 : les étapes 26 à 28 sont faites**, avec un manque nommé. Quatre sonneries,
+montée progressive sur 2, 5, 10 ou 15 min (liste resserrée le 08/10), réglage copié dans la session
+et modifiable pendant `ARMED`. Mesuré sur Xiaomi / Android 16 : dix des onze lignes §20 conformes
+(`QA_MATRIX.md`), montée à moins de 0,3 % de la courbe, reprise après mort du processus au bon
+niveau, redémarrage verrouillé. Le réveil joue depuis le 15/10 par un `AudioTrack` statique à
+points de boucle : `MediaPlayer` laissait 70 à 430 ms de silence à chaque tour, audible sur
+« Oiseaux ». Deux limites écrites dans l'aide après mesure. Détail dans `ETAPE-28.md`.
+
+Ce qui reste ouvert pour le Lot 7 :
+
+- **réécouter « Piano », « Cloche » et « Énergique » avec le lecteur `AudioTrack`** (critère 30 de
+  `RELEASE_REPORT.md`, partiel) : trois sessions courtes, volume constant, trente secondes
+  d'écoute chacune, journal `AudioTrack` sans arrêt de piste ;
+- TalkBack sur l'écran 14, passé le 15/10 ;
+- le redémarrage de la montée observé une fois le 08/10, non reproduit depuis (13 et 15/10) : à
+  consigner s'il revient, capture `ActivityManager` comprise ;
+- une session sur **APK de publication** (A2) : `RingtoneResources` référence les quatre ressources
+  `raw`, que la réduction de ressources doit donc garder — à prouver ;
+- la couverture Pixel et Samsung (B1, B2) ;
+- vibration progressive (impulsions qui se resserrent) proposée par l'utilisateur, hors périmètre
+  du Lot 7, à spécifier séparément.
 
 ## Ce qui n'est pas dans ce document
 

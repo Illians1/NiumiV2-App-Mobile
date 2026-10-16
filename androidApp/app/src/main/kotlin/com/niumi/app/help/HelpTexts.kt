@@ -84,6 +84,16 @@ object HelpTexts {
                     ),
             ),
             HelpSection(
+                title = "Sonnerie",
+                items =
+                    listOf(
+                        "La pré-écoute et l'alarme suivent le volume des alarmes de ton téléphone, jamais " +
+                            "celui des médias.",
+                        "Si Niumi s'arrête pendant la sonnerie et que le système le relance, le son se coupe une " +
+                            "ou deux secondes, puis reprend au volume où il en était, pas depuis le début.",
+                    ),
+            ),
+            HelpSection(
                 title = "Notifications et avertissements",
                 items =
                     listOf(

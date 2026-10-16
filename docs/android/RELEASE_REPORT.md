@@ -1,19 +1,21 @@
 # Rapport de release — MVP Android
 
-Les trente et un critères d'acceptation de SPEC_ANDROID §21, un par un, avec leur preuve. Les quatre
+Les trente-sept critères d'acceptation de SPEC_ANDROID §21, un par un, avec leur preuve. Les quatre
 critères du blocage différé (Lot 6, 26 à 29) ont été insérés dans §21 le 2026-09-15 entre l'ancien 25
-et l'ancien 26 : la numérotation suit l'ordre de §21 depuis l'étape 25, et les anciens 26 et 27
-sont devenus 30 et 31.
+et l'ancien 26 ; les six critères des sonneries (Lot 7, 30 à 35) l'ont été à l'étape 26 à la suite.
+La numérotation suit l'ordre de §21 : les anciens 26 et 27 sont devenus 30 et 31 à l'étape 25, puis
+36 et 37 à l'étape 28.
 
 **Règle.** Un critère n'est coché qu'avec une preuve nommée : un test qui le vérifie, un essai
 consigné dans un rapport d'étape, ou une ligne de `QA_MATRIX.md`. Un critère dont la preuve
 n'existe pas reste **ouvert**, même si le code paraît correct — c'est la différence entre un
 comportement implémenté et un comportement prouvé. Aucun critère n'est coché par défaut.
 
-État au 2026-09-28 (étape 25) : **1 126 exécutions de tests JVM** (dont les tests de `:app` rejoués
-sur les variantes debug et release), **151 tests instrumentés** au dernier passage sur appareil
-(28/09, un ignoré par hypothèse), `ktlintCheck`, `detekt`, `:app:lintRelease`,
-`:app:assembleRelease` et `:app:bundleRelease` verts. Les chiffres de l'étape 21 étaient 916 et 141.
+État au 2026-10-15 (étape 28) : **1 296 exécutions de tests JVM** (dont les tests de `:app` rejoués
+sur les variantes debug et release), **165 tests instrumentés** au dernier passage sur appareil
+(15/10), `ktlintCheck`, `detekt`, `:app:lintRelease`, `:app:assembleRelease` et
+`:app:bundleRelease` verts. Les chiffres de l'étape 25 étaient 1 126 et 151, ceux de l'étape 21
+916 et 141.
 
 ## Critères prouvés
 
@@ -38,7 +40,7 @@ sur les variantes debug et release), **151 tests instrumentés** au dernier pass
 | 19 | Un changement d'heure ou de fuseau réenregistre le même instant | `commonTest` (heure d'été, heure d'hiver, changement de fuseau) ; essais sur appareil `ETAPE-19.md` |
 | 20 | L'application ne lit aucun contenu de fenêtre via l'accessibilité | `NiumiBlockingAccessibilityServiceSourceTest` : le source du service ne contient ni `rootInActiveWindow`, ni `getText`, ni `contentDescription`, ni `AccessibilityNodeInfo`. Déclaration Play correspondante dans `ACCESSIBILITY_DECLARATION.md` |
 | 21 | Le parcours critique ne réalise aucun appel réseau | `ReleaseHygieneTest.theReleaseManifestDeclaresExactlyTheNinePermissionsOfTheSpec` : le manifeste **fusionné release** déclare exactement les neuf permissions de §14, donc pas `INTERNET`. Lu en DOM, ce qu'un commentaire ne peut pas tromper. Aucune dépendance réseau au classpath |
-| 22 | Tous les tests unitaires et instrumentés passent | Passe finale de l'étape 25, le 2026-09-28, après la dernière modification du code : **1 126 exécutions JVM** et **151 tests instrumentés** verts (un ignoré par hypothèse, `AndroidAccessibilityServiceStatusInstrumentedTest`, sans service activé à comparer), `HelpScreenTest` compris |
+| 22 | Tous les tests unitaires et instrumentés passent | Passe finale de l'étape 28, le 2026-10-15, après la dernière modification du code : **1 296 exécutions JVM** et **165 tests instrumentés** verts, `HelpScreenTest` compris. Deux échecs de la première passe instrumentée corrigés le jour même : un test de préférence qui écrivait encore une durée retirée le 08/10, et `AndroidAccessibilityServiceStatusInstrumentedTest`, qui échouait quand le premier service activé de l'appareil est écrit en forme courte `pkg/.Classe` (parseur rendu symétrique, deux tests JVM ajoutés) — sans doute aussi la cause de l'échec dit « transitoire » du 06/10 |
 | 23 | Lint, ktlint et detekt passent sans erreur | `./gradlew ktlintCheck detekt :app:lintRelease` vert. `lintRelease` est exécuté pour la première fois à l'étape 21, avec `abortOnError` et `warningsAsErrors` |
 | 24 | Les limites de l'arrêt forcé, du FGS et du NFC verrouillé sont documentées dans l'application | Écran 13 « Aide et limites » (étape 21), `docs/android/LIMITES.md`, `HelpTextsTest` qui verrouille la correspondance entre les deux. Les six limites de l'onboarding y sont reprises mot pour mot |
 | 25 | L'absence de mécanisme de secours est expliquée avant la première activation | `OnboardingTexts.limits`, quatrième limite ; `OnboardingScreenTest` |
@@ -46,20 +48,26 @@ sur les variantes debug et release), **151 tests instrumentés** au dernier pass
 | 27 | Un redémarrage avant l'heure de début reprogramme l'alarme de début avant le premier déverrouillage (Lot 6) | Mesuré le 2026-09-24 (reprogrammée 1 s après le démarrage, même instant, avant déverrouillage) et le 2026-09-27 (trois redémarrages ; téléphone resté verrouillé à l'heure de début : blocage appliqué pendant la phase verrouillée). `SessionReconcilerBootTest`, `tools/validate_blocking_start.sh reboot` |
 | 28 | Aucune session n'atteint `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans blocage demandé (Lot 6) | Par construction du moteur : `ALARM_FIRED`, `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` appliquent eux-mêmes un blocage encore en attente (`SessionEngineTriggerTest`, repli de SPEC_CORE_KMP §5.1). Sur appareil (2026-09-28) : début manqué téléphone éteint, blocage appliqué à la réconciliation **avant** le réveil, puis sonnerie à l'heure. Le repli lui-même — début et réveil tous deux dépassés au même moment — n'a pas été provoqué sur appareil |
 | 29 | L'annulation d'une session avant le début de son blocage exige le scan du boîtier, et l'écran 5 refuse un début non strictement antérieur au réveil (Lot 6) | Scan avant l'heure → `CANCELLED` et plus aucune alarme Niumi (2026-09-17) ; 08:00 et un 15:00 devenu postérieur refusés sur l'écran 5, « Continuer » inactif, dans les deux conventions horaires. `ETAPE-24.md` ; `WakeTimeViewModelTest`, `SessionEngineNfcTest` |
+| 31 | Avec la montée progressive, l'alarme démarre à −40 dB et atteint son volume maximal à la durée choisie ; sans, plein volume immédiat (Lot 7) | Mesuré au logcat (`AudioTrack::setVolume`, chaque pas de 250 ms) : départ à 0,0101 (−40 dB), plein volume à 120,04 s et 120,17 s pour 2 min, 300,20 s pour 5 min, 900,12 s pour 15 min, écart à la courbe ≤ 0,3 % ; volume constant : 60/60 valeurs à 1,0. `VolumeRampPolicyTest`, `DefaultAlarmAudioEngineTest`. `ETAPE-28.md`, `QA_MATRIX.md` (Lot 7) |
+| 32 | Le réglage est copié dans la session à l'activation ; un redémarrage sans déverrouillage sonne celui de la session ; modifié pendant `ARMED`, c'est le nouveau qui sonne ; figé à partir de `RINGING` (Lot 7) | Session E (2026-10-15) : « Énergique » / 5 min armé, modifié en « Oiseaux » / 2 min pendant `ARMED`, redémarrage, « Oiseaux » / 120 s joué téléphone verrouillé depuis la projection Direct Boot v3. Figé : `updateAlarmSound` refuse hors `ARMED` (`SessionCoordinatorAlarmSoundTest`) et la ligne « Sonnerie » est inatteignable pendant la sonnerie (session B). `ArmSessionUseCaseTest`, `RoomSessionStoreCommitTest` |
+| 33 | Ni une base antérieure à v4, ni une projection Direct Boot antérieure à v3, ni une clé inconnue ne rendent le réveil muet (Lot 7) | Mise à jour par-dessus une session armée en `niumi_alarm` (2026-10-01) : « Piano » à volume constant, aucun `RINGTONE_FALLBACK` (`ETAPE-26.md`). Migration 3→4 instrumentée (`NiumiDatabaseSchemaTest`), lecture des projections v1/v2 (`DirectBootMapperTest`), clé inconnue (`RingingSoundResolverTest`). Depuis le 2026-10-15, un lecteur `AudioTrack` refusé repasse sur `MediaPlayer` (`FallbackAlarmPlayerFactoryTest`) |
+| 34 | La pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (Lot 7) | Grep de clôture de l'étape 27 (aucun `AlarmAudioEngine` dans `:feature:session`), `RingtonePreviewPlayerTest`, `RingtoneViewModelTest` ; sur appareil (2026-10-02) : plus aucun lecteur de l'application dans `dumpsys audio` après le retour. `ETAPE-27.md` |
+| 35 | Les limites mesurées du Lot 7 sont écrites dans l'aide et `LIMITES.md` (Lot 7) | Section « Sonnerie » de `LIMITES.md` et de `HelpTexts` (2026-10-15), deux limites mesurées : volume des alarmes et non des médias (pré-écoute audible média à 0, alarme à 4/15), reprise de la montée après une mort du processus (`am crash`, session F). `HelpTextsTest` verrouille la correspondance ; l'affichage à l'écran n'a pas été relu |
 
 ## Critères partiellement prouvés
 
 | # | Critère §21 | Ce qui est prouvé | Ce qui manque |
 | --- | --- | --- | --- |
 | 3 | L'alarme sonne hors ligne, écran éteint, sur la matrice P0 | Sur Xiaomi / Android 16 : écran éteint 31 min, Doze profond réel, silencieux, volumes à zéro, Bluetooth — tous verts | **La matrice P0 n'est pas couverte.** Un seul fabricant, une seule version d'Android. Voir `QA_MATRIX.md` |
-| 30 | Les scénarios DND, Bluetooth, USB-C et route audio sont consignés sur la matrice P0 | DND (trois modes) et Bluetooth A2DP mesurés | USB-C, casque filaire et changement de route pendant `RINGING` : matériel non disponible |
+| 30 | Chacune des quatre sonneries joue en boucle jusqu'au scan, sans blanc audible à la jonction (Lot 7) | « Oiseaux » avec le lecteur de réveil actuel (`AudioTrack` statique, 2026-10-15) : une seule piste, aucun arrêt sur ~21 reprises, aucune coupure à l'oreille. Piano, Cloche et Énergique sans blanc audible avec l'ancien lecteur `MediaPlayer` (07/10) | Piano, Cloche et Énergique à réécouter avec le lecteur `AudioTrack` (trois sessions courtes) |
+| 36 | Les scénarios DND, Bluetooth, USB-C et route audio sont consignés sur la matrice P0 | DND (trois modes) et Bluetooth A2DP mesurés | USB-C, casque filaire et changement de route pendant `RINGING` : matériel non disponible |
 
 ## Critères ouverts
 
 | # | Critère §21 | État |
 | --- | --- | --- |
 | 4 | Sur Android 17, l'alarme utilise `USAGE_ALARM` et reste audible en arrière-plan | **Ouvert.** Aucun appareil Android 17. `USAGE_ALARM` est vérifié sur Android 16 (`dumpsys audio`), mais le comportement d'arrière-plan d'Android 17 ne l'est pas |
-| 31 | Le dossier Play de l'AccessibilityService est prêt **et** a été soumis sur une piste interne ou fermée, réponse de Google traitée | **Ouvert — porte 0b.** Le dossier est rédigé depuis l'étape 6 (six documents). La vidéo n'est pas tournée, l'application n'est pas soumise, Google n'a pas statué. C'est le risque principal assumé par la décision du 2026-09-07 (`LOT-0.md`) : les étapes 7 à 21 ont été développées avant le verdict |
+| 37 | Le dossier Play de l'AccessibilityService est prêt **et** a été soumis sur une piste interne ou fermée, réponse de Google traitée | **Ouvert — porte 0b.** Le dossier est rédigé depuis l'étape 6 (six documents). La vidéo n'est pas tournée, l'application n'est pas soumise, Google n'a pas statué. C'est le risque principal assumé par la décision du 2026-09-07 (`LOT-0.md`) : les étapes 7 à 21 ont été développées avant le verdict |
 
 ## Écarts techniques encore ouverts
 
@@ -147,7 +155,8 @@ opératoire et leur critère de réussite, dans **`docs/android/RESTE_A_FAIRE.md
 ## Conclusion
 
 Le code du MVP est complet et ses règles métier sont prouvées par les tests. Les quatre critères du
-blocage différé (26 à 29) sont prouvés sur un appareil, avec la réserve de l'écart 9. **Le MVP n'est
-pas acceptable au sens de §21** : deux critères sont ouverts, deux ne sont que partiellement prouvés,
+blocage différé (26 à 29) sont prouvés sur un appareil, avec la réserve de l'écart 9, et cinq des six
+critères des sonneries (31 à 35) ; le 30 attend la réécoute de trois sonneries avec le nouveau lecteur.
+**Le MVP n'est pas acceptable au sens de §21** : deux critères sont ouverts, trois ne sont que partiellement prouvés,
 et la porte finale exige une matrice §20 verte dans le périmètre de §4.1 plus le verdict de Google
 sur l'AccessibilityService. Aucun des deux n'est acquis.

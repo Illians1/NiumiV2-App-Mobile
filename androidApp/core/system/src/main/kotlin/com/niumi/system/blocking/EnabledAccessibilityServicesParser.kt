@@ -4,7 +4,7 @@ package com.niumi.system.blocking
  * Parseur pur de `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES` (SPEC_ANDROID §13, §19.1) :
  * une liste de composants `pkg/classe` séparés par `:`. Android accepte, pour la partie
  * classe, un nom qualifié complet ou un nom relatif préfixé par un point (`pkg/.Classe`
- * équivaut à `pkg/pkg.Classe`).
+ * équivaut à `pkg/pkg.Classe`), des deux côtés de la comparaison.
  */
 object EnabledAccessibilityServicesParser {
     fun isEnabled(
@@ -17,7 +17,7 @@ object EnabledAccessibilityServicesParser {
             val component = splitComponent(entry)
             component != null &&
                 component.packageName == expected.packageName &&
-                resolvedClassName(component) == expected.className
+                resolvedClassName(component) == resolvedClassName(expected)
         }
     }
 

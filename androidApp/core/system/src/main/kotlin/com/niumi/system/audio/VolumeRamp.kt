@@ -10,9 +10,18 @@ data class VolumeRamp(
     val startedAtEpochMillis: Long,
 )
 
-/** Durées proposées, liste fermée comme les heures (plan maître, phase J, décision 3). */
+/**
+ * Durées proposées, liste fermée comme les heures (plan maître, phase J, décision 3).
+ *
+ * Resserrée le 2026-10-08 : 30 s et 1 min retirées, remplacées par 10 min et 15 min. Un essai
+ * utilisateur sur « Oiseaux » (montée 5 min, volume alarme 7/15) a jugé la montée perçue comme
+ * trop rapide dès les premières secondes ; la courbe (`VolumeRampPolicy`) ne dépendant que de la
+ * fraction écoulée de la durée, doubler celle-ci divise par deux la vitesse de montée en dB à
+ * chaque instant — vérifié par le calcul, pas par un second essai à 10 min (voir
+ * `ETAPE-28.md`).
+ */
 object VolumeRampDurations {
-    val SECONDS: List<Int> = listOf(30, 60, 120, 300)
+    val SECONDS: List<Int> = listOf(120, 300, 600, 900)
 
     /** 2 min, décision du 2026-09-30 : valeur par défaut et valeur proposée à l'activation de l'interrupteur. */
     const val DEFAULT_SECONDS = 120

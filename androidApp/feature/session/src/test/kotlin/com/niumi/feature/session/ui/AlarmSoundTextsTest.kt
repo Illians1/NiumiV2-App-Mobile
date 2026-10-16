@@ -6,16 +6,18 @@ import org.junit.Test
 
 /**
  * Résumé partagé des écrans 5, 6 et 7 (SPEC_ANDROID §15, Lot 7) : « {Sonnerie} · volume constant »
- * ou « {Sonnerie} · volume progressif sur {durée} », les durées s'écrivant « 30 s », « 1 min »,
- * « 2 min », « 5 min ». Mot pour mot, verrouillé ici.
+ * ou « {Sonnerie} · volume progressif sur {durée} », les durées s'écrivant « 2 min », « 5 min »,
+ * « 10 min », « 15 min » (resserré le 2026-10-08 : les durées 30 s et 1 min retirées, trop
+ * rapides selon un essai utilisateur, remplacées par 10 min et 15 min). Mot pour mot, verrouillé
+ * ici.
  */
 class AlarmSoundTextsTest {
     @Test
     fun durationLabelsMatchTheSpecExactly() {
-        assertThat(AlarmSoundTexts.durationLabel(30)).isEqualTo("30 s")
-        assertThat(AlarmSoundTexts.durationLabel(60)).isEqualTo("1 min")
         assertThat(AlarmSoundTexts.durationLabel(120)).isEqualTo("2 min")
         assertThat(AlarmSoundTexts.durationLabel(300)).isEqualTo("5 min")
+        assertThat(AlarmSoundTexts.durationLabel(600)).isEqualTo("10 min")
+        assertThat(AlarmSoundTexts.durationLabel(900)).isEqualTo("15 min")
     }
 
     @Test

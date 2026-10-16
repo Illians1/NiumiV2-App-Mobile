@@ -100,7 +100,7 @@ class FakeSessionCoordinator : SessionCoordinator {
 }
 
 /** Réglages distincts du défaut, pour distinguer « lu de la session » de « lu de la préférence ». */
-val SESSION_EXTRAS_SETTINGS = AlarmSoundSettings("niumi_oiseaux", 30)
+val SESSION_EXTRAS_SETTINGS = AlarmSoundSettings("niumi_oiseaux", 600)
 
 fun sessionExtras(): AndroidSessionExtras =
     AndroidSessionExtras(

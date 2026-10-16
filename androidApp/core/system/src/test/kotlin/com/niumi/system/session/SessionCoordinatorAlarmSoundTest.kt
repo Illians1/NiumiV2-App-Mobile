@@ -110,11 +110,11 @@ class SessionCoordinatorAlarmSoundTest {
     fun aDecisionAfterTheChangeKeepsTheNewSound() =
         runTest {
             val armed = armSession()
-            harness.coordinator.updateAlarmSound("niumi_oiseaux", 30)
+            harness.coordinator.updateAlarmSound("niumi_oiseaux", 600)
 
             harness.coordinator.dispatch(harness.eventFactory.alarmFired(armed))
 
             assertThat(present().extras.ringtoneKey).isEqualTo("niumi_oiseaux")
-            assertThat(present().extras.volumeRampSeconds).isEqualTo(30)
+            assertThat(present().extras.volumeRampSeconds).isEqualTo(600)
         }
 }

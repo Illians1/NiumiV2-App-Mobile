@@ -157,6 +157,7 @@ Signalés ici pour que l'exécutant ne les découvre pas en cours de route.
 13. **Le repli du moteur n'est pas une permission de manquer l'alarme de début.** `ALARM_FIRED` et `TRIGGER_ELAPSED` appliquent eux-mêmes un blocage encore en attente (SPEC_CORE_KMP §5.1) : c'est un filet pour qu'aucune sonnerie ne parte sans blocage, pas un chemin normal. Le chemin normal est `BlockingStartReceiver` à l'heure, puis `SessionReconciler` au premier réveil du processus. Un test qui n'observerait le blocage qu'au réveil prouverait le filet, pas la fonctionnalité.
 14. **`niumi_alarm.wav` ne se retire qu'avec le code qui le remplace (constaté le 2026-09-24).** Le fichier avait été supprimé de `androidApp/feature/ringing/src/main/res/raw/` sans changement de code, ce qui cassait le build : `RingingModule` référence `R.raw.niumi_alarm`, `AlarmRingingService` et `NiumiRingtones` portent la clé `"niumi_alarm"` en dur, `NiumiAlarmWavTest` lit le fichier. **Il a été remis le jour même, identique au commit** : le dépôt compile et tous les tests passent. Les quatre nouveaux fichiers (`niumi_bell`, `niumi_energique`, `niumi_oiseaux`, `niumi_piano`) sont présents dans l'arbre de travail, non suivis par git et référencés par aucune ligne de code — mais une ressource `raw` est empaquetée même inutilisée, ce qui alourdit l'APK debug de ~12,6 Mo jusqu'à l'étape 26 (la réduction de ressources de la variante release les retire tant qu'ils ne sont pas référencés). Règle pour l'étape 26 : supprimer `niumi_alarm.wav`, brancher les quatre clés et remplacer `NiumiAlarmWavTest` **dans un seul changement**, jamais le fichier d'abord. *Appliquée à l'étape 26 (2026-09-30).*
 15. **Une clé de sonnerie inconnue rend le réveil muet.** `MediaPlayerAlarmPlayerFactory` fait `requireNotNull(resolver.resourceId(key))` : une clé sans ressource devient `Failure("ANDROID_AUDIO_START_FAILED")`, `AUDIO_START_FAILED` est journalisé, et aucun son ne sort — la session reste `RINGING` en silence. Toute session armée avec `"niumi_alarm"` avant la mise à jour est dans ce cas, en Room v3 comme dans la projection Direct Boot v2. Deux filets, tous deux obligatoires à l'étape 26 : `MIGRATION_3_4` réécrit la clé en base (vers `niumi_piano`, volume constant), et `RingingSoundResolver` replie toute clé que `NiumiRingtones` ne connaît pas sur la sonnerie par défaut. Le second vaut aussi pour la projection Direct Boot, que la migration Room n'atteint pas avant la fusion, et pour toute clé retirée du catalogue à l'avenir.
+16. **Le lecteur de réveil sans blanc ne doit jamais rendre le réveil muet (2026-10-15).** L'`AudioTrack` statique charge le fichier entier en mémoire (jusqu'à ~1,8 Mo pour 20 s) ; un appareil peut refuser ce tampon. `FallbackAlarmPlayerFactory` repasse alors sur `MediaPlayer` (son présent, blanc de boucle revenu, `AUDIO_LOOP_FALLBACK` journalisé). Toute évolution du catalogue (fichier plus long, stéréo, autre fréquence) passe d'abord par `PcmWav` et `NiumiRingtoneWavTest` : un format que `PcmWav` refuse fait jouer tous les réveils par le repli, sans erreur visible ailleurs que dans le journal.
 
 ## Interfaces transverses
 
@@ -424,7 +425,7 @@ object NiumiRingtones {
     fun byKey(key: String): Ringtone?                 // null si inconnue
 }
 data class VolumeRamp(val durationMs: Long, val startedAtEpochMillis: Long)   // absent (null) = volume constant
-object VolumeRampDurations { val SECONDS = listOf(30, 60, 120, 300); const val DEFAULT_SECONDS = 120 }   // défaut décidé le 2026-09-30
+object VolumeRampDurations { val SECONDS = listOf(120, 300, 600, 900); const val DEFAULT_SECONDS = 120 }   // défaut décidé le 2026-09-30 ; liste resserrée le 2026-10-08 (30 s, 1 min retirées ; 10 min, 15 min ajoutées)
 object VolumeRampPolicy {
     const val TICK_MS = 250L
     const val START_AMPLITUDE = 0.01f                 // −40 dB
@@ -516,7 +517,7 @@ interface AlarmSoundPreferences { suspend fun read(): AlarmSoundSettings; suspen
 //   onVolumeRampSecondsChanged(seconds), onPause(), refresh() — deux modes selon sources.gateway.load() : ARMED → session,
 //   sinon → préférence. Messages ajoutés hors spec : SAVE_FAILED, PREVIEW_FAILED, SESSION_UPDATE_FAILED (RingtoneTexts)
 // ui/AlarmSoundTexts.summary(settings): "Cloche · volume constant" / "Piano · volume progressif sur 2 min" (défaut) ;
-//   durationLabel(30) = "30 s", (60) = "1 min", (120) = "2 min", (300) = "5 min" — tables associées à
+//   durationLabel(120) = "2 min", (300) = "5 min", (600) = "10 min", (900) = "15 min" (liste resserrée le 2026-10-08) — tables associées à
 //   VolumeRampDurations.SECONDS et NiumiRingtones.ALL par position, aucun nombre magique
 // ui/AlarmSoundRow(title, summary, onClick: (() -> Unit)?) : composable partagé des écrans 5, 6, 7
 // WakeTimeUiState : + alarmSoundSummary: String ; WakeTimeActions : + onOpenRingtone ; SummaryUiState : + alarmSoundSummary: String
@@ -1917,6 +1918,33 @@ boucle, avec ou sans montée progressive, d'après la session persistée, et le 
 nouveau. 27 : l'utilisateur choisit, écoute, règle et relit son choix. 28 : le tout est prouvé sur
 appareil et écrit dans la matrice, l'aide et le rapport.
 
+**Resserrement des durées de montée du 2026-10-08 (étape 28), prime sur la décision 3 et sur le
+bloc `VolumeRampDurations` de la liste d'interfaces ci-dessous.** Un essai utilisateur sur
+« Oiseaux », montée 5 min, a jugé la montée perçue comme trop rapide dès le départ. La courbe ne
+dépendant que de la fraction écoulée de la durée (`VolumeRampPolicy.amplitudeAt`), doubler la
+durée divise par deux la vitesse de montée en dB à chaque instant, vérifié par le calcul sans
+nouvel essai sur appareil. Décidé avec l'utilisateur : `VolumeRampDurations.SECONDS` devient
+`[120, 300, 600, 900]` (2, 5, 10, 15 min), 30 s et 1 min retirées. `DEFAULT_SECONDS` reste 120 (2
+min), déjà dans la nouvelle liste : aucun changement pour une session jamais configurée. Touche
+`:core:system` (`VolumeRamp.kt`), `:feature:session` (`AlarmSoundTexts.kt`, table des libellés) et
+les tests qui échantillonnaient une durée retirée (30 ou 60) pour un usage sans rapport avec le
+catalogue lui-même — mis à jour vers une valeur toujours valide, jamais vers un contournement.
+Detekt, ktlint, lint et la suite JVM complète revérifiés verts après le changement. SPEC_ANDROID
+§3, §10.2, §15 et §20 mis à jour dans le même changement. Voir
+`docs/android/implementation-reports/ETAPE-28.md`.
+
+**Lecteur de réveil sans blanc du 2026-10-15 (étape 28), prime sur « boucle `MediaPlayer.isLooping` »
+de l'étape 26.** Session D, « Oiseaux » : chaque tour de boucle `MediaPlayer` arrivait 70 à 430 ms
+après la fin du fichier (96 cycles, 10,07–10,43 s pour 10,00 s), et l'utilisateur a entendu la
+coupure. Décidé avec lui : le réveil joue par un `AudioTrack` statique à points de boucle
+(`AudioTrackAlarmPlayerFactory`, `PcmWav`), avec repli `MediaPlayer` par
+`FallbackAlarmPlayerFactory` et `AUDIO_LOOP_FALLBACK` journalisé ; `AlarmAudioEngine.isGaplessLoop`
+pour le service ; pré-écoute inchangée. Aucune dépendance ajoutée. Tests : `PcmWavTest`,
+`FallbackAlarmPlayerFactoryTest`, `DefaultAlarmAudioEngineTest`, `RingingStartJournalTest`,
+`TechnicalEventTypeTest`, `NiumiRingtoneWavTest` (les quatre fichiers lus par `PcmWav`). SPEC_ANDROID
+§10.2, §17, §19.1 et §20 mis à jour dans le même changement ; point de vigilance 16. À prouver sur
+appareil en session E : aucun arrêt/redémarrage de piste sur trois cycles, aucune coupure audible.
+
 ### Étape 26 : specs, fichiers audio, catalogue, montée progressive, Room v4, Direct Boot v3 et service
 
 **Specs à lire :** SPEC_ANDROID §3, §7.2, §7.3, §10.2, §17, §18, §19.1, §19.2 ; « Ajouts du Lot 7 » des interfaces transverses ; points de vigilance 10, 14 et 15 ; `ETAPE-03.md` (décision « descripteurs purs » du moteur audio), `ETAPE-17.md` (reconstruction du service), `ETAPE-23.md` (migration 2→3 et projection v2, à reproduire à l'identique).
@@ -2009,8 +2037,8 @@ Voir `ETAPE-26.md`.
 
 | Scénario | Résultat attendu |
 | --- | --- |
-| chacune des quatre sonneries, session à +2 min, écran éteint (Lot 7) | sonnerie choisie audible, en boucle sur trois cycles sans blanc ni clic, jusqu'au scan |
-| montée progressive 30 s, puis 5 min (Lot 7) | départ presque inaudible, plein volume atteint à la durée choisie à ± 5 s à l'oreille, puis constant |
+| chacune des quatre sonneries, session à +2 min, écran éteint (Lot 7) | sonnerie choisie audible, en boucle sur trois cycles sans blanc ni clic, jusqu'au scan ; depuis le 2026-10-15, aucun arrêt/redémarrage de la piste dans le journal `AudioTrack` |
+| montée progressive 2 min, puis 15 min (Lot 7, liste resserrée le 2026-10-08) | départ presque inaudible, plein volume atteint à la durée choisie à ± 5 s à l'oreille, puis constant |
 | volume constant (Lot 7) | plein volume dès la première seconde, comme avant le Lot 7 |
 | mort du processus pendant la montée (`am crash`, cf. étape 17) (Lot 7) | si le service revit, la montée reprend à l'amplitude attendue pour le temps écoulé, jamais depuis zéro ; sinon, limite consignée comme à l'étape 17 |
 | redémarrage sans déverrouillage avant l'heure, sonnerie autre que « Piano » choisie (Lot 7) | la sonnerie choisie sonne, avec sa montée, depuis la projection Direct Boot v3 |
@@ -2023,11 +2051,11 @@ Voir `ETAPE-26.md`.
 
 **Produit :** le Lot 7 prouvé sur appareil, documenté dans l'application et dans les documents de release.
 
-- [ ] **Étendre `tools/validate_alarm.sh`** ; exécuter sur l'appareil branché (`adb devices` d'abord ; les tests instrumentés de l'étape 26 sont rejoués **avant** tout essai manuel, jamais entre deux — ils désinstallent l'application et ses données).
-- [ ] **Dérouler les onze scénarios du Lot 7**, un par un, en consignant modèle, version, firmware, volume d'alarme réglé, sortie audio, résultat, écoute et logs.
-- [ ] **Écrire les limites mesurées** dans `LIMITES.md` et `HelpTexts` ; `HelpTextsTest` vert ; ne rien écrire qui n'ait été mesuré.
-- [ ] **Remplir `QA_MATRIX.md`, `RELEASE_REPORT.md` et `RESTE_A_FAIRE.md`.**
-- [ ] **Vérifier :**
+- [x] **Étendre `tools/validate_alarm.sh`** ; exécuter sur l'appareil branché (`adb devices` d'abord ; les tests instrumentés de l'étape 26 sont rejoués **avant** tout essai manuel, jamais entre deux — ils désinstallent l'application et ses données).
+- [x] **Dérouler les onze scénarios du Lot 7**, un par un, en consignant modèle, version, firmware, volume d'alarme réglé, sortie audio, résultat, écoute et logs. *Fait du 1er au 15/10 sur Xiaomi / Android 16 : dix lignes conformes, la boucle des quatre sonneries partielle (seule « Oiseaux » réécoutée avec le lecteur `AudioTrack` adopté le 15/10, les trois autres reportées par l'utilisateur). Mesures faites à la main (`ringingAtEpochMillis` + logcat), le script n'ayant jamais tenu sa fenêtre de bout en bout. `QA_MATRIX.md`, `ETAPE-28.md`.*
+- [x] **Écrire les limites mesurées** dans `LIMITES.md` et `HelpTexts` ; `HelpTextsTest` vert ; ne rien écrire qui n'ait été mesuré.
+- [x] **Remplir `QA_MATRIX.md`, `RELEASE_REPORT.md` et `RESTE_A_FAIRE.md`.**
+- [x] **Vérifier :**
 
 ```bash
 ./gradlew :shared:core:jvmTest
@@ -2038,7 +2066,7 @@ Voir `ETAPE-26.md`.
 ./gradlew :app:assembleRelease :app:bundleRelease
 ```
 
-- [ ] **Rédiger `ETAPE-28.md`.**
+- [x] **Rédiger `ETAPE-28.md`.** *Le 2026-10-15 ; 1 296 exécutions JVM et 165 tests instrumentés verts, release assemblé. Session sur APK release signé non faite : aucune clé (A1).*
 
 **Tests manuels :** les onze lignes ci-dessus, plus une session complète sur un **APK release signé** (A1 de `RESTE_A_FAIRE.md`) si la clé existe : « Oiseaux », montée sur 2 min, activation le soir, sonnerie le matin, scan — R8 doit garder les quatre ressources `raw` (`shrinkResources` ne retire que les ressources non référencées ; `RingtoneResources` les référence toutes, ce que l'essai prouve).
 
@@ -2266,12 +2294,12 @@ du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
 **Lot 7 — sonneries et volume progressif (SPEC_ANDROID §21, critères à ajouter à l'étape 26).** Hors
 porte finale du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
 
-- [ ] Chacune des quatre sonneries joue en boucle jusqu'au scan, sans blanc audible à la jonction (étapes 26, 28).
-- [ ] Avec la montée progressive, l'alarme démarre à −40 dB et atteint son volume maximal à la durée choisie ; sans, plein volume immédiat (étapes 26, 28).
-- [ ] Le réglage est copié dans la session à l'activation : un redémarrage sans déverrouillage sonne la sonnerie et la montée de la session ; modifié pendant `ARMED`, c'est le nouveau réglage qui sonne ; il ne change plus à partir de `RINGING` (étapes 26, 27, 28).
-- [ ] Ni une base antérieure à v4, ni une projection Direct Boot antérieure à v3, ni une clé inconnue ne rendent le réveil muet (étape 26 par test ; étape 28 par mise à jour par-dessus une session armée).
-- [ ] La pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (étape 27).
-- [ ] Limites mesurées du Lot 7 écrites dans l'aide et `LIMITES.md` (étape 28).
+- [ ] Chacune des quatre sonneries joue en boucle jusqu'au scan, sans blanc audible à la jonction (étapes 26, 28). *Partiel au 15/10 : « Oiseaux » prouvée avec le lecteur `AudioTrack` ; Piano, Cloche et Énergique à réécouter avec ce lecteur.*
+- [x] Avec la montée progressive, l'alarme démarre à −40 dB et atteint son volume maximal à la durée choisie ; sans, plein volume immédiat (étapes 26, 28). *Prouvé : 2, 5 et 15 min à ≤ 0,3 % de la courbe, volume constant à 1,0 dès le départ.*
+- [x] Le réglage est copié dans la session à l'activation : un redémarrage sans déverrouillage sonne la sonnerie et la montée de la session ; modifié pendant `ARMED`, c'est le nouveau réglage qui sonne ; il ne change plus à partir de `RINGING` (étapes 26, 27, 28). *Prouvé le 15/10 (session E).*
+- [x] Ni une base antérieure à v4, ni une projection Direct Boot antérieure à v3, ni une clé inconnue ne rendent le réveil muet (étape 26 par test ; étape 28 par mise à jour par-dessus une session armée). *Prouvé : mise à jour par-dessus une session armée le 01/10 (`ETAPE-26.md`), tests de migration, de projection et du résolveur.*
+- [x] La pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (étape 27). *Prouvé le 02/10 (`ETAPE-27.md`).*
+- [x] Limites mesurées du Lot 7 écrites dans l'aide et `LIMITES.md` (étape 28). *Deux limites, section « Sonnerie », `HelpTextsTest` vert.*
 
 **Lot 8 — boîtiers multiples (SPEC_ANDROID §21, critères à ajouter à l'étape 31).** Hors porte
 finale du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».

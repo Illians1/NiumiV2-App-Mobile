@@ -54,7 +54,7 @@ class VolumeRampPolicyTest {
 
     @Test
     fun durationsAreTheClosedListWithTwoMinutesByDefault() {
-        assertThat(VolumeRampDurations.SECONDS).containsExactly(30, 60, 120, 300).inOrder()
+        assertThat(VolumeRampDurations.SECONDS).containsExactly(120, 300, 600, 900).inOrder()
         assertThat(VolumeRampDurations.DEFAULT_SECONDS).isEqualTo(120)
         assertThat(VolumeRampDurations.SECONDS).contains(VolumeRampDurations.DEFAULT_SECONDS)
     }

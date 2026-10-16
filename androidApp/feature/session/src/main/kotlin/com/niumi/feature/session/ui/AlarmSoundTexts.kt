@@ -15,7 +15,7 @@ import com.niumi.system.audio.VolumeRampDurations
  */
 object AlarmSoundTexts {
     private val DURATION_LABELS: Map<Int, String> =
-        VolumeRampDurations.SECONDS.zip(listOf("30 s", "1 min", "2 min", "5 min")).toMap()
+        VolumeRampDurations.SECONDS.zip(listOf("2 min", "5 min", "10 min", "15 min")).toMap()
 
     private val RINGTONE_LABELS: Map<String, String> = NiumiRingtones.ALL.associate { it.key to it.label }
 

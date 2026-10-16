@@ -30,6 +30,11 @@ principe. Chaque point renvoie à la section de spécification qui l'établit.
 - Une mise à jour de Niumi peut réinitialiser l'exemption d'énergie. Le diagnostic la revérifie avant chaque session, et Niumi te prévient s'il la voit disparaître pendant une session.
 - Juste après un redémarrage, le diagnostic peut annoncer le NFC désactivé alors qu'il ne l'est pas : la pile NFC du système n'a pas fini de démarrer. Rouvrir Niumi corrige l'affichage.
 
+## Sonnerie
+
+- La pré-écoute et l'alarme suivent le volume des alarmes de ton téléphone, jamais celui des médias.
+- Si Niumi s'arrête pendant la sonnerie et que le système le relance, le son se coupe une ou deux secondes, puis reprend au volume où il en était, pas depuis le début.
+
 ## Notifications et avertissements
 
 - La notification qui te demande de scanner ton boîtier peut être balayée. Depuis Android 14, Niumi ne peut pas l'en empêcher. Elle revient dès que tu rouvres l'application, et l'écran de blocage te rappelle le scan.

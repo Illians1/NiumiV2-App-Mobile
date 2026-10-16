@@ -21,6 +21,7 @@ class DefaultAlarmAudioEngineTest {
     private class FakePlayer : AlarmPlayer {
         var released = false
         val volumes = mutableListOf<Float>()
+        override var gaplessLoop: Boolean = true
 
         override fun setVolume(amplitude: Float) {
             volumes += amplitude
@@ -246,6 +247,26 @@ class DefaultAlarmAudioEngineTest {
         assertThat((result as OperationResult.Failure).code).isEqualTo("ANDROID_AUDIO_START_FAILED")
         assertThat(engine.isPlaying).isFalse()
         assertThat(fakePlayer.volumes).isEmpty()
+    }
+
+    /**
+     * Boucle sans blanc (2026-10-15) : le service doit savoir si le lecteur créé est celui à points
+     * de boucle ou le repli `MediaPlayer`, pour journaliser `AUDIO_LOOP_FALLBACK`.
+     */
+    @Test
+    fun isGaplessLoopReflectsTheActivePlayer() {
+        assertThat(engine.isGaplessLoop).isFalse()
+
+        engine.start(constant())
+        assertThat(engine.isGaplessLoop).isTrue()
+
+        engine.stop()
+        fakePlayer.gaplessLoop = false
+        engine.start(constant())
+        assertThat(engine.isGaplessLoop).isFalse()
+
+        engine.stop()
+        assertThat(engine.isGaplessLoop).isFalse()
     }
 
     private companion object {

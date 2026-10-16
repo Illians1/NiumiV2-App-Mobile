@@ -10,9 +10,11 @@ import com.niumi.system.audio.AndroidAlarmVolumeSource
 import com.niumi.system.audio.AndroidAudioFocusController
 import com.niumi.system.audio.AndroidVibrationController
 import com.niumi.system.audio.AudioFocusController
+import com.niumi.system.audio.AudioTrackAlarmPlayerFactory
 import com.niumi.system.audio.DataStoreAlarmSoundPreferences
 import com.niumi.system.audio.DefaultAlarmAudioEngine
 import com.niumi.system.audio.DefaultRingtonePreviewPlayer
+import com.niumi.system.audio.FallbackAlarmPlayerFactory
 import com.niumi.system.audio.MediaPlayerAlarmPlayerFactory
 import com.niumi.system.audio.PreviewPlayerFactory
 import com.niumi.system.audio.RingtonePreviewPlayer
@@ -57,8 +59,21 @@ object AudioModule {
         ringtoneResolver: RingtoneResourceResolver,
     ): MediaPlayerAlarmPlayerFactory = MediaPlayerAlarmPlayerFactory(context, ringtoneResolver)
 
+    /**
+     * Réveil : boucle sans blanc par `AudioTrack` statique, repli sur `MediaPlayer` si elle ne peut
+     * pas être créée — jamais muet (SPEC_ANDROID §10.2, décision du 2026-10-15). La pré-écoute,
+     * ci-dessous, garde `MediaPlayer` : elle ne boucle pas et attend la fin du fichier.
+     */
     @Provides
-    fun provideAlarmPlayerFactory(factory: MediaPlayerAlarmPlayerFactory): AlarmPlayerFactory = factory
+    fun provideAlarmPlayerFactory(
+        @ApplicationContext context: Context,
+        ringtoneResolver: RingtoneResourceResolver,
+        mediaPlayerFactory: MediaPlayerAlarmPlayerFactory,
+    ): AlarmPlayerFactory =
+        FallbackAlarmPlayerFactory(
+            primary = AudioTrackAlarmPlayerFactory(context, ringtoneResolver),
+            fallback = mediaPlayerFactory,
+        )
 
     @Provides
     fun providePreviewPlayerFactory(factory: MediaPlayerAlarmPlayerFactory): PreviewPlayerFactory = factory

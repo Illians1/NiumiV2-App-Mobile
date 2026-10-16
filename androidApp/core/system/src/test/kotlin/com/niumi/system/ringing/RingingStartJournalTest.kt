@@ -53,4 +53,30 @@ class RingingStartJournalTest {
     fun aFallbackIsNotJournaledAgainWhileTheSoundIsAlreadyPlaying() {
         assertThat(RingingStartJournal.eventsFor(OperationResult.AlreadySatisfied, ringtoneFallback = true)).isEmpty()
     }
+
+    /**
+     * Boucle sans blanc (2026-10-15) : le lecteur `AudioTrack` n'a pas pu être créé, le repli
+     * `MediaPlayer` sonne avec un blanc à chaque tour — le diagnostic doit pouvoir le dire.
+     */
+    @Test
+    fun aLoopFallbackIsJournaledBeforeTheStart() {
+        assertThat(RingingStartJournal.eventsFor(OperationResult.Success, loopFallback = true))
+            .containsExactly(TechnicalEventType.AUDIO_LOOP_FALLBACK, TechnicalEventType.RINGING_STARTED)
+            .inOrder()
+    }
+
+    @Test
+    fun bothFallbacksAreJournaledRingtoneFirst() {
+        assertThat(RingingStartJournal.eventsFor(OperationResult.Success, ringtoneFallback = true, loopFallback = true))
+            .containsExactly(
+                TechnicalEventType.RINGTONE_FALLBACK,
+                TechnicalEventType.AUDIO_LOOP_FALLBACK,
+                TechnicalEventType.RINGING_STARTED,
+            ).inOrder()
+    }
+
+    @Test
+    fun aLoopFallbackIsNotJournaledAgainWhileTheSoundIsAlreadyPlaying() {
+        assertThat(RingingStartJournal.eventsFor(OperationResult.AlreadySatisfied, loopFallback = true)).isEmpty()
+    }
 }

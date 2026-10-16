@@ -25,10 +25,10 @@ class AlarmSoundSettingsTest {
 
     @Test
     fun anUnknownRingtoneFallsBackToTheDefaultKey() {
-        val settings = AlarmSoundSettings("niumi_alarm", 60).sanitized()
+        val settings = AlarmSoundSettings("niumi_alarm", 300).sanitized()
 
         assertThat(settings.ringtoneKey).isEqualTo(NiumiRingtones.DEFAULT_KEY)
-        assertThat(settings.volumeRampSeconds).isEqualTo(60)
+        assertThat(settings.volumeRampSeconds).isEqualTo(300)
     }
 
     @Test

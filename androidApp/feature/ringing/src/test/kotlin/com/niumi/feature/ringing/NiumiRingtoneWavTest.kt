@@ -2,6 +2,7 @@ package com.niumi.feature.ringing
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.system.audio.NiumiRingtones
+import com.niumi.system.audio.PcmWav
 import org.junit.Test
 import java.io.File
 import java.nio.ByteBuffer
@@ -40,6 +41,21 @@ class NiumiRingtoneWavTest {
             assertThat(header.sampleRate).isEqualTo(SAMPLE_RATE)
             assertThat(header.bitsPerSample).isEqualTo(BITS_PER_SAMPLE)
             assertThat(header.durationMs).isIn(MIN_DURATION_MS..MAX_DURATION_MS)
+        }
+    }
+
+    /**
+     * Le lecteur de réveil `AudioTrack` (boucle sans blanc, 2026-10-15) lit ces mêmes fichiers avec
+     * `PcmWav` : chacun doit passer, et sa durée doit être celle de l'en-tête.
+     */
+    @Test
+    fun everyCatalogRingtoneIsReadableByThePlayerWavReader() {
+        NiumiRingtones.ALL.forEach { ringtone ->
+            val bytes = File(rawDir, "${ringtone.key}.wav").readBytes()
+
+            val wav = PcmWav.read(bytes)
+
+            assertThat(wav.frameCount * MS_PER_S / SAMPLE_RATE).isEqualTo(WavHeader.read(bytes).durationMs)
         }
     }
 

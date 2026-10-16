@@ -13,7 +13,7 @@ l'audio, de Doze et des surcouches OEM.
 
 | Fabricant | Modèle | Android | Firmware | État |
 | --- | --- | --- | --- | --- |
-| Xiaomi (Redmi) | 25080RABDG (`lapis`) | 16 / API 36, HyperOS OS3.0.302.0.WPPEUXM | `BP2A.250605.031.A3` | **couvert**, campagnes des 7-8, 13, 14, 15, 16, 17, 24, 25, 27 et 28 septembre 2026 |
+| Xiaomi (Redmi) | 25080RABDG (`lapis`) | 16 / API 36, HyperOS OS3.0.302.0.WPPEUXM | `BP2A.250605.031.A3` | **couvert**, campagnes des 7-8, 13, 14, 15, 16, 17, 24, 25, 27 et 28 septembre, 1er, 2, 7, 8, 13 et 15 octobre 2026 |
 | Google Pixel | — | 14, 15, 16, 17 | — | **non testé** — aucun appareil disponible |
 | Samsung Galaxy | — | 14, 15, 16 | — | **non testé** — aucun appareil disponible |
 | Oppo / Realme | — | — | — | **non testé** — aucun appareil disponible |
@@ -46,7 +46,7 @@ essais qui en dépendent.
 
 ## Scénarios de §20
 
-Les 50 scénarios du tableau de §20 — dont les neuf du blocage différé (Lot 6), ajoutés le 2026-09-15 —, dans son ordre. « Source » renvoie au rapport qui porte les
+Les 61 scénarios du tableau de §20 — dont les neuf du blocage différé (Lot 6), ajoutés le 2026-09-15, et les onze des sonneries (Lot 7), ajoutés à l'étape 26 —, dans son ordre. « Source » renvoie au rapport qui porte les
 mesures détaillées, dans `docs/android/implementation-reports/`.
 
 ### Réveil, audio et Doze
@@ -100,7 +100,7 @@ rouge, ce qui est la forme concrète du refus d'activation de §9.2.
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Source |
 | --- | --- | --- | --- |
-| ouverture depuis l'accueil, hors session | les limites lisibles de bout en bout | **OK** (2026-09-15) — quatre sections et seize limites restituées, comparées une à une à `LIMITES.md`. Trois limites mesurées à l'étape 25 portent le total à dix-neuf ; leur correspondance est verrouillée par `HelpTextsTest`, leur affichage n'a pas été relu à l'œil | `ETAPE-21.md`, `ETAPE-25.md` |
+| ouverture depuis l'accueil, hors session | les limites lisibles de bout en bout | **OK** (2026-09-15) — quatre sections et seize limites restituées, comparées une à une à `LIMITES.md`. Trois limites mesurées à l'étape 25 portent le total à dix-neuf, puis la section « Sonnerie » et ses deux limites mesurées à l'étape 28 à cinq sections et vingt et une limites ; leur correspondance est verrouillée par `HelpTextsTest`, leur affichage n'a pas été relu à l'œil | `ETAPE-21.md`, `ETAPE-25.md` |
 | actions offertes par l'écran | aucune (§3, §10.2) | **OK** — zéro nœud cliquable dans l'arbre d'accessibilité ; le geste Retour ramène à l'accueil | `ETAPE-21.md` |
 | ouverture pendant une session active | idem | **non testé** — exige une session armée, donc le boîtier et le parcours complet | à exécuter |
 
@@ -156,6 +156,33 @@ comptés depuis l'instant contractuel `blockingStartsAtEpochMillis` jusqu'à
 | service d'accessibilité désactivé avant l'heure de début | incident `BLOCKING_PERMISSION_REVOKED`, session conservée, blocage appliqué à l'heure si le service est réactivé avant | **OK** (2026-09-25) — incident et avertissement, session conservée `ARMED` ; service réactivé avant l'heure → blocage appliqué à l'heure, avertissement retiré par le processus suivant | +44 ms | `ETAPE-25.md` |
 | Doze forcé à l'heure de début | alarme de début délivrée à l'heure, comme le watchdog de §4.2 | **OK** (2026-09-24) — Doze profond (`deep=IDLE`), téléphone débranché, adb par Wi-Fi ; `exactAllowReason=policy_permission`. **La seconde dérogation de §9.1 tient** sur cet appareil. Réserve : point d'accès Wi-Fi du téléphone actif pendant l'essai | +77 ms (réception), +91 ms (blocage) | `ETAPE-25.md` |
 
+### Sonneries et volume progressif (Lot 7)
+
+Onze lignes ajoutées à §20 à l'étape 26, mesurées aux étapes 26, 27 et 28 (1er, 2, 7, 8, 13 et
+15 octobre 2026). La montée est mesurée exactement : le logcat du Xiaomi journalise chaque
+`AudioTrack::setVolume` de la piste Niumi, comparé à `10^(−2·(1−p))` depuis
+`ringingAtEpochMillis` ; la boucle par les arrêts et redémarrages de la piste. L'audibilité et la
+perception de la montée restent à l'oreille de l'utilisateur. **Depuis le 2026-10-15, le réveil
+joue par un `AudioTrack` statique à points de boucle** (SPEC_ANDROID §10.2) : les essais antérieurs
+portaient sur le lecteur `MediaPlayer`, ce que la colonne précise.
+
+| Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Retard mesuré | Source |
+| --- | --- | --- | --- | --- |
+| chacune des quatre sonneries, session à +2 min, écran éteint | audible, en boucle sur trois cycles sans blanc ni clic, jusqu'au scan ; aucun arrêt/redémarrage de piste | **Partiel.** « Oiseaux », lecteur `AudioTrack` (15/10) : **une seule piste, aucun arrêt sur ~21 reprises, aucune coupure à l'oreille**, aucun `AUDIO_LOOP_FALLBACK`. Avec l'ancien lecteur `MediaPlayer` : « Piano » (15,19–15,24 s pour 15,00 s), « Cloche » (7,29–7,43 s pour 7,22 s), « Énergique » (16,09–16,25 s pour 16,00 s) sans blanc audible ; « Oiseaux » **coupure audible** (10,07–10,43 s pour 10,00 s, 96 cycles), d'où le changement de lecteur. Piano, Cloche et Énergique **non réécoutées avec `AudioTrack`** | T+79 à T+495 ms | `ETAPE-26.md`, `ETAPE-28.md` |
+| montée progressive 2 min, puis 15 min | départ presque inaudible, plein volume à la durée choisie, puis constant | **OK** — 2 min : plein volume à 120,04 s (07/10), 120,17 s (15/10) ; 15 min : 3723 points, ≤ 0,3 % de la courbe, plein volume à 900,12 s (15/10). Perçue progressive. Un redémarrage de la montée observé une fois le 08/10, **non reproduit** sur deux sessions de 15 min (13 et 15/10) | T+108 ms (2 min), T+186 ms (15 min) | `ETAPE-28.md` |
+| volume constant | plein volume dès la première seconde | **OK** — « Cloche », 60/60 `setVolume` à 1,0 (07/10) | T+243 ms | `ETAPE-28.md` |
+| réglage par défaut, jamais modifié | « Piano », départ presque inaudible, plein volume vers 2 min | **OK** — `niumi_piano` / 120 s lus dans la projection, 488 points, ≤ 0,3 % de la courbe (07/10) | T+108 ms | `ETAPE-28.md` |
+| mort du processus pendant la montée (`am crash`) | la montée reprend à l'amplitude du temps écoulé, jamais depuis zéro | **OK** (15/10) — « Oiseaux », 5 min, crash à T+60,3 s : processus relancé en 70 ms (écran de réveil au premier plan), son revenu à T+62,30 s à **0,02592 pour 0,02595 attendu**, plein volume à 300,20 s, ≤ 0,13 % de la courbe ; « court silence, même niveau » à l'oreille. Service d'accessibilité délié ensuite (limite de l'étape 25) | silence ~1,6 s | `ETAPE-28.md` |
+| redémarrage sans déverrouillage avant l'heure, sonnerie autre que « Piano » | la sonnerie choisie sonne, avec sa montée, depuis la projection Direct Boot v3 | **OK** (15/10) — `RUNNING_LOCKED` à l'heure, « Oiseaux » / 120 s joué, alarme reprogrammée avant tout déverrouillage. État de la permission OEM de démarrage automatique non relevé | T+495 ms | `ETAPE-28.md` |
+| mise à jour par-dessus une session armée en `niumi_alarm` | « Piano » à volume constant, aucun `RINGTONE_FALLBACK` | **OK** (01/10) — base v3 → v4 au premier accès, `niumi_piano` / `NULL`, un seul `RINGING_STARTED`, aucun `RINGTONE_FALLBACK` ; « Piano et le son n'augmente pas » à l'oreille | T+205 ms | `ETAPE-26.md` |
+| sonnerie modifiée pendant `ARMED`, puis redémarrage sans déverrouillage | la nouvelle sonnerie sonne, avec sa nouvelle montée | **OK** (15/10) — « Énergique » / 5 min armé, modifié en « Oiseaux » / 2 min depuis l'écran 7, projection relue, redémarrage : « Oiseaux » / 120 s joué verrouillé | T+495 ms | `ETAPE-28.md` |
+| Ne pas déranger « alarmes seules », montée progressive | montée audible ; non-régression de la ligne DND | **OK** (07/10) — `zen_mode` alarmes seules, `STREAM_ALARM` non muté, montée conforme à 2 % près, audible | T+79 ms | `ETAPE-28.md` |
+| casque Bluetooth connecté, montée progressive | flux dupliqué, montée sur les deux sorties | **OK** (07/10) — `speaker(2), bt_a2dp(80)`, montée mesurée, confirmée à l'oreille | T+108 ms | `ETAPE-28.md` |
+| pré-écoute avec volume d'alarme à zéro | message affiché, aucun son, aucun lecteur créé | **OK** (02/10) — volume borné à 1 sur cet appareil : obtenu par le silence total ; message affiché, boutons inactifs, aucun `requestAudioFocus`. Annexe (15/10) : média à 0, alarme à 4/15 → pré-écoute **audible**, lecteur `STREAM_ALARM` | — | `ETAPE-27.md`, `ETAPE-28.md` |
+
+TalkBack sur l'écran 14 (contrôle du plan, hors §20) : **non testé**, passé par choix de
+l'utilisateur le 2026-10-15.
+
 ### Arrêts système et corruption
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Source |
@@ -181,7 +208,8 @@ en fonctionnement.
 
 | | Lignes |
 | --- | --- |
-| Mesurées et conformes | 35 (dont 8 des 9 lignes du blocage différé, et le retrait des récents, conforme avec parade) |
+| Mesurées et conformes | 45 (dont 8 des 9 lignes du blocage différé, 10 des 11 lignes des sonneries, et le retrait des récents, conforme avec parade) |
+| Mesurées partiellement | 1 (boucle des quatre sonneries : « Oiseaux » seule réécoutée avec le lecteur `AudioTrack`) |
 | Mesurées, limite établie et documentée | 5 (silence total, arrêt forcé, NFC verrouillé, restriction d'énergie constructeur, **processus tué avant l'heure de début** — mesurée à l'étape 25 : sur HyperOS, le service d'accessibilité n'est plus relié après la mort du processus) |
 | Non reproductibles sur cet appareil | 1 (arrêt du seul FGS) |
 | Non testées faute d'appareil, de matériel audio ou de second tag | 12 |

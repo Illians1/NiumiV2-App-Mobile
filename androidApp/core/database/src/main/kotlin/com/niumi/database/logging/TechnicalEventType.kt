@@ -6,6 +6,8 @@ package com.niumi.database.logging
  * `SESSION_READINESS_DEGRADED` complétés à l'étape 9 : présents dans §17 et exigés nommément par
  * §13.1, absents de la liste livrée à l'étape 3 (voir `ETAPE-09.md`). `RINGTONE_FALLBACK` ajouté au
  * Lot 7 : une clé de sonnerie hors catalogue remplacée par la sonnerie par défaut.
+ * `AUDIO_LOOP_FALLBACK` ajouté le 2026-10-15 : le lecteur sans blanc de boucle (`AudioTrack`) n'a pas
+ * pu être créé, le réveil sonne par le repli `MediaPlayer`, avec un blanc à chaque tour.
  */
 enum class TechnicalEventType {
     SESSION_PREPARING,
@@ -18,6 +20,7 @@ enum class TechnicalEventType {
     RINGING_STARTED,
     AUDIO_START_FAILED,
     RINGTONE_FALLBACK,
+    AUDIO_LOOP_FALLBACK,
     FULL_SCREEN_DENIED,
     EXACT_ALARM_LOST,
     MISSED_TRIGGER_WINDOW,

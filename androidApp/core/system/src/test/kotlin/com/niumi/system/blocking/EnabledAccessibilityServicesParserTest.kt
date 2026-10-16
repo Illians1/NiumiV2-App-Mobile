@@ -57,6 +57,34 @@ class EnabledAccessibilityServicesParserTest {
         assertThat(result).isTrue()
     }
 
+    /**
+     * Les deux formes sont équivalentes dans les deux sens. Constaté le 2026-10-15 :
+     * `AndroidAccessibilityServiceStatusInstrumentedTest` passe la première entrée de la liste
+     * comme composant attendu, et le seul service activé était alors celui d'une autre
+     * application, écrit `pkg/.Classe` par Android.
+     */
+    @Test
+    fun aRelativeExpectedComponentMatchesItsQualifiedEntry() {
+        val result =
+            EnabledAccessibilityServicesParser.isEnabled(
+                "com.exemple/com.exemple.core.Service",
+                "com.exemple/.core.Service",
+            )
+
+        assertThat(result).isTrue()
+    }
+
+    @Test
+    fun aRelativeExpectedComponentMatchesTheSameRelativeEntry() {
+        val result =
+            EnabledAccessibilityServicesParser.isEnabled(
+                "com.exemple/.core.Service",
+                "com.exemple/.core.Service",
+            )
+
+        assertThat(result).isTrue()
+    }
+
     @Test
     fun severalServicesSeparatedByColonAreAllConsidered() {
         val raw = "com.exemple/com.exemple.AutreService:$COMPONENT"
