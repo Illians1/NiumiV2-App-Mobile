@@ -114,7 +114,7 @@ object SessionDtoFixtures {
         val credential = PairedBoxCredentialDto.fromPayload(payload)
         val context = NfcVerificationContextDto(sessionId, eventId, expectedRevision, occurredAtEpochMillis)
         val proof =
-            requireNotNull(facade.verifyBox(payload, credential, context).proof) {
+            requireNotNull(facade.verifyBox(payload, listOf(credential), context).proof) {
                 "verifyBox() n'a pas produit de preuve : payload/credential désynchronisés dans la fixture"
             }
         return SessionEventDto(

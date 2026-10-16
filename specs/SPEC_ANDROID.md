@@ -14,7 +14,7 @@ Cette spécification décrit l'application Android de Niumi. Elle doit permettre
 3. il confirme une session;
 4. les applications choisies restent bloquées pendant la session, dès l'activation ou dès l'instant de début choisi;
 5. l'alarme sonne à l'heure prévue;
-6. seul le scan du boîtier NFC associé termine la session dans le parcours normal;
+6. seul le scan de l'un des boîtiers NFC associés termine la session dans le parcours normal (jusqu'à cinq boîtiers nommés, figés à l'activation — Lot 8, contrat KMP 1.4, décision du 2026-10-13);
 7. la fin de session arrête la sonnerie et débloque les applications.
 
 Le réveil, le blocage et le NFC appartiennent à une même session métier. Ils ne doivent pas être implémentés comme trois fonctions indépendantes.
@@ -58,7 +58,7 @@ Codex doit appliquer les décisions suivantes sans ajouter de variante cachée:
 - Une seule session peut être active.
 - Le moteur `NiumiCore` est l'unique autorité pour les transitions métier communes à Android et iOS.
 - Une session active ne peut pas être annulée ou modifiée depuis un bouton ordinaire.
-- Toute modification ou annulation après activation exige le scan du boîtier associé. **Une seule exception (Lot 7, décision du 2026-09-30) : la sonnerie et la montée progressive du volume.** Elles ne sont pas des termes de l'engagement — elles ne touchent ni l'heure du réveil, ni le blocage, ni la sortie par scan — et restent modifiables sans scan tant que la session est `ARMED` ; dès `RINGING`, elles sont figées (7.2, 10.2).
+- Toute modification ou annulation après activation exige le scan de l'un des boîtiers figés à l'activation (Lot 8). **Une seule exception (Lot 7, décision du 2026-09-30) : la sonnerie et la montée progressive du volume.** Elles ne sont pas des termes de l'engagement — elles ne touchent ni l'heure du réveil, ni le blocage, ni la sortie par scan — et restent modifiables sans scan tant que la session est `ARMED` ; dès `RINGING`, elles sont figées (7.2, 10.2).
 - Une annulation avant la sonnerie place la session dans l'état `CANCELLED`. Elle ne compte pas comme une session terminée au réveil.
 - L'alarme ne propose ni arrêt, ni répétition, ni délai.
 - L'alarme joue l'une des quatre sonneries empaquetées dans l'APK (« Cloche », « Énergique », « Oiseaux », « Piano »), en boucle jusqu'au scan, avec ou sans montée progressive du volume (30 s, 1 min, 2 min ou 5 min). Défaut : « Piano », volume progressif sur 2 min (Lot 7, décision du 2026-09-30). Le choix est copié dans la session à l'activation (7.2, 7.3, 10.2).
@@ -847,8 +847,8 @@ Résultats UI:
 
 | Résultat | Effet |
 | --- | --- |
-| tag valide et associé | transmettre la `NfcVerificationProof` opaque avec `VALID_NFC_SCANNED`, puis exécuter les effets KMP |
-| tag Niumi non associé | vibration courte d'erreur, alarme maintenue |
+| tag valide, dans la liste figée de la session (`MATCH`) | transmettre la `NfcVerificationProof` opaque avec `VALID_NFC_SCANNED`, puis exécuter les effets KMP |
+| tag Niumi hors de la liste figée (`NO_PAIRED_BOX_MATCH`, Lot 8 — y compris un boîtier associé après l'activation) | vibration courte d'erreur, alarme maintenue |
 | tag illisible | message "Boîtier non reconnu. Réessaie." |
 | NFC désactivé | ouvrir une explication et un raccourci vers les réglages NFC |
 | matériel absent | appareil non pris en charge |

@@ -35,7 +35,7 @@ Les décisions suivantes s'appliquent aux deux applications:
 
 1. Une seule session Niumi peut être active sur un appareil.
 2. Une session active fonctionne sans réseau pour le réveil, le blocage, le scan et la fin de session.
-3. Une session ne se termine qu'après validation locale du boîtier associé.
+3. Une session ne se termine qu'après validation locale de l'un des boîtiers associés (contrat 1.4 : plusieurs boîtiers, décision 16).
 4. Avant le réveil, une modification ou une annulation exige également ce scan. Le résultat final est alors `CANCELLED`.
 5. Pendant ou après le réveil, un scan valide mène à `COMPLETED` après nettoyage des sous-systèmes.
 6. L'arrêt du son fourni par iOS ne termine pas la session et ne retire pas les blocages.
@@ -43,13 +43,14 @@ Les décisions suivantes s'appliquent aux deux applications:
 8. Le passage à un état final se fait seulement après une phase `RELEASING` réussie.
 9. Le réveil conserve l'instant calculé lors de l'activation. Un changement de fuseau ne déplace pas cet instant.
 10. Le même tag NFC physique doit être reconnu par Android et iOS.
-11. Le boîtier vérifié pour terminer une session est celui associé au moment de l'activation. Une ré-association du boîtier ou un changement de la sélection d'applications est interdit tant qu'une session est active.
+11. Les boîtiers vérifiés pour terminer une session sont ceux associés au moment de l'activation, figés en liste dans la session. Ajouter, retirer ou renommer un boîtier, ou changer la sélection d'applications, est interdit tant qu'une session est active.
 12. L'utilisateur sélectionne entre 1 et 50 applications.
 13. Le MVP ne propose aucun secours logiciel immédiat si le boîtier ou le NFC est indisponible.
 14. Un état qui attend le scan sans présentation d'alarme active demande explicitement ce scan à l'utilisateur, sous réserve de l'exception iOS documentée en section 11.2.
 15. Le blocage commence à l'activation, ou à un instant de début choisi par l'utilisateur et strictement antérieur au réveil. L'alarme est programmée dès l'activation dans les deux cas, et l'engagement est pris à l'activation : avant le début d'un blocage différé, une modification ou une annulation exige le scan, comme le point 4 l'impose. Décision validée le 2026-09-15 (contrat 1.3).
+16. L'utilisateur associe de un à cinq boîtiers (`PairedBoxLimit`, section 9.2), chacun nommé par lui. Le scan de n'importe lequel des boîtiers figés à l'activation termine ou annule la session ; un boîtier associé après l'activation ne la termine pas. Décision validée le 2026-10-13 (contrat 1.4). Ce que l'on accepte en le décidant : un second boîtier gardé près du lit permet de contourner le réveil — la vérification n'a jamais protégé l'utilisateur contre lui-même, seulement contre un tag étranger (9.2 : un tag NDEF reste clonable).
 
-L'absence de secours logiciel est une contrainte produit assumée. L'activation vérifie que le NFC est disponible et que le boîtier associé a été validé; l'application ne présente ni délai, ni code, ni bouton de déblocage comme solution de récupération.
+L'absence de secours logiciel est une contrainte produit assumée. L'activation vérifie que le NFC est disponible et qu'au moins un boîtier associé a été validé; l'application ne présente ni délai, ni code, ni bouton de déblocage comme solution de récupération.
 
 ## 3. Périmètre du module partagé
 
@@ -93,7 +94,7 @@ Le moteur commun doit refuser toute transition qui enfreint un invariant.
 - `FAILED` est réservé à une activation qui n'a jamais abouti.
 - Une session déjà armée ne passe pas à `FAILED` à cause d'un incident technique.
 - Un NFC invalide ne modifie ni l'état, ni le blocage, ni le son.
-- Le boîtier vérifié pour une session est celui figé au moment de l'activation. Le coordinateur natif ne substitue jamais le boîtier courant du dépôt à celui capturé pour la session; une ré-association pendant une session active est refusée en amont, avant tout appel au moteur.
+- Les boîtiers vérifiés pour une session sont ceux figés au moment de l'activation. Le coordinateur natif ne substitue jamais la liste courante du dépôt à celle capturée pour la session; tout ajout, retrait ou renommage pendant une session active est refusé en amont, avant tout appel au moteur.
 - `VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé avec la violation `TRIGGER_ALREADY_ELAPSED`. Le coordinateur doit produire `TRIGGER_ELAPSED` avant tout scan dans ce cas, conformément à la section 5.1.
 - `nfcVerifiedAt` doit exister avant l'entrée dans `RELEASING`.
 - `COMPLETED` et `CANCELLED` ne sont atteints qu'après réussite du nettoyage.
@@ -265,7 +266,7 @@ data class ActivationRequest(
 
 `expectedRevision` est obligatoire sauf pour `ACTIVATION_REQUESTED`. `activationRequest` est obligatoire uniquement pour `ACTIVATION_REQUESTED`. `nfcProof` est obligatoire uniquement pour `VALID_NFC_SCANNED`; le moteur refuse une preuve absente, mal formée, qui ne provient pas de `verifyBox()`, dont `sessionId`, `eventId`, `expectedRevision` ou `verifiedAtEpochMillis` ne correspondent pas à l'événement. `failureCode` est obligatoire uniquement pour `ACTIVATION_FAILED`. `incident` est obligatoire pour `RELEASE_FAILED` et `INCIDENT_REPORTED`; il est facultatif pour `TRIGGER_ELAPSED`, afin d'y joindre `MISSED_TRIGGER_WINDOW`, et pour `BLOCKING_START_ELAPSED`, afin d'y joindre `MISSED_BLOCKING_START_WINDOW`. Les autres événements doivent laisser ces champs à `null`.
 
-`NfcVerificationProof` est une valeur opaque créée uniquement par `NiumiCoreFacade.verifyBox()` après comparaison du payload NFC et du boîtier associé. Le coordinateur fournit à cette vérification le `sessionId`, le nouvel `eventId`, la `expectedRevision` et l'horodatage qui sera placé dans l'événement. La preuve est ainsi liée à une seule transition. Elle est transmise en mémoire à `reduce()`, n'est ni sérialisable, ni journalisée, ni placée dans le reçu d'événement. Les adaptateurs natifs ne peuvent pas construire ou réutiliser cette preuve pour un autre événement.
+`NfcVerificationProof` est une valeur opaque créée uniquement par `NiumiCoreFacade.verifyBox()` après comparaison du payload NFC à la liste des boîtiers figés dans la session ; elle porte le `boxId` du boîtier reconnu. Le coordinateur fournit à cette vérification le `sessionId`, le nouvel `eventId`, la `expectedRevision` et l'horodatage qui sera placé dans l'événement. La preuve est ainsi liée à une seule transition. Elle est transmise en mémoire à `reduce()`, n'est ni sérialisable, ni journalisée, ni placée dans le reçu d'événement. Les adaptateurs natifs ne peuvent pas construire ou réutiliser cette preuve pour un autre événement.
 
 Les effets décrivent ce que le coordinateur natif doit exécuter. Ils ne contiennent aucun appel système.
 
@@ -572,7 +573,23 @@ data class PairedBoxCredential(
 )
 ```
 
-L'application stocke le `boxId` canonique et l'empreinte SHA-256 des 16 octets décodés. Elle compare les empreintes en temps constant. Elle ne journalise jamais le token, sa forme encodée ou son empreinte complète.
+L'application stocke, pour chaque boîtier associé, le `boxId` canonique et l'empreinte SHA-256 des 16 octets décodés. Elle compare les empreintes en temps constant. Elle ne journalise jamais le token, sa forme encodée ou son empreinte complète.
+
+**Plusieurs boîtiers (contrat 1.4, décision 16).** L'application conserve une liste ordonnée de un à cinq credentials — `PairedBoxLimit.MIN = 1`, `PairedBoxLimit.MAX = 5`, constante commune au même titre que les bornes 1–50 de la sélection d'applications — chacun accompagné d'un nom choisi par l'utilisateur, donnée de plateforme hors du module commun. Un `boxId` déjà présent n'est pas ajouté une seconde fois. La vérification d'un scan compare le payload à chaque credential de la liste figée dans la session :
+
+```kotlin
+object BoxVerifier {
+    fun verify(
+        payload: BoxPayload,
+        credentials: List<PairedBoxCredential>,
+        context: NfcVerificationContext?
+    ): BoxVerificationResult
+}
+
+enum class BoxVerificationStatus { MATCH, NO_PAIRED_BOX_MATCH, UNSUPPORTED_VERSION }
+```
+
+`UNSUPPORTED_VERSION` si la version du payload n'est pas prise en charge; sinon `MATCH` au premier credential dont le `boxId` est égal **et** dont l'empreinte correspond, la preuve portant ce `boxId`; sinon `NO_PAIRED_BOX_MATCH`, liste vide comprise. Les anciens `BOX_MISMATCH` et `TOKEN_MISMATCH` disparaissent : distinguer « bon identifiant, mauvais token » n'avait de sens que face à un boîtier unique, et c'est une information de moins qui sort du module. Une empreinte non canonique dans la liste est un credential qui ne correspond pas, jamais une exception.
 
 Le token statique ne rend pas le tag inviolable. Un tag NDEF reste clonable. Une protection anti-clonage demandera un nouveau protocole et un tag capable de produire une preuve cryptographique dynamique.
 
@@ -619,7 +636,7 @@ Si une étape échoue:
 
 L'engagement n'est pris qu'après `ACTIVATION_SUCCEEDED`. Pour un blocage différé, le blocage lui-même n'est demandé qu'à `BLOCKING_START_ELAPSED`, mais la session est engagée dès `ARMED` (décision 15) : le scan reste la seule sortie.
 
-À l'étape 1, le coordinateur natif capture aussi le `PairedBoxCredential` courant du dépôt et le fige dans la session. Toute vérification NFC ultérieure pour cette session utilise exclusivement ce credential figé, jamais le boîtier courant du dépôt. Le parcours d'association et le sélecteur d'applications sont désactivés tant qu'une session est active, afin que ce credential et la sélection ne puissent pas changer sous la session.
+À l'étape 1, le coordinateur natif capture aussi la liste courante des `PairedBoxCredential` du dépôt, avec leurs noms, et la fige dans la session. Toute vérification NFC ultérieure pour cette session utilise exclusivement cette liste figée, jamais le dépôt courant : un boîtier associé après l'activation ne termine pas la session en cours. Le parcours d'association et le sélecteur d'applications sont désactivés tant qu'une session est active, afin que cette liste et la sélection ne puissent pas changer sous la session. Une liste vide à l'étape 1 refuse l'activation (`NO_PAIRED_BOX`), plus de cinq boîtiers aussi (`TOO_MANY_PAIRED_BOXES`, section 14).
 
 ## 11. Déclenchement, arrêt sonore et scan
 
@@ -716,7 +733,7 @@ class NiumiCoreFacade {
 
     fun verifyBox(
         payload: BoxPayloadDto,
-        credential: PairedBoxCredentialDto,
+        credentials: List<PairedBoxCredentialDto>,
         context: NfcVerificationContextDto?
     ): BoxVerificationResultDto
 
@@ -785,7 +802,7 @@ data class ActivationPolicyInputDto(
     val appSelectionCount: Int,
     val triggerAtEpochMillis: Long,
     val nowEpochMillis: Long,
-    val hasPairedBox: Boolean,
+    val pairedBoxCount: Int,
     val blockingStartsAtEpochMillis: Long?
 )
 
@@ -844,7 +861,9 @@ Contraintes d'interopérabilité:
 
 Les types Kotlin plus expressifs peuvent rester internes si la façade les convertit en DTO simples.
 
-Lorsqu'un appel de scan avec contexte réussit, `BoxVerificationResultDto` expose la `NfcVerificationProof` opaque à transmettre immédiatement dans `SessionEventDto`. Le contexte contient la session, l'événement, la révision attendue et l'horodatage. Les vérifications sans session, notamment lors de l'association, passent `null` et ne reçoivent aucune preuve. Le type ne possède pas d'initialiseur public côté Swift et n'est jamais stocké.
+Lorsqu'un appel de scan avec contexte réussit, `BoxVerificationResultDto` expose la `NfcVerificationProof` opaque à transmettre immédiatement dans `SessionEventDto` ; elle porte le `boxId` du credential reconnu dans la liste. Le contexte contient la session, l'événement, la révision attendue et l'horodatage. Une vérification sans session passe `null` et ne reçoit aucune preuve ; l'association elle-même n'appelle plus `verifyBox` (contrat 1.4) : elle parse le payload, en dérive le credential et laisse le dépôt natif refuser un doublon ou un sixième boîtier. Le type ne possède pas d'initialiseur public côté Swift et n'est jamais stocké.
+
+`ActivationPolicyInputDto.pairedBoxCount: Int` remplace `hasPairedBox: Boolean` (contrat 1.4). La politique refuse l'activation avec `NO_PAIRED_BOX` sous `PairedBoxLimit.MIN` et avec `TOO_MANY_PAIRED_BOXES` au-dessus de `PairedBoxLimit.MAX` (section 9.2).
 
 ## 15. Structure du monorepo
 
@@ -1010,7 +1029,7 @@ Les tests `commonTest` couvrent au minimum:
 - query ou fragment supplémentaire;
 - encodage par pourcentage;
 - payload supérieur à 96 octets;
-- mauvais boîtier;
+- vérification contre une liste de boîtiers (contrat 1.4) : liste vide, un boîtier, cinq boîtiers avec correspondance en première, en dernière et en aucune position, identifiant connu avec mauvais token, empreinte non canonique dans la liste ignorée sans exception, preuve portant le `boxId` reconnu;
 - comparaison constante dans l'implémentation dédiée;
 - fuzzing avec chaînes vides, caractères de contrôle et UTF-8 invalide à la frontière native.
 
@@ -1023,7 +1042,8 @@ Les tests `commonTest` couvrent au minimum:
 - reprise de `RECORD_INCIDENT` après interruption avec son code, sa gravité, son horodatage et sa plateforme;
 - aucune fin sans `nfcVerifiedAt`;
 - aucun besoin de réseau pour une décision critique;
-- vérification effectuée avec le boîtier figé à l'activation, refusée si le credential fourni par le coordinateur ne correspond pas à celui de la session.
+- vérification effectuée contre la liste de boîtiers figée à l'activation, refusée pour tout credential hors de cette liste;
+- 0, 1, 5 et 6 boîtiers associés (`NO_PAIRED_BOX`, accepté, accepté, `TOO_MANY_PAIRED_BOXES`).
 
 Des fixtures communes décrivent les entrées et résultats attendus. Les tests natifs utilisent aussi ces fixtures pour valider leurs conversions.
 

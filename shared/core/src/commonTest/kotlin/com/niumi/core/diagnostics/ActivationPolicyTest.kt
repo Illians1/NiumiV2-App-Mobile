@@ -16,14 +16,14 @@ private fun input(
     appSelectionCount: Int = DEFAULT_APP_SELECTION_COUNT,
     triggerAtEpochMillis: Long = FUTURE_TRIGGER_EPOCH_MILLIS,
     nowEpochMillis: Long = NOW_EPOCH_MILLIS,
-    hasPairedBox: Boolean = true,
+    pairedBoxCount: Int = 1,
     blockingStartsAtEpochMillis: Long? = null,
 ) = ActivationPolicyInput(
     checks,
     appSelectionCount,
     triggerAtEpochMillis,
     nowEpochMillis,
-    hasPairedBox,
+    pairedBoxCount,
     blockingStartsAtEpochMillis,
 )
 
@@ -176,13 +176,35 @@ class ActivationPolicyTest {
         )
     }
 
+    // Contrat 1.4 : de un à cinq boîtiers (`PairedBoxLimit`), comme 1 à 50 applications.
     @Test
-    fun noPairedBoxIsRefused() {
-        val result = ActivationPolicy.evaluate(input(hasPairedBox = false))
+    fun pairedBoxCountZeroIsRefusedWithNoPairedBox() {
+        val result = ActivationPolicy.evaluate(input(pairedBoxCount = 0))
 
         assertFalseAllowed(result)
         assertEquals(
             listOf(ActivationReason(ActivationReasonCode.NO_PAIRED_BOX, null)),
+            result.blockingReasons,
+        )
+    }
+
+    @Test
+    fun pairedBoxCountOneIsAccepted() {
+        assertEquals(true, ActivationPolicy.evaluate(input(pairedBoxCount = PairedBoxLimit.MIN)).allowed)
+    }
+
+    @Test
+    fun pairedBoxCountFiveIsAccepted() {
+        assertEquals(true, ActivationPolicy.evaluate(input(pairedBoxCount = PairedBoxLimit.MAX)).allowed)
+    }
+
+    @Test
+    fun pairedBoxCountSixIsRefusedWithTooManyPairedBoxes() {
+        val result = ActivationPolicy.evaluate(input(pairedBoxCount = PairedBoxLimit.MAX + 1))
+
+        assertFalseAllowed(result)
+        assertEquals(
+            listOf(ActivationReason(ActivationReasonCode.TOO_MANY_PAIRED_BOXES, null)),
             result.blockingReasons,
         )
     }
@@ -197,7 +219,7 @@ class ActivationPolicyTest {
                     checks = listOf(failedCheck),
                     appSelectionCount = 0,
                     triggerAtEpochMillis = NOW_EPOCH_MILLIS,
-                    hasPairedBox = false,
+                    pairedBoxCount = 0,
                 ),
             )
 

@@ -215,13 +215,13 @@ class HandleValidNfcUseCaseTest {
     // --- 3. Vérification contre le boîtier figé dans la session (§11.3 point 3) -----------------
 
     /**
-     * Le boîtier de référence est celui de la session, jamais `PairedBoxEntity` : une nouvelle
+     * Les boîtiers de référence sont ceux figés dans la session, jamais `PairedBoxEntity` : une
      * association pendant la session ne doit pas ouvrir une sortie que l'utilisateur n'avait pas
-     * au moment de s'engager. Le cas d'usage n'injecte pas `PairedBoxStore` du tout ; ce test
-     * l'observe de l'extérieur.
+     * au moment de s'engager (contrat 1.4 : liste figée). Le cas d'usage n'injecte pas
+     * `PairedBoxStore` du tout ; ce test l'observe de l'extérieur.
      */
     @Test
-    fun aTagMatchingANewlyPairedBoxIsRefused() =
+    fun aTagOutsideTheFrozenListIsRefused() =
         runTest {
             val harness = TestCoordinatorHarness()
             harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())

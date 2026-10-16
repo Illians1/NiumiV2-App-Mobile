@@ -74,7 +74,14 @@ class NiumiCoreFacadeTest {
     fun evaluateActivationDelegatesToActivationPolicy() {
         val checks = listOf(ReadinessCheckInputDto("nfc_enabled", ReadinessSeverityDto.WARNING, passed = false))
         val input =
-            ActivationPolicyInputDto(checks, appSelectionCount = 5, TRIGGER_AT_EPOCH_MILLIS, 0L, true, null)
+            ActivationPolicyInputDto(
+                checks,
+                appSelectionCount = 5,
+                TRIGGER_AT_EPOCH_MILLIS,
+                0L,
+                pairedBoxCount = 1,
+                null,
+            )
         val expected =
             ActivationPolicy.evaluate(
                 ActivationPolicyInput(
@@ -82,7 +89,7 @@ class NiumiCoreFacadeTest {
                     appSelectionCount = 5,
                     triggerAtEpochMillis = TRIGGER_AT_EPOCH_MILLIS,
                     nowEpochMillis = 0L,
-                    hasPairedBox = true,
+                    pairedBoxCount = 1,
                     blockingStartsAtEpochMillis = null,
                 ),
             )

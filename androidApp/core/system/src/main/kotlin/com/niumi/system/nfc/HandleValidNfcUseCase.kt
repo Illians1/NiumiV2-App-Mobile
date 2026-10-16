@@ -74,7 +74,9 @@ class HandleValidNfcUseCase
                 }
 
             val context = eventFactory.verificationContext(session.snapshot)
-            val verification = facade.verifyBox(payload, credentialOf(session.extras, payload), context)
+            // Contrat 1.4 : `verifyBox` compare à une liste. Jusqu'à l'étape 30 du Lot 8, les
+            // extras ne portent qu'un boîtier : liste d'un seul, comportement inchangé.
+            val verification = facade.verifyBox(payload, listOf(credentialOf(session.extras, payload)), context)
             val proof = verification.proof
             if (verification.status != BoxVerificationStatus.MATCH || proof == null) {
                 return refusalFor(verification.status)
@@ -119,8 +121,9 @@ class HandleValidNfcUseCase
 
         private fun refusalFor(status: BoxVerificationStatus): ScanOutcome =
             when (status) {
-                // §11.2 : « tag Niumi non associé → vibration courte d'erreur, alarme maintenue ».
-                BoxVerificationStatus.BOX_MISMATCH, BoxVerificationStatus.TOKEN_MISMATCH -> ScanOutcome.UnknownBox
+                // §11.2 : « tag Niumi hors de la liste figée → vibration courte d'erreur, alarme
+                // maintenue » (contrat 1.4 : un seul statut de refus, `NO_PAIRED_BOX_MATCH`).
+                BoxVerificationStatus.NO_PAIRED_BOX_MATCH -> ScanOutcome.UnknownBox
 
                 // Inatteignable derrière un payload `VALID` : `BoxPayloadParser` rejette déjà les
                 // versions non prises en charge (§11.2). Traité en tag inutilisable par défense.

@@ -21,15 +21,18 @@ public class NiumiCoreFacade {
     public fun parseBoxPayload(uri: String): BoxPayloadResultDto = BoxPayloadParser.parse(uri).toDto()
 
     /**
-     * Compare [payload] au boîtier associé [credential]. [context] est fourni pour un scan de fin
-     * de session, `null` lors d'une association (SPEC_CORE_KMP §14, dernier alinéa).
+     * Compare [payload] à la liste des boîtiers figés dans la session, [credentials] (contrat 1.4,
+     * SPEC_CORE_KMP §9.2). [context] est fourni pour un scan de fin de session ; `null` ne produit
+     * aucune preuve. L'association n'appelle plus cette méthode : elle parse et déduplique au dépôt.
      */
     public fun verifyBox(
         payload: BoxPayloadDto,
-        credential: PairedBoxCredentialDto,
+        credentials: List<PairedBoxCredentialDto>,
         context: NfcVerificationContextDto?,
     ): BoxVerificationResultDto =
-        BoxVerifier.verify(payload.toDomain(), credential.toDomain(), context?.toDomain()).toDto()
+        BoxVerifier
+            .verify(payload.toDomain(), credentials.map { it.toDomain() }, context?.toDomain())
+            .toDto()
 
     /** Unique autorité de transition de la machine à états commune (SPEC_CORE_KMP §5, §6). */
     public fun reduce(

@@ -22,11 +22,11 @@ object NfcScanFixtures {
     const val SESSION_BOX_URI: String =
         "niumi://box/v1/${SessionDtoFixtures.BOX_ID}?token=AAAAAAAAAAAAAAAAAAAAAA"
 
-    /** Même boîtier, token différent : `TOKEN_MISMATCH`, donc `UnknownBox`. */
+    /** Même boîtier, token différent : `NO_PAIRED_BOX_MATCH`, donc `UnknownBox`. */
     const val SESSION_BOX_WRONG_TOKEN_URI: String =
         "niumi://box/v1/${SessionDtoFixtures.BOX_ID}?token=BAAAAAAAAAAAAAAAAAAAAA"
 
-    /** Un autre boîtier Niumi, valide mais étranger à la session : `BOX_MISMATCH`. */
+    /** Un autre boîtier Niumi, valide mais hors de la liste figée : `NO_PAIRED_BOX_MATCH`. */
     const val OTHER_BOX_URI: String =
         "niumi://box/v1/33333333-3333-3333-3333-333333333333?token=AAAAAAAAAAAAAAAAAAAAAA"
 

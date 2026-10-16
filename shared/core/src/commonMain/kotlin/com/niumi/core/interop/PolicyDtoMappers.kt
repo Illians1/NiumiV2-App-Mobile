@@ -31,7 +31,7 @@ internal fun ActivationPolicyInputDto.toDomain(): ActivationPolicyInput =
         appSelectionCount = appSelectionCount,
         triggerAtEpochMillis = triggerAtEpochMillis,
         nowEpochMillis = nowEpochMillis,
-        hasPairedBox = hasPairedBox,
+        pairedBoxCount = pairedBoxCount,
         blockingStartsAtEpochMillis = blockingStartsAtEpochMillis,
     )
 

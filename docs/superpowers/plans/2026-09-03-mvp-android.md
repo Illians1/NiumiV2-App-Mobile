@@ -70,7 +70,7 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 
 | Composant | Version | Note |
 | --- | --- | --- |
-| Kotlin / KMP | 2.4.20 | Compatibilité officielle : Gradle 7.6.3–9.7.0, AGP 8.5.2–9.3.1, Xcode 26.4. Montée depuis 2.4.10 le 2026-09-11 (étape 12a), voir « Montée de versions » ci-dessous |
+| Kotlin / KMP | 2.4.21 | Compatibilité officielle (ligne commune 2.4.20–2.4.21) : Gradle 7.6.3–9.7.0, AGP 8.5.2–9.3.1, Xcode 26.4. Montée depuis 2.4.10 le 2026-09-11 (étape 12a), puis depuis 2.4.20 le 2026-10-13 (étape 29), voir « Montée de Kotlin du 2026-10-13 » ci-dessous |
 | AGP | 9.1.1 | Exigé par Compose BOM 2026.08 pour compileSdk 37 ; JDK 17 ; Kotlin intégré (ne pas appliquer `org.jetbrains.kotlin.android`). Était un patch au-dessus du maximum testé par KGP 2.4.10 (9.1.0) ; **désormais bien à l'intérieur** de la matrice de KGP 2.4.20 (max 9.3.1) |
 | Gradle | 9.5.0 | Était le maximum testé par KGP 2.4.10 ; KGP 2.4.20 teste jusqu'à 9.7.0, la marge est donc plus large qu'à l'étape 1 |
 | Compose BOM | 2026.09.00 | Compose 1.12.1, material3 1.4.0 (résolution vérifiée). Montée depuis 2026.08.00 (Compose 1.12.0) le 2026-09-11, voir « Montée de versions » ci-dessous |
@@ -124,6 +124,19 @@ consultée avant la montée donne, pour KGP 2.4.20 : Gradle 7.6.3–9.7.0 et AGP
 (versionnage découplé depuis KSP 2.3.0) et detekt 2.0.0-alpha.6 reste vert. Batterie complète
 rejouée après la montée : tests JVM des six modules, `:app:assembleDebug`, ktlint, detekt et
 `:app:lintDebug`, tous verts.
+
+### Montée de Kotlin du 2026-10-13 (étape 29)
+
+`:app:lintDebug` remontait trois `NewerVersionAvailable` sur Kotlin 2.4.20 (`multiplatform`,
+`plugin.compose`, `plugin.serialization`). Matrice officielle consultée avant la montée
+(`kotlinlang.org/docs/gradle-configure-project`) : la ligne **2.4.20–2.4.21** est commune, Gradle
+7.6.3–9.7.0 et AGP 8.5.2–9.3.1 — AGP 9.1.1 et Gradle 9.5.0 restent à l'intérieur, rien ne bouge.
+Contenu réel de 2.4.21 d'après ses notes de version : correctifs seulement (Wasm, réflexion JVM,
+JS, sérialisation Wasm, Gradle Native, scripts), aucun changement de compatibilité annoncé. KSP
+reste en 2.3.11 (versionnage découplé) et detekt 2.0.0-alpha.6 reste vert. Décidé avec
+l'utilisateur le 2026-10-13 ; batterie complète rejouée après la montée — tests JVM de tous les
+modules, framework iOS, `assembleDebug`, ktlint, detekt, `lintDebug`, `lintRelease`,
+`assembleRelease`, `bundleRelease` — tous verts.
 
 ## Points de vigilance sur les specs
 
@@ -514,6 +527,65 @@ interface AlarmSoundPreferences { suspend fun read(): AlarmSoundSettings; suspen
 // :app (étape 27)
 // NiumiRoute.Ringtone (data object, écran 14, quinzième destination), enregistrée dans NiumiNavHost avec son écran ;
 //   atteinte depuis WakeTime et, en ARMED, depuis ActiveSession ; retour par la pile
+```
+
+### Ajouts du Lot 8 (étapes 29 à 31)
+
+Définis ici une fois, créés à l'étape indiquée, consommés ensuite sans renommage. Conception :
+`docs/superpowers/specs/2026-10-13-boitiers-multiples-design.md`. Le contrat commun passe en 1.4.
+
+```kotlin
+// :shared:core — com.niumi.core.nfc (étape 29, contrat 1.4, SPEC_CORE_KMP §9.2, §14)
+enum class BoxVerificationStatus { MATCH, NO_PAIRED_BOX_MATCH, UNSUPPORTED_VERSION }   // BOX_MISMATCH et TOKEN_MISMATCH disparaissent
+object BoxVerifier {
+    fun verify(payload: BoxPayload, credentials: List<PairedBoxCredential>, context: NfcVerificationContext?): BoxVerificationResult
+    // UNSUPPORTED_VERSION si la version du payload n'est pas prise en charge ; sinon MATCH au premier credential
+    // dont boxId est égal ET dont l'empreinte correspond (temps constant) — la preuve porte ce boxId ;
+    // sinon NO_PAIRED_BOX_MATCH, liste vide comprise. Une empreinte non canonique dans la liste = « ne correspond pas ».
+}
+// NiumiCoreFacade.verifyBox(payload: BoxPayloadDto, credentials: List<PairedBoxCredentialDto>, context: NfcVerificationContextDto?)
+//   — l'association ne l'appelle plus (elle parse et déduplique au dépôt) ; un scan de fin de session passe la liste figée.
+
+// :shared:core — com.niumi.core.diagnostics (étape 29)
+object PairedBoxLimit { const val MIN = 1; const val MAX = 5 }      // même rôle qu'AppSelectionSummary.MIN_COUNT/MAX_COUNT
+// ActivationPolicyInput / ActivationPolicyInputDto : pairedBoxCount: Int remplace hasPairedBox: Boolean
+// ActivationReasonCode : + TOO_MANY_PAIRED_BOXES ; NO_PAIRED_BOX inchangé (count < MIN)
+
+// :core:database (étape 30, SPEC_ANDROID §7.2 v5, §7.3 projection v4, §11.1)
+// PairedBoxEntity : + name: String, + position: Int (ordre d'affichage, 0 en tête)
+data class PairedBoxDto(val credential: PairedBoxCredentialDto, val name: String)
+sealed interface PairedBoxAddResult { data object Added; data object AlreadyPaired; data object LimitReached }
+interface PairedBoxStore {                                          // remplace current/replace/clear
+    suspend fun all(): List<PairedBoxDto>                           // par position ; liste vide sans ouvrir la base avant déverrouillage
+    suspend fun add(credential: PairedBoxCredentialDto, name: String): PairedBoxAddResult
+    suspend fun rename(boxId: String, name: String)
+    suspend fun remove(boxId: String)
+}
+object PairedBoxName { const val MAX_LENGTH = 30; fun sanitize(raw: String): String? }   // trim ; null si vide ou > 30
+@Entity("session_box", PK (sessionId, boxId), FK CASCADE -> alarm_session.id, Index(sessionId))
+data class SessionBoxEntity(val sessionId: String, val boxId: String, val tokenSha256: String, val name: String, val position: Int)
+data class SessionBox(val boxId: String, val tokenSha256Hex: String, val name: String)
+// AndroidSessionExtras : boxes: List<SessionBox> remplace boxId + boxTokenSha256Hex ; freezeFrom fige la liste comme la sonnerie
+// MIGRATION_4_5 ; NiumiDatabase version = 5 ; schemas/5.json
+// DirectBootSnapshot.Active : boxes: List<DirectBootBox(boxId, tokenSha256Hex)> remplace les deux champs ; sans les noms ;
+//   DIRECT_BOOT_PROJECTION_SCHEMA_VERSION = 4 ; seuil figé PROJECTION_VERSION_WITH_MULTIPLE_BOXES = 4 ;
+//   un fichier v1/v2/v3 se lit comme une liste d'un seul boîtier (DirectBootMapper)
+
+// :core:system (étape 30)
+// HandleValidNfcUseCase : facade.verifyBox(payload, extras.boxes.map { it.toCredential(payload.protocolVersion) }, context)
+// ReadinessReport / ReadinessDtoMapper : pairedBoxCount: Int remplace hasPairedBox ; AndroidDeviceReadinessChecker lit all().size
+
+// :feature:session (étape 30)
+// ArmSessionUseCase : extras.boxes = pairedBoxStore.all() copié à l'activation ; ActivationPreview.boxNames: List<String> remplace boxId
+// DiagnosticReport : boxes: List<DiagnosticBox(boxId, name)> remplace boxId ; export : une ligne par boîtier, nom + 8 caractères
+
+// :feature:setup (étape 31, SPEC_ANDROID §15 écran 3)
+// PairingUiState(nfcAvailability, boxes: List<PairedBoxRow(boxId, prefix, name)>, pendingName: PendingName?, renaming: String?,
+//   message: String?, isSessionInProgress: Boolean) ; canAdd = boxes.size < PairedBoxLimit.MAX && !isSessionInProgress
+// PairingViewModel : onUriRead, onUnreadableTag, onNameChanged(text), confirmAdd(), cancelAdd(), startRename(boxId),
+//   confirmRename(), cancelRename(), remove(boxId)
+// ReadinessMessages : « Boîtiers associés » ; « Associer un boîtier » ; CHANGE_PAIRED_BOX_LABEL = « Gérer mes boîtiers » ;
+//   satisfiedDetailFor(PAIRED_BOX, count) = « 1 boîtier associé » / « 3 boîtiers associés »
 ```
 
 ---
@@ -1972,6 +2044,181 @@ Voir `ETAPE-26.md`.
 
 **Terminé quand :** les onze lignes sont renseignées (vert, limite établie ou « non testé » avec la raison) ; les critères §21 du Lot 7 ont chacun une preuve ou un statut ouvert nommé ; aucune limite de l'aide n'est écrite sans mesure ; `RESTE_A_FAIRE.md` dit l'état réel.
 
+## Phase K — Lot 8 : boîtiers multiples
+
+**Lot ajouté le 2026-10-13**, pendant l'étape 28 (restée ouverte : sessions D, E, F de sa campagne à
+refaire). Conception validée section par section le même jour :
+`docs/superpowers/specs/2026-10-13-boitiers-multiples-design.md` — l'exécutant la lit avant chaque
+étape, le plan n'en recopie que ce que les étapes consomment.
+
+**Objectif.** L'utilisateur enregistre jusqu'à cinq boîtiers Niumi, chacun nommé ; une session fige
+la liste à l'activation et se termine ou s'annule par le scan de **n'importe lequel** d'entre eux.
+
+**Architecture.** La règle « l'un des boîtiers figés suffit » vit dans le contrat commun (1.4) :
+`BoxVerifier` reçoit la liste et répond `MATCH` ou `NO_PAIRED_BOX_MATCH`, la machine à états et le
+snapshot commun ne changent pas (le boîtier est une donnée de plateforme, comme la sonnerie). Sur
+Android, la liste figée vit dans une table enfant `session_box` sur le modèle de `blocked_app`
+(Room v5), et dans la projection Direct Boot v4 sans les noms. L'écran 3 devient « Mes boîtiers ».
+
+**Ce qui ne change pas** (conception §2) : format et parseur du payload, `NfcVerificationProof`,
+interdiction de toucher aux boîtiers pendant une session, textes de scan des écrans 7, 8, 9 et 11,
+réaction à un tag non associé ou illisible, anti-clonage (§9.2).
+
+**Contraintes propres au lot**, en plus des contraintes globales du plan :
+- contrat commun 1.3 → 1.4 ; `schemaVersion` du snapshot commun inchangé (2) ;
+- `PairedBoxLimit.MIN = 1`, `MAX = 5` ; nom de boîtier : 1 à 30 caractères après `trim()` ;
+- Room v4 → v5 par `MIGRATION_4_5`, jamais `fallbackToDestructiveMigration` ; `schemas/5.json`
+  committé ; projection Direct Boot 3 → 4 avec seuil figé, jamais « < version courante »
+  (point de vigilance de l'étape 26) ;
+- aucune empreinte de token à l'écran, dans l'export ou le journal (§16, §17) ;
+- textes imposés par SPEC_ANDROID §13 et §15 repris mot pour mot, mis à jour dans la spec **dans
+  le même changement** que le code (CLAUDE.md).
+
+**Points de vigilance (à tester, aucune étape ne les couvrirait sinon) :**
+1. `MIGRATION_4_5` doit remplir `session_box` depuis les colonnes d'`alarm_session`, **jamais**
+   depuis `paired_box` : une session armée puis un boîtier remplacé hors session (permis jusqu'ici)
+   laisse `paired_box` différent de la paire figée. Test de l'étape 30 avec les deux désaccordés.
+2. Un nom composé d'espaces, ou de 31 caractères, ou vide : refusé par `PairedBoxName.sanitize`
+   avant toute écriture (étape 30, puis l'écran à l'étape 31 n'affiche que le refus).
+3. Une liste figée vide (table `session_box` sans ligne pour la session, migration corrompue) :
+   `verifyBox` répond `NO_PAIRED_BOX_MATCH`, le scan est `UnknownBox`, rien ne plante (étapes 29
+   et 30).
+4. Un fichier Direct Boot v3 lu avant déverrouillage, puis le scan du boîtier d'origine : `MATCH`
+   (étape 30, `DirectBootMapperTest` + parité instrumentée) — c'est le cas réel d'une mise à jour
+   suivie d'un redémarrage.
+5. Cinq boîtiers associés, un retiré hors session, nouvelle session : la liste figée compte quatre
+   boîtiers, pas cinq (étape 30, `ArmSessionUseCaseTest`).
+
+**Ce que chaque étape produit, en une ligne.** 29 : le contrat commun sait vérifier contre une
+liste et compter les boîtiers, Android compile et se comporte comme avant avec sa liste d'un
+seul. 30 : Android enregistre jusqu'à cinq boîtiers nommés, les fige dans la session et les
+reconnaît tous, base et projection migrées. 31 : l'utilisateur gère ses boîtiers à l'écran 3, le
+diagnostic et le récapitulatif en parlent au pluriel, le tout est prouvé sur appareil.
+
+### Étape 29 : contrat KMP 1.4 — vérificateur sur liste, limite de boîtiers, specs
+
+**Specs à lire :** conception §3 ; SPEC_CORE_KMP §2 (décisions 3 et 11), §9.2, §9.3, §10, §14, §17 ; SPEC_ANDROID §11.2 (table des issues du scan) ; `ETAPE-22.md` (comment le contrat 1.3 a été monté : specs d'abord, adaptateurs Android réduits au minimum pour rester vert).
+
+**Fichiers :**
+- Specs, **premier travail de l'étape** : SPEC_CORE_KMP §2 (décision 3 : « validation locale de l'un des boîtiers associés » ; décision 11 : « les boîtiers vérifiés sont ceux figés à l'activation ; ajouter, retirer ou renommer un boîtier est interdit tant qu'une session est active »), §9.2 (`PairedBoxCredential` inchangé, « l'application stocke jusqu'à cinq credentials nommés ; la vérification compare le payload à chacun »), §10 (la liste est capturée et figée à l'étape 1), §14 (signature de `verifyBox`, `pairedBoxCount`, `TOO_MANY_PAIRED_BOXES`, version 1.4), §17 (tests NFC et politique) ; SPEC_ANDROID §3 (« seul le scan de l'un des boîtiers associés termine la session », « toute modification ou annulation exige le scan de l'un d'eux »), §11.2 : ligne « tag Niumi non associé » reformulée « tag Niumi hors de la liste figée (`NO_PAIRED_BOX_MATCH`) », comportement inchangé ; SPEC_IOS §14 : « refuse un boîtier hors de la liste figée », « Ce boîtier n'est pas associé à cet iPhone. », Keychain en liste de cinq au maximum, verdict d'activation par `pairedBoxCount` (spec seulement, aucun code iOS).
+- `:shared:core` — modifier `nfc/BoxVerificationResult.kt` (enum), `nfc/BoxVerifier.kt` (`credentials: List`), `interop/NiumiCoreFacade.kt` (`verifyBox`), `diagnostics/ActivationPolicyInput.kt` (`pairedBoxCount`), `diagnostics/ActivationPolicyResult.kt` (`TOO_MANY_PAIRED_BOXES`), `diagnostics/ActivationPolicy.kt`, `interop/PolicyDtos.kt`, `interop/PolicyDtoMappers.kt` ; créer `diagnostics/PairedBoxLimit.kt`.
+- `:core:system` — modifier `nfc/HandleValidNfcUseCase.kt` (`listOf(credentialOf(session.extras, payload))`, `refusalFor` : `NO_PAIRED_BOX_MATCH -> UnknownBox`), `readiness/ReadinessDtoMapper.kt` (`pairedBoxCount = if (report.hasPairedBox) 1 else 0` — transitoire, remplacé à l'étape 30).
+- Tests : réécrire `BoxVerifierTest`, étendre `NiumiCoreFacadeNfcTest`, `ActivationPolicyTest` ; compléter `fixtures/nfc_payloads.json` (deux boîtiers valides distincts) ; adapter `HandleValidNfcUseCaseTest` (deux tests nommés ci-dessous), `ReadinessDtoMapperTest`.
+
+**Produit :** le contrat 1.4 est écrit et prouvé en `commonTest` ; Android compile et se comporte exactement comme avant (liste d'un seul boîtier) ; le framework iOS se construit.
+
+- [x] **Mettre à jour les specs** (liste ci-dessus) avant tout code ; relire SPEC_CORE_KMP §2 et §10 pour vérifier qu'aucune phrase ne suppose encore « le boîtier » au singulier. *(Fait le 2026-10-13, décision 16 ajoutée à §2 ; voir `ETAPE-29.md`.)*
+- [x] **Réécrire `BoxVerifierTest`** (rouge : `verify` n'accepte pas de liste) : `anEmptyListYieldsNoPairedBoxMatchWithoutProof` ; `aSingleMatchingCredentialYieldsMatchAndTheProofCarriesItsBoxId` ; `aSingleCredentialWithAnotherBoxIdYieldsNoPairedBoxMatch` ; `aSingleCredentialWithAnotherTokenYieldsNoPairedBoxMatch` ; `theMatchingCredentialIsFoundInFirstPosition` et `...InLastPosition` (cinq credentials distincts, le payload correspond au premier puis au dernier, la preuve porte le `boxId` du bon) ; `fiveCredentialsNoneMatchingYieldNoPairedBoxMatch` ; `aKnownBoxIdWithTheWrongTokenAmongOthersIsNotAMatch` ; `aNonCanonicalHashInTheListIsSkippedWithoutThrowing` (liste `["abcd", bon]` → `MATCH`) ; `unsupportedProtocolVersionYieldsUnsupportedVersionEvenWithAMatchingCredential` ; `withoutContextAMatchCarriesNoProof`. Implémenter `BoxVerifier.verify(payload, credentials, context)` : version d'abord, puis `credentials.firstOrNull { it.boxId == payload.boxId && tokenMatches(payload, it) }`. Supprimer `BOX_MISMATCH`/`TOKEN_MISMATCH`.
+- [x] **Étendre `NiumiCoreFacadeNfcTest`** : `verifyBoxAgainstAListExposesTheProofOfTheMatchingBox`, `verifyBoxAgainstAnEmptyListNeverExposesProof` ; mettre à jour les trois tests existants à la nouvelle signature. *(Fait ; `NiumiCoreFacadeTest` et `NfcVerificationProofTest`, oubliés ici, adaptés sans changer leurs assertions.)*
+- [x] **Étendre `ActivationPolicyTest`** (rouge : `pairedBoxCount` inconnu) : `pairedBoxCountZeroIsRefusedWithNoPairedBox`, `pairedBoxCountOneIsAccepted`, `pairedBoxCountFiveIsAccepted`, `pairedBoxCountSixIsRefusedWithTooManyPairedBoxes` ; adapter `noPairedBoxIsRefused` et `multipleSimultaneousRefusalsAreAllReported`. Créer `PairedBoxLimit`, remplacer `hasPairedBox` dans `ActivationPolicyInput`, `ActivationPolicyInputDto`, le mapper, et la politique.
+- [x] **Adapter Android au minimum** pour compiler : `HandleValidNfcUseCase` (liste d'un seul, `NO_PAIRED_BOX_MATCH -> UnknownBox`), `ReadinessDtoMapper` (`1`/`0`). Renommer dans `HandleValidNfcUseCaseTest` : `aTagMatchingANewlyPairedBoxIsRefused` → `aTagOutsideTheFrozenListIsRefused`, `theSameBoxWithAnotherTokenIsRefused` inchangé ; les deux attendent toujours `ScanOutcome.UnknownBox`.
+- [x] **Vérifier :** *(Tout vert le 2026-10-13, lint compris après la montée Kotlin 2.4.21 décidée en cours d'étape — voir « Montée de Kotlin du 2026-10-13 » et `ETAPE-29.md`.)*
+
+```bash
+./gradlew :shared:core:jvmTest
+./gradlew :shared:core:linkDebugFrameworkIosSimulatorArm64
+./gradlew :core:system:testDebugUnitTest :feature:session:testDebugUnitTest :feature:setup:testDebugUnitTest :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+./gradlew ktlintCheck detekt :app:lintDebug
+grep -rn "BOX_MISMATCH\|TOKEN_MISMATCH\|hasPairedBox" shared androidApp --include='*.kt'   # attendu : aucune occurrence
+```
+
+- [x] **Rédiger `ETAPE-29.md`.**
+
+**Tests manuels :** aucun — le comportement sur appareil est identique à celui de l'étape 28 (liste d'un seul boîtier). Le dire dans le rapport.
+
+**Terminé quand :** `BoxVerifierTest` couvre liste vide, un, cinq, première et dernière position, mauvais token sur un identifiant connu, empreinte non canonique ; `ActivationPolicyTest` couvre 0, 1, 5 et 6 ; le grep de clôture est vide ; SPEC_CORE_KMP annonce la version 1.4.
+
+### Étape 30 : persistance Android — boîtiers nommés, `session_box`, Room v5, Direct Boot v4
+
+**Specs à lire :** conception §4 ; SPEC_ANDROID §7.2, §7.3, §11.1, §11.3 (point 3), §17 (export), §19.1, §19.2 ; « Ajouts du Lot 8 » ; points de vigilance 10 et 12 du plan ; `ETAPE-09.md` (transaction de décision, `freezeFrom`), `ETAPE-23.md` (migration 2→3 et projection v2), `ETAPE-26.md` (migration 3→4, seuils de projection figés) ; points de vigilance 1, 3, 4 et 5 du lot.
+
+**Fichiers :**
+- Specs, **premier travail de l'étape** : SPEC_ANDROID §7.2 (`PairedBoxEntity` + `name`, `position` ; `session_box` ; alinéa « v5 » sur le modèle de « v4 » : création de `session_box`, copie depuis les colonnes d'`alarm_session`, recréation d'`alarm_session` sans `boxId` ni `boxTokenSha256Hex`, `PRAGMA foreign_keys = OFF` le temps de la migration), §7.3 (`boxes`, alinéa « Projection v4 » : un fichier v1, v2 ou v3 se lit comme une liste d'un seul boîtier ; sans les noms, et pourquoi), §11.1 (jusqu'à cinq boîtiers nommés, nom 1–30 caractères, refus du doublon et du sixième au dépôt ; « un seul boîtier » et « toute nouvelle association remplace l'ancienne » supprimés), §11.3 point 3 (« contre la liste `session_box` de la session active »), §17 (export : une ligne par boîtier figé, nom et huit caractères), §19.1 et §19.2 (tests du lot : migration 4→5 depuis une base v4 désaccordée, dépôt multi-boîtiers, scan contre une liste, lecture d'une projection v3).
+- `:core:database` — modifier `entity/PairedBoxEntity.kt`, `dao/PairedBoxDao.kt` (`all()` par position, `upsert`, `rename`, `delete(boxId)`, `count()`), `pairing/PairedBoxStore.kt` (nouvelle interface), `pairing/RoomPairedBoxStore.kt`, `mapping/PairedBoxMapper.kt`, `AndroidSessionExtras.kt` (`boxes`), `entity/AlarmSessionEntity.kt` (sans les deux colonnes), `NiumiDatabase.kt` (`version = 5`, entité `SessionBoxEntity`, `sessionBoxDao()`), `migration/Migrations.kt` (`MIGRATION_4_5`), `mapping/SessionSnapshotMapper.kt` (`toExtras(blockedPackages, boxes)`), `RoomSessionStore.kt` (`freezeFrom` fige `boxes` ; `commitDecision` écrit `session_box` à la création comme `blocked_app`), `directboot/DirectBootSnapshot.kt` (`boxes`, version 4, seuil), `directboot/DirectBootMapper.kt`, `directboot/DirectBootRoomMerge.kt` (`boxes = existing` via la lecture de `session_box`), `RoomSessionAlarmSoundStore.kt` si elle recopie des extras ; créer `entity/SessionBoxEntity.kt`, `dao/SessionBoxDao.kt`, `pairing/PairedBoxDto.kt`, `pairing/PairedBoxAddResult.kt`, `pairing/PairedBoxName.kt`, `SessionBox.kt` ; committer `schemas/5.json`.
+- `:core:system` — modifier `nfc/HandleValidNfcUseCase.kt` (`extras.boxes`), `readiness/ReadinessSources.kt` (inchangée), `readiness/AndroidDeviceReadinessChecker.kt` (`pairedBoxCount = sources.pairedBoxStore.all().size`, `journeyChecks(pairedBoxCount, …)` avec `passed = pairedBoxCount in PairedBoxLimit.MIN..PairedBoxLimit.MAX`), `readiness/ReadinessReport.kt` et `ReadinessDtoMapper.kt` (`pairedBoxCount`, fin du transitoire de l'étape 29).
+- `:feature:session` — modifier `activation/ArmSessionUseCase.kt` (`boxes = pairedBoxStore.all()` figées ; garde « liste vide » → `NO_PAIRED_BOX` ; `ActivationPreview.boxNames`), `summary/SummaryUiState.kt`, `summary/SummaryViewModel.kt` (`boxNames`, écran à l'étape 31), `diagnostics/DiagnosticExporter.kt` et `diagnostics/IncidentDiagnosticViewModel.kt` (`boxes`).
+- Tests JVM : créer `PairedBoxNameTest`, `SessionBoxMapperTest` ; étendre `SessionSnapshotMapperTest`, `DirectBootMapperTest` (v3 → liste d'un ; v4 aller-retour ; `LEGACY_KEY` toujours traduit), `DirectBootSnapshotJsonTest` (vrai fichier v3, ajouté en ressource de test), `DirectBootRoomParityTest`, `ExportedSchemaTest` (`5.json`, version 5), `RoomPairedBoxStoreUnlockGuardTest` (`all()` vide avant déverrouillage, `add`/`rename`/`remove` refusés), `HandleValidNfcUseCaseTest`, `AndroidDeviceReadinessCheckerTest`, `ArmSessionUseCaseTest`, `SummaryViewModelTest`, `DiagnosticExporterTest`, `IncidentDiagnosticViewModelTest` ; fixtures `SessionDtoFixtures.extras(boxes = …)`, `NfcScanFixtures`, `ActivationTestFakes`, `ReadinessTestSources`, `ActiveSessionTestFakes`, `AlarmTestFakes`, `RingtoneTestFakes`, `DirectBootBlockedPackagesSourceTest`. Instrumentés : étendre `NiumiDatabaseSchemaTest`, `RoomPairedBoxStoreTest` (réécrit), `PairedBoxDaoTest`, `RoomSessionStoreCommitTest`, `RoomDirectBootMergeTest`, `AlarmChainInstrumentedTest`, `BlockingStartReceiverInstrumentedTest`, `ProcessDeathInstrumentedTest` (extras à la nouvelle forme).
+
+**Produit :** jusqu'à cinq boîtiers nommés dans Room, figés dans `session_box` à l'activation, reconnus tous par le scan, base v5 et projection v4 migrées depuis une installation du Lot 7. Aucune interface encore : l'écran 3 de l'étape 28 n'ajoute qu'un boîtier et le nomme « Boîtier 1 » (adaptation minimale du `PairingViewModel` : `add(candidate, "Boîtier 1")`, le dialogue de remplacement devient « déjà associé »).
+
+- [ ] **Mettre à jour les specs** (liste ci-dessus) avant tout code.
+- [ ] **Écrire `PairedBoxNameTest`** (rouge) : `" Cuisine "` → `"Cuisine"` ; `""` et `"   "` → `null` ; 30 caractères → conservés ; 31 → `null` ; `"Salle de bain"` → inchangé. Implémenter `PairedBoxName.sanitize`.
+- [ ] **Réécrire `RoomPairedBoxStoreTest`** (instrumenté, rouge : nouvelle interface) : `allIsEmptyWhenNothingIsPaired` ; `addThenAllReturnsTheBoxWithItsNameInPositionZero` ; `addingTheSameBoxIdTwiceReturnsAlreadyPairedAndKeepsOneRow` ; `aSixthBoxReturnsLimitReachedAndWritesNothing` ; `renameChangesOnlyTheName` ; `removeDropsOneBoxAndRenumbersPositions` (retirer le 2ᵉ de 3 → positions 0, 1) ; `allIsOrderedByPosition`. Implémenter `PairedBoxEntity` (+ `name`, `position`), `PairedBoxDao`, `PairedBoxStore`, `RoomPairedBoxStore` (chaque écriture dans `withTransaction` ; `add` compte avant d'insérer). Étendre `RoomPairedBoxStoreUnlockGuardTest`.
+- [ ] **Écrire le test de migration** `migrationFourToFiveMovesTheFrozenBoxIntoSessionBoxAndDropsTheColumns` dans `NiumiDatabaseSchemaTest` (rouge) : base v4 avec `paired_box` contenant le boîtier B (remplacé hors session) et `alarm_session` `ARMED` figée sur le boîtier A, plus un reçu, une ligne d'outbox, une application bloquée et un incident ; après `MIGRATION_4_5` : `session_box` contient exactement A avec le nom `'Boîtier 1'` et la position 0 (**pas B**, point de vigilance 1) ; `alarm_session` n'a plus les colonnes `boxId` ni `boxTokenSha256Hex` et conserve toutes ses autres colonnes ; reçu, outbox, application et incident toujours présents (le `CASCADE` n'a pas joué) ; `paired_box` a `name = 'Boîtier 1'`, `position = 0`. Implémenter `MIGRATION_4_5` dans cet ordre : `ALTER TABLE paired_box ADD COLUMN name TEXT NOT NULL DEFAULT ''` ; `UPDATE paired_box SET name = 'Boîtier 1'` ; `ALTER TABLE paired_box ADD COLUMN position INTEGER NOT NULL DEFAULT 0` ; `CREATE TABLE session_box (sessionId TEXT NOT NULL, boxId TEXT NOT NULL, tokenSha256 TEXT NOT NULL, name TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(sessionId, boxId), FOREIGN KEY(sessionId) REFERENCES alarm_session(id) ON DELETE CASCADE)` ; `CREATE INDEX index_session_box_sessionId ON session_box(sessionId)` ; `INSERT INTO session_box SELECT id, boxId, boxTokenSha256Hex, 'Boîtier 1', 0 FROM alarm_session` ; puis la recréation d'`alarm_session` sans les deux colonnes sous `PRAGMA foreign_keys = OFF` (`CREATE TABLE alarm_session_new (…)` à la définition exacte de `schemas/5.json`, `INSERT INTO alarm_session_new SELECT <toutes les colonnes sauf les deux> FROM alarm_session`, `DROP TABLE alarm_session`, `ALTER TABLE alarm_session_new RENAME TO alarm_session`, recréation des index de `schemas/5.json`), `PRAGMA foreign_keys = ON`. `NiumiDatabase.version = 5`, `SessionBoxEntity`, `SessionBoxDao` (`forSession(sessionId)` par position, `insertAll`, `deleteForSession`). Régénérer et committer `schemas/5.json` ; `ExportedSchemaTest`.
+- [ ] **Étendre les tests de mapping et de gel** (rouge) : `SessionSnapshotMapperTest` (`toExtras(blockedPackages, boxes)` aller-retour) ; `RoomSessionStoreCommitTest` (instrumenté : `commitDecision` à la création écrit `session_box` dans la même transaction ; une décision suivante avec d'autres `boxes` dans ses extras ne change pas `session_box` — `freezeFrom`) ; `DirectBootMapperTest` (`aVersionThreeProjectionReadsAsAListOfOneBox`, `aVersionFourProjectionRoundTripsItsBoxes`, `aVersionTwoProjectionKeepsItsPendingBlocking` conservé) ; `DirectBootSnapshotJsonTest` (`a version three file stays readable as a one-box list`, depuis une vraie ressource JSON v3) ; `RoomDirectBootMergeTest` (instrumenté : la fusion conserve `session_box` de Room, noms compris, et ne la réécrit pas). Implémenter `AndroidSessionExtras.boxes`, `SessionBox`, `AlarmSessionEntity` sans les deux colonnes, `SessionSnapshotMapper`, `RoomSessionStore` (`freezeFrom` fige `boxes` ; lecture : `sessionBoxDao().forSession(id)`), `DirectBootSnapshot.Active.boxes` + `DIRECT_BOOT_PROJECTION_SCHEMA_VERSION = 4` + `PROJECTION_VERSION_WITH_MULTIPLE_BOXES = 4`, `DirectBootMapper` (v < 4 : `listOf(DirectBootBox(boxId, boxTokenSha256Hex))` depuis les deux anciens champs, conservés dans la classe avec valeur par défaut `""` pour rester désérialisables, comme `volumeRampSeconds` l'a été), `DirectBootRoomMerge`.
+- [ ] **Étendre `HandleValidNfcUseCaseTest`** (rouge) : `aTagMatchingTheSecondOfThreeFrozenBoxesEndsTheSession` (preuve portant le `boxId` du deuxième) ; `aTagMatchingABoxPairedAfterActivationIsRefused` (le dépôt courant contient le boîtier, `session_box` non → `UnknownBox`) ; `anEmptyFrozenListRefusesEveryScanWithoutThrowing` (point de vigilance 3). Implémenter `extras.boxes.map { it.toCredential(payload.protocolVersion) }`.
+- [ ] **Étendre `ArmSessionUseCaseTest`** (rouge) : `theExtrasFreezeEveryPairedBoxInOrder` (trois boîtiers) ; `aBoxRemovedBeforeArmingIsNotFrozen` (cinq, un retiré → quatre, point de vigilance 5) ; `noPairedBoxAtAllIsRefusedWithNoPairedBox` ; `thePreviewListsTheBoxNamesInOrder`. Puis `AndroidDeviceReadinessCheckerTest` (`pairedBoxCount` 0, 1, 5, 6 → contrôle `PAIRED_BOX` vert pour 1 et 5, rouge pour 0 et 6), `SummaryViewModelTest` (`boxNames`), `DiagnosticExporterTest` (`theExportListsEachFrozenBoxByNameAndEightCharactersAndNeverAHash`, deux boîtiers), `IncidentDiagnosticViewModelTest`. Implémenter, puis adapter `PairingViewModel` au minimum (`add(candidate, "Boîtier 1")`, `AlreadyPaired` → `PairingTexts.ALREADY_PAIRED = "Ce boîtier est déjà associé."`, suppression du dialogue de remplacement et de ses deux textes, `PairingViewModelTest` adapté — l'écran complet est l'étape 31).
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :core:database:testDebugUnitTest :core:system:testDebugUnitTest :feature:session:testDebugUnitTest :feature:setup:testDebugUnitTest :feature:ringing:testDebugUnitTest :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+./gradlew ktlintCheck detekt :app:lintDebug
+./gradlew :core:database:connectedDebugAndroidTest :app:connectedDebugAndroidTest   # appareil requis, avant tout essai manuel
+grep -rn "boxTokenSha256Hex\|\.boxId\b" androidApp --include='*.kt' | grep -v "/test/\|/androidTest/\|DirectBootSnapshot.kt\|DirectBootMapper.kt\|Migrations.kt\|SessionBox"   # attendu : vide hors lecture d'anciennes projections
+```
+
+- [ ] **Valider sur appareil**, puis **rédiger `ETAPE-30.md`** (la commande de régénération de `schemas/5.json`, le poids de la base avant et après migration).
+
+**Tests manuels :** (1) installer l'APK de la fin de l'étape 28, associer un boîtier, armer une session à +6 min, installer l'APK de l'étape 30 par-dessus → à l'heure, le scan du boîtier d'origine termine la session, `session_box` contient une ligne nommée « Boîtier 1 », aucun `SNAPSHOT_CORRUPTED` ; (2) même mise à jour mais redémarrage **sans déverrouillage** avant l'heure (projection v3) → le scan du boîtier d'origine termine la session après déverrouillage.
+
+**Terminé quand :** la migration 4→5 est prouvée depuis une base v4 où `paired_box` et la session sont en désaccord ; un fichier Direct Boot v3 réel se lit comme une liste d'un boîtier ; `freezeFrom` fige la liste ; le scan reconnaît le deuxième de trois boîtiers et refuse un boîtier associé après l'activation ; aucun test ni fake ne construit encore `boxId`/`boxTokenSha256Hex` sur des extras ; `ETAPE-30.md` donne les deux essais manuels.
+
+### Étape 31 : interface « Mes boîtiers », diagnostic, récapitulatif, validation et documents
+
+**Specs à lire :** conception §5, §6, §8 ; SPEC_ANDROID §13 (contrôle `PAIRED_BOX`), §15 (écran 3, écran 2, écran 6, règles UI), §20, §21 ; `docs/CHARTE_GRAPHIQUE_APP_MOBILE.md` §3, §15, §16 ; `ETAPE-13.md` (écran 3 d'origine, action secondaire « Changer de boîtier » mesurée sur appareil), `ETAPE-27.md` (écran 14 : liste sobre, Ambre + gras, rôle TalkBack) ; « Particularités de l'appareil de test » ; `docs/android/LIMITES.md`, `QA_MATRIX.md`, `RELEASE_REPORT.md`, `RESTE_A_FAIRE.md`.
+
+**Fichiers :**
+- Specs, **premier travail de l'étape** : SPEC_ANDROID §13 (ligne « boîtiers associés », message d'échec « Aucun boîtier n'est associé. Associe au moins un boîtier Niumi : c'est l'un d'eux qui terminera ta session. », action « Associer un boîtier », action secondaire « Gérer mes boîtiers », détail satisfait « {n} boîtier(s) associé(s) »), §15 (écran 3 « Mes boîtiers » : liste, « Renommer », « Retirer », « Ajouter un boîtier », « 5 boîtiers maximum. », « Boîtier ajouté. », « Ce boîtier est déjà associé. », « Une session est en cours. Tes boîtiers ne peuvent pas être modifiés avant sa fin. », champ de nom prérempli « Boîtier {n} » ; écran 6 : liste des noms et « Seul le scan d'un de tes boîtiers terminera la session. »), §20 (quatre lignes du Lot 8, ci-dessous), §21 (critères du Lot 8, repris de la recette), §22 (Lot 8).
+- `:feature:setup` — modifier `pairing/PairingTexts.kt`, `pairing/PairingUiState.kt`, `pairing/PairingViewModel.kt`, `pairing/PairingScreen.kt`, `readiness/ReadinessMessages.kt`, `readiness/ReadinessUiState.kt` si le détail satisfait y vit.
+- `:feature:session` — modifier `summary/SummaryTexts.kt` (`COMMITMENT_REMINDER`, `BOX_TITLE = "Boîtiers associés"`), `summary/SummaryScreen.kt` (liste des noms).
+- `:app` — `help/HelpTexts.kt` et `docs/android/LIMITES.md` **ensemble, après mesure seulement** (`HelpTextsTest`) : candidat « Un boîtier ajouté après l'activation ne termine pas la session en cours ; un boîtier retiré hors session ne termine plus rien. »
+- Tests : réécrire `PairingViewModelTest` et `PairingTextsTest` ; étendre `ReadinessMessagesTest`, `SummaryTextsTest`, `SummaryViewModelTest` ; `HelpTextsTest`.
+- Documents : `QA_MATRIX.md` (sous-section « Boîtiers multiples (Lot 8) », quatre lignes), `RELEASE_REPORT.md` (critères §21 du Lot 8), `RESTE_A_FAIRE.md` (section D), `ETAPE-31.md`.
+
+**Lignes ajoutées à §20 (à l'étape 31) et à dérouler :**
+
+| Scénario | Résultat attendu |
+| --- | --- |
+| deux boîtiers associés, session armée, scan du second (Lot 8) | `RELEASING` puis état final, comme avec le premier ; la preuve journalisée porte le `boxId` du second |
+| boîtier ajouté après l'activation, scanné pendant la session (Lot 8) | refusé (vibration d'erreur), session maintenue ; accepté à la session suivante |
+| mise à jour par-dessus une session armée du Lot 7 (Lot 8) | le boîtier d'origine termine la session, nommé « Boîtier 1 » à l'écran 6 de la session suivante |
+| redémarrage sans déverrouillage après la mise à jour, projection v3 (Lot 8) | le boîtier d'origine termine la session après déverrouillage |
+
+**Produit :** écrans 2, 3 et 6 conformes à SPEC_ANDROID §13 et §15 pour le Lot 8 ; le Lot 8 prouvé sur appareil et documenté.
+
+- [ ] **Mettre à jour les specs** (liste ci-dessus) avant tout code.
+- [ ] **Réécrire `PairingTextsTest` et `PairingViewModelTest`** (rouge) : `theSpecTextsAreQuotedWordForWord` (tous les textes de §15 ci-dessus) ; `onEntryTheListShowsEveryPairedBoxByNameAndPrefixInOrder` ; `aValidNewTagOpensTheNamePromptPrefilledWithBoitierN` (deux associés → « Boîtier 3 ») ; `confirmingTheNameAddsTheBoxAndSaysBoitierAjoute` ; `aBlankOrTooLongNameIsRefusedWithoutWriting` ; `cancellingTheNamePromptWritesNothing` ; `aTagAlreadyPairedSaysSoAndWritesNothing` ; `fiveBoxesHideAddAndShowTheMaximumMessage` ; `renameWritesTheNewNameAndRefreshesTheList` ; `removeDropsTheBoxAndRefreshesTheList` ; `aSessionInProgressDisablesEveryActionAndExplains` ; `noTokenOrFingerprintEverReachesTheTechnicalLog` (conservé) ; `losingTheReaderClearsTheFeedbackOfAPreviousScan` (conservé). Implémenter `PairingUiState`, `PairingViewModel`, `PairingTexts`.
+- [ ] **Dessiner l'écran 3** d'après la charte : liste sobre (nom en `titleMedium`, préfixe en `bodySmall`), deux actions textuelles par ligne, bouton « Ajouter un boîtier » en bas, champ de nom dans une feuille ou un dialogue Material 3 avec « Ajouter » / « Annuler », rôle `listItem` et `contentDescription` « Renommer {nom} » / « Retirer {nom} » pour TalkBack.
+- [ ] **Étendre `ReadinessMessagesTest`, `SummaryTextsTest`, `SummaryViewModelTest`** (rouge), implémenter le diagnostic (libellé, message, actions, détail satisfait au singulier et au pluriel) et l'écran 6 (liste des noms, rappel d'engagement).
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :feature:setup:testDebugUnitTest :feature:session:testDebugUnitTest :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+./gradlew ktlintCheck detekt :app:lintDebug
+./gradlew connectedDebugAndroidTest         # appareil requis, avant tout essai manuel
+```
+
+- [ ] **Dérouler les quatre lignes §20 du Lot 8** sur l'appareil branché (`adb devices` d'abord ; **vérifier que les boîtiers sont physiquement à portée de main avant d'armer** — leçon de l'étape 28, deux désinstallations), en consignant modèle, version, firmware, résultat et journal ; puis **écrire la limite** dans `LIMITES.md` et `HelpTexts` après mesure, `HelpTextsTest` vert.
+- [ ] **Remplir `QA_MATRIX.md`, `RELEASE_REPORT.md`, `RESTE_A_FAIRE.md`**, cocher la recette du Lot 8 pour ce qui est prouvé.
+- [ ] **Vérifier :**
+
+```bash
+./gradlew :shared:core:jvmTest
+./gradlew testDebugUnitTest
+./gradlew :app:testReleaseUnitTest
+./gradlew ktlintCheck detekt :app:lintRelease
+./gradlew :app:assembleRelease :app:bundleRelease
+```
+
+- [ ] **Rédiger `ETAPE-31.md`.**
+
+**Tests manuels :** les quatre lignes ci-dessus ; plus, à l'écran 3 : ajouter trois boîtiers nommés, renommer le deuxième, retirer le premier, vérifier l'ordre et les noms à l'écran 6 ; tenter un sixième → « 5 boîtiers maximum. » ; rescanner un boîtier déjà associé → « Ce boîtier est déjà associé. » ; TalkBack : chaque ligne annonce son nom, chaque action sa description.
+
+**Terminé quand :** chaque texte de §13 et §15 (Lot 8) est verrouillé par un test de textes ; les quatre lignes §20 sont renseignées ; les critères §21 du Lot 8 ont chacun une preuve ou un statut ouvert nommé ; aucune limite de l'aide n'est écrite sans mesure.
+
 ## Recette et critères d'acceptation
 
 Repris de SPEC_ANDROID §21 ; chaque point renvoie à l'étape qui le prouve. **Le détail des preuves
@@ -2025,6 +2272,15 @@ porte finale du MVP ; une case cochée signifie « prouvé », jamais « implém
 - [ ] Ni une base antérieure à v4, ni une projection Direct Boot antérieure à v3, ni une clé inconnue ne rendent le réveil muet (étape 26 par test ; étape 28 par mise à jour par-dessus une session armée).
 - [ ] La pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (étape 27).
 - [ ] Limites mesurées du Lot 7 écrites dans l'aide et `LIMITES.md` (étape 28).
+
+**Lot 8 — boîtiers multiples (SPEC_ANDROID §21, critères à ajouter à l'étape 31).** Hors porte
+finale du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
+
+- [ ] Le scan de n'importe lequel des boîtiers figés à l'activation termine ou annule la session ; un boîtier hors de cette liste est refusé sans effet (étapes 29, 30, 31).
+- [ ] Jusqu'à cinq boîtiers nommés sont associés ; un sixième et un doublon sont refusés au dépôt ; aucun ajout, retrait ni renommage pendant une session (étapes 30, 31).
+- [ ] Ni une base antérieure à v5, ni une projection Direct Boot antérieure à v4 ne perdent le boîtier figé d'une session en cours (étape 30 par test ; étape 31 par mise à jour par-dessus une session armée, avec et sans redémarrage).
+- [ ] Ni l'écran, ni l'export, ni le journal n'exposent une empreinte de token ; l'export nomme chaque boîtier figé avec huit caractères de son identifiant (étapes 30, 31).
+- [ ] Limites mesurées du Lot 8 écrites dans l'aide et `LIMITES.md` (étape 31).
 
 ## Hypothèses et limites du plan
 

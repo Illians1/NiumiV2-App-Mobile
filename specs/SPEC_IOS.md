@@ -148,7 +148,7 @@ Les jetons renvoyés par `FamilyActivityPicker` sont opaques. Le code ne doit pa
 - l'outil qui écrit le message NDEF;
 - le verrouillage éventuel du tag après écriture;
 - le contrôle qualité et la gestion des doublons;
-- la procédure de remplacement d'un boîtier associé.
+- la procédure de gestion des boîtiers associés (ajout, renommage, retrait).
 
 ## 5. Choix techniques
 
@@ -371,7 +371,7 @@ final class NiumiSessionRecord {
 
 Les quatre champs `blocking*` (contrat KMP 1.3, section 7.5) sont tous nuls pour un blocage immédiat ; `blockingAppliedAt` est renseigné dès que le moteur a demandé les shields. Un enregistrement de `schemaVersion` 1 se lit comme un blocage immédiat dont `blockingAppliedAt` vaut `createdAt`, et la migration SwiftData est testée. `revision` reste positive et augmente à chaque décision métier acceptée. `stateCode`, `releaseTargetCode` et `healthCode` utilisent les codes canoniques du contrat KMP. Un code inconnu produit une erreur de migration ou de corruption; il n'est pas remplacé par une valeur par défaut. SwiftData permet un aller-retour complet avec `SessionSnapshotDto`.
 
-`boxID` et `boxTokenSha256Hex` sont copiés depuis le Keychain à l'étape `ACTIVATION_REQUESTED` et figés pour la durée de la session. `SessionCoordinator.handleValidNFC()` vérifie toujours le scan contre ces deux valeurs de la session active, jamais contre le Keychain courant, afin qu'une ré-association ne puisse pas changer le boîtier attendu d'une session en cours. Le parcours d'association reste de toute façon inaccessible pendant une session active (section 14).
+La liste des boîtiers associés (`boxID`, `boxTokenSha256Hex`, nom — contrat KMP 1.4, de un à cinq) est copiée depuis le Keychain à l'étape `ACTIVATION_REQUESTED` et figée pour la durée de la session, dans une relation enfant de `NiumiSessionRecord`. `SessionCoordinator.handleValidNFC()` vérifie toujours le scan contre cette liste figée (`verifyBox(payload, credentials:, context:)`), jamais contre le Keychain courant, afin qu'un boîtier ajouté, retiré ou renommé ne puisse pas changer les boîtiers attendus d'une session en cours. Le parcours d'association reste de toute façon inaccessible pendant une session active (section 14).
 
 ### État métier
 
@@ -480,7 +480,7 @@ Le payload valide respecte exactement les règles suivantes:
 
 Le parseur compare les composants attendus et reconstruit ensuite la forme canonique. Il n'accepte pas une URI simplement parce qu'une normalisation permissive la rendrait équivalente.
 
-Le Keychain enregistre le `boxId` canonique et l'empreinte SHA-256 des 16 octets du token, avec une accessibilité limitée à l'appareil et sans synchronisation iCloud. Comparer les empreintes en temps constant. Ne jamais journaliser le token, sa forme encodée ou son empreinte complète.
+Le Keychain enregistre, pour chacun des boîtiers associés (de un à cinq, `PairedBoxLimit`, contrat KMP 1.4), le `boxId` canonique, l'empreinte SHA-256 des 16 octets du token et le nom choisi par l'utilisateur (1 à 30 caractères), avec une accessibilité limitée à l'appareil et sans synchronisation iCloud. Un `boxId` déjà présent et un sixième boîtier sont refusés avant toute écriture. Comparer les empreintes en temps constant. Ne jamais journaliser le token, sa forme encodée ou son empreinte complète.
 
 Un simple tag NDEF peut être copié. L'interface et la documentation produit ne doivent pas le présenter comme inviolable. Un futur boîtier anti-clonage devra utiliser un tag capable de répondre à un challenge cryptographique.
 
@@ -722,13 +722,13 @@ Le bouton du shield ne doit jamais autoriser temporairement l'application. L'ext
 
 Le parcours d'association est autorisé uniquement lorsqu'aucune session n'est active:
 
-1. expliquer où placer le boîtier;
-2. démarrer une `NFCNDEFReaderSession`;
+1. afficher la liste des boîtiers déjà associés (nom, huit premiers caractères du `boxId`), avec renommage et retrait, et un bouton d'ajout masqué dès cinq boîtiers (contrat KMP 1.4) ;
+2. à l'ajout, expliquer où placer le boîtier et démarrer une `NFCNDEFReaderSession`;
 3. accepter un seul tag;
 4. lire le premier message NDEF compatible;
 5. transmettre l'URI au parseur KMP et valider le schéma, la version, l'identifiant et le token;
-6. demander confirmation;
-7. enregistrer le `boxId` canonique et l'empreinte du token dans le Keychain;
+6. refuser un `boxId` déjà associé (« Ce boîtier est déjà associé. ») sans rien écrire, sinon demander un nom (1 à 30 caractères, proposé « Boîtier {n} »);
+7. enregistrer le `boxId` canonique, l'empreinte du token et le nom dans le Keychain;
 8. invalider la session NFC avec un message de réussite.
 
 ### Scan du matin
@@ -738,7 +738,7 @@ Le scanner du matin:
 1. vérifie qu'une session active existe;
 2. démarre une session Core NFC;
 3. ignore les enregistrements non compatibles;
-4. refuse un boîtier différent sans révéler l'identifiant attendu;
+4. refuse un boîtier hors de la liste figée à l'activation (`NO_PAIRED_BOX_MATCH`) sans révéler les identifiants attendus;
 5. limite les nouvelles tentatives rapides pour éviter une boucle d'interface;
 6. transmet la `NfcVerificationProof` opaque renvoyée par KMP avec `VALID_NFC_SCANNED` après comparaison valide.
 
@@ -747,7 +747,7 @@ Messages:
 | Situation | Texte |
 | --- | --- |
 | attente | `Approche ton iPhone du boîtier Niumi.` |
-| mauvais tag | `Ce n'est pas le boîtier associé à cet iPhone.` |
+| mauvais tag | `Ce boîtier n'est pas associé à cet iPhone.` |
 | lecture impossible | `Le boîtier n'a pas pu être lu. Réessaie.` |
 | NFC indisponible | `Le scan NFC n'est pas disponible sur cet iPhone.` |
 | réussite | `Session terminée. Tes applications sont de nouveau accessibles.` |
@@ -773,7 +773,7 @@ Le lecteur Core NFC transmet l'URI brute au parseur de `NiumiCore`. Swift ne dup
 
 1. consommer les événements App Group et interroger AlarmKit sous le même acteur que la réconciliation;
 2. si l'état est `ARMED`, produire d'abord `ALARM_SOUND_STOPPED`, `ALARM_FIRED` ou `TRIGGER_ELAPSED` selon le fait observé;
-3. vérifier de nouveau le boîtier scanné contre `boxID` et `boxTokenSha256Hex` de `NiumiSessionRecord` (jamais contre le Keychain courant) avec le parseur et le vérificateur `NiumiCore`;
+3. vérifier de nouveau le boîtier scanné contre la liste de boîtiers figée dans `NiumiSessionRecord` (jamais contre le Keychain courant) avec le parseur et le vérificateur `NiumiCore`, qui reconnaît n'importe lequel des boîtiers de la liste;
 4. créer l'identifiant d'événement et l'horodatage, puis envoyer `VALID_NFC_SCANNED` au moteur commun avec la `NfcVerificationProof` opaque retournée par `verifyBox()` pour cette session et cette révision;
 5. persister atomiquement `nfcVerifiedAt`, `releaseTarget`, `RELEASING`, le reçu et l'outbox dans SwiftData;
 6. publier le snapshot avec la même `domainRevision`;
@@ -881,7 +881,7 @@ L'écran de réveil met le scan au premier plan. Il ne comporte aucun bouton `Te
 
 Hors session, permettre de:
 
-- changer le boîtier associé;
+- gérer les boîtiers associés (ajouter, renommer, retirer);
 - modifier les applications choisies;
 - consulter l'état des autorisations;
 - consulter une courte explication des limites iOS;
@@ -999,7 +999,7 @@ Niumi ne prétend pas résister à une personne qui désinstalle l'application, 
 - reprise depuis `RELEASING`;
 - mapping aller-retour entre SwiftData et les DTO KMP, puis mapping de projection pour le snapshot App Group, champs `blocking*` compris, et lecture d'un enregistrement de `schemaVersion` 1 comme blocage immédiat;
 - conversion de `blockingStarted` vers `BLOCKING_START_ELAPSED` et application des shields à la réconciliation quand l'instant de début est atteint sans shields;
-- vérification effectuée contre `boxID` et `boxTokenSha256Hex` de `NiumiSessionRecord`, refusée si le Keychain a changé depuis l'activation;
+- vérification effectuée contre la liste de boîtiers figée dans `NiumiSessionRecord`, refusée pour un boîtier ajouté au Keychain depuis l'activation;
 - conversion de `alarmStopped` vers `ALARM_SOUND_STOPPED`;
 - routage vers l'écran de réveil déclenché par `PRESENT_SCAN_REQUEST` au lancement et au retour au premier plan;
 - réconciliation sérialisée d'une alarme `.scheduled`, `.alerting`, absente après lecture réussie ou illisible, avant, exactement à et après l'heure, avant un scan;
@@ -1079,7 +1079,7 @@ Matrice minimale:
 
 La version iPhone est acceptée si tous les critères suivants sont remplis:
 
-1. une session ne peut être activée sans alarme autorisée, sélection de 1 à 50 applications et boîtier associé;
+1. une session ne peut être activée sans alarme autorisée, sélection de 1 à 50 applications et de un à cinq boîtiers associés;
 2. la configuration de shield est demandée immédiatement après une activation réussie, puis son affichage est confirmé pendant la recette sur appareil;
 3. l'alarme est enregistrée dans AlarmKit pour la date affichée;
 4. la fermeture de l'application ne termine pas la session;

@@ -25,11 +25,13 @@ class NfcVerificationProofTest {
                             boxId = "550e8400-e29b-41d4-a716-446655440000",
                             tokenBytes = ByteArray(16),
                         ),
-                    credential =
-                        PairedBoxCredential(
-                            protocolVersion = 1,
-                            boxId = "550e8400-e29b-41d4-a716-446655440000",
-                            tokenSha256Hex = Sha256.hexOf(Sha256.hash(ByteArray(16))),
+                    credentials =
+                        listOf(
+                            PairedBoxCredential(
+                                protocolVersion = 1,
+                                boxId = "550e8400-e29b-41d4-a716-446655440000",
+                                tokenSha256Hex = Sha256.hexOf(Sha256.hash(ByteArray(16))),
+                            ),
                         ),
                     context =
                         NfcVerificationContext(

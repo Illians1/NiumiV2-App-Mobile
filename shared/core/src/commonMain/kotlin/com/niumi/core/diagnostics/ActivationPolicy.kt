@@ -58,8 +58,11 @@ public object ActivationPolicy {
         if (blockingStartsAt != null && blockingStartsAt >= input.triggerAtEpochMillis) {
             reasons += ActivationReason(ActivationReasonCode.BLOCKING_START_NOT_BEFORE_TRIGGER, checkId = null)
         }
-        if (!input.hasPairedBox) {
+        // Contrat 1.4 : de un à cinq boîtiers, bornes communes comme celles des applications.
+        if (input.pairedBoxCount < PairedBoxLimit.MIN) {
             reasons += ActivationReason(ActivationReasonCode.NO_PAIRED_BOX, checkId = null)
+        } else if (input.pairedBoxCount > PairedBoxLimit.MAX) {
+            reasons += ActivationReason(ActivationReasonCode.TOO_MANY_PAIRED_BOXES, checkId = null)
         }
         return reasons
     }
