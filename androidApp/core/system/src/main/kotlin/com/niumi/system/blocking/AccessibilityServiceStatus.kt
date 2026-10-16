@@ -20,14 +20,17 @@ interface AccessibilityServiceStatus {
 }
 
 /**
- * État du service d'accessibilité de Niumi lu dans les réglages système (étape 25).
+ * État du service d'accessibilité de Niumi (étape 25) : la liste des services choisie par
+ * l'utilisateur, lue dans les réglages système, croisée avec la liaison du service **dans ce
+ * processus** ([AccessibilityServiceBinding], 2026-10-15).
  *
- * [PENDING] — inscrit dans `enabled_accessibility_services` mais `accessibility_enabled` à 0 — est
- * un état **transitoire** juste après le déverrouillage : Android relie les services
- * d'accessibilité après celui-ci, pas instantanément (mesuré le 2026-09-27 : l'état existait 0,3 s
- * après le déverrouillage et avait disparu 15 s plus tard). C'est aussi un état **durable** après
- * une mort du processus sur HyperOS, où Android ne relie plus le service tant que l'utilisateur ne
- * l'a pas réactivé (mesuré le 2026-09-25). Seule la durée les distingue.
+ * [PENDING] — inscrit dans `enabled_accessibility_services` mais aucune instance connectée dans ce
+ * processus — est un état **transitoire** juste après le déverrouillage : Android relie les
+ * services d'accessibilité après celui-ci, pas instantanément (mesuré le 2026-09-27 : l'état
+ * existait 0,3 s après le déverrouillage et avait disparu 15 s plus tard ; liaison relevée 2,3 à
+ * 3,6 s après). C'est aussi un état **durable** après une mort du processus sur HyperOS, où
+ * Android ne relie plus le service tant que l'utilisateur ne l'a pas réactivé (mesuré le
+ * 2026-09-25). Seule la durée les distingue.
  */
 enum class AccessibilityServiceState {
     ENABLED,
@@ -38,12 +41,12 @@ enum class AccessibilityServiceState {
     companion object {
         /** Règle pure, testable en JVM : `Settings.Secure` ne l'est pas. */
         fun of(
-            globallyEnabled: Boolean,
             listed: Boolean,
+            bound: Boolean,
         ): AccessibilityServiceState =
             when {
                 !listed -> DISABLED
-                globallyEnabled -> ENABLED
+                bound -> ENABLED
                 else -> PENDING
             }
     }

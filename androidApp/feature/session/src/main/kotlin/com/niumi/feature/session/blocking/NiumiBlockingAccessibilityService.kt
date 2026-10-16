@@ -10,6 +10,7 @@ import com.niumi.system.blocking.BlockAction
 import com.niumi.system.blocking.BlockedPackagesProjection
 import com.niumi.system.blocking.BlockingDecision
 import com.niumi.system.blocking.BlockingProjectionRefresher
+import com.niumi.system.blocking.InMemoryAccessibilityServiceBinding
 import com.niumi.system.common.OperationResult
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +40,11 @@ import javax.inject.Inject
  * service porte le token de fenêtre autorisant `TYPE_ACCESSIBILITY_OVERLAY`
  * (voir [WindowManagerBlockOverlayController]). Même motif que `AlarmNfcScanCoordinator`,
  * instancié à la main par `AlarmActivity` faute d'un contexte injectable pertinent.
+ *
+ * Le service annonce lui-même sa liaison au diagnostic (SPEC_ANDROID §13.1, 2026-10-15) par
+ * [binding] : relié à [onServiceConnected], délié à [onUnbind] et [onDestroy]. Un réglage système
+ * ne peut pas le dire à sa place — l'interrupteur global d'accessibilité reste à 1 tant qu'une
+ * autre application en tient un service, Niumi délié ou non.
  */
 @AndroidEntryPoint
 class NiumiBlockingAccessibilityService : AccessibilityService() {
@@ -50,6 +56,9 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
 
     @Inject
     lateinit var technicalEventLog: TechnicalEventLog
+
+    @Inject
+    lateinit var binding: InMemoryAccessibilityServiceBinding
 
     /**
      * `Dispatchers.Main.immediate` : le cache de la projection est lu par
@@ -71,6 +80,9 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // Hors des gardes qui suivent : une reconnexion doit remarquer la liaison même si l'overlay
+        // et l'abonnement tiennent déjà.
+        binding.markConnected()
         // Peut être rappelé à chaque reconnexion : ne recrée ni l'overlay ni l'abonnement si
         // l'un et l'autre tiennent déjà.
         if (overlayController == null) {
@@ -183,11 +195,18 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
     }
 
     override fun onUnbind(intent: android.content.Intent?): Boolean {
+        binding.markDisconnected()
         overlayController?.hide()
         overlayController = null
         refreshScope?.cancel()
         refreshScope = null
         return super.onUnbind(intent)
+    }
+
+    /** Filet : un service détruit sans `onUnbind` ne doit pas rester annoncé comme relié. */
+    override fun onDestroy() {
+        binding.markDisconnected()
+        super.onDestroy()
     }
 
     private companion object {

@@ -109,7 +109,7 @@ Repris des étapes 19 et 20 plutôt que présentés comme résolus.
    n'est pas mesuré (B1, B2).
 9. **Même mécanisme pour toute mort du processus** (essai 3, 2026-09-25) : alarme de début
    conservée, blocage suspendu jusqu'à la réactivation du service. C'est ce qui sépare le critère 26
-   de la ligne §20 « processus tué avant l'heure de début ». Sans parade connue : Android ne laisse pas une
+   de la ligne §20 « processus tué avant l'heure de début ». Sa détection dépend de l'écart 12. Sans parade connue : Android ne laisse pas une
    application relier son propre service d'accessibilité. **Limite écrite dans l'aide le 30/09**
    (`LIMITES.md`, puce « si Niumi est arrêté pendant une session ») et ligne §20 requalifiée en
    limite consignée.
@@ -134,6 +134,19 @@ Repris des étapes 19 et 20 plutôt que présentés comme résolus.
     l'alarme en attente, plus les statistiques du dump. Reste perfectible : la ligne « notification »
     du relevé capte le résumé de groupe d'Android au lieu de la notification de sonnerie, et le code
     de sortie est toujours 0.
+12. **Une mort du processus n'était pas signalée dès qu'une autre application d'accessibilité
+    tournait** (mesuré le 15/10, session F de l'étape 28, avec « Brick App Blocker » actif). Le
+    contrôle lisait l'interrupteur global `accessibility_enabled`, à 1 tant qu'un service
+    quelconque tourne : Niumi délié (« Crashed services ») était lu « actif », aucun
+    `BLOCKING_PERMISSION_REVOKED`, blocage coupé en silence. Les mesures du 25/09 (écart 9)
+    n'avaient réussi que parce que Niumi était alors seul. **Traité le 16/10** : le service annonce
+    lui-même sa liaison dans le processus (`AccessibilityServiceBinding`), l'interrupteur global
+    n'est plus lu ; règle en JVM, lecture réelle en instrumenté. **Mesuré le 16/10**, Brick actif,
+    `accessibility_enabled` resté à 1 : incident et notification 30,7 s après la réouverture de
+    Niumi, « Rétabli depuis » à la réactivation, aucun faux incident au redémarrage (liaison 5,9 s
+    après le déverrouillage). Ce qui reste : l'avertissement arrive au plus tard 30 s après la
+    relance du processus (fenêtre `UnlockSettling`), et rien ne relance Niumi fermé — détection au
+    prochain démarrage du processus seulement.
 
 ## Préconditions de publication à la charge de l'utilisateur
 

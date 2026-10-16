@@ -182,8 +182,10 @@ class AndroidDeviceReadinessChecker(
         listOf(
             // Avant le premier déverrouillage, ce contrôle ne peut rien dire de vrai : Android
             // refuse de lier un service d'accessibilité non `directBootAware` (« Ignoring
-            // non-encryption-aware service ») et remet `accessibility_enabled` à 0 tant qu'aucun
-            // service ne tourne — alors que le réglage de l'utilisateur, lui, n'a pas bougé.
+            // non-encryption-aware service »), donc Niumi n'est pas relié dans ce processus
+            // (`AccessibilityServiceBinding`) — alors que le réglage de l'utilisateur, lui, n'a
+            // pas bougé. (Mesuré à l'étape 19 par `accessibility_enabled` à 0, l'indice de
+            // l'époque ; la liaison dans le processus l'a remplacé le 2026-10-15.)
             //
             // `FAILED` y était doublement faux, mesuré sur appareil le 2026-09-14 (étape 19) : un
             // incident `BLOCKING_PERMISSION_REVOKED` `CRITICAL` mensonger était consigné avec sa

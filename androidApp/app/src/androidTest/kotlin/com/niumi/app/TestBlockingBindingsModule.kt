@@ -18,9 +18,11 @@ import javax.inject.Singleton
  * `ACCESSIBILITY_SERVICE` échoue : sans cette doublure, un test de réconciliation d'une session
  * `ARMED` ne prouverait rien du tout, la passe s'arrêtant avant d'atteindre ce qu'il observe.
  *
- * Écarté : écrire `accessibility_enabled` et `enabled_accessibility_services` par `settings put
- * secure`. Cela n'achèterait rien — `AndroidAccessibilityServiceStatus` ne lit que ces deux clés,
- * déjà couvertes en JVM — et **lierait réellement** le service : §12.4 lui impose de rejouer
+ * Écarté : écrire `enabled_accessibility_services` par `settings put secure`. Cela n'achèterait
+ * rien — `AndroidAccessibilityServiceStatus` croise cette liste avec la liaison du service dans le
+ * processus (`AccessibilityServiceBinding`, 2026-10-15), qui reste fausse sous instrumentation
+ * puisque le service n'y est jamais relié ; la règle est couverte en JVM — et **lierait
+ * réellement** le service : §12.4 lui impose de rejouer
  * `BlockingDecision.decide` sur le dernier package vu quand la projection passe d'inactive à
  * active, donc un test pourrait renvoyer l'instrumentation à l'accueil et poser un overlay au
  * milieu de la passe suivante.

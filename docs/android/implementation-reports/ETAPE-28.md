@@ -541,6 +541,65 @@ deux limites, chacune mesurée : la pré-écoute et l'alarme suivent le volume d
 celui des médias (contrôle annexe du matin, sessions A à F sur `STREAM_ALARM`) ; après une mort du
 processus relancé, une coupure d'une ou deux secondes puis la reprise au même niveau (session F).
 
+## Défaut trouvé après la campagne — mort du processus invisible au diagnostic (15/10, corrigé le 16/10)
+
+Après la session F, l'utilisateur a remarqué que Niumi n'affichait **aucun avertissement** alors que
+son service d'accessibilité n'était plus relié. État réel relevé par adb :
+
+```text
+enabled_accessibility_services = com.niumi.app/…NiumiBlockingAccessibilityService:com.brickllc.brick/…BrickAccessibilityService
+accessibility_enabled          = 1
+dumpsys accessibility : Bound services {Brick App Blocker} ; Crashed services {com.niumi.app/…}
+```
+
+**Cause.** `AndroidAccessibilityServiceStatus` déduisait « relié » de l'interrupteur global
+`Settings.Secure.ACCESSIBILITY_ENABLED`, qu'Android met à 1 dès qu'**un** service d'accessibilité
+tourne. « Brick App Blocker » le tenait à 1 pendant que Niumi, mort puis relancé, n'était plus
+relié. Les mesures de l'étape 25 (25/09, `BLOCKING_PERMISSION_REVOKED` bien consigné après une mort
+du processus) n'avaient réussi que parce que Niumi était alors le seul service d'accessibilité de
+l'appareil. Conséquence : avec une autre application d'accessibilité — profil réaliste pour un
+utilisateur de Niumi —, une mort du processus coupait le blocage en silence, et l'aide (« Niumi te
+prévient dès qu'il tourne à nouveau ») mentait.
+
+**Correction (plan approuvé par l'utilisateur, TDD).** Le service annonce lui-même sa liaison dans
+le processus : `AccessibilityServiceBinding` / `InMemoryAccessibilityServiceBinding` (`:core:system`,
+lié par `BlockingModule`), marqué relié à `onServiceConnected`, délié à `onUnbind` et à un
+`onDestroy` ajouté. `AccessibilityServiceState.of(listed, bound)` remplace `of(globallyEnabled,
+listed)` ; `ACCESSIBILITY_ENABLED` n'est plus lu. Rien d'autre ne change : `PENDING` garde son sens
+(« inscrit mais non relié »), la fenêtre `UnlockSettling` de 30 s et le `ReadinessRecheck` couvrent à
+l'identique la liaison après déverrouillage et, pour un processus relancé après une mort, le verdict
+`FAILED` à la fin de sa propre fenêtre. Tests : `InMemoryAccessibilityServiceBindingTest` (nouveau),
+`AccessibilityServiceStateTest` (table réécrite, cas du défaut), instrumenté
+`AndroidAccessibilityServiceStatusInstrumentedTest` (lecture réelle de la liste, liaison simulée :
+inconnu → `DISABLED`, listé non relié → `PENDING`, listé relié → `ENABLED`). Specs : SPEC_ANDROID
+§7.1, §12.2, §13 (tableau), §13.1 (nouvel alinéa daté), §15, §19.2 ; `RELEASE_REPORT.md` écart 12 ;
+plan maître, point de vigilance 17.
+
+`AccessibilityManager.getEnabledAccessibilityServiceList` a été envisagé puis écarté : la
+documentation officielle (relue par Context7) n'en fixe pas la sémantique « services liés seulement ».
+
+**Validé sur appareil le 2026-10-16**, Xiaomi 25080RABDG / Android 16, « Brick App Blocker » actif
+pendant tout le protocole :
+
+| Essai | Résultat |
+| --- | --- |
+| tests instrumentés | `:feature:session` 3/3 (les trois cas de `AndroidAccessibilityServiceStatusInstrumentedTest` exécutés, aucun ignoré : la liste contenait Brick), `:app` 12/12 |
+| écran de consentement, retour des réglages après activation | « Service actif » immédiatement (constat de l'utilisateur) ; Niumi et Brick reliés dans `dumpsys accessibility` |
+| session `ARMED`, blocage immédiat, `am crash` à 18:08:04 | Niumi dans « Crashed services », seul Brick relié, **`accessibility_enabled` toujours à 1** — l'ancien critère aurait lu « actif » |
+| réouverture de Niumi 22 s après | `SESSION_READINESS_DEGRADED`, `ACCESSIBILITY_DISABLED`, incident `BLOCKING_PERMISSION_REVOKED` `CRITICAL` **30,7 s après le démarrage du processus** (fenêtre `UnlockSettling`), avertissement à l'écran, notification « Vérifie ton réveil Niumi — Le service d'accessibilité de Niumi est désactivé. Tes applications ne sont plus bloquées. » |
+| réactivation dans les réglages | avertissement retiré, « Rétabli depuis » (constat de l'utilisateur), notification retirée, Niumi relié |
+| redémarrage, session `ARMED` | `ALARM_RESCHEDULED` 6,7 s **avant** le déverrouillage ; Niumi relié **5,9 s après** le déverrouillage ; sur les 56 s suivantes : aucun `ACCESSIBILITY_DISABLED`, aucun nouvel incident, aucune notification d'avertissement, session toujours `ARMED` |
+
+Réserve sur le dernier essai : l'incident est enregistré une fois par code et par session, et celui de
+l'essai 2 existait déjà ; c'est l'absence d'`ACCESSIBILITY_DISABLED` et de notification qui prouve
+que le contrôle n'a pas échoué pendant la liaison.
+
+**Limite confirmée, hors de ce correctif** : application fermée après une mort du processus, rien ne
+relance Niumi (processus absent jusqu'à la réouverture). L'avertissement n'arrive qu'au prochain
+démarrage du processus — ouverture, réveil, redémarrage, alarme de début différé. C'est ce que dit
+l'aide (« dès qu'il tourne à nouveau »). Le combler demanderait un réveil périodique de Niumi :
+décision produit non prise.
+
 ## Ce qui reste
 
 - **Réécouter « Piano », « Cloche » et « Énergique » avec le lecteur `AudioTrack`** — reporté par
@@ -567,6 +626,12 @@ processus relancé, une coupure d'une ou deux secondes puis la reprise au même 
   `DataStoreAlarmSoundPreferencesInstrumentedTest.kt`, `LIMITES.md`, `HelpTexts.kt`,
   `QA_MATRIX.md` (sous-section Lot 7), `RELEASE_REPORT.md` (critères 30 à 35, renumérotation),
   `RESTE_A_FAIRE.md` (B1, B2, section D).
+- Liaison du service d'accessibilité (16/10) : créé `blocking/AccessibilityServiceBinding.kt`
+  (`:core:system`) ; modifiés `blocking/AccessibilityServiceStatus.kt`,
+  `blocking/AndroidAccessibilityServiceStatus.kt`, `di/BlockingModule.kt`,
+  `readiness/AndroidDeviceReadinessChecker.kt` (commentaire), `di/SessionBlockingModule.kt` et
+  `blocking/NiumiBlockingAccessibilityService.kt` (`:feature:session`), tests JVM et instrumenté,
+  KDoc de `TestBlockingBindingsModule` (`:app`) ; SPEC_ANDROID, `RELEASE_REPORT.md`, plan maître.
 
 ## Incertitudes et limites
 
@@ -620,6 +685,8 @@ tools/validate_alarm.sh 300                                                  # 2
 # `adb reboot`, `adb shell am crash com.niumi.app`, base Room copiée par `run-as … cat` et lue en sqlite3
 ./gradlew :shared:core:jvmTest testDebugUnitTest :app:testReleaseUnitTest ktlintCheck detekt \
   :app:lintRelease :app:assembleRelease :app:bundleRelease                    # 2026-10-15, final : BUILD SUCCESSFUL, 1 296 exécutions JVM
+./gradlew :core:system:testDebugUnitTest :feature:session:testDebugUnitTest :app:testDebugUnitTest \
+  :app:assembleDebug ktlintCheck detekt :app:lintDebug                        # 2026-10-16, liaison du service : BUILD SUCCESSFUL
 ```
 
 **Rien n'est committé.**

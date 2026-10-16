@@ -5,6 +5,7 @@ import com.niumi.feature.session.blocking.AndroidBlockingController
 import com.niumi.feature.session.blocking.BlockOverlayController
 import com.niumi.feature.session.blocking.NiumiBlockingAccessibilityService
 import com.niumi.feature.session.blocking.WindowManagerBlockOverlayController
+import com.niumi.system.blocking.AccessibilityServiceBinding
 import com.niumi.system.blocking.AccessibilityServiceStatus
 import com.niumi.system.blocking.AndroidAccessibilityServiceStatus
 import com.niumi.system.blocking.BlockingController
@@ -28,10 +29,12 @@ object SessionBlockingModule {
     @Singleton
     fun provideAccessibilityServiceStatus(
         @ApplicationContext context: Context,
+        binding: AccessibilityServiceBinding,
     ): AccessibilityServiceStatus =
         AndroidAccessibilityServiceStatus(
             contentResolver = context.contentResolver,
             expectedComponent = "${context.packageName}/${NiumiBlockingAccessibilityService::class.java.name}",
+            binding = binding,
         )
 
     @Provides
