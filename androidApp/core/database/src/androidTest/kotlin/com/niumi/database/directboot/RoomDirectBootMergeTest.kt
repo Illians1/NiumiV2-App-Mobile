@@ -12,6 +12,7 @@ import com.niumi.database.PendingEffect
 import com.niumi.database.RoomSessionStore
 import com.niumi.database.RoomTestFixtures
 import com.niumi.database.StoredDecision
+import com.niumi.database.mapping.toDomain
 import com.niumi.database.newInMemoryDatabase
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -197,8 +198,7 @@ class RoomDirectBootMergeTest {
         runTest {
             val tampered =
                 projection(revision = 5, state = SessionState.ARMED).copy(
-                    boxId = "ffffffff-ffff-ffff-ffff-ffffffffffff",
-                    boxTokenSha256Hex = "f".repeat(64),
+                    boxes = listOf(DirectBootBox("ffffffff-ffff-ffff-ffff-ffffffffffff", "f".repeat(64))),
                     ringtoneKey = "autre_sonnerie",
                     vibrationEnabled = false,
                     volumeRampSeconds = 5,
@@ -207,11 +207,24 @@ class RoomDirectBootMergeTest {
             merge.merge(tampered)
 
             val entity = requireNotNull(database.sessionDao().findById(SESSION_ID))
-            assertThat(entity.boxId).isEqualTo(RoomTestFixtures.extras().boxId)
-            assertThat(entity.boxTokenSha256Hex).isEqualTo(RoomTestFixtures.extras().boxTokenSha256Hex)
             assertThat(entity.ringtoneKey).isEqualTo(RoomTestFixtures.extras().ringtoneKey)
             assertThat(entity.vibrationEnabled).isEqualTo(RoomTestFixtures.extras().vibrationEnabled)
             assertThat(entity.volumeRampSeconds).isEqualTo(RoomTestFixtures.extras().volumeRampSeconds)
+        }
+
+    /** §7.2, Lot 8 : la fusion ne touche jamais `session_box`, qui reste celle de Room. */
+    @Test
+    fun frozenBoxListIsNeverOverwrittenByTheProjection() =
+        runTest {
+            val tampered =
+                projection(revision = 5, state = SessionState.ARMED).copy(
+                    boxes = listOf(DirectBootBox("ffffffff-ffff-ffff-ffff-ffffffffffff", "f".repeat(64))),
+                )
+
+            merge.merge(tampered)
+
+            val boxes = database.sessionBoxDao().forSession(SESSION_ID).map { it.toDomain() }
+            assertThat(boxes).isEqualTo(RoomTestFixtures.extras().boxes)
         }
 
     /**

@@ -8,6 +8,7 @@ import com.niumi.database.BlockedPackage
 import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
+import com.niumi.database.SessionBox
 import com.niumi.database.StoredDecision
 import com.niumi.database.incident.SessionIncidentsReader
 import com.niumi.database.logging.TechnicalEventEntry
@@ -88,8 +89,7 @@ fun presentSession(
         snapshot = snapshot,
         extras =
             AndroidSessionExtras(
-                boxId = "550e8400-e29b-41d4-a716-446655440000",
-                boxTokenSha256Hex = "a".repeat(64),
+                boxes = listOf(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), "Boîtier 1")),
                 ringtoneKey = "niumi_piano",
                 vibrationEnabled = true,
                 volumeRampSeconds = 120,

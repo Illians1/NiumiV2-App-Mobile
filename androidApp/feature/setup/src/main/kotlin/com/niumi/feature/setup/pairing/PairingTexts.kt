@@ -23,14 +23,10 @@ object PairingTexts {
 
     const val UNKNOWN_PAYLOAD = "Ce tag n'est pas un boîtier Niumi."
 
-    const val REPLACE_QUESTION = "Remplacer le boîtier actuel ?"
+    /** Lot 8 : remplace le dialogue de remplacement — un boîtier déjà associé n'est pas réassocié. */
+    const val ALREADY_PAIRED = "Ce boîtier est déjà associé."
 
-    const val REPLACE_EXPLANATION =
-        "Un seul boîtier peut être associé. L'ancien ne pourra plus terminer tes sessions."
-
-    const val REPLACE_CONFIRM_BUTTON_LABEL = "Remplacer"
-
-    const val REPLACE_CANCEL_BUTTON_LABEL = "Garder l'actuel"
+    const val LIMIT_REACHED = "5 boîtiers maximum."
 
     const val PAIRED = "Boîtier associé."
 

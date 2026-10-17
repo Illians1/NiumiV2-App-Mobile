@@ -126,7 +126,7 @@ class SummaryViewModel
                     display = display,
                     blockingDisplay = blockingDisplay,
                     blockedPackages = preview.blockedPackages,
-                    boxId = preview.boxId,
+                    boxNames = preview.boxNames,
                     isAllowed = preview.canActivate,
                     isLoading = false,
                     message = previewMessage(preview),

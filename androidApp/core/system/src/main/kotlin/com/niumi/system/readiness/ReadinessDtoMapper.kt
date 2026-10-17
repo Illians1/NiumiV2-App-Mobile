@@ -38,9 +38,8 @@ fun ReadinessReport.toActivationPolicyInput(): ActivationPolicyInputDto =
         // début absent n'est pas un début invalide, c'est l'absence de choix différé.
         blockingStartsAtEpochMillis = candidateBlockingStartsAtEpochMillis,
         nowEpochMillis = nowEpochMillis,
-        // Contrat 1.4 : la politique compte les boîtiers. Transitoire jusqu'à l'étape 30 du Lot 8,
-        // où le rapport portera le vrai compte ; un boîtier associé vaut 1, aucun vaut 0.
-        pairedBoxCount = if (hasPairedBox) 1 else 0,
+        // Contrat 1.4 (Lot 8) : le rapport porte désormais le vrai compte.
+        pairedBoxCount = pairedBoxCount,
     )
 
 /**

@@ -7,10 +7,10 @@ import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionStateDto
 
 /**
- * Session persistée, colonnes exactes de SPEC_ANDROID §7.2. `boxId` et `boxTokenSha256Hex` sont
- * copiés depuis `PairedBoxEntity` à `ACTIVATION_REQUESTED` et figés pour la durée de la session
- * (§7.2, dernier alinéa) : `RoomSessionStore.commitDecision` les reprend de la ligne existante
- * plutôt que de l'appelant. `localDate`/`localTime` reprennent le nom de colonne de §7.2, qui
+ * Session persistée, colonnes exactes de SPEC_ANDROID §7.2. La liste des boîtiers associés est
+ * figée à part, dans [SessionBoxEntity] (`session_box`, Lot 8) sur le modèle de
+ * [BlockedAppEntity] : `RoomSessionStore.commitDecision` l'écrit à la création de la session,
+ * jamais depuis l'appelant. `localDate`/`localTime` reprennent le nom de colonne de §7.2, qui
  * diffère de `localDateIso`/`localTimeIso` du DTO (SPEC_CORE_KMP §7.2) : divergence absorbée par
  * `SessionSnapshotMapper`.
  *
@@ -39,8 +39,6 @@ data class AlarmSessionEntity(
     val state: SessionStateDto,
     val releaseTarget: ReleaseTargetDto?,
     val health: SessionHealthDto,
-    val boxId: String,
-    val boxTokenSha256Hex: String,
     val ringtoneKey: String,
     val vibrationEnabled: Boolean,
     val volumeRampSeconds: Int?,

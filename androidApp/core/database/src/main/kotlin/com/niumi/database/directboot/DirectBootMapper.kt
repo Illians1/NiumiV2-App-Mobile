@@ -55,8 +55,7 @@ object DirectBootMapper {
             ringtoneKey = extras.ringtoneKey,
             vibrationEnabled = extras.vibrationEnabled,
             volumeRampSeconds = extras.volumeRampSeconds,
-            boxId = extras.boxId,
-            boxTokenSha256Hex = extras.boxTokenSha256Hex,
+            boxes = extras.boxes.map { it.toProjection() },
             blockedPackages = extras.blockedPackages.map { it.toProjection() },
             eventReceipts = receipts.map { it.toProjection() },
             pendingEffects = effects.map { it.toProjection() },
@@ -117,11 +116,15 @@ fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
  * se lit comme sa remplaçante — même règle que `MIGRATION_3_4`, que la projection n'atteint pas
  * avant la fusion. Sans elle, un réveil après redémarrage, avant tout déverrouillage, sonnerait par
  * le repli de `RingingSoundResolver`.
+ *
+ * **Lecture d'un fichier v1, v2 ou v3 (Lot 8, SPEC_ANDROID §7.3).** `boxes` y est absent (liste
+ * vide, valeur par défaut) ; la liste figée se reconstruit depuis les deux anciens champs à plat,
+ * sans nom : c'est le seul renseignement dont ce fichier a jamais eu besoin pour que le scan
+ * reconnaisse le boîtier d'origine avant déverrouillage.
  */
 fun DirectBootSnapshot.Active.toExtras(): AndroidSessionExtras =
     AndroidSessionExtras(
-        boxId = boxId,
-        boxTokenSha256Hex = boxTokenSha256Hex,
+        boxes = if (hasMultipleBoxes) boxes.map { it.toDomain() } else listOf(legacyBox()),
         ringtoneKey = if (hasRingtoneCatalog) ringtoneKey else LegacyRingtone.migrate(ringtoneKey),
         vibrationEnabled = vibrationEnabled,
         volumeRampSeconds = volumeRampSeconds,
@@ -160,3 +163,6 @@ private val DirectBootSnapshot.Active.isLegacyProjection: Boolean
 
 private val DirectBootSnapshot.Active.hasRingtoneCatalog: Boolean
     get() = projectionSchemaVersion >= PROJECTION_VERSION_WITH_RINGTONE_CATALOG
+
+private val DirectBootSnapshot.Active.hasMultipleBoxes: Boolean
+    get() = projectionSchemaVersion >= PROJECTION_VERSION_WITH_MULTIPLE_BOXES

@@ -4,6 +4,8 @@ import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.core.interop.SessionEventDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
+import com.niumi.database.pairing.PairedBoxAddResult
+import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.apps.AppSelectionStore
 import com.niumi.system.common.TimeZoneProvider
@@ -67,23 +69,34 @@ class RecordingTimeZoneProvider(
 
 class RecordingPairedBoxStore(
     private val journal: CallJournal,
-    var credential: PairedBoxCredentialDto?,
+    var boxes: List<PairedBoxDto>,
 ) : PairedBoxStore {
-    var currentCallCount = 0
+    var allCallCount = 0
         private set
 
-    override suspend fun current(): PairedBoxCredentialDto? {
-        journal.record("pairedBox.current")
-        currentCallCount++
-        return credential
+    override suspend fun all(): List<PairedBoxDto> {
+        journal.record("pairedBox.all")
+        allCallCount++
+        return boxes
     }
 
-    override suspend fun replace(credential: PairedBoxCredentialDto) {
-        this.credential = credential
+    override suspend fun add(
+        credential: PairedBoxCredentialDto,
+        name: String,
+    ): PairedBoxAddResult {
+        boxes = boxes + PairedBoxDto(credential, name)
+        return PairedBoxAddResult.Added
     }
 
-    override suspend fun clear() {
-        credential = null
+    override suspend fun rename(
+        boxId: String,
+        name: String,
+    ) {
+        boxes = boxes.map { if (it.credential.boxId == boxId) it.copy(name = name) else it }
+    }
+
+    override suspend fun remove(boxId: String) {
+        boxes = boxes.filterNot { it.credential.boxId == boxId }
     }
 }
 

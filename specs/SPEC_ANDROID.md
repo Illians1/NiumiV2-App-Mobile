@@ -342,8 +342,6 @@ blockingAppliedAtEpochMillis: Long?
 state: SessionState
 releaseTarget: ReleaseTarget?
 health: SessionHealth
-boxId: String
-boxTokenSha256Hex: String
 ringtoneKey: String
 vibrationEnabled: Boolean
 volumeRampSeconds: Int?
@@ -361,7 +359,7 @@ failureCode: String?
 
 `failureCode` n'est renseigné que lorsqu'une session termine son activation dans l'état `FAILED`. Les incidents postérieurs à l'armement sont stockés séparément.
 
-`boxId` et `boxTokenSha256Hex` sont copiés depuis `PairedBoxEntity` à l'étape `ACTIVATION_REQUESTED` et figés pour la durée de la session. `HandleValidNfcUseCase` vérifie toujours le scan contre ces deux valeurs de la session active, jamais contre `PairedBoxEntity` directement, afin qu'une ré-association ne puisse pas changer le boîtier attendu d'une session en cours.
+**Lot 8 (boîtiers multiples) :** la liste des boîtiers associés (`PairedBoxEntity`) est copiée en entier dans la table enfant `session_box` à l'étape `ACTIVATION_REQUESTED` et figée pour la durée de la session, sur le modèle exact de `blocked_app`. `HandleValidNfcUseCase` vérifie toujours le scan contre cette liste figée, jamais contre `PairedBoxEntity` directement, afin qu'une association, un retrait ou un renommage postérieur à l'activation ne puisse pas changer la liste attendue d'une session en cours.
 
 `ringtoneKey`, `vibrationEnabled` et `volumeRampSeconds` (`null` = volume constant) sont eux aussi copiés à `ACTIVATION_REQUESTED`, et aucune décision du moteur ne les réécrit : la session déjà persistée fait foi, jamais l'appelant (`RoomSessionStore.freezeFrom`). **Lot 7 :** `ringtoneKey` et `volumeRampSeconds` ont un unique chemin d'écriture hors activation, `SessionCoordinator.updateAlarmSound`, refusé hors de `ARMED` et avant déverrouillage (3, 10.2). `vibrationEnabled` n'en a aucun.
 
@@ -374,13 +372,29 @@ displayNameSnapshot: String
 clé primaire composée: sessionId + packageName
 ```
 
-`PairedBoxEntity`:
+`PairedBoxEntity` (Lot 8 : `+ name`, `+ position`) :
 
 ```text
 boxId: String, clé primaire
 protocolVersion: Int
 tokenSha256: String hexadécimal
 pairedAtEpochMillis: Long
+name: String, 1 à 30 caractères après trim()
+position: Int, ordre d'affichage, 0 en tête
+```
+
+`SessionBoxEntity` (Lot 8), sur le modèle exact de `BlockedAppEntity` : la liste des boîtiers
+figée dans la session à l'activation.
+
+```text
+sessionId: String
+boxId: String
+tokenSha256: String hexadécimal
+name: String
+position: Int
+clé primaire composée: sessionId + boxId
+clé étrangère: sessionId → alarm_session.id, ON DELETE CASCADE
+index: sessionId
 ```
 
 `TechnicalEventEntity`:
@@ -413,6 +427,31 @@ Le journal conserve au maximum les 200 derniers événements. Il ne doit conteni
 **v3 (Lot 6, blocage différé).** `alarm_session` gagne les quatre colonnes `blocking*`, toutes nullables (§7.2 ci-dessus), et `MIGRATION_2_3` est additive : les lignes existantes reçoivent `NULL` pour `blockingLocalDate`, `blockingLocalTime` et `blockingStartsAtEpochMillis` (blocage immédiat) et `createdAtEpochMillis` pour `blockingAppliedAtEpochMillis` — une session en cours pendant la mise à jour avait demandé son blocage à l'activation — puis `schemaVersion = 2` (SPEC_CORE_KMP §7.1). Schéma v3 committé sous `androidApp/core/database/schemas/`, migration testée depuis une base v2 peuplée d'une session `ARMED`.
 
 **v4 (Lot 7, sonneries et volume progressif).** `alarm_session` gagne `volumeRampSeconds INTEGER`, nullable. `MIGRATION_3_4` ajoute la colonne (`NULL` pour les lignes existantes : volume constant, puisqu'une session armée avant la mise à jour n'a pas choisi de montée), puis réécrit `ringtoneKey = 'niumi_alarm'` — la sonnerie unique du MVP, retirée de l'APK — en `'niumi_piano'`, sonnerie par défaut. Aucune autre table n'est touchée. Sans cette réécriture, une session armée avant la mise à jour sonnerait avec une clé sans ressource ; le repli de 10.2 la rattraperait, mais journaliserait à tort `RINGTONE_FALLBACK`. Schéma v4 committé, migration testée depuis une base v3 peuplée d'une session `ARMED` en `niumi_alarm`.
+
+**v5 (Lot 8, boîtiers multiples).** `paired_box` gagne `name` et `position` ; une nouvelle table
+`session_box` fige la liste des boîtiers d'une session, sur le modèle exact de `blocked_app` ;
+`alarm_session` perd `boxId` et `boxTokenSha256Hex`, copiés dans `session_box` à l'activation.
+`MIGRATION_4_5`, dans cet ordre : ajouter `name` (`DEFAULT ''`) puis le renseigner à
+`'Boîtier 1'`, ajouter `position` (`DEFAULT 0`) à `paired_box` ; créer `session_box` avec sa clé
+étrangère et son index ; y insérer, pour chaque session, la ligne `(id, boxId,
+boxTokenSha256Hex, 'Boîtier 1', 0)` lue dans **`alarm_session`, jamais dans `paired_box`** — une
+session armée puis un boîtier remplacé hors session (permis jusqu'ici) laisse les deux tables en
+désaccord, et seule la paire figée dans la session doit se retrouver dans `session_box` ; puis
+recréer `alarm_session` sans les deux colonnes (SQLite ne retire pas une colonne d'une table
+peuplée autrement) en suivant la procédure officielle de recréation de table : `CREATE TABLE
+alarm_session_new`, `INSERT … SELECT`, `DROP TABLE alarm_session`, `ALTER TABLE … RENAME`,
+reconstruction des index. `PRAGMA foreign_keys` reste sans effet pendant une migration Room — la
+pragma ne peut être changée à l'intérieur d'une transaction, et Room exécute chaque migration
+dans une transaction ; elle est à `OFF` par défaut pour toute connexion et Room ne la met à `ON`
+que dans `onOpen()`, **après** les migrations. C'est cela, et non la pragma, qui évite que le
+`DROP TABLE alarm_session` ne déclenche le `CASCADE` des six tables enfants (`blocked_app`,
+`session_incident`, `session_event_receipt`, `session_effect_outbox`,
+`active_session_pointer` et, depuis cette version, `session_box`). `MIGRATION_4_5` se
+termine par `PRAGMA foreign_key_check` : toute violation fait échouer la migration plutôt que de
+livrer une base incohérente. Schéma v5 committé, migration testée depuis une base v4 peuplée
+d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé, avec un reçu, une
+ligne d'outbox, une application bloquée et un incident, pour prouver qu'aucune donnée n'est
+perdue par le `CASCADE` qui n'a pas lieu.
 
 ### 7.3 Snapshot Direct Boot
 
@@ -449,18 +488,33 @@ failureCode
 ringtoneKey
 vibrationEnabled
 volumeRampSeconds
-boxId
-boxTokenSha256Hex
+boxes
 blockedPackages
 eventReceipts
 pendingEffects
 ```
 
-`boxTokenSha256Hex` reprend le nom de colonne de `AlarmSessionEntity` (§7.2) plutôt que `tokenSha256` (nom propre à `PairedBoxEntity`) : le snapshot projette la session, pas le boîtier associé. `blockedPackages` conserve la paire `(packageName, displayNameSnapshot)` de `BlockedAppEntity`, pas seulement le nom du package : le libellé figé à l'activation est requis par le texte imposé de l'overlay (§12.2, « {Nom de l'application} reste bloquée… ») et doit rester disponible si le blocage doit être reconstruit avant déverrouillage.
+**Lot 8 (boîtiers multiples).** `boxes` remplace `boxId` et `boxTokenSha256Hex` : une liste de
+`(boxId, tokenSha256Hex)`, sans les noms — la projection sert la vérification avant
+déverrouillage, pas l'affichage, et `DirectBootRoomMerge` conserve les extras de Room (noms
+compris) sans jamais les réécrire depuis la projection. `blockedPackages` conserve la paire
+`(packageName, displayNameSnapshot)` de `BlockedAppEntity`, pas seulement le nom du package : le
+libellé figé à l'activation est requis par le texte imposé de l'overlay (§12.2, « {Nom de
+l'application} reste bloquée… ») et doit rester disponible si le blocage doit être reconstruit
+avant déverrouillage.
 
 **Projection v2 (Lot 6).** `projectionSchemaVersion` passe à 2 avec les quatre champs `blocking*`. Un fichier de version 1 reste lisible : les champs absents se lisent comme un blocage immédiat dont `blockingAppliedAtEpochMillis` vaut `createdAtEpochMillis`, puis la projection est réécrite depuis Room à la fusion suivante. Un fichier v1 ne se lit jamais « pas de session ».
 
 **Projection v3 (Lot 7).** `projectionSchemaVersion` passe à 3 avec `volumeRampSeconds`. Un fichier v1 ou v2 reste lisible : `volumeRampSeconds` s'y lit `null` (volume constant) et une `ringtoneKey` égale à `niumi_alarm` s'y lit comme la sonnerie par défaut, `niumi_piano` — même règle que `MIGRATION_3_4`, que la projection n'atteint pas avant la fusion. C'est ce qui permet à un réveil après redémarrage, avant tout déverrouillage, de sonner la sonnerie et la montée choisies.
+
+**Projection v4 (Lot 8).** `projectionSchemaVersion` passe à 4 avec `boxes`. Un fichier v1, v2 ou
+v3 — qui portait encore `boxId` et `boxTokenSha256Hex` à plat — se lit comme une liste d'un seul
+boîtier, sans nom : c'est le seul renseignement dont ce fichier a jamais eu besoin pour que le
+scan reconnaisse le boîtier d'origine avant déverrouillage. Seuil figé
+`PROJECTION_VERSION_WITH_MULTIPLE_BOXES = 4`, jamais « < version courante » (point de vigilance
+de l'étape 26). C'est ce qui permet à un boîtier scanné après un redémarrage sans déverrouillage,
+sur une mise à jour qui vient d'écrire une base v5 mais n'a pas encore fusionné la projection, de
+toujours terminer la session.
 
 Ce snapshot est une projection partielle de Room, mais son enveloppe de session active contient tous les champs requis pour reconstruire un `SessionSnapshot` et appeler KMP avant déverrouillage. Chaque effet de `pendingEffects` conserve aussi son payload sérialisé afin de reprendre `RECORD_INCIDENT`. Il permet de reprogrammer et de déclencher l'alarme avant le premier déverrouillage après un redémarrage. Il ne contient aucune donnée de compte. Son écriture doit être atomique. Utiliser un fichier temporaire dans le même répertoire, puis un renommage, ou des préférences synchrones dédiées avec contrôle de version. Une réécriture à `domainRevision` égale, pour la même session, est idempotente; une révision inférieure pour cette même session est refusée. Une nouvelle session (autre `sessionId`) repart légitimement à une révision inférieure : la garde est scopée par `sessionId`, pas globale.
 
@@ -476,7 +530,7 @@ Les deux dépôts portent donc une garde construite sur le même patron que `Roo
 
 Une sélection vide avant déverrouillage est sans conséquence: `APP_SELECTION` ne fait pas partie des sept contrôles surveillés pendant `ARMED` (§13.1), et les applications bloquées d'une session active sont figées dans Room et dans la projection Direct Boot (§7.2, §7.3), jamais relues dans ces dépôts.
 
-**Exception documentée — `RoomPairedBoxStore.current()` (étape 13).** Tous les dépôts Room refusent l'accès avant déverrouillage en levant (`ROOM_BEFORE_UNLOCK`), sauf la lecture du boîtier associé, qui renvoie « aucun boîtier » sans jamais ouvrir la base. Raison : le diagnostic de §13 est rejoué pendant la réconciliation Direct Boot (raison `LOCKED_BOOT`, §13.1), et une levée y interromprait la reprogrammation de l'alarme. L'exception est sans effet sur la sûreté : le contrôle `PAIRED_BOX` ne fait pas partie des sept contrôles surveillés pendant `ARMED` (§13.1), donc aucun incident faux n'est produit, et le contrat commun impose déjà que la vérification NFC d'une session armée utilise le credential figé à l'activation (SPEC_CORE_KMP §10), jamais le dépôt courant. L'écriture (`replace`, `clear`) conserve le refus strict : une association n'a lieu qu'à l'écran dédié, hors session, donc toujours après déverrouillage.
+**Exception documentée — `RoomPairedBoxStore.all()` (étape 13, reportée de `current()` au Lot 8).** Tous les dépôts Room refusent l'accès avant déverrouillage en levant (`ROOM_BEFORE_UNLOCK`), sauf la lecture des boîtiers associés, qui renvoie une liste vide sans jamais ouvrir la base. Raison : le diagnostic de §13 est rejoué pendant la réconciliation Direct Boot (raison `LOCKED_BOOT`, §13.1), et une levée y interromprait la reprogrammation de l'alarme. L'exception est sans effet sur la sûreté : le contrôle `PAIRED_BOX` ne fait pas partie des sept contrôles surveillés pendant `ARMED` (§13.1), donc aucun incident faux n'est produit, et le contrat commun impose déjà que la vérification NFC d'une session armée utilise la liste figée à l'activation (SPEC_CORE_KMP §10), jamais le dépôt courant. L'écriture (`add`, `rename`, `remove`) conserve le refus strict : une association, un renommage ou un retrait n'ont lieu qu'à l'écran dédié, hors session, donc toujours après déverrouillage.
 
 ## 8. Calcul de l'heure de déclenchement
 
@@ -834,8 +888,13 @@ Contraintes:
 - le payload ne dépasse pas 96 octets UTF-8 et ne contient aucun caractère de contrôle;
 - l'application stocke `SHA-256` des 16 octets décodés, et non le token en clair, dans Room;
 - le snapshot Direct Boot reçoit le même hash;
-- un seul boîtier est associé dans le MVP;
-- toute nouvelle association remplace l'ancienne après confirmation.
+- jusqu'à cinq boîtiers nommés sont associés (Lot 8) : chaque nom fait 1 à 30 caractères après
+  `trim()`, un nom vide ou blanc est refusé ; c'est le dépôt qui tient cet invariant — `add` et
+  `rename` passent le nom par `PairedBoxName.sanitize` avant tout accès à la base, écrivent la
+  valeur nettoyée et lèvent `PAIRED_BOX_NAME_INVALID` pour un nom refusé, l'écran validant avec la
+  même fonction avant d'appeler ; le dépôt refuse aussi un `boxId` déjà présent (« Ce boîtier est
+  déjà associé. ») et un sixième boîtier (« 5 boîtiers maximum. »), tous deux en résultat typé,
+  sans écriture — l'écran ne fait qu'afficher le refus.
 
 Le tag MVP reste clonable par une personne qui lit puis recopie son contenu. La protection contre le clonage exige un tag cryptographique capable de produire une preuve dynamique. Elle appartient à une version ultérieure du produit.
 
@@ -880,7 +939,7 @@ Ordre logique:
 
 1. vérifier que l'état est `ARMED`, `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`;
 2. si l'état est `ARMED`, réconcilier l'heure et AlarmManager avant le scan;
-3. créer l'identifiant d'événement et l'horodatage, puis valider le boîtier scanné contre `boxId` et `boxTokenSha256Hex` de la session active (jamais contre `PairedBoxEntity`), avec le parseur et le vérificateur communs, qui retournent une `NfcVerificationProof` opaque liée à la session et à la révision attendue;
+3. créer l'identifiant d'événement et l'horodatage, puis valider le boîtier scanné contre la liste `session_box` de la session active (jamais contre `PairedBoxEntity`), avec le parseur et le vérificateur communs, qui retournent une `NfcVerificationProof` opaque liée à la session et à la révision attendue — le `boxId` qu'elle porte est celui du boîtier de la liste qui a correspondu (Lot 8);
 4. envoyer `VALID_NFC_SCANNED` avec cette preuve;
 5. persister atomiquement `nfcVerifiedAtEpochMillis`, `releaseTarget`, `RELEASING`, le reçu et l'outbox;
 6. publier la même `domainRevision` dans le snapshot Direct Boot et Room quand Room est accessible;
@@ -1116,7 +1175,7 @@ L'écran n'affiche qu'une action principale à la fois, en commençant par le pr
 
 1. **Un contrôle sans objet n'est ni réussi ni échoué.** `NOT_APPLICABLE` couvre l'autorisation plein écran avant Android 14 (l'API n'existe pas), l'activation du NFC sur un appareil sans matériel NFC (proposer d'activer ce qui n'existe pas serait un faux recours), et la validité de l'instant de réveil tant qu'aucune heure n'a été choisie — l'écran de diagnostic précède le choix de l'heure dans le parcours. Un contrôle `NOT_APPLICABLE` est exclu de `ActivationPolicyInputDto` : il ne peut ni bloquer ni rassurer.
 
-2. **Les trois contrôles de parcours ne transitent pas par la liste `checks`.** « boîtier associé », « applications choisies » et « date future valide » sont affichés comme les onze autres, mais convertis vers les champs dédiés `hasPairedBox`, `appSelectionCount` et `triggerAtEpochMillis` d'`ActivationPolicyInputDto`. La politique commune les refuse déjà avec `NO_PAIRED_BOX`, `INVALID_APP_SELECTION` et `TRIGGER_NOT_IN_FUTURE` (SPEC_CORE_KMP §7.4, §10) ; les verser aussi dans `checks` ferait remonter deux refus pour une seule cause, l'un précis et l'autre générique. Un diagnostic lancé avant tout choix d'heure reçoit donc `triggerAtEpochMillis = nowEpochMillis` et se voit refuser l'activation par `TRIGGER_NOT_IN_FUTURE`, ce qui est le verdict exact à ce stade.
+2. **Les trois contrôles de parcours ne transitent pas par la liste `checks`.** « boîtier associé », « applications choisies » et « date future valide » sont affichés comme les onze autres, mais convertis vers les champs dédiés `pairedBoxCount` (Lot 8, remplace `hasPairedBox`), `appSelectionCount` et `triggerAtEpochMillis` d'`ActivationPolicyInputDto`. La politique commune les refuse déjà avec `NO_PAIRED_BOX`, `TOO_MANY_PAIRED_BOXES`, `INVALID_APP_SELECTION` et `TRIGGER_NOT_IN_FUTURE` (SPEC_CORE_KMP §7.4, §10) ; les verser aussi dans `checks` ferait remonter deux refus pour une seule cause, l'un précis et l'autre générique. Un diagnostic lancé avant tout choix d'heure reçoit donc `triggerAtEpochMillis = nowEpochMillis` et se voit refuser l'activation par `TRIGGER_NOT_IN_FUTURE`, ce qui est le verdict exact à ce stade.
 
 3. **Le contrôle d'énergie repose sur la détection** (depuis l'étape 25 ; il reposait sur une confirmation de l'utilisateur jusque-là). Il est satisfait quand, et seulement quand, `isIgnoringBatteryOptimizations()` renvoie `true`, relu à chaque diagnostic : un réglage revenu en arrière, après une mise à jour par exemple, est vu à la préparation suivante. Aucune confirmation n'est demandée ni persistée.
 
@@ -1468,7 +1527,13 @@ Chaque événement contient seulement l'heure, le type, l'identifiant de session
 
 Ajouter un écran de diagnostic exportable sous forme de texte après action explicite de l'utilisateur. Masquer le token, son hash complet et tout identifiant matériel. L'export ne doit contenir que les 200 événements locaux et les résultats du contrôle de santé.
 
-**Forme de l'export (étape 16).** Le contexte d'appareil ouvre le texte ; une ligne d'événement ne le répète que s'il **diffère** de cet en-tête, ce qui n'arrive qu'après une mise à jour — sinon 200 lignes répéteraient la même constante. Le `boxId` est tronqué à ses huit premiers caractères, assez pour distinguer deux boîtiers dans un échange d'assistance. Le hash du token ne traverse **jamais** le modèle de données de l'export : il n'y est pas transporté, plutôt que transporté puis masqué à l'affichage — on ne divulgue pas ce qu'on ne reçoit pas.
+**Forme de l'export (étape 16).** Le contexte d'appareil ouvre le texte ; une ligne d'événement ne le répète que s'il **diffère** de cet en-tête, ce qui n'arrive qu'après une mise à jour — sinon 200 lignes répéteraient la même constante. Le hash du token ne traverse **jamais** le modèle de données de l'export : il n'y est pas transporté, plutôt que transporté puis masqué à l'affichage — on ne divulgue pas ce qu'on ne reçoit pas.
+
+**Lot 8 (boîtiers multiples).** La ligne « Boîtier » devient une ligne par boîtier de la liste
+figée de la session, dans l'ordre de `session_box` : nom, puis `boxId` tronqué à ses huit
+premiers caractères entre parenthèses, assez pour distinguer deux boîtiers dans un échange
+d'assistance. Une session sans boîtier figé (projection ou base corrompue) n'exporte aucune
+ligne « Boîtier », jamais une ligne vide.
 
 ## 18. Gestion des erreurs
 
@@ -1548,18 +1613,20 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - reconstruction du snapshot Direct Boot depuis Room après une interruption entre les deux écritures de l'étape 4 de l'activation;
 - sonneries et volume progressif (Lot 7) : catalogue et clé par défaut ; courbe de montée (−40 dB au départ, −20 dB à mi-parcours, 0 dB à la durée, bornée avant et après) ; moteur audio qui crée le lecteur à l'amplitude initiale, la réajuste toutes les 250 ms jusqu'à la durée, reprend une montée déjà entamée à l'amplitude du temps écoulé et annule la rampe à l'arrêt ; `RingingSoundResolver` sur les trois cas de 10.2 ; `updateAlarmSound` accepté en `ARMED` et refusé ailleurs, hors catalogue ou avant déverrouillage ; migration Room 3→4 et lecture d'une projection Direct Boot v1 ou v2 ; pré-écoute distincte du moteur de sonnerie ; en-tête de chaque fichier de sonnerie (PCM 16 bits, mono, 44,1 kHz) ; boucle sans blanc (2026-10-15) : `PcmWav` lit chaque fichier du catalogue et refuse tout autre format (stéréo, 8 bits, autre fréquence, flottant, en-tête tronqué, bloc `data` plus long que le fichier), `FallbackAlarmPlayerFactory` passe au lecteur `MediaPlayer` avec la même demande quand l'`AudioTrack` est refusé, `isGaplessLoop` suit le lecteur courant, `AUDIO_LOOP_FALLBACK` écrit avant `RINGING_STARTED` et jamais sur une relance ;
 - blocage différé (Lot 6) : programmation, annulation et reprogrammation idempotentes du début du blocage, avec un code de requête distinct du réveil et du watchdog ; `BlockingStartHandler` (gardes de session, de révision et d'illisibilité, puis dispatch de `BLOCKING_START_ELAPSED`) ; réconciliation d'une session `ARMED` en attente de blocage (reprogrammation si l'alarme manque, `BLOCKING_START_ELAPSED` à l'heure et au-delà, `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes, y compris depuis le coordinateur Direct Boot) ; projection de blocage inactive sur `ARMED` tant que `blockingAppliedAtEpochMillis` est nul et active ensuite, en Room comme en Direct Boot ; relecture du dernier package au premier plan quand la projection devient active ; migration Room 2→3 et lecture d'une projection Direct Boot v1 comme blocage immédiat ; effets requis de l'activation selon le `blockingSchedule` ; un exécuteur lié pour chaque valeur de `SessionEffectKindDto`.
+- boîtiers multiples (Lot 8) : `PairedBoxName.sanitize` (trim, vide ou blanc refusé, 30 gardé, 31 refusé) ; `RoomPairedBoxStore` (ajout, doublon, sixième, renommage, retrait avec renumérotation des positions, ordre) sous la garde de déverrouillage (`all()` vide, écritures refusées) ; mapping aller-retour `boxes` de Room et de la projection Direct Boot, `freezeFrom` qui fige la liste comme la sonnerie ; lecture d'une projection v1, v2 ou v3 comme une liste d'un seul boîtier, sans nom ; scan qui reconnaît n'importe quel boîtier de la liste figée, y compris le dernier de cinq, et qui refuse un boîtier associé après l'activation ou une liste figée vide sans lever ; `AndroidDeviceReadinessChecker` sur 0, 1, 5 et 6 boîtiers associés.
 
 `feature`:
 
 - impossibilité de confirmer si un contrôle bloquant échoue;
 - écran d'association et sélecteur d'applications inaccessibles pendant une session active;
-- scan vérifié contre `boxId` et `boxTokenSha256Hex` de la session active, refusé si le dépôt de boîtiers a changé depuis l'activation;
+- scan vérifié contre la liste `session_box` figée de la session active, refusé si le dépôt de boîtiers a changé depuis l'activation (Lot 8);
 - absence d'action d'arrêt sur l'écran de sonnerie;
 - retour des réglages et nouveau diagnostic;
 - messages d'erreur NFC;
 - reprise d'un état `RINGING` après recréation;
 - affichage de l'avertissement sur l'absence de mécanisme de secours logiciel avant la première activation;
 - blocage différé (Lot 6) : « Maintenant » par défaut sur l'écran 5, instant de début recalculé à chaque changement et à chaque `ON_RESUME`, continuation refusée si l'instant n'est pas strictement antérieur au réveil ; `ArmSessionUseCase` transmet le `blockingSchedule` calculé, jamais l'heure saisie, et refuse `BLOCKING_START_NOT_BEFORE_TRIGGER` ; écran 6 et écran 7 selon le `blockingSchedule` et `blockingAppliedAtEpochMillis`.
+- boîtiers multiples (Lot 8) : `ArmSessionUseCase` fige tous les boîtiers associés dans l'ordre, refuse l'activation sans boîtier, ne fige pas un boîtier retiré hors session ; export du diagnostic qui liste chaque boîtier figé par son nom et huit caractères, jamais le hash ; écran 3 minimal qui ajoute un boîtier nommé et refuse un doublon sans dialogue de remplacement.
 
 ### 19.2 Tests instrumentés
 
@@ -1573,7 +1640,8 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - réception de l'intent explicite de début du blocage par `BlockingStartReceiver` (Lot 6);
 - migration Room 2→3 depuis une base v2 peuplée (Lot 6);
 - migration Room 3→4 depuis une base v3 peuplée d'une session en `niumi_alarm`, et modification de la sonnerie d'une session `ARMED` relue dans Room et dans la projection Direct Boot (Lot 7);
-- démarrage du service et lecture réelle d'une sonnerie autre que celle par défaut, avec montée progressive (Lot 7).
+- démarrage du service et lecture réelle d'une sonnerie autre que celle par défaut, avec montée progressive (Lot 7);
+- migration Room 4→5 depuis une base v4 peuplée d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé, avec reçu, outbox, application bloquée et incident (Lot 8) ; `RoomPairedBoxStore` (ajout, doublon, sixième, renommage, retrait, ordre) ; parité Room / Direct Boot de la liste figée, noms compris côté Room.
 
 Les tests ne doivent pas attendre une vraie heure de réveil. Injecter `Clock`, `AlarmScheduler`, `AlarmAudioEngine`, `NfcVerifier` et `ForegroundAppSource`.
 

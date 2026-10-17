@@ -5,6 +5,8 @@ import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.database.logging.TechnicalEventEntry
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.database.pairing.PairedBoxAddResult
+import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.common.OperationResult
 import com.niumi.system.nfc.NfcAvailability
@@ -38,21 +40,35 @@ class RecordingTechnicalEventLog : TechnicalEventLog {
 }
 
 class FakePairedBoxStore(
-    var credential: PairedBoxCredentialDto? = null,
+    var boxes: List<PairedBoxDto> = emptyList(),
 ) : PairedBoxStore {
-    var replaceCallCount = 0
-    var clearCallCount = 0
+    var addCallCount = 0
+        private set
 
-    override suspend fun current(): PairedBoxCredentialDto? = credential
+    override suspend fun all(): List<PairedBoxDto> = boxes
 
-    override suspend fun replace(credential: PairedBoxCredentialDto) {
-        replaceCallCount++
-        this.credential = credential
+    override suspend fun add(
+        credential: PairedBoxCredentialDto,
+        name: String,
+    ): PairedBoxAddResult {
+        addCallCount++
+        return if (boxes.any { it.credential.boxId == credential.boxId }) {
+            PairedBoxAddResult.AlreadyPaired
+        } else {
+            boxes = boxes + PairedBoxDto(credential, name)
+            PairedBoxAddResult.Added
+        }
     }
 
-    override suspend fun clear() {
-        clearCallCount++
-        credential = null
+    override suspend fun rename(
+        boxId: String,
+        name: String,
+    ) {
+        boxes = boxes.map { if (it.credential.boxId == boxId) it.copy(name = name) else it }
+    }
+
+    override suspend fun remove(boxId: String) {
+        boxes = boxes.filterNot { it.credential.boxId == boxId }
     }
 }
 

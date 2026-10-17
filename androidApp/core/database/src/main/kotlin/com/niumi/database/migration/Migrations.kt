@@ -71,3 +71,75 @@ val MIGRATION_3_4 =
             )
         }
     }
+
+/**
+ * v4 → v5 (Lot 8, boîtiers multiples) : `paired_box` gagne `name` et `position` ; une nouvelle
+ * table `session_box` fige la liste des boîtiers d'une session, sur le modèle exact de
+ * `blocked_app` ; `alarm_session` perd `boxId` et `boxTokenSha256Hex`, copiés dans `session_box`.
+ *
+ * `session_box` est peuplée **depuis `alarm_session`, jamais depuis `paired_box`** (point de
+ * vigilance 1 du Lot 8) : une session armée puis un boîtier remplacé hors session (permis
+ * jusqu'ici) laisse les deux tables en désaccord, et seule la paire figée dans la session doit se
+ * retrouver dans `session_box`.
+ *
+ * `alarm_session` est recréée en suivant la procédure officielle SQLite de recréation de table
+ * (`sqlite.org/lang_altertable.html`, § « Making Other Kinds Of Table Schema Changes ») : SQLite
+ * ne retire pas une colonne d'une table peuplée autrement. `PRAGMA foreign_keys` n'a volontairement
+ * pas sa place ici : la pragma ne peut être changée à l'intérieur d'une transaction (elle est sans
+ * effet dans une migration Room, qui en exécute toujours une), et Room ne la met à `ON` que dans
+ * `onOpen()`, **après** les migrations — c'est cela, et non une pragma, qui empêche le `DROP TABLE
+ * alarm_session` de déclencher le `CASCADE` des tables enfants. `PRAGMA foreign_key_check` ferme la
+ * migration : toute violation fait échouer l'ouverture plutôt que de livrer une base incohérente.
+ */
+val MIGRATION_4_5 =
+    object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE paired_box ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+            db.execSQL("UPDATE paired_box SET name = 'Boîtier 1'")
+            db.execSQL("ALTER TABLE paired_box ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+
+            db.execSQL(
+                "CREATE TABLE session_box (" +
+                    "sessionId TEXT NOT NULL, boxId TEXT NOT NULL, tokenSha256 TEXT NOT NULL, " +
+                    "name TEXT NOT NULL, position INTEGER NOT NULL, " +
+                    "PRIMARY KEY(sessionId, boxId), " +
+                    "FOREIGN KEY(sessionId) REFERENCES alarm_session(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
+            )
+            db.execSQL("CREATE INDEX index_session_box_sessionId ON session_box(sessionId)")
+            db.execSQL(
+                "INSERT INTO session_box SELECT id, boxId, boxTokenSha256Hex, 'Boîtier 1', 0 FROM alarm_session",
+            )
+
+            db.execSQL(
+                "CREATE TABLE alarm_session_new (" +
+                    "id TEXT NOT NULL, schemaVersion INTEGER NOT NULL, revision INTEGER NOT NULL, " +
+                    "localDate TEXT NOT NULL, localTime TEXT NOT NULL, zoneIdAtActivation TEXT NOT NULL, " +
+                    "triggerAtEpochMillis INTEGER NOT NULL, blockingLocalDate TEXT, blockingLocalTime TEXT, " +
+                    "blockingStartsAtEpochMillis INTEGER, blockingAppliedAtEpochMillis INTEGER, " +
+                    "state TEXT NOT NULL, releaseTarget TEXT, health TEXT NOT NULL, " +
+                    "ringtoneKey TEXT NOT NULL, vibrationEnabled INTEGER NOT NULL, volumeRampSeconds INTEGER, " +
+                    "createdAtEpochMillis INTEGER NOT NULL, armedAtEpochMillis INTEGER, " +
+                    "ringingAtEpochMillis INTEGER, alarmSoundStoppedAtEpochMillis INTEGER, " +
+                    "triggerElapsedAtEpochMillis INTEGER, nfcVerifiedAtEpochMillis INTEGER, " +
+                    "releasingAtEpochMillis INTEGER, completedAtEpochMillis INTEGER, " +
+                    "cancelledAtEpochMillis INTEGER, failureCode TEXT, PRIMARY KEY(id))",
+            )
+            db.execSQL(
+                "INSERT INTO alarm_session_new SELECT " +
+                    "id, schemaVersion, revision, localDate, localTime, zoneIdAtActivation, " +
+                    "triggerAtEpochMillis, blockingLocalDate, blockingLocalTime, blockingStartsAtEpochMillis, " +
+                    "blockingAppliedAtEpochMillis, state, releaseTarget, health, " +
+                    "ringtoneKey, vibrationEnabled, volumeRampSeconds, createdAtEpochMillis, " +
+                    "armedAtEpochMillis, ringingAtEpochMillis, alarmSoundStoppedAtEpochMillis, " +
+                    "triggerElapsedAtEpochMillis, nfcVerifiedAtEpochMillis, releasingAtEpochMillis, " +
+                    "completedAtEpochMillis, cancelledAtEpochMillis, failureCode " +
+                    "FROM alarm_session",
+            )
+            db.execSQL("DROP TABLE alarm_session")
+            db.execSQL("ALTER TABLE alarm_session_new RENAME TO alarm_session")
+
+            db.query("PRAGMA foreign_key_check").use { cursor ->
+                check(cursor.count == 0) { "MIGRATION_4_5: foreign_key_check a trouvé une violation." }
+            }
+        }
+    }

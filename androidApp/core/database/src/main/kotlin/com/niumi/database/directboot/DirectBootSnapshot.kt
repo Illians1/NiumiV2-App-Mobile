@@ -8,7 +8,7 @@ import com.niumi.database.EffectStatus
 import kotlinx.serialization.Serializable
 
 /** Version du format de projection lui-même, indépendante de [DirectBootSnapshot.Active.domainSchemaVersion]. */
-public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 3
+public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 4
 
 /**
  * Première version portant les champs `blocking*` (Lot 6). Seuil figé, jamais dérivé de
@@ -19,6 +19,14 @@ internal const val PROJECTION_VERSION_WITH_BLOCKING_SCHEDULE: Int = 2
 
 /** Première version portant `volumeRampSeconds` et un catalogue de sonneries (Lot 7). */
 internal const val PROJECTION_VERSION_WITH_RINGTONE_CATALOG: Int = 3
+
+/**
+ * Première version portant [DirectBootSnapshot.Active.boxes] (Lot 8). Seuil figé, jamais dérivé
+ * de [DIRECT_BOOT_PROJECTION_SCHEMA_VERSION], même règle que les deux seuils ci-dessus : un
+ * fichier antérieur se lit comme une liste d'un seul boîtier, construite depuis `boxId` et
+ * `boxTokenSha256Hex`, sans nom.
+ */
+internal const val PROJECTION_VERSION_WITH_MULTIPLE_BOXES: Int = 4
 
 /**
  * Projection partielle de Room dans le stockage protégé de l'appareil (SPEC_ANDROID §7.3,
@@ -47,7 +55,14 @@ internal const val PROJECTION_VERSION_WITH_RINGTONE_CATALOG: Int = 3
  *
  * **Projection v3 (Lot 7).** `volumeRampSeconds` porte lui aussi une valeur par défaut, `null` —
  * volume constant, ce qu'avait choisi toute session écrite avant. `DirectBootMapper.toExtras`
- * y réécrit la sonnerie retirée de l'APK (`LegacyRingtone`). L'écriture est toujours en v3.
+ * y réécrit la sonnerie retirée de l'APK (`LegacyRingtone`).
+ *
+ * **Projection v4 (Lot 8).** [boxes] remplace `boxId` et `boxTokenSha256Hex`, sans les noms — la
+ * projection sert la vérification avant déverrouillage, pas l'affichage. Les deux anciens champs
+ * restent dans la classe avec une valeur par défaut `""`, comme `volumeRampSeconds` l'a été, pour
+ * que le format v4 reste désérialisable sans eux ; ils ne portent plus aucune valeur utile.
+ * `DirectBootMapper.toSnapshotDto`/`toExtras` traduisent un fichier antérieur en une liste d'un
+ * seul boîtier depuis ces deux champs. L'écriture est toujours en v4.
  *
  * Seul [Active] est jamais sérialisé (directement, via son propre sérialiseur) : [Corrupted]
  * représente un état de lecture, jamais écrit. L'interface scellée n'est donc pas elle-même
@@ -85,8 +100,9 @@ public sealed interface DirectBootSnapshot {
         val ringtoneKey: String,
         val vibrationEnabled: Boolean,
         val volumeRampSeconds: Int? = null,
-        val boxId: String,
-        val boxTokenSha256Hex: String,
+        val boxId: String = "",
+        val boxTokenSha256Hex: String = "",
+        val boxes: List<DirectBootBox> = emptyList(),
         val blockedPackages: List<DirectBootBlockedPackage>,
         val eventReceipts: List<DirectBootReceipt>,
         val pendingEffects: List<DirectBootEffect>,
@@ -97,6 +113,12 @@ public sealed interface DirectBootSnapshot {
         val reason: String,
     ) : DirectBootSnapshot
 }
+
+@Serializable
+public data class DirectBootBox(
+    val boxId: String,
+    val tokenSha256Hex: String,
+)
 
 @Serializable
 public data class DirectBootBlockedPackage(

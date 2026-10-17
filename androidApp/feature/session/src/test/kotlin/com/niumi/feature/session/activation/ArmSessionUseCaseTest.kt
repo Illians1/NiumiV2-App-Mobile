@@ -15,6 +15,8 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.core.interop.WakeScheduleStatusDto
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
+import com.niumi.database.SessionBox
+import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.feature.session.activation.fakes.CallJournal
 import com.niumi.feature.session.activation.fakes.RecordingAppSelectionStore
 import com.niumi.feature.session.activation.fakes.RecordingPairedBoxStore
@@ -66,6 +68,7 @@ class ArmSessionUseCaseTest {
             boxId = "b0c1d2e3-4455-6677-8899-aabbccddeeff",
             tokenSha256Hex = "a".repeat(64),
         )
+    private val pairedBox = PairedBoxDto(credential, "Boîtier 1")
     private val selection =
         listOf(
             BlockedPackage("com.example.chat", "Chat"),
@@ -79,7 +82,7 @@ class ArmSessionUseCaseTest {
             reportForCandidate = { candidate -> report(candidateTriggerAtEpochMillis = candidate) },
         )
     private val timeZoneProvider = RecordingTimeZoneProvider(journal, zoneId = "Europe/Paris")
-    private val pairedBoxStore = RecordingPairedBoxStore(journal, credential)
+    private val pairedBoxStore = RecordingPairedBoxStore(journal, listOf(pairedBox))
     private val appSelectionStore = RecordingAppSelectionStore(journal, selection)
     private val coordinator = RecordingSessionCoordinator(journal)
 
@@ -87,11 +90,11 @@ class ArmSessionUseCaseTest {
         candidateTriggerAtEpochMillis: Long?,
         checks: List<ReadinessCheck> = listOf(passedCheck()),
         appSelectionCount: Int = selection.size,
-        hasPairedBox: Boolean = true,
+        pairedBoxCount: Int = 1,
     ) = ReadinessReport(
         checks = checks,
         appSelectionCount = appSelectionCount,
-        hasPairedBox = hasPairedBox,
+        pairedBoxCount = pairedBoxCount,
         candidateTriggerAtEpochMillis = candidateTriggerAtEpochMillis,
         nowEpochMillis = now,
     )
@@ -164,7 +167,7 @@ class ArmSessionUseCaseTest {
                     "readiness.check(null)",
                     "timeZone.current",
                     "readiness.check(candidate)",
-                    "pairedBox.current",
+                    "pairedBox.all",
                     "appSelection.selection",
                     "coordinator.dispatch(${SessionEventKindDto.ACTIVATION_REQUESTED})",
                 ).inOrder()
@@ -213,12 +216,12 @@ class ArmSessionUseCaseTest {
         }
 
     @Test
-    fun aMissingPairedBoxRefusesActivationWithoutAnyDispatch() =
+    fun noPairedBoxAtAllIsRefusedWithNoPairedBox() =
         runTest {
             readinessChecker.reportForCandidate = { candidate ->
-                report(candidateTriggerAtEpochMillis = candidate, hasPairedBox = false)
+                report(candidateTriggerAtEpochMillis = candidate, pairedBoxCount = 0)
             }
-            pairedBoxStore.credential = null
+            pairedBoxStore.boxes = emptyList()
 
             val result = useCase().arm("07:00", blockingLocalTimeIso = null)
 
@@ -234,9 +237,49 @@ class ArmSessionUseCaseTest {
 
             useCase().arm("07:00", blockingLocalTimeIso = null)
 
-            assertThat(pairedBoxStore.currentCallCount).isEqualTo(1)
-            assertThat(coordinator.lastExtras?.boxId).isEqualTo(credential.boxId)
-            assertThat(coordinator.lastExtras?.boxTokenSha256Hex).isEqualTo(credential.tokenSha256Hex)
+            assertThat(pairedBoxStore.allCallCount).isEqualTo(1)
+            assertThat(coordinator.lastExtras?.boxes).containsExactly(
+                SessionBox(credential.boxId, credential.tokenSha256Hex, pairedBox.name),
+            )
+        }
+
+    /** Lot 8 : la liste figée porte chaque boîtier dans l'ordre de `PairedBoxStore.all()`. */
+    @Test
+    fun theExtrasFreezeEveryPairedBoxInOrder() =
+        runTest {
+            val threeBoxes =
+                listOf(
+                    PairedBoxDto(PairedBoxCredentialDto(1, "box-0", "a".repeat(64)), "Cuisine"),
+                    PairedBoxDto(PairedBoxCredentialDto(1, "box-1", "b".repeat(64)), "Chambre"),
+                    PairedBoxDto(PairedBoxCredentialDto(1, "box-2", "c".repeat(64)), "Salon"),
+                )
+            pairedBoxStore.boxes = threeBoxes
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+
+            useCase().arm("07:00", blockingLocalTimeIso = null)
+
+            assertThat(coordinator.lastExtras?.boxes?.map { it.boxId })
+                .containsExactlyElementsIn(threeBoxes.map { it.credential.boxId })
+                .inOrder()
+        }
+
+    /** Lot 8, point de vigilance 5 : cinq boîtiers associés, un retiré hors session, quatre figés. */
+    @Test
+    fun aBoxRemovedBeforeArmingIsNotFrozen() =
+        runTest {
+            val fiveBoxes =
+                (0..4).map { index ->
+                    PairedBoxDto(PairedBoxCredentialDto(1, "box-$index", "a".repeat(64)), "Boîtier ${index + 1}")
+                }
+            pairedBoxStore.boxes = fiveBoxes
+            pairedBoxStore.boxes = pairedBoxStore.boxes.filterNot { it.credential.boxId == "box-2" }
+            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
+
+            useCase().arm("07:00", blockingLocalTimeIso = null)
+
+            val frozenIds = coordinator.lastExtras?.boxes?.map { it.boxId }
+            assertThat(frozenIds).hasSize(4)
+            assertThat(frozenIds).doesNotContain("box-2")
         }
 
     /**
@@ -316,7 +359,7 @@ class ArmSessionUseCaseTest {
 
             val failure = (result as ArmSessionResult.Failed).failure as ActivationFailure.InvalidSchedule
             assertThat(failure.status).isEqualTo(WakeScheduleStatusDto.INVALID_TIME)
-            assertThat(pairedBoxStore.currentCallCount).isEqualTo(0)
+            assertThat(pairedBoxStore.allCallCount).isEqualTo(0)
             assertThat(coordinator.dispatchCount).isEqualTo(0)
         }
 
@@ -415,9 +458,24 @@ class ArmSessionUseCaseTest {
             val preview = useCase().preview("07:00", blockingLocalTimeIso = null)
 
             assertThat(preview.canActivate).isTrue()
-            assertThat(preview.boxId).isEqualTo(credential.boxId)
+            assertThat(preview.boxNames).containsExactly(pairedBox.name)
             assertThat(preview.blockedPackages).containsExactlyElementsIn(selection).inOrder()
             assertThat(preview.scheduleResult.status).isEqualTo(WakeScheduleStatusDto.VALID)
+        }
+
+    /** Lot 8 : l'aperçu liste les noms des boîtiers associés, dans l'ordre de `PairedBoxStore.all()`. */
+    @Test
+    fun thePreviewListsTheBoxNamesInOrder() =
+        runTest {
+            pairedBoxStore.boxes =
+                listOf(
+                    PairedBoxDto(PairedBoxCredentialDto(1, "box-0", "a".repeat(64)), "Cuisine"),
+                    PairedBoxDto(PairedBoxCredentialDto(1, "box-1", "b".repeat(64)), "Chambre"),
+                )
+
+            val preview = useCase().preview("07:00", blockingLocalTimeIso = null)
+
+            assertThat(preview.boxNames).containsExactly("Cuisine", "Chambre").inOrder()
         }
 
     @Test

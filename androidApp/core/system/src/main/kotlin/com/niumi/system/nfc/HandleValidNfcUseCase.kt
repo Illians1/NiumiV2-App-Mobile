@@ -6,7 +6,7 @@ import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.nfc.BoxPayloadStatus
 import com.niumi.core.nfc.BoxVerificationStatus
-import com.niumi.database.AndroidSessionExtras
+import com.niumi.database.SessionBox
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.ReconcileReason
@@ -27,10 +27,10 @@ import javax.inject.Singleton
  * vérificateur communs tranchent, ce cas d'usage ne fait que leur fournir le boîtier de référence
  * et traduire leur verdict en [ScanOutcome].
  *
- * **Le boîtier de référence vient de la session, jamais de `PairedBoxEntity`** (§11.3 point 3) :
- * `PairedBoxStore` n'est délibérément pas une dépendance de cette classe. Une nouvelle association
- * pendant une session ouvrirait sinon une sortie que l'utilisateur n'avait pas au moment de
- * s'engager.
+ * **La liste de référence vient de la session, jamais de `PairedBoxStore`** (§11.3 point 3) :
+ * `PairedBoxStore` n'est délibérément pas une dépendance de cette classe. Une association, un
+ * retrait ou un renommage pendant une session ouvrirait sinon une sortie que l'utilisateur
+ * n'avait pas au moment de s'engager (Lot 8).
  *
  * **S'exécute hors du `Mutex` du coordinateur**, comme `AlarmTriggerHandler` (étape 17) : ce mutex
  * est privé et non réentrant, et lire puis dispatcher est le seul motif possible. Si la révision
@@ -74,9 +74,11 @@ class HandleValidNfcUseCase
                 }
 
             val context = eventFactory.verificationContext(session.snapshot)
-            // Contrat 1.4 : `verifyBox` compare à une liste. Jusqu'à l'étape 30 du Lot 8, les
-            // extras ne portent qu'un boîtier : liste d'un seul, comportement inchangé.
-            val verification = facade.verifyBox(payload, listOf(credentialOf(session.extras, payload)), context)
+            // Contrat 1.4 (Lot 8) : `verifyBox` compare à la liste figée dans la session — vide
+            // comprise, auquel cas `NO_PAIRED_BOX_MATCH` revient sans qu'aucun credential n'ait
+            // correspondu.
+            val credentials = session.extras.boxes.map { it.toCredential(payload.protocolVersion) }
+            val verification = facade.verifyBox(payload, credentials, context)
             val proof = verification.proof
             if (verification.status != BoxVerificationStatus.MATCH || proof == null) {
                 return refusalFor(verification.status)
@@ -105,18 +107,15 @@ class HandleValidNfcUseCase
             (gateway.load() as? LoadResult.Present)?.takeIf { it.snapshot.state in SCAN_SOURCE_STATES }
 
         /**
-         * `protocolVersion` est repris du payload scanné : [AndroidSessionExtras] ne le porte pas,
-         * et `BoxVerifier` ne lit jamais ce champ du credential — il compare la version du
-         * *payload* à celle qu'il prend en charge. Aucune information n'est donc perdue.
+         * `protocolVersion` est repris du payload scanné : [SessionBox] ne le porte pas, et
+         * `BoxVerifier` ne lit jamais ce champ du credential — il compare la version du *payload*
+         * à celle qu'il prend en charge. Aucune information n'est donc perdue.
          */
-        private fun credentialOf(
-            extras: AndroidSessionExtras,
-            payload: BoxPayloadDto,
-        ): PairedBoxCredentialDto =
+        private fun SessionBox.toCredential(protocolVersion: Int): PairedBoxCredentialDto =
             PairedBoxCredentialDto(
-                protocolVersion = payload.protocolVersion,
-                boxId = extras.boxId,
-                tokenSha256Hex = extras.boxTokenSha256Hex,
+                protocolVersion = protocolVersion,
+                boxId = boxId,
+                tokenSha256Hex = tokenSha256Hex,
             )
 
         private fun refusalFor(status: BoxVerificationStatus): ScanOutcome =

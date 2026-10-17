@@ -2,6 +2,7 @@ package com.niumi.system.readiness
 
 import android.app.NotificationManager
 import android.os.Build
+import com.niumi.core.diagnostics.PairedBoxLimit
 import com.niumi.core.domain.AppSelectionSummary
 import com.niumi.core.interop.ReadinessSeverityDto
 import com.niumi.system.blocking.AccessibilityServiceState
@@ -26,19 +27,19 @@ class AndroidDeviceReadinessChecker(
     override suspend fun check(input: ReadinessInput): ReadinessReport {
         val now = clock.nowEpochMillis()
         val availability = sources.nfcReader.availability
-        val hasPairedBox = sources.pairedBoxStore.current() != null
+        val pairedBoxCount = sources.pairedBoxStore.all().size
         val appSelectionCount = sources.appSelectionSource.selectedCount()
         val interruptionFilter = sources.interruptionFilterSource.currentInterruptionFilter()
 
         return ReadinessReport(
             checks =
                 nfcChecks(availability) +
-                    journeyChecks(hasPairedBox, appSelectionCount) +
+                    journeyChecks(pairedBoxCount, appSelectionCount) +
                     deliveryChecks() +
                     audibilityChecks(interruptionFilter) +
                     sessionChecks(input.candidateTriggerAtEpochMillis, now),
             appSelectionCount = appSelectionCount,
-            hasPairedBox = hasPairedBox,
+            pairedBoxCount = pairedBoxCount,
             candidateTriggerAtEpochMillis = input.candidateTriggerAtEpochMillis,
             // Transporté tel quel, sans contrôle dédié : l'antériorité au réveil est une règle
             // commune (SPEC_ANDROID §13, point 4).
@@ -74,19 +75,19 @@ class AndroidDeviceReadinessChecker(
 
     /**
      * Contrôles 3 et 4. Affichés comme les autres, mais convertis par [ReadinessDtoMapper] vers
-     * `hasPairedBox` et `appSelectionCount` : la politique commune les refuse déjà avec
-     * `NO_PAIRED_BOX` et `INVALID_APP_SELECTION`, les verser aussi dans `checks` doublerait le
-     * refus. Les bornes 1..50 viennent de `:shared:core`, jamais réécrites ici.
+     * `pairedBoxCount` et `appSelectionCount` : la politique commune les refuse déjà avec
+     * `NO_PAIRED_BOX`/`TOO_MANY_PAIRED_BOXES` et `INVALID_APP_SELECTION`, les verser aussi dans
+     * `checks` doublerait le refus. Les bornes viennent de `:shared:core`, jamais réécrites ici.
      */
     private fun journeyChecks(
-        hasPairedBox: Boolean,
+        pairedBoxCount: Int,
         appSelectionCount: Int,
     ): List<ReadinessCheck> =
         listOf(
             check(
                 ReadinessCheckId.PAIRED_BOX,
                 ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
-                passed = hasPairedBox,
+                passed = pairedBoxCount in PairedBoxLimit.MIN..PairedBoxLimit.MAX,
                 action = ReadinessAction.StartPairing,
             ),
             check(

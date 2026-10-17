@@ -45,7 +45,7 @@ class DiagnosticExporterTest {
     )
 
     private fun report(
-        boxId: String? = this.boxId,
+        boxes: List<DiagnosticBox> = listOf(DiagnosticBox(boxId, "Boîtier 1")),
         checks: List<ReadinessCheck> = emptyList(),
         incidents: List<SessionIncidentDto> = emptyList(),
         events: List<TechnicalEventEntry> = emptyList(),
@@ -54,7 +54,7 @@ class DiagnosticExporterTest {
         sessionId = "session-1",
         state = SessionStateDto.ARMED,
         health = SessionHealthDto.DEGRADED,
-        boxId = boxId,
+        boxes = boxes,
         checks = checks,
         incidents = incidents,
         events = events,
@@ -70,6 +70,28 @@ class DiagnosticExporterTest {
         assertThat(text).contains("550e8400")
         assertThat(text).doesNotContain(boxId)
         assertThat(text).doesNotContain("e29b-41d4")
+    }
+
+    /** SPEC_ANDROID §17, Lot 8 : une ligne par boîtier figé, nom et huit caractères, jamais un hash. */
+    @Test
+    fun theExportListsEachFrozenBoxByNameAndEightCharactersAndNeverAHash() {
+        val secondBoxId = "11111111-1111-1111-1111-111111111111"
+        val text =
+            export(
+                report(
+                    boxes =
+                        listOf(
+                            DiagnosticBox(boxId, "Cuisine"),
+                            DiagnosticBox(secondBoxId, "Chambre"),
+                        ),
+                ),
+            )
+
+        assertThat(text).contains("Cuisine (550e8400")
+        assertThat(text).contains("Chambre (11111111")
+        assertThat(text).doesNotContain(boxId)
+        assertThat(text).doesNotContain(secondBoxId)
+        assertThat(text).doesNotContain("a".repeat(64))
     }
 
     /**
@@ -88,7 +110,7 @@ class DiagnosticExporterTest {
 
     @Test
     fun aSessionWithoutAnyPairedBoxExportsNoBoxLineAtAll() {
-        val text = export(report(boxId = null))
+        val text = export(report(boxes = emptyList()))
 
         assertThat(text).doesNotContain("550e8400")
     }
@@ -175,7 +197,7 @@ class DiagnosticExporterTest {
 
     @Test
     fun anEmptyDiagnosticStillProducesAReadableReport() {
-        val text = export(report(boxId = null))
+        val text = export(report(boxes = emptyList()))
 
         assertThat(text).contains(IncidentDiagnosticTexts.EXPORT_TITLE)
         assertThat(text).contains(IncidentDiagnosticTexts.NO_EVENT)

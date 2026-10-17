@@ -11,10 +11,10 @@ import javax.inject.Provider
 
 /**
  * `ROOM_BEFORE_UNLOCK` (SPEC_ANDROID §7.3), écart documenté dans le KDoc de [RoomPairedBoxStore] :
- * [RoomPairedBoxStore.current] renvoie `null` avant déverrouillage sans jamais résoudre
+ * [RoomPairedBoxStore.all] renvoie une liste vide avant déverrouillage sans jamais résoudre
  * [NiumiDatabase] (le diagnostic de réconciliation `LOCKED_BOOT` doit pouvoir s'exécuter) ;
- * [RoomPairedBoxStore.replace] et [RoomPairedBoxStore.clear] gardent le refus strict des autres
- * dépôts Room, la base n'étant jamais résolue.
+ * [RoomPairedBoxStore.add], [RoomPairedBoxStore.rename] et [RoomPairedBoxStore.remove] gardent le
+ * refus strict des autres dépôts Room, la base n'étant jamais résolue (Lot 8).
  */
 class RoomPairedBoxStoreUnlockGuardTest {
     private object LockedState : UnlockState {
@@ -27,22 +27,36 @@ class RoomPairedBoxStoreUnlockGuardTest {
     private val store = RoomPairedBoxStore(neverCalledProvider, LockedState)
 
     @Test
-    fun `current returns null before unlock without resolving the database`() =
+    fun `all returns an empty list before unlock without resolving the database`() =
         runBlocking {
-            assertThat(store.current()).isNull()
+            assertThat(store.all()).isEmpty()
         }
 
     @Test
-    fun `replace is refused before unlock`() {
+    fun `add is refused before unlock`() {
         val credential = PairedBoxCredentialDto(1, "550e8400-e29b-41d4-a716-446655440000", "a".repeat(64))
         val exception =
-            assertThrows(IllegalStateException::class.java) { runBlocking { store.replace(credential) } }
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking { store.add(credential, "Cuisine") }
+            }
         assertThat(exception).hasMessageThat().isEqualTo("ROOM_BEFORE_UNLOCK")
     }
 
     @Test
-    fun `clear is refused before unlock`() {
-        val exception = assertThrows(IllegalStateException::class.java) { runBlocking { store.clear() } }
+    fun `rename is refused before unlock`() {
+        val exception =
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking { store.rename("550e8400-e29b-41d4-a716-446655440000", "Cuisine") }
+            }
+        assertThat(exception).hasMessageThat().isEqualTo("ROOM_BEFORE_UNLOCK")
+    }
+
+    @Test
+    fun `remove is refused before unlock`() {
+        val exception =
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking { store.remove("550e8400-e29b-41d4-a716-446655440000") }
+            }
         assertThat(exception).hasMessageThat().isEqualTo("ROOM_BEFORE_UNLOCK")
     }
 }

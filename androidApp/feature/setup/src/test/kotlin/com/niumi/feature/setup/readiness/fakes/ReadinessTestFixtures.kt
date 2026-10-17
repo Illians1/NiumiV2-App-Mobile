@@ -56,7 +56,7 @@ fun reportWith(
     failing: Set<ReadinessCheckId> = emptySet(),
     notApplicable: Set<ReadinessCheckId> = emptySet(),
     appSelectionCount: Int = 1,
-    hasPairedBox: Boolean = true,
+    pairedBoxCount: Int = 1,
     candidateTriggerAtEpochMillis: Long? = NOW_EPOCH_MILLIS + ONE_HOUR_MILLIS,
 ): ReadinessReport =
     ReadinessReport(
@@ -75,7 +75,7 @@ fun reportWith(
                 )
             },
         appSelectionCount = appSelectionCount,
-        hasPairedBox = hasPairedBox,
+        pairedBoxCount = pairedBoxCount,
         candidateTriggerAtEpochMillis = candidateTriggerAtEpochMillis,
         nowEpochMillis = NOW_EPOCH_MILLIS,
     )

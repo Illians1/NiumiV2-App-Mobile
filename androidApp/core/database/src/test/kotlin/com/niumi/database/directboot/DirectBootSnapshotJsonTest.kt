@@ -7,6 +7,7 @@ import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
 import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.EffectStatus
+import com.niumi.database.SessionBox
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -119,6 +120,7 @@ class DirectBootSnapshotJsonTest {
                 "volumeRampSeconds",
                 "boxId",
                 "boxTokenSha256Hex",
+                "boxes",
                 "blockedPackages",
                 "eventReceipts",
                 "pendingEffects",
@@ -184,7 +186,8 @@ class DirectBootSnapshotJsonTest {
 
     @Test
     fun `a version three file keeps its ramp and ringtone`() {
-        val versionThree = reference.copy(ringtoneKey = "niumi_oiseaux", volumeRampSeconds = 300)
+        val versionThree =
+            reference.copy(projectionSchemaVersion = 3, ringtoneKey = "niumi_oiseaux", volumeRampSeconds = 300)
 
         val decoded =
             json.decodeFromString(
@@ -195,6 +198,45 @@ class DirectBootSnapshotJsonTest {
         assertThat(decoded.projectionSchemaVersion).isEqualTo(3)
         assertThat(decoded.toExtras().ringtoneKey).isEqualTo("niumi_oiseaux")
         assertThat(decoded.toExtras().volumeRampSeconds).isEqualTo(300)
+    }
+
+    /**
+     * Lot 8, SPEC_ANDROID §7.3 : un vrai fichier v3 — écrit par le code de l'étape 28, avant ce
+     * lot, ajouté en ressource de test (`directboot/projection-v3.json`) — se lit comme une liste
+     * d'un seul boîtier, sans nom.
+     */
+    @Test
+    fun `a real version three file reads as a list of one box`() {
+        val file =
+            checkNotNull(javaClass.getResourceAsStream("/directboot/projection-v3.json")) {
+                "ressource de test manquante : directboot/projection-v3.json"
+            }.bufferedReader().readText()
+
+        val decoded = json.decodeFromString(DirectBootSnapshot.Active.serializer(), file)
+
+        assertThat(decoded.projectionSchemaVersion).isEqualTo(3)
+        assertThat(decoded.toExtras().boxes)
+            .containsExactly(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), name = ""))
+    }
+
+    /** Lot 8, SPEC_ANDROID §7.3 : l'écriture courante (v4) porte la liste complète, sans les noms. */
+    @Test
+    fun `a version four file round trips its boxes`() {
+        val twoBoxes =
+            listOf(
+                DirectBootBox("11111111-1111-1111-1111-111111111111", "a".repeat(64)),
+                DirectBootBox("22222222-2222-2222-2222-222222222222", "b".repeat(64)),
+            )
+        val versionFour = reference.copy(boxes = twoBoxes)
+
+        val decoded =
+            json.decodeFromString(
+                DirectBootSnapshot.Active.serializer(),
+                json.encodeToString(DirectBootSnapshot.Active.serializer(), versionFour),
+            )
+
+        assertThat(decoded.projectionSchemaVersion).isEqualTo(4)
+        assertThat(decoded.boxes).isEqualTo(twoBoxes)
     }
 
     private fun kotlinx.serialization.json.JsonElement.jsonObjectKeys(): Set<String> = (this as JsonObject).keys

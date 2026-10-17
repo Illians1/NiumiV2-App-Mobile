@@ -10,6 +10,7 @@ import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
+import com.niumi.database.SessionBox
 import com.niumi.database.mapping.SessionSnapshotDtoFixtures
 import org.junit.Test
 
@@ -165,7 +166,7 @@ class DirectBootMapperTest {
                 effects,
             )
 
-        assertThat(active.toExtras()).isEqualTo(extras)
+        assertThat(active.toExtras().blockedPackages).isEqualTo(extras.blockedPackages)
     }
 
     @Test
@@ -203,7 +204,7 @@ class DirectBootMapperTest {
         assertThat(active.toSnapshotDto().isBlockingPending).isFalse()
     }
 
-    /** Toute écriture se fait en v3, quelle que soit la session projetée (SPEC_ANDROID §7.3, Lot 7). */
+    /** Toute écriture se fait en v4, quelle que soit la session projetée (SPEC_ANDROID §7.3, Lot 8). */
     @Test
     fun theProjectionIsAlwaysWrittenAtTheCurrentVersion() {
         val active =
@@ -214,7 +215,7 @@ class DirectBootMapperTest {
                 effects,
             )
 
-        assertThat(active.projectionSchemaVersion).isEqualTo(3)
+        assertThat(active.projectionSchemaVersion).isEqualTo(4)
     }
 
     @Test
@@ -224,8 +225,50 @@ class DirectBootMapperTest {
         val ramped = DirectBootMapper.projectionOf(snapshot, extras.copy(volumeRampSeconds = 30), receipts, effects)
         val constant = DirectBootMapper.projectionOf(snapshot, extras.copy(volumeRampSeconds = null), receipts, effects)
 
-        assertThat(ramped.toExtras()).isEqualTo(extras.copy(volumeRampSeconds = 30))
+        assertThat(ramped.toExtras().volumeRampSeconds).isEqualTo(30)
         assertThat(constant.toExtras().volumeRampSeconds).isNull()
+    }
+
+    /**
+     * SPEC_ANDROID §7.3, Projection v4 (Lot 8) : un fichier v3 réel, vu plus bas dans
+     * `DirectBootSnapshotJsonTest`, se lit comme une liste d'un seul boîtier, sans nom.
+     */
+    @Test
+    fun aVersionThreeProjectionReadsAsAListOfOneBox() {
+        val active =
+            DirectBootMapper
+                .projectionOf(SessionSnapshotDtoFixtures.preparingSnapshot(), extras, receipts, effects)
+                .copy(
+                    projectionSchemaVersion = 3,
+                    boxId = "550e8400-e29b-41d4-a716-446655440000",
+                    boxTokenSha256Hex = "a".repeat(64),
+                )
+
+        assertThat(active.toExtras().boxes)
+            .containsExactly(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), name = ""))
+    }
+
+    /** La liste complète est préservée en v4, l'ordre compris ; les noms n'y voyagent jamais (§7.3). */
+    @Test
+    fun aVersionFourProjectionRoundTripsItsBoxes() {
+        val twoBoxes =
+            listOf(
+                SessionBox("11111111-1111-1111-1111-111111111111", "a".repeat(64), "Cuisine"),
+                SessionBox("22222222-2222-2222-2222-222222222222", "b".repeat(64), "Chambre"),
+            )
+
+        val active =
+            DirectBootMapper.projectionOf(
+                SessionSnapshotDtoFixtures.preparingSnapshot(),
+                extras.copy(boxes = twoBoxes),
+                receipts,
+                effects,
+            )
+
+        assertThat(active.toExtras().boxes.map { it.boxId to it.tokenSha256Hex })
+            .containsExactlyElementsIn(twoBoxes.map { it.boxId to it.tokenSha256Hex })
+            .inOrder()
+        assertThat(active.toExtras().boxes.map { it.name }).containsExactly("", "")
     }
 
     /** Lot 7 : la sonnerie retirée de l'APK se relit comme sa remplaçante dans un fichier v1 ou v2. */

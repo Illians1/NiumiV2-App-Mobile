@@ -11,6 +11,7 @@ import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.core.nfc.BoxPayloadStatus
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.database.pairing.PairedBoxAddResult
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.feature.setup.isSetupEditable
 import com.niumi.system.nfc.NfcAvailability
@@ -104,12 +105,21 @@ class PairingViewModel
                     return@launch
                 }
                 val candidate = PairedBoxCredentialDto.fromPayload(payload)
-                if (pairedBoxStore.current() == null) {
-                    store(candidate)
-                } else {
-                    // §11.1 : « toute nouvelle association remplace l'ancienne après
-                    // confirmation » — rien n'est écrit avant la réponse de l'utilisateur.
-                    state = state.copy(pendingReplacement = candidate, message = null)
+                val name = "Boîtier ${pairedBoxStore.all().size + 1}"
+                when (pairedBoxStore.add(candidate, name)) {
+                    PairedBoxAddResult.Added -> {
+                        technicalEventLog.log(TechnicalEventType.NFC_SCAN_VALID)
+                        refreshPairedBox()
+                        state = state.copy(message = PairingTexts.PAIRED)
+                    }
+
+                    PairedBoxAddResult.AlreadyPaired -> {
+                        state = state.copy(message = PairingTexts.ALREADY_PAIRED)
+                    }
+
+                    PairedBoxAddResult.LimitReached -> {
+                        state = state.copy(message = PairingTexts.LIMIT_REACHED)
+                    }
                 }
             }
         }
@@ -120,33 +130,16 @@ class PairingViewModel
             state = state.copy(message = PairingTexts.UNREADABLE)
         }
 
-        fun confirmReplacement() {
-            val candidate = state.pendingReplacement ?: return
-            viewModelScope.launch {
-                state = state.copy(pendingReplacement = null)
-                store(candidate)
-            }
-        }
-
-        fun cancelReplacement() {
-            state = state.copy(pendingReplacement = null)
-        }
-
-        private suspend fun store(credential: PairedBoxCredentialDto) {
-            pairedBoxStore.replace(credential)
-            technicalEventLog.log(TechnicalEventType.NFC_SCAN_VALID)
-            state =
-                state.copy(
-                    pairedBoxIdPrefix = credential.boxId.take(PairingTexts.BOX_ID_PREFIX_LENGTH),
-                    message = PairingTexts.PAIRED,
-                )
-        }
-
         private suspend fun refreshPairedBox() {
             state =
                 state.copy(
                     pairedBoxIdPrefix =
-                        pairedBoxStore.current()?.boxId?.take(PairingTexts.BOX_ID_PREFIX_LENGTH),
+                        pairedBoxStore
+                            .all()
+                            .firstOrNull()
+                            ?.credential
+                            ?.boxId
+                            ?.take(PairingTexts.BOX_ID_PREFIX_LENGTH),
                 )
         }
     }

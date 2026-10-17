@@ -8,6 +8,7 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
+import com.niumi.database.SessionBox
 
 /**
  * Fixtures propres à `:core:database` : les fixtures de `:shared:core` (`SessionFixtures.kt`)
@@ -114,8 +115,8 @@ internal object SessionSnapshotDtoFixtures {
     // fait varier, ce qui vaut mieux ici que la limite de paramètres.
     @Suppress("LongParameterList")
     internal fun extras(
-        boxId: String = "550e8400-e29b-41d4-a716-446655440000",
-        boxTokenSha256Hex: String = "a".repeat(64),
+        boxes: List<SessionBox> =
+            listOf(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), "Boîtier 1")),
         ringtoneKey: String = "niumi_default",
         vibrationEnabled: Boolean = true,
         volumeRampSeconds: Int? = 120,
@@ -125,8 +126,7 @@ internal object SessionSnapshotDtoFixtures {
                 BlockedPackage("com.example.second", "Deuxième application"),
             ),
     ) = AndroidSessionExtras(
-        boxId,
-        boxTokenSha256Hex,
+        boxes,
         ringtoneKey,
         vibrationEnabled,
         volumeRampSeconds,

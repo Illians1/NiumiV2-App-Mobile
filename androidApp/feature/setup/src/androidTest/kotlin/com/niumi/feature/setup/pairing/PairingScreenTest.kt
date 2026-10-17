@@ -8,7 +8,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.system.nfc.NfcAvailability
 import org.junit.Rule
 import org.junit.Test
@@ -32,8 +31,6 @@ class PairingScreenTest {
                 state = state,
                 actions =
                     PairingActions(
-                        onConfirmReplacement = {},
-                        onCancelReplacement = {},
                         onOpenNfcSettings = {},
                         onContinue = {},
                     ),
@@ -69,31 +66,13 @@ class PairingScreenTest {
             .assertDoesNotExist()
     }
 
+    /** Lot 8 : un doublon se signale par un message, jamais par un dialogue de remplacement. */
     @Test
-    fun aPendingReplacementAsksForConfirmationWithBothChoices() {
-        setContent(
-            PairingUiState(
-                pairedBoxIdPrefix = "11111111",
-                pendingReplacement = PairedBoxCredentialDto(1, BOX_ID, TOKEN_FINGERPRINT),
-            ),
-        )
+    fun anAlreadyPairedMessageIsShownWithoutAnyDialog() {
+        setContent(PairingUiState(pairedBoxIdPrefix = "11111111", message = PairingTexts.ALREADY_PAIRED))
 
-        composeRule.onNodeWithText(PairingTexts.REPLACE_QUESTION, substring = true).assertExists()
-        composeRule.onNode(hasContentDescription(PairingTexts.REPLACE_CONFIRM_BUTTON_LABEL)).assertExists()
-        composeRule.onNode(hasContentDescription(PairingTexts.REPLACE_CANCEL_BUTTON_LABEL)).assertExists()
-    }
-
-    /** §15 : ne jamais laisser poursuivre depuis un état que l'utilisateur n'a pas tranché. */
-    @Test
-    fun theContinueButtonIsHiddenWhileAReplacementAwaitsConfirmation() {
-        setContent(
-            PairingUiState(
-                pairedBoxIdPrefix = "11111111",
-                pendingReplacement = PairedBoxCredentialDto(1, BOX_ID, TOKEN_FINGERPRINT),
-            ),
-        )
-
-        composeRule.onNode(hasContentDescription(PairingTexts.CONTINUE_BUTTON_LABEL)).assertDoesNotExist()
+        composeRule.onNodeWithText(PairingTexts.ALREADY_PAIRED, substring = true).assertExists()
+        composeRule.onNode(hasContentDescription(PairingTexts.CONTINUE_BUTTON_LABEL)).assertExists()
     }
 
     @Test
@@ -112,7 +91,7 @@ class PairingScreenTest {
         setContent(
             PairingUiState(
                 pairedBoxIdPrefix = BOX_ID.take(PairingTexts.BOX_ID_PREFIX_LENGTH),
-                pendingReplacement = PairedBoxCredentialDto(1, BOX_ID, TOKEN_FINGERPRINT),
+                message = PairingTexts.PAIRED,
             ),
         )
 

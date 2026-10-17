@@ -141,11 +141,14 @@ fait foi, jamais l'appelant. `HandleValidNfcUseCase` passe `extras.boxes` au vé
 3. `INSERT INTO session_box SELECT id, boxId, boxTokenSha256Hex, 'Boîtier 1', 0 FROM alarm_session`.
 4. Recréation d'`alarm_session` sans `boxId` ni `boxTokenSha256Hex` (SQLite ne retire pas une
    colonne autrement) : `CREATE TABLE alarm_session_new`, `INSERT … SELECT`, `DROP TABLE
-   alarm_session`, `ALTER TABLE … RENAME`. Les cinq tables enfants portent un `CASCADE` sur
-   `alarm_session` : la recréation se fait avec `PRAGMA foreign_keys = OFF` le temps de la
-   migration, et `NiumiDatabaseSchemaTest` prouve depuis une base v4 peuplée d'une session
-   `ARMED` avec reçus, outbox, applications et boîtier que rien n'est perdu et que `session_box`
-   contient la paire d'origine.
+   alarm_session`, `ALTER TABLE … RENAME`. Les six tables enfants (`session_box` comprise)
+   portent un `CASCADE` sur `alarm_session` : la recréation se fait pendant que les clés
+   étrangères sont inactives (*constaté à l'étape 30 : `PRAGMA foreign_keys` est sans effet dans
+   la transaction d'une migration Room ; c'est Room qui ne les active qu'après les migrations —
+   SPEC_ANDROID §7.2 « v5 » décrit le mécanisme réel et le `PRAGMA foreign_key_check` final*), et
+   `NiumiDatabaseSchemaTest` prouve depuis une base v4 peuplée d'une session `ARMED` avec reçu,
+   outbox, application, incident, pointeur actif et boîtier que rien n'est perdu et que
+   `session_box` contient la paire d'origine.
 
 `schemas/5.json` committé. Aucun `fallbackToDestructiveMigration`.
 

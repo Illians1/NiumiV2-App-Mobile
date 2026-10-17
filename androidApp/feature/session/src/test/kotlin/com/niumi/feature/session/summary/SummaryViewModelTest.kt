@@ -10,6 +10,7 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.BlockedPackage
+import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.feature.session.activation.ActivationSources
 import com.niumi.feature.session.activation.ArmSessionUseCase
 import com.niumi.feature.session.activation.fakes.CallJournal
@@ -84,7 +85,8 @@ class SummaryViewModelTest {
             },
         )
     private val timeZoneProvider = RecordingTimeZoneProvider(journal, zoneId = "Europe/Paris")
-    private val pairedBoxStore = RecordingPairedBoxStore(journal, credential)
+    private val pairedBox = PairedBoxDto(credential, "Boîtier 1")
+    private val pairedBoxStore = RecordingPairedBoxStore(journal, listOf(pairedBox))
     private val appSelectionStore = RecordingAppSelectionStore(journal, selection)
     private val coordinator = RecordingSessionCoordinator(journal)
     private val snapshotPublisher = SessionSnapshotPublisher()
@@ -94,11 +96,11 @@ class SummaryViewModelTest {
         candidateTriggerAtEpochMillis: Long?,
         checks: List<ReadinessCheck> = listOf(passedCheck()),
         appSelectionCount: Int = selection.size,
-        hasPairedBox: Boolean = true,
+        pairedBoxCount: Int = 1,
     ) = ReadinessReport(
         checks = checks,
         appSelectionCount = appSelectionCount,
-        hasPairedBox = hasPairedBox,
+        pairedBoxCount = pairedBoxCount,
         candidateTriggerAtEpochMillis = candidateTriggerAtEpochMillis,
         nowEpochMillis = now,
     )
@@ -180,12 +182,12 @@ class SummaryViewModelTest {
     }
 
     @Test
-    fun aNominalPreviewShowsTheScheduleTheApplicationsAndTheTruncatedBoxId() {
+    fun aNominalPreviewShowsTheScheduleTheApplicationsAndTheBoxNames() {
         val viewModel = loadedViewModel()
 
         assertThat(viewModel.state.display?.relativeDayLabel).isEqualTo("Demain")
         assertThat(viewModel.state.blockedPackages).containsExactlyElementsIn(selection)
-        assertThat(viewModel.state.truncatedBoxId).isEqualTo("b0c1d2e3")
+        assertThat(viewModel.state.boxNamesDisplay).isEqualTo(pairedBox.name)
         assertThat(viewModel.state.canActivate).isTrue()
     }
 
@@ -225,14 +227,14 @@ class SummaryViewModelTest {
     @Test
     fun aMissingPairedBoxDisablesTheActivationButton() {
         readinessChecker.reportForCandidate = { candidate ->
-            report(candidateTriggerAtEpochMillis = candidate, hasPairedBox = false)
+            report(candidateTriggerAtEpochMillis = candidate, pairedBoxCount = 0)
         }
-        pairedBoxStore.credential = null
+        pairedBoxStore.boxes = emptyList()
 
         val viewModel = loadedViewModel()
 
         assertThat(viewModel.state.canActivate).isFalse()
-        assertThat(viewModel.state.truncatedBoxId).isNull()
+        assertThat(viewModel.state.boxNamesDisplay).isNull()
     }
 
     @Test
@@ -425,7 +427,6 @@ class SummaryViewModelTest {
         val rendered = viewModel.state.toString()
 
         assertThat(rendered).doesNotContain(credential.tokenSha256Hex)
-        assertThat(viewModel.state.truncatedBoxId).isNotEqualTo(credential.boxId)
-        assertThat(viewModel.state.truncatedBoxId!!.length).isLessThan(credential.boxId.length)
+        assertThat(rendered).doesNotContain(credential.boxId)
     }
 }

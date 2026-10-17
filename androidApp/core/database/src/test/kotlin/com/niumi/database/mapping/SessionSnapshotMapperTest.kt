@@ -5,6 +5,7 @@ import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionState
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.isBlockingPending
+import com.niumi.database.SessionBox
 import org.junit.Test
 
 /**
@@ -114,12 +115,28 @@ class SessionSnapshotMapperTest {
         val snapshot = SessionSnapshotDtoFixtures.preparingSnapshot()
         val entity = snapshot.toEntity(extras)
 
-        val roundTrippedExtras = entity.toExtras(extras.blockedPackages)
+        val roundTrippedExtras = entity.toExtras(extras.blockedPackages, extras.boxes)
 
         assertThat(roundTrippedExtras).isEqualTo(extras)
         assertThat(roundTrippedExtras.blockedPackages.map { it.packageName })
             .containsExactlyElementsIn(extras.blockedPackages.map { it.packageName })
             .inOrder()
+    }
+
+    @Test
+    fun extrasRoundTripPreservesTheFrozenBoxList() {
+        val boxes =
+            listOf(
+                SessionBox("11111111-1111-1111-1111-111111111111", "a".repeat(64), "Cuisine"),
+                SessionBox("22222222-2222-2222-2222-222222222222", "b".repeat(64), "Chambre"),
+            )
+        val extrasWithTwoBoxes = SessionSnapshotDtoFixtures.extras(boxes = boxes)
+        val snapshot = SessionSnapshotDtoFixtures.preparingSnapshot()
+        val entity = snapshot.toEntity(extrasWithTwoBoxes)
+
+        val roundTrippedExtras = entity.toExtras(extrasWithTwoBoxes.blockedPackages, boxes)
+
+        assertThat(roundTrippedExtras.boxes).containsExactlyElementsIn(boxes).inOrder()
     }
 
     @Test

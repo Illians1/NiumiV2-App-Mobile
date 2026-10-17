@@ -90,9 +90,9 @@ fun SummaryScreen(
                 Text(text = "•  ${blocked.displayNameSnapshot}", style = MaterialTheme.typography.bodyMedium)
             }
 
-            state.truncatedBoxId?.let { boxId ->
+            state.boxNamesDisplay?.let { names ->
                 Text(text = SummaryTexts.BOX_TITLE, style = MaterialTheme.typography.titleMedium)
-                Text(text = boxId, style = MaterialTheme.typography.bodyMedium)
+                Text(text = names, style = MaterialTheme.typography.bodyMedium)
             }
 
             Text(text = SummaryTexts.COMMITMENT_REMINDER, style = MaterialTheme.typography.bodyLarge)

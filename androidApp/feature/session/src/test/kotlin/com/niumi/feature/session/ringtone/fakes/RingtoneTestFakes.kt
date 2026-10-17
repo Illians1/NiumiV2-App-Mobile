@@ -2,6 +2,7 @@ package com.niumi.feature.session.ringtone.fakes
 
 import com.niumi.core.interop.SessionEventDto
 import com.niumi.database.AndroidSessionExtras
+import com.niumi.database.SessionBox
 import com.niumi.system.audio.AlarmSoundPreferences
 import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.audio.AlarmVolumeSource
@@ -104,8 +105,7 @@ val SESSION_EXTRAS_SETTINGS = AlarmSoundSettings("niumi_oiseaux", 600)
 
 fun sessionExtras(): AndroidSessionExtras =
     AndroidSessionExtras(
-        boxId = "550e8400-e29b-41d4-a716-446655440000",
-        boxTokenSha256Hex = "a".repeat(64),
+        boxes = listOf(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), "Boîtier 1")),
         ringtoneKey = SESSION_EXTRAS_SETTINGS.ringtoneKey,
         vibrationEnabled = true,
         volumeRampSeconds = SESSION_EXTRAS_SETTINGS.volumeRampSeconds,

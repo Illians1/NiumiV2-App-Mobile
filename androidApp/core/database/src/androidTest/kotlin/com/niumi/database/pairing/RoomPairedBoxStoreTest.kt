@@ -14,9 +14,9 @@ import org.junit.runner.RunWith
 import javax.inject.Provider
 
 /**
- * SPEC_ANDROID §11.1 : un seul boîtier associé, toute nouvelle association remplace l'ancienne.
- * `current()` avant déverrouillage renvoie `null` plutôt que de lever, à la différence du reste
- * de `RoomPairedBoxStore` — voir le KDoc de la classe.
+ * SPEC_ANDROID §11.1 (Lot 8) : jusqu'à cinq boîtiers nommés, ordonnés par position. `all()` avant
+ * déverrouillage renvoie une liste vide plutôt que de lever, à la différence du reste de
+ * `RoomPairedBoxStore` — voir le KDoc de la classe.
  */
 @RunWith(AndroidJUnit4::class)
 class RoomPairedBoxStoreTest {
@@ -32,41 +32,106 @@ class RoomPairedBoxStoreTest {
     @After
     fun tearDown() = database.close()
 
+    private fun credential(
+        boxId: String = "550e8400-e29b-41d4-a716-446655440000",
+        tokenPrefix: Char = 'a',
+    ) = PairedBoxCredentialDto(1, boxId, tokenPrefix.toString().repeat(64))
+
     @Test
-    fun currentIsNullWhenNothingIsPaired() =
+    fun allIsEmptyWhenNothingIsPaired() =
         runTest {
-            assertThat(store.current()).isNull()
+            assertThat(store.all()).isEmpty()
         }
 
     @Test
-    fun replaceThenCurrentReturnsTheSameCredential() =
+    fun addThenAllReturnsTheBoxWithItsNameInPositionZero() =
         runTest {
-            val credential = PairedBoxCredentialDto(1, "550e8400-e29b-41d4-a716-446655440000", "a".repeat(64))
+            val credential = credential()
 
-            store.replace(credential)
+            val result = store.add(credential, "Cuisine")
 
-            assertThat(store.current()).isEqualTo(credential)
+            assertThat(result).isEqualTo(PairedBoxAddResult.Added)
+            assertThat(store.all()).containsExactly(PairedBoxDto(credential, "Cuisine"))
         }
 
     @Test
-    fun replacingWithADifferentBoxIdLeavesExactlyOneBoxStored() =
+    fun addingTheSameBoxIdTwiceReturnsAlreadyPairedAndKeepsOneRow() =
         runTest {
-            store.replace(PairedBoxCredentialDto(1, "550e8400-e29b-41d4-a716-446655440000", "a".repeat(64)))
+            val credential = credential()
+            store.add(credential, "Cuisine")
 
-            val secondCredential = PairedBoxCredentialDto(1, "00000000-0000-0000-0000-000000000000", "b".repeat(64))
-            store.replace(secondCredential)
+            val result = store.add(credential.copy(tokenSha256Hex = "b".repeat(64)), "Chambre")
 
-            assertThat(store.current()).isEqualTo(secondCredential)
-            assertThat(database.pairedBoxDao().findById("550e8400-e29b-41d4-a716-446655440000")).isNull()
+            assertThat(result).isEqualTo(PairedBoxAddResult.AlreadyPaired)
+            assertThat(store.all()).containsExactly(PairedBoxDto(credential, "Cuisine"))
         }
 
     @Test
-    fun clearRemovesTheStoredBox() =
+    fun aSixthBoxReturnsLimitReachedAndWritesNothing() =
         runTest {
-            store.replace(PairedBoxCredentialDto(1, "550e8400-e29b-41d4-a716-446655440000", "a".repeat(64)))
+            repeat(5) { index -> store.add(credential(boxId = "box-$index"), "Boîtier ${index + 1}") }
 
-            store.clear()
+            val result = store.add(credential(boxId = "box-5"), "Boîtier 6")
 
-            assertThat(store.current()).isNull()
+            assertThat(result).isEqualTo(PairedBoxAddResult.LimitReached)
+            assertThat(store.all()).hasSize(5)
+        }
+
+    @Test
+    fun renameChangesOnlyTheName() =
+        runTest {
+            val credential = credential()
+            store.add(credential, "Cuisine")
+
+            store.rename(credential.boxId, "Salle de bain")
+
+            assertThat(store.all()).containsExactly(PairedBoxDto(credential, "Salle de bain"))
+        }
+
+    @Test
+    fun addStoresTheTrimmedName() =
+        runTest {
+            val credential = credential()
+
+            store.add(credential, "  Cuisine  ")
+
+            assertThat(store.all()).containsExactly(PairedBoxDto(credential, "Cuisine"))
+        }
+
+    @Test
+    fun renameStoresTheTrimmedName() =
+        runTest {
+            val credential = credential()
+            store.add(credential, "Cuisine")
+
+            store.rename(credential.boxId, " Salle de bain ")
+
+            assertThat(store.all()).containsExactly(PairedBoxDto(credential, "Salle de bain"))
+        }
+
+    @Test
+    fun removeDropsOneBoxAndRenumbersPositions() =
+        runTest {
+            store.add(credential(boxId = "box-0"), "Premier")
+            val removed = credential(boxId = "box-1")
+            store.add(removed, "Deuxième")
+            store.add(credential(boxId = "box-2"), "Troisième")
+
+            store.remove(removed.boxId)
+
+            val remaining = store.all()
+            assertThat(remaining.map { it.name }).containsExactly("Premier", "Troisième").inOrder()
+            assertThat(database.pairedBoxDao().findById("box-0")?.position).isEqualTo(0)
+            assertThat(database.pairedBoxDao().findById("box-2")?.position).isEqualTo(1)
+        }
+
+    @Test
+    fun allIsOrderedByPosition() =
+        runTest {
+            store.add(credential(boxId = "box-0"), "Premier")
+            store.add(credential(boxId = "box-1"), "Deuxième")
+            store.add(credential(boxId = "box-2"), "Troisième")
+
+            assertThat(store.all().map { it.name }).containsExactly("Premier", "Deuxième", "Troisième").inOrder()
         }
 }

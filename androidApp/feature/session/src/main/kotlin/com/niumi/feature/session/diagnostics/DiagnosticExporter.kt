@@ -16,21 +16,27 @@ private const val BOX_ID_VISIBLE_CHARS = 8
 
 private val TIMESTAMP_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
+/** Un boîtier de la liste figée, pour l'export (SPEC_ANDROID §17, Lot 8) : jamais de hash. */
+data class DiagnosticBox(
+    val boxId: String,
+    val name: String,
+)
+
 /**
  * Ce que l'export a le droit de contenir (SPEC_ANDROID §17 : « les 200 événements locaux et les
  * résultats du contrôle de santé »).
  *
  * **Le hash du token n'y figure pas, et c'est délibéré.** `AndroidSessionExtras` porte
- * `boxTokenSha256Hex` ; le rapport ne le reprend jamais. Un secret qu'on ne transporte pas ne peut
- * pas fuiter par un format d'affichage oublié. [boxId] est transporté entier et tronqué par
- * l'exporteur, seul endroit où la règle des huit caractères s'applique.
+ * `tokenSha256Hex` par boîtier ; le rapport ne le reprend jamais. Un secret qu'on ne transporte pas
+ * ne peut pas fuiter par un format d'affichage oublié. [boxes] porte chaque `boxId` entier, tronqué
+ * par l'exporteur, seul endroit où la règle des huit caractères s'applique.
  */
 data class DiagnosticReport(
     val deviceContext: DeviceContext,
     val sessionId: String?,
     val state: SessionStateDto?,
     val health: SessionHealthDto?,
-    val boxId: String?,
+    val boxes: List<DiagnosticBox>,
     val checks: List<ReadinessCheck>,
     val incidents: List<SessionIncidentDto>,
     val events: List<TechnicalEventEntry>,
@@ -79,7 +85,9 @@ object DiagnosticExporter {
         appendLine("- Identifiant : ${report.sessionId}")
         report.state?.let { appendLine("- État : ${IncidentDiagnosticTexts.stateLabel(it)}") }
         report.health?.let { appendLine("- Santé : ${IncidentDiagnosticTexts.healthLabel(it)}") }
-        report.boxId?.let { appendLine("- ${IncidentDiagnosticTexts.BOX_TITLE} : ${mask(it)}") }
+        report.boxes.forEach { box ->
+            appendLine("- ${IncidentDiagnosticTexts.BOX_TITLE} : ${box.name} (${mask(box.boxId)})")
+        }
     }
 
     private fun StringBuilder.appendChecks(checks: List<ReadinessCheck>) {

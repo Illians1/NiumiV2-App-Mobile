@@ -78,10 +78,6 @@ fun PairingScreen(
                     }
                 }
 
-                state.pendingReplacement != null -> {
-                    ReplacementConfirmation(actions.onConfirmReplacement, actions.onCancelReplacement)
-                }
-
                 else -> {
                     Text(text = PairingTexts.INSTRUCTION, style = MaterialTheme.typography.bodyLarge)
                 }
@@ -98,7 +94,7 @@ fun PairingScreen(
                 Text(text = message, style = MaterialTheme.typography.bodyMedium)
             }
 
-            if (state.canContinue && state.pendingReplacement == null) {
+            if (state.canContinue) {
                 Button(
                     onClick = actions.onContinue,
                     modifier = Modifier.semantics { contentDescription = PairingTexts.CONTINUE_BUTTON_LABEL },
@@ -107,27 +103,6 @@ fun PairingScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ReplacementConfirmation(
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    Text(text = PairingTexts.REPLACE_QUESTION, style = MaterialTheme.typography.titleMedium)
-    Text(text = PairingTexts.REPLACE_EXPLANATION, style = MaterialTheme.typography.bodyMedium)
-    Button(
-        onClick = onConfirm,
-        modifier = Modifier.semantics { contentDescription = PairingTexts.REPLACE_CONFIRM_BUTTON_LABEL },
-    ) {
-        Text(PairingTexts.REPLACE_CONFIRM_BUTTON_LABEL)
-    }
-    OutlinedButton(
-        onClick = onCancel,
-        modifier = Modifier.semantics { contentDescription = PairingTexts.REPLACE_CANCEL_BUTTON_LABEL },
-    ) {
-        Text(PairingTexts.REPLACE_CANCEL_BUTTON_LABEL)
     }
 }
 
@@ -177,8 +152,6 @@ fun PairingRoute(
         state = state,
         actions =
             PairingActions(
-                onConfirmReplacement = viewModel::confirmReplacement,
-                onCancelReplacement = viewModel::cancelReplacement,
                 onOpenNfcSettings = {
                     settingsIntentFor(ReadinessAction.OpenNfcSettings, context.packageName)
                         ?.let(context::startActivity)
@@ -206,8 +179,6 @@ private fun PairingScreenPreview() {
             state = PairingUiState(pairedBoxIdPrefix = "550e8400"),
             actions =
                 PairingActions(
-                    onConfirmReplacement = {},
-                    onCancelReplacement = {},
                     onOpenNfcSettings = {},
                     onContinue = {},
                 ),

@@ -58,7 +58,7 @@ class IncidentDiagnosticViewModelTest {
             ReadinessReport(
                 checks = checks,
                 appSelectionCount = 1,
-                hasPairedBox = true,
+                pairedBoxCount = 1,
                 candidateTriggerAtEpochMillis = null,
                 nowEpochMillis = now,
             )
@@ -183,7 +183,7 @@ class IncidentDiagnosticViewModelTest {
                             ),
                         ),
                     appSelectionCount = 1,
-                    hasPairedBox = true,
+                    pairedBoxCount = 1,
                     candidateTriggerAtEpochMillis = null,
                     nowEpochMillis = now,
                 )

@@ -41,7 +41,8 @@ data class ReadinessInput(
 data class ReadinessReport(
     val checks: List<ReadinessCheck>,
     val appSelectionCount: Int,
-    val hasPairedBox: Boolean,
+    /** Lot 8 : remplace `hasPairedBox`, qui ne savait compter que 0 ou 1. */
+    val pairedBoxCount: Int,
     val candidateTriggerAtEpochMillis: Long?,
     /** `null` quand aucun début différé n'a été choisi — le cas de tout diagnostic hors Lot 6. */
     val candidateBlockingStartsAtEpochMillis: Long? = null,

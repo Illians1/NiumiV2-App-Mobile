@@ -76,7 +76,7 @@ class ActiveSessionViewModelTest {
             ReadinessReport(
                 checks = checks,
                 appSelectionCount = 1,
-                hasPairedBox = true,
+                pairedBoxCount = 1,
                 candidateTriggerAtEpochMillis = null,
                 nowEpochMillis = now,
             )
@@ -590,7 +590,7 @@ class ActiveSessionViewModelTest {
                 ReadinessReport(
                     checks = listOf(check(ReadinessCheckId.NFC_ENABLED, outcome)),
                     appSelectionCount = 1,
-                    hasPairedBox = true,
+                    pairedBoxCount = 1,
                     candidateTriggerAtEpochMillis = null,
                     nowEpochMillis = now,
                 )

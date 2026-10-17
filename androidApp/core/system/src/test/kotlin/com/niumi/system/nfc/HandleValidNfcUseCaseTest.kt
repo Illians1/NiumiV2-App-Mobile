@@ -244,6 +244,59 @@ class HandleValidNfcUseCaseTest {
             assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
         }
 
+    /** Lot 8 : la liste figée compte plusieurs boîtiers, n'importe lequel suffit à terminer la session. */
+    @Test
+    fun aTagMatchingTheSecondOfThreeFrozenBoxesEndsTheSession() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            val threeBoxes =
+                NfcScanFixtures.extrasForMany(
+                    harness.facade,
+                    listOf(
+                        NfcScanFixtures.SESSION_BOX_URI,
+                        NfcScanFixtures.SECOND_BOX_URI,
+                        NfcScanFixtures.THIRD_BOX_URI,
+                    ),
+                )
+            harness.persistSession(SessionStateDto.RINGING, extras = threeBoxes)
+            val coordinator = ProgrammableCoordinator()
+
+            val outcome = harness.useCaseWith(coordinator).onUriRead(NfcScanFixtures.SECOND_BOX_URI)
+
+            assertThat(outcome).isEqualTo(ScanOutcome.Accepted)
+            val proof = checkNotNull(coordinator.dispatched.single().nfcProof)
+            assertThat(proof.boxId).isEqualTo(threeBoxes.boxes[1].boxId)
+        }
+
+    /**
+     * Un boîtier associé **après** l'activation n'est jamais dans la liste figée (§11.3 point 3,
+     * Lot 8) : le dépôt courant peut le connaître, le scan ne le reconnaît pas.
+     */
+    @Test
+    fun aTagMatchingABoxPairedAfterActivationIsRefused() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
+
+            val outcome = harness.useCase().onUriRead(NfcScanFixtures.OTHER_BOX_URI)
+
+            assertThat(outcome).isEqualTo(ScanOutcome.UnknownBox)
+            assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
+        }
+
+    /** Liste figée vide (migration ou projection corrompue, point de vigilance 3 du Lot 8) : refus, jamais de levée. */
+    @Test
+    fun anEmptyFrozenListRefusesEveryScanWithoutThrowing() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras().copy(boxes = emptyList()))
+
+            val outcome = harness.useCase().onUriRead(NfcScanFixtures.SESSION_BOX_URI)
+
+            assertThat(outcome).isEqualTo(ScanOutcome.UnknownBox)
+            assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
+        }
+
     /** Payload rejeté par le parseur commun : ni état, ni révision, ni effet ne bougent (§4). */
     @Test
     fun aMalformedPayloadLeavesEverythingUntouched() =

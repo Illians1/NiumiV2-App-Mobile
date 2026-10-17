@@ -7,10 +7,9 @@ import androidx.room.Query
 import com.niumi.database.entity.PairedBoxEntity
 
 /**
- * Un seul boîtier associé dans le MVP (SPEC_ANDROID §11.1) : [current] lit la table sans connaître
- * de `boxId`, et [deleteAll] permet à [com.niumi.database.pairing.RoomPairedBoxStore] de retirer
- * l'ancien boîtier avant d'insérer le nouveau, y compris quand le `boxId` change (`upsert` seul ne
- * couvre que le remplacement d'une même clé primaire).
+ * Jusqu'à cinq boîtiers associés, nommés, ordonnés par position (SPEC_ANDROID §11.1, Lot 8).
+ * Le refus d'un doublon ou d'un sixième boîtier se fait au dépôt
+ * ([com.niumi.database.pairing.RoomPairedBoxStore]), pas ici : ce DAO n'est que la persistance.
  */
 @Dao
 interface PairedBoxDao {
@@ -20,9 +19,18 @@ interface PairedBoxDao {
     @Query("SELECT * FROM paired_box WHERE boxId = :boxId")
     suspend fun findById(boxId: String): PairedBoxEntity?
 
-    @Query("SELECT * FROM paired_box LIMIT 1")
-    suspend fun current(): PairedBoxEntity?
+    @Query("SELECT * FROM paired_box ORDER BY position ASC")
+    suspend fun all(): List<PairedBoxEntity>
 
-    @Query("DELETE FROM paired_box")
-    suspend fun deleteAll()
+    @Query("SELECT COUNT(*) FROM paired_box")
+    suspend fun count(): Int
+
+    @Query("UPDATE paired_box SET name = :name WHERE boxId = :boxId")
+    suspend fun rename(
+        boxId: String,
+        name: String,
+    )
+
+    @Query("DELETE FROM paired_box WHERE boxId = :boxId")
+    suspend fun delete(boxId: String)
 }

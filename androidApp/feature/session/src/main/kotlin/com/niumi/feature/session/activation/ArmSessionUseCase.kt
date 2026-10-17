@@ -14,6 +14,7 @@ import com.niumi.core.interop.WakeScheduleInputDto
 import com.niumi.core.interop.WakeScheduleResultDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
+import com.niumi.database.SessionBox
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.toActivationPolicyInput
@@ -36,7 +37,7 @@ private data class Diagnosis(
 )
 
 /**
- * Aperçu affiché par le récapitulatif (écran 6, SPEC_ANDROID §15). [boxId] et [blockedPackages]
+ * Aperçu affiché par le récapitulatif (écran 6, SPEC_ANDROID §15). [boxNames] et [blockedPackages]
  * sont lus indépendamment du verdict d'activation : l'écran doit pouvoir montrer ce qui est
  * choisi même quand un contrôle bloque encore (§19.1, « impossibilité de confirmer si un
  * contrôle bloquant échoue » — encore faut-il pouvoir afficher pourquoi).
@@ -51,7 +52,8 @@ data class ActivationPreview(
     val blockingResult: BlockingScheduleResultDto?,
     val policy: ActivationPolicyResultDto?,
     val blockedPackages: List<BlockedPackage>,
-    val boxId: String?,
+    /** Lot 8 : remplace `boxId`, un nom par boîtier associé, dans l'ordre de `PairedBoxStore.all()`. */
+    val boxNames: List<String>,
     val nowEpochMillis: Long,
 ) {
     /**
@@ -100,7 +102,7 @@ class ArmSessionUseCase
                 blockingResult = diagnosis.blockingResult,
                 policy = diagnosis.policy,
                 blockedPackages = sources.appSelectionStore.selection(),
-                boxId = sources.pairedBoxStore.current()?.boxId,
+                boxNames = sources.pairedBoxStore.all().map { it.name },
                 nowEpochMillis = diagnosis.nowEpochMillis,
             )
         }
@@ -139,15 +141,17 @@ class ArmSessionUseCase
                 return ArmSessionResult.Failed(ActivationFailure.Blocked(policy.blockingReasons))
             }
 
-            // Point 5 de §9.2 côté commun (SPEC_CORE_KMP §10) : le credential est capturé et figé
-            // ici, à l'étape 1 de la transaction — jamais relu depuis le dépôt pendant la session.
-            val credential =
-                sources.pairedBoxStore.current()
-                    ?: return ArmSessionResult.Failed(
-                        ActivationFailure.Blocked(
-                            listOf(ActivationReasonDto(ActivationReasonCode.NO_PAIRED_BOX, null)),
-                        ),
-                    )
+            // Point 5 de §9.2 côté commun (SPEC_CORE_KMP §10) : la liste des boîtiers est capturée
+            // et figée ici, à l'étape 1 de la transaction — jamais relue depuis le dépôt pendant
+            // la session (Lot 8).
+            val pairedBoxes = sources.pairedBoxStore.all()
+            if (pairedBoxes.isEmpty()) {
+                return ArmSessionResult.Failed(
+                    ActivationFailure.Blocked(
+                        listOf(ActivationReasonDto(ActivationReasonCode.NO_PAIRED_BOX, null)),
+                    ),
+                )
+            }
             val selection = sources.appSelectionStore.selection()
             // Lu **au moment d'armer**, jamais transporté par la route : même règle que les heures
             // (SetupPreferences). `sanitized()` protège d'une clé ou d'une durée retirée du
@@ -164,8 +168,7 @@ class ArmSessionUseCase
                 )
             val extras =
                 AndroidSessionExtras(
-                    boxId = credential.boxId,
-                    boxTokenSha256Hex = credential.tokenSha256Hex,
+                    boxes = pairedBoxes.map { SessionBox(it.credential.boxId, it.credential.tokenSha256Hex, it.name) },
                     ringtoneKey = alarmSound.ringtoneKey,
                     vibrationEnabled = true,
                     volumeRampSeconds = alarmSound.volumeRampSeconds,

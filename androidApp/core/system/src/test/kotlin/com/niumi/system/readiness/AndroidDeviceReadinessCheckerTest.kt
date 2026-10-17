@@ -92,7 +92,26 @@ class AndroidDeviceReadinessCheckerTest {
             assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
             assertThat(check.severity).isEqualTo(ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE)
             assertThat(check.action).isEqualTo(ReadinessAction.StartPairing)
-            assertThat(report.hasPairedBox).isFalse()
+            assertThat(report.pairedBoxCount).isEqualTo(0)
+        }
+
+    @Test
+    fun fiveOrFewerPairedBoxesPassTheCheckSixDoesNot() =
+        runTest {
+            val sources = ReadinessTestSources()
+
+            sources.pairedBoxStore.seedCount(1)
+            assertThat(report(sources).check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.PASSED)
+
+            sources.pairedBoxStore.seedCount(5)
+            val fiveBoxes = report(sources)
+            assertThat(fiveBoxes.check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.PASSED)
+            assertThat(fiveBoxes.pairedBoxCount).isEqualTo(5)
+
+            sources.pairedBoxStore.seedCount(6)
+            val sixBoxes = report(sources)
+            assertThat(sixBoxes.check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.FAILED)
+            assertThat(sixBoxes.pairedBoxCount).isEqualTo(6)
         }
 
     @Test

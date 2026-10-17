@@ -2,7 +2,10 @@ package com.niumi.system.readiness.fakes
 
 import android.app.Activity
 import android.app.NotificationManager
+import com.niumi.core.diagnostics.PairedBoxLimit
 import com.niumi.core.interop.PairedBoxCredentialDto
+import com.niumi.database.pairing.PairedBoxAddResult
+import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.apps.AppSelectionSource
 import com.niumi.system.audio.AlarmVolumeSource
@@ -38,17 +41,59 @@ class FakeNfcReader(
         get() = availabilityValue
 }
 
+/** Un boîtier associé par défaut : c'est l'état « tout vert » du contrôle `PAIRED_BOX` (Lot 8). */
 class FakePairedBoxStore(
-    private var credential: PairedBoxCredentialDto? = PairedBoxCredentialDto(1, "box-1", "a".repeat(64)),
+    seed: List<PairedBoxDto> =
+        listOf(PairedBoxDto(PairedBoxCredentialDto(1, "box-1", "a".repeat(64)), "Boîtier 1")),
 ) : PairedBoxStore {
-    override suspend fun current(): PairedBoxCredentialDto? = credential
+    private val boxes = seed.toMutableList()
 
-    override suspend fun replace(credential: PairedBoxCredentialDto) {
-        this.credential = credential
+    override suspend fun all(): List<PairedBoxDto> = boxes.toList()
+
+    override suspend fun add(
+        credential: PairedBoxCredentialDto,
+        name: String,
+    ): PairedBoxAddResult =
+        when {
+            boxes.any { it.credential.boxId == credential.boxId } -> {
+                PairedBoxAddResult.AlreadyPaired
+            }
+
+            boxes.size >= PairedBoxLimit.MAX -> {
+                PairedBoxAddResult.LimitReached
+            }
+
+            else -> {
+                boxes += PairedBoxDto(credential, name)
+                PairedBoxAddResult.Added
+            }
+        }
+
+    override suspend fun rename(
+        boxId: String,
+        name: String,
+    ) {
+        val index = boxes.indexOfFirst { it.credential.boxId == boxId }
+        if (index >= 0) boxes[index] = boxes[index].copy(name = name)
     }
 
-    override suspend fun clear() {
-        credential = null
+    override suspend fun remove(boxId: String) {
+        boxes.removeAll { it.credential.boxId == boxId }
+    }
+
+    /** Convenience de test, hors interface : « aucun boîtier associé ». */
+    fun clear() = boxes.clear()
+
+    /** Convenience de test, hors interface : force un nombre de boîtiers distincts. */
+    fun seedCount(count: Int) {
+        boxes.clear()
+        repeat(count) { index ->
+            boxes +=
+                PairedBoxDto(
+                    PairedBoxCredentialDto(1, "box-$index", "a".repeat(64)),
+                    "Boîtier ${index + 1}",
+                )
+        }
     }
 }
 

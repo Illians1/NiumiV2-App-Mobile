@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.feature.setup.pairing.fakes.FakeNfcReader
 import com.niumi.feature.setup.pairing.fakes.FakePairedBoxStore
 import com.niumi.feature.setup.pairing.fakes.RecordingTechnicalEventLog
@@ -26,9 +27,11 @@ private const val VALID_BOX_ID = "550e8400-e29b-41d4-a716-446655440000"
 private const val OTHER_URI = "niumi://box/v1/00000000-0000-0000-0000-000000000000?token=AAAAAAAAAAAAAAAAAAAAAA"
 
 /**
- * SPEC_ANDROID §11.1 : un seul boîtier associé, remplacement seulement après confirmation, jamais
- * le token en clair. Le ViewModel ne juge jamais lui-même de la validité d'un payload — il
- * délègue à la **vraie** `NiumiCoreFacade` (SPEC_CORE_KMP §9.3), jamais à un parseur simulé.
+ * SPEC_ANDROID §11.1 (Lot 8) : jusqu'à cinq boîtiers associés, un doublon est signalé sans
+ * écriture, jamais le token en clair. Le ViewModel ne juge jamais lui-même de la validité d'un
+ * payload — il délègue à la **vraie** `NiumiCoreFacade` (SPEC_CORE_KMP §9.3), jamais à un parseur
+ * simulé. L'écran « Mes boîtiers » complet (renommer, retirer) arrive à l'étape 31 : ici, le
+ * dépôt n'ajoute qu'un boîtier à la fois, nommé « Boîtier {n} ».
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PairingViewModelTest {
@@ -64,8 +67,13 @@ class PairingViewModelTest {
 
         viewModel.onUriRead(VALID_URI)
 
-        assertThat(store.replaceCallCount).isEqualTo(1)
-        assertThat(store.credential?.boxId).isEqualTo(VALID_BOX_ID)
+        assertThat(store.addCallCount).isEqualTo(1)
+        assertThat(
+            store.boxes
+                .single()
+                .credential.boxId,
+        ).isEqualTo(VALID_BOX_ID)
+        assertThat(store.boxes.single().name).isEqualTo("Boîtier 1")
         assertThat(viewModel.state.pairedBoxIdPrefix).isEqualTo(VALID_BOX_ID.take(PairingTexts.BOX_ID_PREFIX_LENGTH))
         assertThat(viewModel.state.message).isEqualTo(PairingTexts.PAIRED)
         assertThat(log.types).containsExactly(TechnicalEventType.NFC_SCAN_VALID)
@@ -77,8 +85,8 @@ class PairingViewModelTest {
 
         viewModel.onUriRead("https://example.com/not-a-niumi-box")
 
-        assertThat(store.replaceCallCount).isEqualTo(0)
-        assertThat(store.credential).isNull()
+        assertThat(store.addCallCount).isEqualTo(0)
+        assertThat(store.boxes).isEmpty()
         assertThat(viewModel.state.pairedBoxIdPrefix).isNull()
         assertThat(viewModel.state.message).isEqualTo(PairingTexts.UNKNOWN_PAYLOAD)
         assertThat(log.types).containsExactly(TechnicalEventType.NFC_SCAN_INVALID)
@@ -90,61 +98,39 @@ class PairingViewModelTest {
 
         viewModel.onUnreadableTag()
 
-        assertThat(store.replaceCallCount).isEqualTo(0)
+        assertThat(store.addCallCount).isEqualTo(0)
         assertThat(viewModel.state.message).isEqualTo(PairingTexts.UNREADABLE)
         assertThat(log.types).containsExactly(TechnicalEventType.NFC_SCAN_INVALID)
     }
 
+    /** Lot 8 : un doublon de `boxId` est signalé, jamais réécrit — plus de dialogue de remplacement. */
     @Test
-    fun anExistingBoxTurnsAValidTagIntoAConfirmationRequestWithoutWriting() {
-        store.credential = PairedBoxCredentialDto(1, "11111111-1111-1111-1111-111111111111", "a".repeat(64))
+    fun aValidTagForAnAlreadyPairedBoxShowsAlreadyPairedWithoutWriting() {
+        store.boxes = listOf(PairedBoxDto(PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64)), "Boîtier 1"))
         val viewModel = viewModel()
 
         viewModel.onUriRead(VALID_URI)
 
-        assertThat(store.replaceCallCount).isEqualTo(0)
-        assertThat(store.credential?.boxId).isEqualTo("11111111-1111-1111-1111-111111111111")
-        assertThat(viewModel.state.pendingReplacement?.boxId).isEqualTo(VALID_BOX_ID)
+        assertThat(store.addCallCount).isEqualTo(1)
+        assertThat(store.boxes).hasSize(1)
+        assertThat(viewModel.state.message).isEqualTo(PairingTexts.ALREADY_PAIRED)
     }
 
+    /** Lot 8 : un deuxième boîtier distinct s'ajoute à la liste, nommé par sa position. */
     @Test
-    fun confirmingTheReplacementWritesTheNewBoxAndForgetsTheOldOne() {
-        store.credential = PairedBoxCredentialDto(1, "11111111-1111-1111-1111-111111111111", "a".repeat(64))
+    fun aSecondDistinctBoxIsAddedAndNamedByItsPosition() {
+        store.boxes =
+            listOf(
+                PairedBoxDto(
+                    PairedBoxCredentialDto(1, "11111111-1111-1111-1111-111111111111", "a".repeat(64)),
+                    "Boîtier 1",
+                ),
+            )
         val viewModel = viewModel()
-        viewModel.onUriRead(VALID_URI)
-
-        viewModel.confirmReplacement()
-
-        assertThat(store.replaceCallCount).isEqualTo(1)
-        assertThat(store.credential?.boxId).isEqualTo(VALID_BOX_ID)
-        assertThat(viewModel.state.pendingReplacement).isNull()
-        assertThat(viewModel.state.pairedBoxIdPrefix).isEqualTo(VALID_BOX_ID.take(PairingTexts.BOX_ID_PREFIX_LENGTH))
-    }
-
-    @Test
-    fun cancellingTheReplacementKeepsTheExistingBox() {
-        val existing = PairedBoxCredentialDto(1, "11111111-1111-1111-1111-111111111111", "a".repeat(64))
-        store.credential = existing
-        val viewModel = viewModel()
-        viewModel.onUriRead(VALID_URI)
-
-        viewModel.cancelReplacement()
-
-        assertThat(store.replaceCallCount).isEqualTo(0)
-        assertThat(store.credential).isEqualTo(existing)
-        assertThat(viewModel.state.pendingReplacement).isNull()
-    }
-
-    @Test
-    fun rescanningBeforeConfirmingReplacesThePendingCandidateNotTheStoredBox() {
-        store.credential = PairedBoxCredentialDto(1, "11111111-1111-1111-1111-111111111111", "a".repeat(64))
-        val viewModel = viewModel()
-        viewModel.onUriRead(VALID_URI)
 
         viewModel.onUriRead(OTHER_URI)
 
-        assertThat(store.replaceCallCount).isEqualTo(0)
-        assertThat(viewModel.state.pendingReplacement?.boxId).isEqualTo("00000000-0000-0000-0000-000000000000")
+        assertThat(store.boxes.map { it.name }).containsExactly("Boîtier 1", "Boîtier 2").inOrder()
     }
 
     /**
@@ -160,7 +146,10 @@ class PairingViewModelTest {
         viewModel.onUriRead("niumi://box/v1/bad-uuid?token=AAAAAAAAAAAAAAAAAAAAAA")
         viewModel.onUnreadableTag()
 
-        val storedFingerprint = checkNotNull(store.credential).tokenSha256Hex
+        val storedFingerprint =
+            store.boxes
+                .single()
+                .credential.tokenSha256Hex
         assertThat(log.entries).isNotEmpty()
         log.entries.forEach { entry ->
             val details = entry.detailsJson.orEmpty()
@@ -231,7 +220,7 @@ class PairingViewModelTest {
 
     @Test
     fun anExistingBoxIsShownOnEntryAsATruncatedIdentifier() {
-        store.credential = PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64))
+        store.boxes = listOf(PairedBoxDto(PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64)), "Boîtier 1"))
 
         val state = viewModel().state
 

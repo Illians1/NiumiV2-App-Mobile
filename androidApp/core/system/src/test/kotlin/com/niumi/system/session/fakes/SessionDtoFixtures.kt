@@ -17,6 +17,7 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.core.nfc.NfcVerificationProof
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
+import com.niumi.database.SessionBox
 
 /**
  * Fixtures partagées par les tests du coordinateur : les fixtures de `:shared:core` sont
@@ -44,10 +45,10 @@ object SessionDtoFixtures {
         ringtoneKey: String = "niumi_default",
         vibrationEnabled: Boolean = true,
         volumeRampSeconds: Int? = null,
+        boxes: List<SessionBox> = listOf(SessionBox(BOX_ID, "a".repeat(64), "Boîtier 1")),
     ): AndroidSessionExtras =
         AndroidSessionExtras(
-            boxId = BOX_ID,
-            boxTokenSha256Hex = "a".repeat(64),
+            boxes = boxes,
             ringtoneKey = ringtoneKey,
             vibrationEnabled = vibrationEnabled,
             volumeRampSeconds = volumeRampSeconds,

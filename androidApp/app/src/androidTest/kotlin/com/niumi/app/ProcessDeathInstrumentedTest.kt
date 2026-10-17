@@ -19,6 +19,7 @@ import com.niumi.core.schedule.TriggerDelayPolicy
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
+import com.niumi.database.SessionBox
 import com.niumi.database.StoredDecision
 import com.niumi.database.blocking.BlockedPackagesRead
 import com.niumi.database.blocking.BlockedPackagesSource
@@ -281,8 +282,7 @@ class ProcessDeathInstrumentedTest {
                     effects = emptyList(),
                     androidExtras =
                         AndroidSessionExtras(
-                            boxId = BOX_ID,
-                            boxTokenSha256Hex = "a".repeat(64),
+                            boxes = listOf(SessionBox(BOX_ID, "a".repeat(64), "Boîtier 1")),
                             ringtoneKey = "niumi_piano",
                             vibrationEnabled = false,
                             volumeRampSeconds = null,
@@ -350,8 +350,7 @@ class ProcessDeathInstrumentedTest {
                     effects = emptyList(),
                     androidExtras =
                         AndroidSessionExtras(
-                            boxId = BOX_ID,
-                            boxTokenSha256Hex = "a".repeat(64),
+                            boxes = listOf(SessionBox(BOX_ID, "a".repeat(64), "Boîtier 1")),
                             ringtoneKey = "niumi_piano",
                             vibrationEnabled = false,
                             volumeRampSeconds = null,

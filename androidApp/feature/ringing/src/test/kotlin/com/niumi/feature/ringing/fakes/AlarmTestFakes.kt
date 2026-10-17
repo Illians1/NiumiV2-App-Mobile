@@ -11,6 +11,7 @@ import com.niumi.database.BlockedPackage
 import com.niumi.database.EffectStatus
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
+import com.niumi.database.SessionBox
 import com.niumi.database.StoredDecision
 import com.niumi.system.common.OperationResult
 import com.niumi.system.session.AlarmSoundUpdateResult
@@ -88,8 +89,7 @@ fun presentSession(
         snapshot = snapshotInState(state),
         extras =
             AndroidSessionExtras(
-                boxId = "22222222-2222-2222-2222-222222222222",
-                boxTokenSha256Hex = "a".repeat(64),
+                boxes = listOf(SessionBox("22222222-2222-2222-2222-222222222222", "a".repeat(64), "Boîtier 1")),
                 ringtoneKey = "niumi_default",
                 vibrationEnabled = true,
                 volumeRampSeconds = null,

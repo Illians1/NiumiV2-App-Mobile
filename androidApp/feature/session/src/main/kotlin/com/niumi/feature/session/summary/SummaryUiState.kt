@@ -5,9 +5,6 @@ import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.WakeScheduleDisplay
 import com.niumi.system.audio.AlarmSoundSettings
 
-/** Nombre de caractères du `boxId` affichés : jamais l'identifiant complet, jamais le token (§16). */
-private const val BOX_ID_PREFIX_LENGTH = 8
-
 /**
  * État de l'écran 6 (SPEC_ANDROID §15). [canActivate] vient exclusivement du dernier verdict de
  * `NiumiCoreFacade.evaluateActivation` relayé par `ArmSessionUseCase.preview` : l'écran ne
@@ -18,7 +15,8 @@ data class SummaryUiState(
     val display: WakeScheduleDisplay? = null,
     val blockingDisplay: WakeScheduleDisplay? = null,
     val blockedPackages: List<BlockedPackage> = emptyList(),
-    val boxId: String? = null,
+    /** Lot 8 : remplace `boxId`, les noms de la liste figée, dans l'ordre de `PairedBoxStore.all()`. */
+    val boxNames: List<String> = emptyList(),
     val isAllowed: Boolean = false,
     val isActivating: Boolean = false,
     val isSessionInProgress: Boolean = false,
@@ -43,7 +41,7 @@ data class SummaryUiState(
     val isBlockingImmediate: Boolean
         get() = blockingDisplay == null
 
-    /** `boxId` tronqué (§16 : jamais l'identifiant complet à l'écran, jamais l'empreinte du token). */
-    val truncatedBoxId: String?
-        get() = boxId?.take(BOX_ID_PREFIX_LENGTH)
+    /** Noms joints pour l'affichage (« Salle de bain, Cuisine »), `null` sans boîtier (Lot 8). */
+    val boxNamesDisplay: String?
+        get() = boxNames.takeIf { it.isNotEmpty() }?.joinToString(", ")
 }

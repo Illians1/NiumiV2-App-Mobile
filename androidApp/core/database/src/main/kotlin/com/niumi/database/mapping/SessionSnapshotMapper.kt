@@ -5,6 +5,7 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
+import com.niumi.database.SessionBox
 import com.niumi.database.entity.AlarmSessionEntity
 
 /**
@@ -34,8 +35,6 @@ fun SessionSnapshotDto.toEntity(extras: AndroidSessionExtras): AlarmSessionEntit
         state = state,
         releaseTarget = releaseTarget,
         health = health,
-        boxId = extras.boxId,
-        boxTokenSha256Hex = extras.boxTokenSha256Hex,
         ringtoneKey = extras.ringtoneKey,
         vibrationEnabled = extras.vibrationEnabled,
         volumeRampSeconds = extras.volumeRampSeconds,
@@ -85,11 +84,16 @@ fun AlarmSessionEntity.toSnapshotDto(): SessionSnapshotDto =
         failureCode = failureCode,
     )
 
-/** [blockedPackages] vient d'une requête séparée (`BlockedAppDao`) : pas de colonne dédiée. */
-fun AlarmSessionEntity.toExtras(blockedPackages: List<BlockedPackage>): AndroidSessionExtras =
+/**
+ * [blockedPackages] et [boxes] viennent chacun d'une requête séparée (`BlockedAppDao`,
+ * `SessionBoxDao`) : pas de colonne dédiée sur `alarm_session` (Lot 8).
+ */
+fun AlarmSessionEntity.toExtras(
+    blockedPackages: List<BlockedPackage>,
+    boxes: List<SessionBox>,
+): AndroidSessionExtras =
     AndroidSessionExtras(
-        boxId = boxId,
-        boxTokenSha256Hex = boxTokenSha256Hex,
+        boxes = boxes,
         ringtoneKey = ringtoneKey,
         vibrationEnabled = vibrationEnabled,
         volumeRampSeconds = volumeRampSeconds,

@@ -6,6 +6,7 @@ import com.niumi.database.NiumiDatabase
 import com.niumi.database.migration.MIGRATION_1_2
 import com.niumi.database.migration.MIGRATION_2_3
 import com.niumi.database.migration.MIGRATION_3_4
+import com.niumi.database.migration.MIGRATION_4_5
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -35,6 +36,6 @@ object DatabaseModule {
     ): NiumiDatabase =
         Room
             .databaseBuilder(context, NiumiDatabase::class.java, DATABASE_NAME)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
 }

@@ -58,16 +58,15 @@ internal object RoomTestFixtures {
     // fait varier, ce qui vaut mieux ici que la limite de paramètres.
     @Suppress("LongParameterList")
     internal fun extras(
-        boxId: String = "550e8400-e29b-41d4-a716-446655440000",
-        boxTokenSha256Hex: String = "a".repeat(64),
+        boxes: List<SessionBox> =
+            listOf(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), "Boîtier 1")),
         ringtoneKey: String = "niumi_default",
         vibrationEnabled: Boolean = true,
         volumeRampSeconds: Int? = 120,
         blockedPackages: List<BlockedPackage> =
             listOf(BlockedPackage("com.example.first", "Première application")),
     ) = AndroidSessionExtras(
-        boxId,
-        boxTokenSha256Hex,
+        boxes,
         ringtoneKey,
         vibrationEnabled,
         volumeRampSeconds,

@@ -7,6 +7,7 @@ import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.EventReceipt
 import com.niumi.database.PendingEffect
+import com.niumi.database.SessionBox
 import com.niumi.database.StoredDecision
 
 /**
@@ -30,26 +31,41 @@ object NfcScanFixtures {
     const val OTHER_BOX_URI: String =
         "niumi://box/v1/33333333-3333-3333-3333-333333333333?token=AAAAAAAAAAAAAAAAAAAAAA"
 
+    /** Lot 8 : deuxième et troisième boîtiers d'une liste figée à trois. */
+    const val SECOND_BOX_URI: String =
+        "niumi://box/v1/44444444-4444-4444-4444-444444444444?token=AAAAAAAAAAAAAAAAAAAAAA"
+    const val THIRD_BOX_URI: String =
+        "niumi://box/v1/55555555-5555-5555-5555-555555555555?token=AAAAAAAAAAAAAAAAAAAAAA"
+
     /** Rejeté par le parseur avant toute vérification (`MALFORMED_URI`). */
     const val MALFORMED_URI: String = "niumi:/box/v1/pas-un-uuid"
 
     /**
-     * Extras dont le boîtier figé correspond à [uri]. `boxTokenSha256Hex` vient de
+     * Extras dont la liste figée contient le boîtier de [uri], seul (Lot 8 : voir [extrasForMany]
+     * pour une liste à plusieurs boîtiers). `tokenSha256Hex` vient de
      * [PairedBoxCredentialDto.fromPayload], comme à l'association réelle (SPEC_ANDROID §11.1).
      */
     fun extrasFor(
         facade: NiumiCoreFacade,
         uri: String = SESSION_BOX_URI,
-    ): AndroidSessionExtras {
+    ): AndroidSessionExtras = SessionDtoFixtures.extras(boxes = listOf(credentialBox(facade, uri)))
+
+    /** Liste figée à plusieurs boîtiers, dans l'ordre des URI données. */
+    fun extrasForMany(
+        facade: NiumiCoreFacade,
+        uris: List<String>,
+    ): AndroidSessionExtras = SessionDtoFixtures.extras(boxes = uris.map { credentialBox(facade, it) })
+
+    private fun credentialBox(
+        facade: NiumiCoreFacade,
+        uri: String,
+    ): SessionBox {
         val payload =
             requireNotNull(facade.parseBoxPayload(uri).payload) {
                 "URI de fixture rejetée par le parseur commun : $uri"
             }
         val credential = PairedBoxCredentialDto.fromPayload(payload)
-        return SessionDtoFixtures.extras().copy(
-            boxId = credential.boxId,
-            boxTokenSha256Hex = credential.tokenSha256Hex,
-        )
+        return SessionBox(credential.boxId, credential.tokenSha256Hex, "Boîtier")
     }
 }
 

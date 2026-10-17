@@ -3,20 +3,30 @@ package com.niumi.database.pairing
 import com.niumi.core.interop.PairedBoxCredentialDto
 
 /**
- * Stockage du boîtier associé (« Interfaces transverses » du plan MVP, SPEC_ANDROID §11.1).
- * Un seul boîtier est associé dans le MVP ; toute nouvelle association remplace l'ancienne.
- *
- * Vit dans `:core:database`, avec les autres interfaces de dépôt (`SessionStore`,
- * `DirectBootStore`, `TechnicalEventLog`) : le plan MVP place son implémentation Room
- * (`RoomPairedBoxStore`) dans ce module, qui ne peut pas dépendre de `:core:system` où
- * l'interface vivait jusqu'à l'étape 13 (règle de dépendance §6). Implémentation Room à
- * l'étape 13 ; implémentation debug sur DataStore Preferences depuis l'étape 4
- * (`DebugPairedBoxStore`, `src/debug` de `:app`).
+ * Stockage des boîtiers associés, jusqu'à cinq, nommés (SPEC_ANDROID §11.1, Lot 8 ; remplace
+ * `current`/`replace`/`clear` de l'étape 13). Vit dans `:core:database`, avec les autres
+ * interfaces de dépôt (`SessionStore`, `DirectBootStore`, `TechnicalEventLog`) : le plan MVP
+ * place son implémentation Room (`RoomPairedBoxStore`) dans ce module, qui ne peut pas dépendre
+ * de `:core:system` où l'interface vivait jusqu'à l'étape 13 (règle de dépendance §6).
  */
 public interface PairedBoxStore {
-    public suspend fun current(): PairedBoxCredentialDto?
+    /** Par position, 0 en tête. Liste vide avant déverrouillage, jamais une levée. */
+    public suspend fun all(): List<PairedBoxDto>
 
-    public suspend fun replace(credential: PairedBoxCredentialDto)
+    /**
+     * [name] passe par [PairedBoxName.sanitize] : la valeur nettoyée est écrite, un nom refusé lève
+     * `IllegalArgumentException("PAIRED_BOX_NAME_INVALID")` avant toute écriture (§7.2, §11.1).
+     */
+    public suspend fun add(
+        credential: PairedBoxCredentialDto,
+        name: String,
+    ): PairedBoxAddResult
 
-    public suspend fun clear()
+    /** Même règle que [add] pour [name]. */
+    public suspend fun rename(
+        boxId: String,
+        name: String,
+    )
+
+    public suspend fun remove(boxId: String)
 }

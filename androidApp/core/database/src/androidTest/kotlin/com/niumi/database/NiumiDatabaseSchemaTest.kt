@@ -1,12 +1,14 @@
 package com.niumi.database
 
 import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import com.niumi.database.migration.MIGRATION_1_2
 import com.niumi.database.migration.MIGRATION_2_3
 import com.niumi.database.migration.MIGRATION_3_4
+import com.niumi.database.migration.MIGRATION_4_5
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -174,5 +176,122 @@ class NiumiDatabaseSchemaTest {
                 assertThat(cursor.isNull(2)).isTrue()
             }
         migrated.close()
+    }
+
+    /**
+     * SPEC_ANDROID §7.2 (v5, Lot 8). Point de vigilance 1 du lot : `paired_box` porte le boîtier
+     * B (remplacé hors session, permis jusqu'ici), mais la session `ARMED` a figé le boîtier A.
+     * `session_box` doit se remplir depuis `alarm_session` (A), **jamais** depuis `paired_box`
+     * (qui contiendrait B). Un reçu, une ligne d'outbox, une application bloquée, un incident et le
+     * pointeur de session active prouvent qu'aucune donnée n'est perdue par un `CASCADE` qui n'a
+     * pas lieu.
+     */
+    @Test
+    fun migrationFourToFiveMovesTheFrozenBoxIntoSessionBoxAndDropsTheColumns() {
+        val boxA = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        val boxB = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        migrationTestHelper.createDatabase(TEST_DATABASE_NAME, 4).use { v4 -> seedV4ArmedSession(v4, boxA, boxB) }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(TEST_DATABASE_NAME, 5, true, MIGRATION_4_5)
+
+        migrated.query("SELECT sessionId, boxId, tokenSha256, name, position FROM session_box").use { cursor ->
+            assertThat(cursor.count).isEqualTo(1)
+            assertThat(cursor.moveToFirst()).isTrue()
+            assertThat(cursor.getString(0)).isEqualTo("session-1")
+            assertThat(cursor.getString(1)).isEqualTo(boxA)
+            assertThat(cursor.getString(2)).isEqualTo("a".repeat(64))
+            assertThat(cursor.getString(3)).isEqualTo("Boîtier 1")
+            assertThat(cursor.getInt(4)).isEqualTo(0)
+        }
+        migrated.query("PRAGMA table_info(alarm_session)").use { cursor ->
+            val columns = generateSequence { if (cursor.moveToNext()) cursor.getString(1) else null }.toList()
+            assertThat(columns).doesNotContain("boxId")
+            assertThat(columns).doesNotContain("boxTokenSha256Hex")
+        }
+        migrated.query("SELECT id, revision, state FROM alarm_session").use { cursor ->
+            assertThat(cursor.count).isEqualTo(1)
+            assertThat(cursor.moveToFirst()).isTrue()
+            assertThat(cursor.getString(0)).isEqualTo("session-1")
+            assertThat(cursor.getLong(1)).isEqualTo(3)
+            assertThat(cursor.getString(2)).isEqualTo("ARMED")
+        }
+        migrated.query("SELECT boxId, name, position FROM paired_box").use { cursor ->
+            assertThat(cursor.moveToFirst()).isTrue()
+            assertThat(cursor.getString(0)).isEqualTo(boxB)
+            assertThat(cursor.getString(1)).isEqualTo("Boîtier 1")
+            assertThat(cursor.getInt(2)).isEqualTo(0)
+        }
+        assertEachChildTableKeptExactlyOneRowForSessionOne(migrated)
+        migrated.close()
+    }
+
+    /**
+     * Point de vigilance 1 du Lot 8 : `paired_box` porte le boîtier B (remplacé hors session,
+     * permis jusqu'ici), mais la session `ARMED` a figé le boîtier A. Un reçu, une ligne
+     * d'outbox, une application bloquée, un incident et le pointeur actif prouvent qu'aucune
+     * donnée n'est perdue.
+     */
+    private fun seedV4ArmedSession(
+        v4: SupportSQLiteDatabase,
+        boxA: String,
+        boxB: String,
+    ) {
+        v4.execSQL(
+            "INSERT INTO alarm_session (id, schemaVersion, revision, localDate, localTime, " +
+                "zoneIdAtActivation, triggerAtEpochMillis, blockingLocalDate, blockingLocalTime, " +
+                "blockingStartsAtEpochMillis, blockingAppliedAtEpochMillis, state, releaseTarget, " +
+                "health, boxId, boxTokenSha256Hex, ringtoneKey, vibrationEnabled, volumeRampSeconds, " +
+                "createdAtEpochMillis, armedAtEpochMillis, ringingAtEpochMillis, " +
+                "alarmSoundStoppedAtEpochMillis, triggerElapsedAtEpochMillis, nfcVerifiedAtEpochMillis, " +
+                "releasingAtEpochMillis, completedAtEpochMillis, cancelledAtEpochMillis, failureCode) " +
+                "VALUES ('session-1', 2, 3, '2026-10-16', '07:00', 'Europe/Paris', 1800000000000, " +
+                "NULL, NULL, NULL, 1700000000000, 'ARMED', NULL, 'HEALTHY', '$boxA', '" +
+                "a".repeat(64) + "', 'niumi_default', 1, NULL, 1700000000000, 1700000001000, " +
+                "NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)",
+        )
+        v4.execSQL(
+            "INSERT INTO paired_box (boxId, protocolVersion, tokenSha256, pairedAtEpochMillis) " +
+                "VALUES ('$boxB', 1, '" + "b".repeat(64) + "', 1700000002000)",
+        )
+        v4.execSQL(
+            "INSERT INTO session_event_receipt (eventId, sessionId, payloadSha256Hex, " +
+                "appliedRevision, receivedAtEpochMillis) VALUES ('event-1', 'session-1', '" +
+                "c".repeat(64) + "', 3, 1700000003000)",
+        )
+        v4.execSQL(
+            "INSERT INTO session_effect_outbox (effectId, sessionId, revision, kind, ordinal, " +
+                "payloadJson, status, lastError, updatedAtEpochMillis) VALUES " +
+                "('session-1:3:SCHEDULE_ALARM:0', 'session-1', 3, 'SCHEDULE_ALARM', 0, NULL, " +
+                "'SUCCEEDED', NULL, 1700000003000)",
+        )
+        v4.execSQL(
+            "INSERT INTO blocked_app (sessionId, packageName, displayNameSnapshot) " +
+                "VALUES ('session-1', 'com.example.first', 'Première application')",
+        )
+        v4.execSQL(
+            "INSERT INTO session_incident (sessionId, code, severity, occurredAtEpochMillis, platform) " +
+                "VALUES ('session-1', 'NFC_DISABLED', 'CRITICAL', 1700000004000, 'ANDROID')",
+        )
+        v4.execSQL("INSERT INTO active_session_pointer (id, sessionId) VALUES (1, 'session-1')")
+    }
+
+    /**
+     * Aucune des cinq tables enfants de la v4 n'a été vidée par le `CASCADE` du `DROP TABLE
+     * alarm_session` — le pointeur de session active compris, dont la perte afficherait « Aucune
+     * session » alors que l'alarme reste programmée.
+     */
+    private fun assertEachChildTableKeptExactlyOneRowForSessionOne(migrated: SupportSQLiteDatabase) {
+        listOf(
+            "session_event_receipt",
+            "session_effect_outbox",
+            "blocked_app",
+            "session_incident",
+            "active_session_pointer",
+        ).forEach { table ->
+            migrated.query("SELECT COUNT(*) FROM $table WHERE sessionId = 'session-1'").use { cursor ->
+                cursor.moveToFirst()
+                assertThat(cursor.getInt(0)).isEqualTo(1)
+            }
+        }
     }
 }

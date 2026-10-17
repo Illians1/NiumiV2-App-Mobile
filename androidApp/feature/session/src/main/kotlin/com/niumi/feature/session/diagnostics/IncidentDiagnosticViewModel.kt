@@ -33,8 +33,8 @@ import javax.inject.Inject
  * état de fiabilité » que §15 interdit. `candidateTriggerAtEpochMillis` reste nul : l'heure de
  * réveil est déjà figée, `FUTURE_TRIGGER` n'a rien à valider ici.
  *
- * [exportText] ne reçoit **jamais** `boxTokenSha256Hex` : seul `boxId` traverse, et l'exporteur le
- * tronque (§17).
+ * [exportText] ne reçoit **jamais** `tokenSha256Hex` : seuls `boxId` et `name` traversent, par
+ * boîtier (Lot 8), et l'exporteur tronque chaque `boxId` (§17).
  */
 @HiltViewModel
 class IncidentDiagnosticViewModel
@@ -47,7 +47,7 @@ class IncidentDiagnosticViewModel
         var state by mutableStateOf(IncidentDiagnosticUiState())
             private set
 
-        private var boxId: String? = null
+        private var boxes: List<DiagnosticBox> = emptyList()
 
         private var refreshJob: Job? = null
 
@@ -89,7 +89,7 @@ class IncidentDiagnosticViewModel
                     sessionId = state.sessionId,
                     state = state.state,
                     health = state.health,
-                    boxId = boxId,
+                    boxes = boxes,
                     checks = state.checks,
                     incidents = state.incidents,
                     events = state.events,
@@ -102,7 +102,7 @@ class IncidentDiagnosticViewModel
             val checks = sources.readinessChecker.check(ReadinessInput()).checks
             val events = sources.technicalEventLog.recent()
             if (snapshot == null) {
-                boxId = null
+                boxes = emptyList()
                 return IncidentDiagnosticUiState(
                     checks = checks,
                     events = events,
@@ -111,7 +111,12 @@ class IncidentDiagnosticViewModel
                 )
             }
 
-            boxId = (sources.gateway.load() as? LoadResult.Present)?.extras?.boxId
+            boxes =
+                (sources.gateway.load() as? LoadResult.Present)
+                    ?.extras
+                    ?.boxes
+                    ?.map { DiagnosticBox(it.boxId, it.name) }
+                    .orEmpty()
             return IncidentDiagnosticUiState(
                 sessionId = snapshot.sessionId,
                 state = snapshot.state,
