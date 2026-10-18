@@ -284,6 +284,25 @@ class ReadinessViewModelTest {
         }
         assertThat(state.nowEpochMillis).isEqualTo(NOW_EPOCH_MILLIS)
     }
+
+    /** §13 (Lot 8) : satisfaite, la ligne des boîtiers énonce leur nombre, celui que la politique a jugé. */
+    @Test
+    fun aSatisfiedPairedBoxLineStatesHowManyBoxesArePaired() {
+        report = reportWith(pairedBoxCount = 3)
+
+        val pairedBox = viewModel().state.items.single { it.id == ReadinessCheckId.PAIRED_BOX }
+
+        assertThat(pairedBox.summary).isEqualTo("3 boîtiers associés")
+    }
+
+    @Test
+    fun aFailedPairedBoxLineKeepsItsRemedyMessage() {
+        report = reportWith(failing = setOf(ReadinessCheckId.PAIRED_BOX), pairedBoxCount = 0)
+
+        val pairedBox = viewModel().state.items.single { it.id == ReadinessCheckId.PAIRED_BOX }
+
+        assertThat(pairedBox.summary).isEqualTo(ReadinessMessages.forCheck(ReadinessCheckId.PAIRED_BOX))
+    }
 }
 
 /**

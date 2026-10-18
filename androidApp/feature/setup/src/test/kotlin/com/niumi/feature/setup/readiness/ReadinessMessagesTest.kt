@@ -103,4 +103,24 @@ class ReadinessLabelsTest {
             assertThat(ReadinessMessages.labelFor(id)).isNotEqualTo(ReadinessMessages.forCheck(id))
         }
     }
+
+    /** SPEC_ANDROID §13 (Lot 8) : le contrôle parle de boîtiers au pluriel, mot pour mot. */
+    @Test
+    fun pairedBoxTextsMatchTheSpecWordForWord() {
+        assertThat(ReadinessMessages.forCheck(ReadinessCheckId.PAIRED_BOX))
+            .isEqualTo(
+                "Aucun boîtier n'est associé. Associe au moins un boîtier Niumi : c'est l'un d'eux qui " +
+                    "terminera ta session.",
+            )
+        assertThat(ReadinessMessages.labelFor(ReadinessCheckId.PAIRED_BOX)).isEqualTo("Boîtiers associés")
+        assertThat(ReadinessMessages.actionLabelFor(ReadinessCheckId.PAIRED_BOX)).isEqualTo("Associer un boîtier")
+        assertThat(ReadinessMessages.CHANGE_PAIRED_BOX_LABEL).isEqualTo("Gérer mes boîtiers")
+    }
+
+    @Test
+    fun theSatisfiedPairedBoxDetailIsSingularForOneAndPluralBeyond() {
+        assertThat(ReadinessMessages.pairedBoxCountDetail(1)).isEqualTo("1 boîtier associé")
+        assertThat(ReadinessMessages.pairedBoxCountDetail(3)).isEqualTo("3 boîtiers associés")
+        assertThat(ReadinessMessages.pairedBoxCountDetail(5)).isEqualTo("5 boîtiers associés")
+    }
 }

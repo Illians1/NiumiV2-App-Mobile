@@ -1,6 +1,7 @@
 package com.niumi.feature.setup.pairing.fakes
 
 import android.app.Activity
+import com.niumi.core.diagnostics.PairedBoxLimit
 import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.database.logging.TechnicalEventEntry
 import com.niumi.database.logging.TechnicalEventLog
@@ -11,6 +12,7 @@ import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.common.OperationResult
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Journal qui conserve le `detailsJson` en plus du type, contrairement au `FakeTechnicalEventLog`
@@ -45,18 +47,41 @@ class FakePairedBoxStore(
     var addCallCount = 0
         private set
 
-    override suspend fun all(): List<PairedBoxDto> = boxes
+    /** Toute écriture, quelle qu'elle soit : un refus de l'écran se prouve par zéro. */
+    var writeCallCount = 0
+        private set
 
+    /**
+     * Retient `all()` tant qu'elle n'est pas complétée : la lecture Room suspend en production, et
+     * c'est pendant cette suspension qu'une seconde lecture du même tag peut arriver.
+     */
+    var allGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun all(): List<PairedBoxDto> {
+        allGate?.await()
+        return boxes
+    }
+
+    /** Même ordre de refus que `RoomPairedBoxStore` : doublon d'abord, plafond ensuite. */
     override suspend fun add(
         credential: PairedBoxCredentialDto,
         name: String,
     ): PairedBoxAddResult {
         addCallCount++
-        return if (boxes.any { it.credential.boxId == credential.boxId }) {
-            PairedBoxAddResult.AlreadyPaired
-        } else {
-            boxes = boxes + PairedBoxDto(credential, name)
-            PairedBoxAddResult.Added
+        writeCallCount++
+        return when {
+            boxes.any { it.credential.boxId == credential.boxId } -> {
+                PairedBoxAddResult.AlreadyPaired
+            }
+
+            boxes.size >= PairedBoxLimit.MAX -> {
+                PairedBoxAddResult.LimitReached
+            }
+
+            else -> {
+                boxes = boxes + PairedBoxDto(credential, name)
+                PairedBoxAddResult.Added
+            }
         }
     }
 
@@ -64,10 +89,12 @@ class FakePairedBoxStore(
         boxId: String,
         name: String,
     ) {
+        writeCallCount++
         boxes = boxes.map { if (it.credential.boxId == boxId) it.copy(name = name) else it }
     }
 
     override suspend fun remove(boxId: String) {
+        writeCallCount++
         boxes = boxes.filterNot { it.credential.boxId == boxId }
     }
 }

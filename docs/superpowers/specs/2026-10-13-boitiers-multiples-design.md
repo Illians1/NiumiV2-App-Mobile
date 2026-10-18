@@ -112,7 +112,9 @@ typé ; l'écran ne fait que l'afficher. La garde de déverrouillage de `RoomPai
 base avant déverrouillage, mêmes raisons.
 
 Noms : 1 à 30 caractères après `trim()`, vide refusé ; valeur proposée à l'ajout « Boîtier {n} »
-où `n` est le nombre de boîtiers déjà associés plus un.
+où `n` est le plus petit entier qu'aucun boîtier associé ne porte déjà sous ce nom (*précisé le
+2026-10-17 à l'étape 31 : la règle d'origine, « nombre de boîtiers déjà associés plus un », proposait
+un second « Boîtier 3 » après le retrait de « Boîtier 2 » parmi trois*).
 
 ### 4.2 Liste figée dans la session
 
@@ -173,7 +175,8 @@ La ligne « Boîtier » devient une ligne par boîtier figé : nom et préfixe d
 - Liste des boîtiers associés, par position : nom, préfixe de huit caractères.
 - Par ligne : « Renommer » (champ, mêmes règles qu'à l'ajout), « Retirer » (sans confirmation :
   retirer le dernier est permis hors session, le diagnostic refusera simplement l'activation).
-- « Ajouter un boîtier » : ouvre le Reader Mode avec l'instruction actuelle ; masqué dès cinq
+- « Ajouter un boîtier » : ouvre le Reader Mode avec l'instruction actuelle (*précisé le 2026-10-17 :
+  sans aucun boîtier associé, la lecture est active dès l'ouverture ; SPEC_ANDROID §15*) ; masqué dès cinq
   boîtiers, remplacé par « 5 boîtiers maximum. ».
 - Payload valide, boîtier nouveau → champ de nom prérempli « Boîtier {n} » → « Boîtier ajouté. ».
 - Payload valide, boîtier déjà présent → « Ce boîtier est déjà associé. », rien n'est écrit.

@@ -26,8 +26,8 @@ object ReadinessMessages {
             }
 
             ReadinessCheckId.PAIRED_BOX -> {
-                "Aucun boîtier n'est associé. Associe ton boîtier Niumi : c'est lui qui terminera " +
-                    "ta session."
+                "Aucun boîtier n'est associé. Associe au moins un boîtier Niumi : c'est l'un d'eux " +
+                    "qui terminera ta session."
             }
 
             ReadinessCheckId.APP_SELECTION -> {
@@ -99,7 +99,7 @@ object ReadinessMessages {
         when (id) {
             ReadinessCheckId.NFC_PRESENT -> "Puce NFC présente"
             ReadinessCheckId.NFC_ENABLED -> "NFC activé"
-            ReadinessCheckId.PAIRED_BOX -> "Boîtier associé"
+            ReadinessCheckId.PAIRED_BOX -> "Boîtiers associés"
             ReadinessCheckId.APP_SELECTION -> "Applications choisies"
             ReadinessCheckId.EXACT_ALARM -> "Accès aux alarmes exactes"
             ReadinessCheckId.FULL_SCREEN_INTENT -> "Alarmes plein écran autorisées"
@@ -119,7 +119,7 @@ object ReadinessMessages {
         when (id) {
             ReadinessCheckId.NFC_PRESENT -> "Appareil non compatible"
             ReadinessCheckId.NFC_ENABLED -> "Ouvrir les réglages NFC"
-            ReadinessCheckId.PAIRED_BOX -> "Associer mon boîtier"
+            ReadinessCheckId.PAIRED_BOX -> "Associer un boîtier"
             ReadinessCheckId.APP_SELECTION -> "Choisir mes applications"
             ReadinessCheckId.EXACT_ALARM -> "Comprendre ce blocage"
             ReadinessCheckId.FULL_SCREEN_INTENT -> "Ouvrir les réglages plein écran"
@@ -150,12 +150,20 @@ object ReadinessMessages {
 
     /**
      * Libellés des deux étapes de parcours **déjà satisfaites** (§11.1, §12.1) : l'utilisateur
-     * peut refaire son choix tant qu'aucune session n'est en cours. « Associer mon boîtier » sur
-     * une ligne verte laisserait croire qu'aucun boîtier n'est associé.
+     * peut refaire son choix tant qu'aucune session n'est en cours. « Associer un boîtier » sur
+     * une ligne verte laisserait croire qu'aucun boîtier n'est associé. Lot 8 : l'écran 3 gère une
+     * liste, d'où « Gérer mes boîtiers » (était « Changer de boîtier »).
      */
-    const val CHANGE_PAIRED_BOX_LABEL = "Changer de boîtier"
+    const val CHANGE_PAIRED_BOX_LABEL = "Gérer mes boîtiers"
 
     const val CHANGE_APP_SELECTION_LABEL = "Modifier ma sélection"
+
+    /**
+     * Ligne `PAIRED_BOX` satisfaite (§13, Lot 8) : le nombre de boîtiers, que la politique commune
+     * vient de juger, plutôt que le seul intitulé — « Boîtiers associés » sous une ligne verte ne
+     * dirait pas combien.
+     */
+    fun pairedBoxCountDetail(count: Int): String = if (count == 1) "1 boîtier associé" else "$count boîtiers associés"
 
     fun revisitLabelFor(id: ReadinessCheckId): String =
         when (id) {

@@ -128,6 +128,27 @@ class AlarmViewModelTest {
         }
 
     /**
+     * SPEC_ANDROID §11.2 (étape 30, essai manuel 2) : juste après un démarrage, le NFC se lit
+     * désactivé puis revient. L'écran relit sur l'état stable annoncé par Android ; ce test verrouille
+     * que la relecture « activé » efface **et** le message **et** le raccourci, sans relancer l'écran.
+     */
+    @Test
+    fun anAdapterThatSettlesOnClearsTheDisabledMessageAndShortcut() =
+        runTest {
+            gateway.result = presentSession(SessionStateDto.RINGING)
+            val viewModel = viewModel()
+            viewModel.onNfcAvailabilityChanged(NfcAvailability.DISABLED)
+            val disabledText = (viewModel.state as AlarmUiState.Visible).screen.instructionText
+
+            viewModel.onNfcAvailabilityChanged(NfcAvailability.ENABLED)
+
+            val screen = (viewModel.state as AlarmUiState.Visible).screen
+            assertThat(screen.showsNfcSettingsShortcut).isFalse()
+            assertThat(screen.instructionText).isNotEqualTo(disabledText)
+            assertThat(screen.nfcAvailability).isEqualTo(NfcAvailability.ENABLED)
+        }
+
+    /**
      * Le double lève sur toute écriture : si le ViewModel dispatchait ou committait quoi que ce
      * soit, ces scénarios échoueraient. L'écran de réveil observe, il ne décide pas (§3, §11.3).
      */

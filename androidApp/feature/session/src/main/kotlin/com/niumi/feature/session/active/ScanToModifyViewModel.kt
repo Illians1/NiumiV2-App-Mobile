@@ -95,6 +95,17 @@ class ScanToModifyViewModel
         }
 
         /**
+         * Relecture sur un état stable de l'adaptateur (SPEC_ANDROID §11.2, étape 31). Juste après
+         * un démarrage, la pile NFC revient une dizaine de secondes après le déverrouillage : lue
+         * une seule fois au `ON_RESUME`, la disponibilité restait « désactivé » à l'écran. Pas de
+         * journal ici : `NFC_DISABLED` est consigné par passage au premier plan, pas par transition
+         * système. La `Route` relance ensuite le lecteur, que [startReaderMode] n'avait pas démarré.
+         */
+        fun onAdapterSettled() {
+            state = state.copy(availability = nfcReader.availability)
+        }
+
+        /**
          * L'`Activity` est reçue en paramètre et jamais conservée (même règle que
          * `PairingViewModel`) : un ViewModel survit à l'`Activity`, la retenir serait une fuite.
          *

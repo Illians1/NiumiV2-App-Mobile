@@ -1,5 +1,6 @@
 package com.niumi.feature.ringing
 
+import android.app.Activity
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -14,7 +15,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.designsystem.ui.theme.NiumiTheme
@@ -30,6 +33,7 @@ import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.nfc.NfcScanHandler
 import com.niumi.system.nfc.ScanOutcome
+import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.ForegroundReadinessTrigger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -133,6 +137,14 @@ class AlarmActivity : ComponentActivity() {
             },
         )
 
+        // §11.2 : au premier plan seulement — le Reader Mode n'y vit que là, et `onResume` relit
+        // de toute façon au retour. Le volet rapide ne met pas l'activité en pause.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                nfcAdapterSettledChanges().collect { onAdapterSettled() }
+            }
+        }
+
         setContent {
             NiumiTheme {
                 when (val current = viewModel.state) {
@@ -166,7 +178,7 @@ class AlarmActivity : ComponentActivity() {
         AlarmScreen(
             state = screen,
             currentTimeText = currentTimeText(),
-            onOpenNfcSettings = ::openNfcSettings,
+            onOpenNfcSettings = { openNfcSettings() },
         )
     }
 
@@ -187,6 +199,29 @@ class AlarmActivity : ComponentActivity() {
         if (nfcReader.availability == NfcAvailability.DISABLED) {
             technicalEventLog.log(TechnicalEventType.NFC_DISABLED)
         }
+        startReader()
+    }
+
+    /**
+     * Relecture sur un état stable de l'adaptateur (SPEC_ANDROID §11.2, étape 31). Mesuré à
+     * l'étape 30 (essai manuel 2) : après un redémarrage, la pile NFC revient environ 13 s après le
+     * déverrouillage, et l'écran lu une seule fois au `ON_RESUME` gardait « Le NFC est désactivé… »
+     * jusqu'à un nouvel essai de l'utilisateur. Le lecteur est relancé avec la disponibilité : un
+     * message effacé sur un écran qui n'écoute pas serait un faux état pire que le message. Aucun
+     * journal ici, ni fenêtre de grâce : un NFC réellement coupé reste affiché coupé.
+     */
+    private fun onAdapterSettled() {
+        viewModel.onNfcAvailabilityChanged(nfcReader.availability)
+        if (nfcReader.availability == NfcAvailability.ENABLED) startReader()
+    }
+
+    /**
+     * Appelé à chaque `onResume` et à chaque état stable « activé ». Android tient une seule
+     * inscription Reader Mode par activité : un second appel la remplace au lieu d'en empiler une
+     * autre, d'où l'absence de garde depuis [onAdapterSettled] (à confirmer sur appareil, ligne §20
+     * de l'étape 31).
+     */
+    private fun startReader() {
         // Invoqués sur le thread binder du Reader Mode (voir ReaderModeNfcReader) : toute
         // lecture ou écriture d'état passe par le dispatcher principal.
         nfcReader.start(
@@ -247,16 +282,19 @@ class AlarmActivity : ComponentActivity() {
         finish()
     }
 
-    // Pas une action d'arrêt : la sonnerie et le service ne sont pas touchés, seul un accès
-    // aux réglages système est ouvert (SPEC_ANDROID §11.2).
-    private fun openNfcSettings() {
-        startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
-    }
-
-    private fun currentTimeText(): String =
-        SimpleDateFormat("HH:mm", Locale.getDefault()).format(System.currentTimeMillis())
-
     companion object {
         fun intent(context: Context): Intent = Intent(context, AlarmActivity::class.java)
     }
 }
+
+// Hors de la classe, déjà au plafond `TooManyFunctions` de detekt (11) depuis la relecture NFC de
+// l'étape 31 : ni l'une ni l'autre ne lit l'état de l'activité.
+
+// Pas une action d'arrêt : la sonnerie et le service ne sont pas touchés, seul un accès
+// aux réglages système est ouvert (SPEC_ANDROID §11.2).
+private fun Activity.openNfcSettings() {
+    startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+}
+
+private fun currentTimeText(): String =
+    SimpleDateFormat("HH:mm", Locale.getDefault()).format(System.currentTimeMillis())

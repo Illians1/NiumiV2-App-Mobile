@@ -1,15 +1,17 @@
 package com.niumi.feature.setup.pairing
 
+import com.niumi.database.pairing.PairedBoxName
+
 /**
- * Textes de l'écran 3 (SPEC_ANDROID §15, §11.1). Tutoiement partout. `object` pur, testable en
- * JVM, même motif qu'`OnboardingTexts`.
+ * Textes de l'écran 3 « Mes boîtiers » (SPEC_ANDROID §15 Lot 8, §11.1). Tutoiement partout.
+ * `object` pur, testable en JVM, même motif qu'`OnboardingTexts`.
  *
  * Aucun texte ne mentionne le token ni son empreinte : §16 interdit de les afficher comme de les
  * journaliser. Seul un préfixe de `boxId` est montré, pour que l'utilisateur distingue deux
  * boîtiers sans exposer d'identifiant complet.
  */
 object PairingTexts {
-    const val TITLE = "Associe ton boîtier"
+    const val TITLE = "Mes boîtiers"
 
     const val INSTRUCTION = "Approche ton boîtier Niumi du dos de ton téléphone."
 
@@ -26,17 +28,45 @@ object PairingTexts {
     /** Lot 8 : remplace le dialogue de remplacement — un boîtier déjà associé n'est pas réassocié. */
     const val ALREADY_PAIRED = "Ce boîtier est déjà associé."
 
+    /** Affiché à la place de [ADD_BUTTON_LABEL] dès cinq boîtiers (`PairedBoxLimit.MAX`). */
     const val LIMIT_REACHED = "5 boîtiers maximum."
 
-    const val PAIRED = "Boîtier associé."
+    const val BOX_ADDED = "Boîtier ajouté."
 
     const val CONTINUE_BUTTON_LABEL = "Continuer"
 
     const val SESSION_IN_PROGRESS =
-        "Une session est en cours. Ton boîtier ne peut pas être remplacé avant sa fin."
+        "Une session est en cours. Tes boîtiers ne peuvent pas être modifiés avant sa fin."
+
+    const val ADD_BUTTON_LABEL = "Ajouter un boîtier"
+
+    /** Arrête la lecture ouverte par [ADD_BUTTON_LABEL], et ferme un dialogue de nom sans écrire. */
+    const val CANCEL_LABEL = "Annuler"
+
+    const val RENAME_LABEL = "Renommer"
+
+    const val REMOVE_LABEL = "Retirer"
+
+    const val ADD_DIALOG_TITLE = "Nouveau boîtier"
+
+    const val RENAME_DIALOG_TITLE = "Renommer le boîtier"
+
+    const val NAME_FIELD_LABEL = "Nom"
+
+    const val CONFIRM_ADD_LABEL = "Ajouter"
+
+    const val CONFIRM_RENAME_LABEL = "Renommer"
 
     /** Préfixe de `boxId` affiché : assez pour distinguer deux boîtiers, jamais l'identifiant entier. */
     const val BOX_ID_PREFIX_LENGTH = 8
 
-    fun currentBoxLabel(boxIdPrefix: String): String = "Boîtier associé : $boxIdPrefix…"
+    /** Descriptions TalkBack des deux actions d'une ligne : « Renommer » seul ne dit pas lequel (§15). */
+    fun renameDescription(name: String): String = "Renommer $name"
+
+    fun removeDescription(name: String): String = "Retirer $name"
+
+    /** Compteur du champ de nom, sur la longueur que le dépôt jugera : après `trim()` (§11.1). */
+    fun nameCounter(text: String): String = "${text.trim().length}/${PairedBoxName.MAX_LENGTH}"
+
+    fun prefixOf(boxId: String): String = "${boxId.take(BOX_ID_PREFIX_LENGTH)}…"
 }

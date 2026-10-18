@@ -8,4 +8,13 @@ package com.niumi.feature.setup.pairing
 data class PairingActions(
     val onOpenNfcSettings: () -> Unit,
     val onContinue: () -> Unit,
+    val onStartAdding: () -> Unit = {},
+    val onCancelScan: () -> Unit = {},
+    val onNameChanged: (String) -> Unit = {},
+    val onConfirmAdd: () -> Unit = {},
+    val onCancelAdd: () -> Unit = {},
+    val onStartRename: (boxId: String) -> Unit = {},
+    val onConfirmRename: () -> Unit = {},
+    val onCancelRename: () -> Unit = {},
+    val onRemove: (boxId: String) -> Unit = {},
 )

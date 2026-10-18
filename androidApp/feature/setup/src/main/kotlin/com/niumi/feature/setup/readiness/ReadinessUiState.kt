@@ -28,6 +28,8 @@ data class ReadinessItem(
     val action: ReadinessAction,
     val actionLabel: String,
     val isActionAvailable: Boolean,
+    /** Texte d'une ligne satisfaite quand l'intitulé seul ne suffit pas (`PAIRED_BOX`, Lot 8). */
+    val satisfiedSummary: String? = null,
 ) {
     /**
      * Les deux étapes de parcours de §13 restent accessibles une fois satisfaites : ce ne sont pas
@@ -50,7 +52,7 @@ data class ReadinessItem(
      * volume correct énoncerait l'inverse de la vérité (§15).
      */
     val summary: String
-        get() = if (outcome == ReadinessOutcome.PASSED) label else message
+        get() = if (outcome == ReadinessOutcome.PASSED) satisfiedSummary ?: label else message
 }
 
 /**

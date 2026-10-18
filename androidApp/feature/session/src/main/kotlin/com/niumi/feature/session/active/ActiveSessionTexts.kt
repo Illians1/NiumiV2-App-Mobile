@@ -13,7 +13,7 @@ object ActiveSessionTexts {
 
     const val CURRENT_ZONE_TITLE = "Dans ton fuseau actuel"
 
-    const val COMMITMENT_REMINDER = "Seul le scan du boîtier terminera la session."
+    const val COMMITMENT_REMINDER = "Seul le scan d'un de tes boîtiers terminera la session."
 
     const val BLOCKED_APPS_TITLE = "Applications bloquées"
 

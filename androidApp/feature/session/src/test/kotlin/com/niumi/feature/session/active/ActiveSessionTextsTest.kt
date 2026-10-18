@@ -91,7 +91,7 @@ class ActiveSessionTextsTest {
     @Test
     fun theCommitmentReminderIsStatedWordForWord() {
         assertThat(ActiveSessionTexts.COMMITMENT_REMINDER)
-            .isEqualTo("Seul le scan du boîtier terminera la session.")
+            .isEqualTo("Seul le scan d'un de tes boîtiers terminera la session.")
     }
 
     /** §15 (étape 25) : la mention d'un incident rétabli parle du réglage, jamais de la session. */

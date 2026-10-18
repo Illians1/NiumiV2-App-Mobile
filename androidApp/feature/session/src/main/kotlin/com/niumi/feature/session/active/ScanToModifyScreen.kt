@@ -21,8 +21,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.system.nfc.ScanOutcome
+import com.niumi.system.nfc.nfcAdapterSettledChanges
 
 /**
  * Écran 9 : scan requis pour modifier ou annuler (SPEC_ANDROID §15). **Aucune action** hors le
@@ -104,6 +106,18 @@ fun ScanToModifyRoute(
     // l'écran resterait sur « Scan requis » après un scan qui a pourtant tout nettoyé.
     LaunchedEffect(state.isCompleted) {
         if (state.isCompleted) onCompleted()
+    }
+
+    // §11.2 (étape 31) : un état stable de l'adaptateur relit la disponibilité et relance la
+    // lecture, que `startReaderMode` n'ouvre pas sous un NFC lu désactivé. Seulement au premier
+    // plan : le Reader Mode n'y vit que là, et `ON_RESUME` relit de toute façon au retour.
+    LaunchedEffect(lifecycleOwner, activity) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            context.nfcAdapterSettledChanges().collect {
+                viewModel.onAdapterSettled()
+                activity?.let(viewModel::startReaderMode)
+            }
+        }
     }
 
     DisposableEffect(lifecycleOwner, activity) {

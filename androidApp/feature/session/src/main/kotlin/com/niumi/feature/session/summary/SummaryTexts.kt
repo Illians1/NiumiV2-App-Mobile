@@ -15,11 +15,12 @@ object SummaryTexts {
 
     const val CHANGE_TIME_LABEL = "Choisir une autre heure"
 
-    const val COMMITMENT_REMINDER = "Seul le scan du boîtier terminera la session."
+    /** Lot 8 : « d'un de tes boîtiers », la session se termine par n'importe lequel des boîtiers figés. */
+    const val COMMITMENT_REMINDER = "Seul le scan d'un de tes boîtiers terminera la session."
 
     const val BLOCKED_APPS_TITLE = "Applications bloquées"
 
-    const val BOX_TITLE = "Boîtier associé"
+    const val BOX_TITLE = "Boîtiers associés"
 
     /** Ligne « Blocage des applications » du Lot 6 (§15, écran 6). */
     const val BLOCKING_TITLE = "Blocage des applications"
@@ -69,7 +70,7 @@ object SummaryTexts {
             }
 
             ActivationReasonCode.NO_PAIRED_BOX -> {
-                "Aucun boîtier n'est associé. Associe ton boîtier avant d'activer ta session."
+                "Aucun boîtier n'est associé. Associe au moins un boîtier avant d'activer ta session."
             }
 
             ActivationReasonCode.INVALID_APP_SELECTION -> {

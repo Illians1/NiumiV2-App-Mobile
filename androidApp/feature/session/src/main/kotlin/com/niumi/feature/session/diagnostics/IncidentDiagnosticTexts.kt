@@ -90,7 +90,7 @@ object IncidentDiagnosticTexts {
         when (id) {
             ReadinessCheckId.NFC_PRESENT -> "NFC présent"
             ReadinessCheckId.NFC_ENABLED -> "NFC activé"
-            ReadinessCheckId.PAIRED_BOX -> "Boîtier associé"
+            ReadinessCheckId.PAIRED_BOX -> "Boîtiers associés"
             ReadinessCheckId.APP_SELECTION -> "Applications choisies"
             ReadinessCheckId.EXACT_ALARM -> "Alarme exacte disponible"
             ReadinessCheckId.FULL_SCREEN_INTENT -> "Alarme plein écran autorisée"

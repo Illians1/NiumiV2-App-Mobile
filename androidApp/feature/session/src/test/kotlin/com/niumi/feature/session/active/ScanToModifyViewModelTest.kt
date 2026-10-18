@@ -104,6 +104,43 @@ class ScanToModifyViewModelTest {
         assertThat(technicalEventLog.logged).contains(TechnicalEventType.NFC_DISABLED)
     }
 
+    /**
+     * SPEC_ANDROID §11.2 (étape 31) : juste après un démarrage, le NFC se lit désactivé au premier
+     * plan puis revient. L'état stable annoncé par Android corrige l'affichage sans quitter l'écran.
+     */
+    @Test
+    fun refreshAfterTheAdapterSettlesReportsTheNfcEnabled() {
+        nfcReader.availabilityValue = NfcAvailability.DISABLED
+        val viewModel = viewModel()
+        viewModel.refreshAvailability()
+
+        nfcReader.availabilityValue = NfcAvailability.ENABLED
+        viewModel.onAdapterSettled()
+
+        assertThat(viewModel.state.availability).isEqualTo(NfcAvailability.ENABLED)
+        assertThat(ScanToModifyTexts.availabilityMessage(viewModel.state.availability)).isNull()
+    }
+
+    /**
+     * §11.2 : `NFC_DISABLED` est consigné une fois par passage au premier plan, pas par transition
+     * système. Un NFC réellement coupé pendant que l'écran est affiché reste affiché coupé.
+     */
+    @Test
+    fun aSettledAdapterNeverLogsNfcDisabledAgain() {
+        nfcReader.availabilityValue = NfcAvailability.DISABLED
+        val viewModel = viewModel()
+        viewModel.refreshAvailability()
+
+        viewModel.onAdapterSettled()
+        nfcReader.availabilityValue = NfcAvailability.ENABLED
+        viewModel.onAdapterSettled()
+        nfcReader.availabilityValue = NfcAvailability.DISABLED
+        viewModel.onAdapterSettled()
+
+        assertThat(technicalEventLog.logged.count { it == TechnicalEventType.NFC_DISABLED }).isEqualTo(1)
+        assertThat(viewModel.state.availability).isEqualTo(NfcAvailability.DISABLED)
+    }
+
     /** Le cas de production de cette étape : rien ne se passe, et l'écran n'annonce rien. */
     @Test
     fun anIgnoredScanChangesNothingAndSaysNothing() {

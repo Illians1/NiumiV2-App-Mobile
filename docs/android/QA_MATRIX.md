@@ -13,7 +13,7 @@ l'audio, de Doze et des surcouches OEM.
 
 | Fabricant | Modèle | Android | Firmware | État |
 | --- | --- | --- | --- | --- |
-| Xiaomi (Redmi) | 25080RABDG (`lapis`) | 16 / API 36, HyperOS OS3.0.302.0.WPPEUXM | `BP2A.250605.031.A3` | **couvert**, campagnes des 7-8, 13, 14, 15, 16, 17, 24, 25, 27 et 28 septembre, 1er, 2, 7, 8, 13 et 15 octobre 2026 |
+| Xiaomi (Redmi) | 25080RABDG (`lapis`) | 16 / API 36, HyperOS OS3.0.302.0.WPPEUXM | `BP2A.250605.031.A3` | **couvert**, campagnes des 7-8, 13, 14, 15, 16, 17, 24, 25, 27 et 28 septembre, 1er, 2, 7, 8, 13, 15, 17 et 18 octobre 2026 |
 | Google Pixel | — | 14, 15, 16, 17 | — | **non testé** — aucun appareil disponible |
 | Samsung Galaxy | — | 14, 15, 16 | — | **non testé** — aucun appareil disponible |
 | Oppo / Realme | — | — | — | **non testé** — aucun appareil disponible |
@@ -46,7 +46,7 @@ essais qui en dépendent.
 
 ## Scénarios de §20
 
-Les 61 scénarios du tableau de §20 — dont les neuf du blocage différé (Lot 6), ajoutés le 2026-09-15, et les onze des sonneries (Lot 7), ajoutés à l'étape 26 —, dans son ordre. « Source » renvoie au rapport qui porte les
+Les 66 scénarios du tableau de §20 — dont les neuf du blocage différé (Lot 6), ajoutés le 2026-09-15, les onze des sonneries (Lot 7), ajoutés à l'étape 26, et les cinq des boîtiers multiples (Lot 8), ajoutés à l'étape 31 —, dans son ordre. « Source » renvoie au rapport qui porte les
 mesures détaillées, dans `docs/android/implementation-reports/`.
 
 ### Réveil, audio et Doze
@@ -132,7 +132,7 @@ contrôle visuel, fait à l'œil pendant les campagnes.
 | verrouillage pendant la sonnerie | sonnerie maintenue | **OK** | `ETAPE-03.md` |
 | scan du bon tag | `RELEASING`, arrêt et déblocage < 1 s, état final | **OK** — `COMPLETED`, watchdog annulé, projection Direct Boot supprimée | `ETAPE-04.md`, `ETAPE-20.md` |
 | interruption pendant `RELEASING` | reprise des effets manquants | **couvert en instrumenté, non rejoué à la main** — `SessionCoordinatorReleaseTest` et la reprise de l'outbox | `ETAPE-18.md` |
-| scan d'un autre tag | sonnerie maintenue | **non testé sur appareil** — un seul tag physique disponible. Le refus est couvert en JVM (payload et boîtier non associés) | `ETAPE-04.md` |
+| scan d'un autre tag | sonnerie maintenue | **OK** (17/10) — tag Niumi valide hors de la liste figée, scanné pendant la sonnerie : `NFC_SCAN_INVALID`, vibration d'erreur ressentie, sonnerie maintenue jusqu'au scan d'un boîtier figé 21 s plus tard (ligne Lot 8 n° 1). Jusqu'au 2026-10-17, un seul tag physique était disponible | `ETAPE-04.md`, `ETAPE-31.md` |
 | NFC désactivé pendant la sonnerie | instruction de réactivation, sonnerie maintenue | **OK** — incident `NFC_DISABLED` `CRITICAL` unique, session toujours `RINGING` | `ETAPE-04.md`, `ETAPE-20.md` |
 | NFC réactivé pendant la sonnerie | Reader Mode restauré, scan accepté | **OK** | `ETAPE-04.md` |
 | scan sur écran verrouillé | déverrouillage demandé si l'appareil l'exige | **Limite constructeur confirmée** — le boîtier n'est lu qu'après déverrouillage sur cet appareil. `AlarmActivity` s'affiche bien par-dessus le verrouillage (§4.4) | `ETAPE-04.md` |
@@ -184,6 +184,31 @@ portaient sur le lecteur `MediaPlayer`, ce que la colonne précise.
 TalkBack sur l'écran 14 (contrôle du plan, hors §20) : **non testé**, passé par choix de
 l'utilisateur le 2026-10-15.
 
+### Boîtiers multiples (Lot 8)
+
+Cinq lignes ajoutées à §20 à l'étape 31 — quatre du Lot 8 et une hors Lot 8 (faux « NFC désactivé »
+des écrans 8 et 9, révélé par l'essai 2 de l'étape 30) —, mesurées les 17 et 18 octobre 2026 avec six
+tags NTAG portant chacun un `boxId` et un token distincts. États lus dans Room (`niumi.db` avec son
+WAL), chronologies NFC dans le logcat système (`NfcService` : `enableInternal`, `disableInternal`),
+verrouillage par `dumpsys trust` et `dumpsys user`. La preuve NFC ne quittant jamais la mémoire, le
+`boxId` reconnu n'est lisible ni dans le journal ni dans Room : sur appareil, c'est le tag scanné et
+l'issue de la session qui font foi.
+
+| Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Retard mesuré | Source |
+| --- | --- | --- | --- | --- |
+| deux boîtiers associés, session armée, scan du second | `RELEASING` puis état final ; la preuve porte le `boxId` du second (JVM) | **OK** (17/10) — liste figée « Entrée », « Boîtier 1 » (`session_box`, positions 0 et 1) ; sonnerie 18:59:00, tag hors liste refusé à 18:59:20, tag du second boîtier accepté à 18:59:41 : `RELEASING` puis `COMPLETED`, révision 5, aucun incident. Écrans 6 et 7 : « Seul le scan d'un de tes boîtiers terminera la session. » | — | `ETAPE-31.md` |
+| boîtier ajouté après l'activation, scanné pendant la session | refusé (vibration d'erreur), session maintenue ; accepté à la session suivante | **Partiel.** (17/10) — pendant la session : refus avec vibration, sonnerie maintenue. Ajouté ensuite (« Boîtier 2 »), session suivante annulée par son scan depuis l'écran 9 à 19:02:16 (`CANCELLED`, révision 4). **Réserve** : l'identité du tag refusé n'a pas été relevée ; il était hors liste, mais peut-être distinct de celui ajouté ensuite. L'ajout pendant une session est par ailleurs impossible (écran 3 fermé, §11.1) | — | `ETAPE-31.md` |
+| mise à jour par-dessus une session armée du Lot 7 | le boîtier d'origine termine la session, nommé « Boîtier 1 » à l'écran 6 de la session suivante | **Partiel.** — mise à jour et scan mesurés à l'étape 30 (17/10, essai 1, sans redémarrage) ; le 18/10, après la mise à jour de l'essai suivant, la session d'après fige « Boîtier 1 » (`session_box`), nom que l'écran 6 lit dans le même dépôt ; l'affichage lui-même n'a pas été confirmé de vive voix | — | `ETAPE-30.md`, `ETAPE-31.md` |
+| redémarrage sans déverrouillage après la mise à jour, projection v3 | le boîtier d'origine termine la session après déverrouillage | **OK** (18/10) — APK `4a03d53` (base v4, projection v3), session armée, APK de l'étape 31 par-dessus sans ouvrir l'application, redémarrage : `RUNNING_LOCKED`, alarme reprogrammée et sonnerie à 09:16:00 depuis la projection v3 ; déverrouillage 09:17:49,7 ; base migrée en v5 au premier accès, `session_box` = « Boîtier 1 » ; scan du boîtier d'origine 09:19:19 → `COMPLETED`, `HEALTHY`, aucun incident | T+0,4 s (sonnerie) | `ETAPE-31.md` |
+| redémarrage sans déverrouillage, écran de sonnerie observé après le déverrouillage (hors Lot 8) | un éventuel « NFC désactivé » disparaît de lui-même, sans quitter l'écran ni réessayer ; `session_incident` vide ; même résultat sur l'écran 9 | **OK, avec réserve** — écran 8 (18/10) : « NFC désactivé » à la réouverture (09:17:53,9), retiré seul à l'allumage du NFC (09:17:58,4), **réaffiché 2 s** pendant que HyperOS éteint et relance réellement le NFC (09:18:05,2 → 09:18:07,1), puis retiré ; scan accepté sans quitter l'écran ; `NFC_DISABLED` journalisé une fois, pas à l'extinction ; aucun incident. Écran 9 (18/10) : même relance du NFC (09:23:33,1 → 09:23:34,8), message affiché ~1 s puis retiré seul, scan accepté (`CANCELLED`). **Réserve** : un incident `TIME_CHANGED` (`WARNING`) est consigné pour cette seconde session, horloge resynchronisée au démarrage — sans rapport avec le NFC, mais `session_incident` n'est pas vide | NFC prêt 8,6 et 8,3 s après le déverrouillage, stable à 17,4 et 17,1 s | `ETAPE-31.md` |
+
+Écran 3 (contrôle du plan, hors §20) : ajout de cinq boîtiers nommés, renommage, retrait, nom
+proposé au plus petit `n` libre, doublon refusé sans dialogue, « 5 boîtiers maximum. » à la place
+du bouton, tag approché hors lecture sans effet — **OK** (17/10), base et `uiautomator dump`
+(descriptions « Renommer {nom} » / « Retirer {nom} », préfixes de huit caractères). TalkBack vocal
+**non écouté** ; la taille de la liste annoncée est prouvée par `PairingScreenTest`, pas sur
+appareil.
+
 ### Arrêts système et corruption
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Source |
@@ -209,11 +234,11 @@ en fonctionnement.
 
 | | Lignes |
 | --- | --- |
-| Mesurées et conformes | 45 (dont 8 des 9 lignes du blocage différé, 10 des 11 lignes des sonneries, et le retrait des récents, conforme avec parade) |
-| Mesurées partiellement | 1 (boucle des quatre sonneries : « Oiseaux » seule réécoutée avec le lecteur `AudioTrack`) |
+| Mesurées et conformes | 49 (dont 8 des 9 lignes du blocage différé, 10 des 11 lignes des sonneries, 3 des 5 lignes des boîtiers multiples — dont une avec réserve, l'incident `TIME_CHANGED` —, le scan d'un autre tag mesuré le 17/10, et le retrait des récents, conforme avec parade) |
+| Mesurées partiellement | 3 (boucle des quatre sonneries : « Oiseaux » seule réécoutée avec le lecteur `AudioTrack` ; boîtier ajouté après l'activation : identité du tag refusé non relevée ; « Boîtier 1 » à l'écran 6 après la mise à jour : lu en base, pas vu à l'écran) |
 | Mesurées, limite établie et documentée | 5 (silence total, arrêt forcé, NFC verrouillé, restriction d'énergie constructeur, **processus tué avant l'heure de début** — mesurée à l'étape 25 : sur HyperOS, le service d'accessibilité n'est plus relié après la mort du processus) |
 | Non reproductibles sur cet appareil | 1 (arrêt du seul FGS) |
-| Non testées faute d'appareil, de matériel audio ou de second tag | 12 |
+| Non testées faute d'appareil ou de matériel audio | 11 |
 | Non testées sur le build release | 2 |
 
 Les campagnes qui restent à mener pour combler ces lignes sont détaillées dans

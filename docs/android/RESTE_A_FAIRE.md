@@ -343,6 +343,39 @@ Ce qui reste ouvert pour le Lot 7 :
 - vibration progressive (impulsions qui se resserrent) proposée par l'utilisateur, hors périmètre
   du Lot 7, à spécifier séparément.
 
+Les **boîtiers multiples** (Lot 8) sont planifiés aux étapes 29 à 31 du même plan (conception
+`docs/superpowers/specs/2026-10-13-boitiers-multiples-design.md`). Ce n'est pas une tâche de
+publication : le lot étend le MVP sans en changer la porte finale.
+
+**État au 2026-10-18 : les étapes 29 à 31 sont faites.** Contrat KMP 1.4 (vérification contre une
+liste), jusqu'à cinq boîtiers nommés figés dans `session_box` (Room v5, projection Direct Boot v4),
+écran 3 « Mes boîtiers », diagnostic et récapitulatif au pluriel. Mesuré sur Xiaomi / Android 16 les
+17 et 18/10 avec six tags : trois des cinq lignes §20 du lot conformes, dont une avec réserve, et deux
+partielles (`QA_MATRIX.md`), les cinq critères §21 prouvés (36 à 40 de `RELEASE_REPORT.md`). Le faux
+« NFC désactivé » des écrans 8 et 9 après un redémarrage, révélé à l'étape 30, est corrigé : le
+message disparaît seul dès que le NFC est prêt. Détail dans `ETAPE-29.md` à `ETAPE-31.md`.
+
+Ce qui reste ouvert pour le Lot 8 :
+
+- la réserve de la ligne « boîtier ajouté après l'activation » : rejouer avec **le même tag**,
+  refusé pendant une session puis accepté à la suivante une fois ajouté (deux sessions courtes) ;
+- après une mise à jour depuis le Lot 7, **voir** « Boîtier 1 » à l'écran 6 de la session suivante
+  (lu dans `session_box` le 18/10, l'écran lui-même n'a pas été regardé) ;
+- TalkBack à voix haute sur l'écran 3 (l'arbre d'accessibilité a été relevé, l'annonce de la taille
+  de la liste n'est prouvée qu'en instrumenté) ;
+- l'export du diagnostic avec plusieurs boîtiers, déclenché sur appareil (prouvé en JVM) ;
+- l'incident `TIME_CHANGED` (`WARNING`) consigné après un redémarrage pendant `ARMED` le 18/10,
+  horloge resynchronisée au démarrage : comportement préexistant, à qualifier (faux positif ou
+  incident légitime) hors du Lot 8 ;
+- après un déverrouillage depuis l'écran de réveil, HyperOS a laissé l'accueil au premier plan le
+  18/10 : il a fallu rouvrir Niumi pour revoir l'écran de réveil (l'écran de réveil était passé en
+  pause à l'ouverture du clavier de code, 6 s avant le déverrouillage). SPEC_ANDROID §10.4 attend
+  qu'un écran affiché au-dessus du verrouillage reste visible après lui : à qualifier selon le geste
+  employé, hors du Lot 8 ;
+- l'écran 3 ne relit pas le NFC sur un état stable de l'adaptateur (volet rapide), contrairement
+  aux écrans 2, 6, 7, 8, 9 et 12 : hors du Lot 8 ;
+- la couverture Pixel et Samsung (B1, B2).
+
 ## Ce qui n'est pas dans ce document
 
 Les limites **assumées et documentées** ne sont pas des tâches. Elles sont énoncées dans

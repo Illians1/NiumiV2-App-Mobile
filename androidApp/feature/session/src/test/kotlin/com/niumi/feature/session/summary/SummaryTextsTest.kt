@@ -28,7 +28,20 @@ class SummaryTextsTest {
 
     @Test
     fun theCommitmentReminderIsStatedWordForWord() {
-        assertThat(SummaryTexts.COMMITMENT_REMINDER).isEqualTo("Seul le scan du boîtier terminera la session.")
+        assertThat(SummaryTexts.COMMITMENT_REMINDER)
+            .isEqualTo("Seul le scan d'un de tes boîtiers terminera la session.")
+    }
+
+    /** §15 (Lot 8) : la ligne liste plusieurs boîtiers. */
+    @Test
+    fun theBoxLineIsTitledInThePlural() {
+        assertThat(SummaryTexts.BOX_TITLE).isEqualTo("Boîtiers associés")
+    }
+
+    @Test
+    fun theNoPairedBoxRefusalAsksForAtLeastOneBox() {
+        assertThat(SummaryTexts.blockingReason(ActivationReasonCode.NO_PAIRED_BOX))
+            .isEqualTo("Aucun boîtier n'est associé. Associe au moins un boîtier avant d'activer ta session.")
     }
 
     @Test

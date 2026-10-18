@@ -10,6 +10,7 @@ import com.niumi.feature.setup.pairing.fakes.FakePairedBoxStore
 import com.niumi.feature.setup.pairing.fakes.RecordingTechnicalEventLog
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.session.SessionSnapshotPublisher
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,18 +26,28 @@ private const val VALID_BOX_ID = "550e8400-e29b-41d4-a716-446655440000"
 
 // Même token que la fixture — seul le `boxId` change : un second boîtier, pas un payload invalide.
 private const val OTHER_URI = "niumi://box/v1/00000000-0000-0000-0000-000000000000?token=AAAAAAAAAAAAAAAAAAAAAA"
+private const val OTHER_BOX_ID = "00000000-0000-0000-0000-000000000000"
+
+private fun box(
+    index: Int,
+    name: String = "Boîtier $index",
+): PairedBoxDto =
+    PairedBoxDto(
+        PairedBoxCredentialDto(1, "${index.toString().repeat(8)}-1111-1111-1111-111111111111", "a".repeat(64)),
+        name,
+    )
 
 /**
- * SPEC_ANDROID §11.1 (Lot 8) : jusqu'à cinq boîtiers associés, un doublon est signalé sans
- * écriture, jamais le token en clair. Le ViewModel ne juge jamais lui-même de la validité d'un
- * payload — il délègue à la **vraie** `NiumiCoreFacade` (SPEC_CORE_KMP §9.3), jamais à un parseur
- * simulé. L'écran « Mes boîtiers » complet (renommer, retirer) arrive à l'étape 31 : ici, le
- * dépôt n'ajoute qu'un boîtier à la fois, nommé « Boîtier {n} ».
+ * Écran 3 « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8). Le ViewModel ne juge jamais lui-même
+ * de la validité d'un payload — il délègue à la **vraie** `NiumiCoreFacade` (SPEC_CORE_KMP §9.3),
+ * jamais à un parseur simulé — ni de celle d'un nom : `PairedBoxName.sanitize`, celle du dépôt,
+ * tranche avant tout appel.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PairingViewModelTest {
     private val store = FakePairedBoxStore()
     private val log = RecordingTechnicalEventLog()
+    private val reader = FakeNfcReader()
 
     @Before
     fun setUp() {
@@ -50,33 +61,316 @@ class PairingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(availability: NfcAvailability = NfcAvailability.ENABLED): PairingViewModel =
-        PairingViewModel(
+    private fun viewModel(availability: NfcAvailability = NfcAvailability.ENABLED): PairingViewModel {
+        reader.availabilityValue = availability
+        return PairingViewModel(
             facade = NiumiCoreFacade(),
             pairedBoxStore = store,
             technicalEventLog = log,
-            nfcReader = FakeNfcReader(availability),
+            nfcReader = reader,
             // Aucun snapshot publié : aucune session en cours, le parcours est ouvert. La règle
             // elle-même est prouvée sur tous les états par `SetupGateTest`.
             snapshotPublisher = SessionSnapshotPublisher(),
         )
+    }
+
+    /** Scanne un boîtier neuf et valide le nom proposé. */
+    private fun PairingViewModel.addScanned(uri: String) {
+        if (!state.isScanning) startAdding()
+        onUriRead(uri)
+        editor.confirmAdd()
+    }
 
     @Test
-    fun aValidTagWithNoExistingBoxIsStoredImmediately() {
+    fun onEntryTheListShowsEveryPairedBoxByNameAndPrefixInOrder() {
+        store.boxes = listOf(box(1, "Salle de bain"), box(2, "Cuisine"))
+
+        val rows = viewModel().state.boxes
+
+        assertThat(rows.map { it.name }).containsExactly("Salle de bain", "Cuisine").inOrder()
+        assertThat(rows.map { it.prefix }).containsExactly("11111111…", "22222222…").inOrder()
+        assertThat(viewModel().state.canContinue).isTrue()
+    }
+
+    /** Décision du 2026-10-17 : la lecture n'est active d'office qu'à la première association. */
+    @Test
+    fun theReaderIsOnAtEntryOnlyWithoutAnyBox() {
+        assertThat(viewModel().state.isReaderModeExpected).isTrue()
+
+        store.boxes = listOf(box(1))
+
+        assertThat(viewModel().state.isReaderModeExpected).isFalse()
+    }
+
+    @Test
+    fun addStartsTheReaderAndCancelStopsIt() {
+        store.boxes = listOf(box(1))
         val viewModel = viewModel()
+
+        viewModel.startAdding()
+        assertThat(viewModel.state.isReaderModeExpected).isTrue()
+
+        viewModel.cancelScan()
+        assertThat(viewModel.state.isReaderModeExpected).isFalse()
+    }
+
+    @Test
+    fun aValidNewTagOpensTheNamePromptPrefilledWithBoitierN() {
+        store.boxes = listOf(box(1), box(2))
+        val viewModel = viewModel()
+        viewModel.startAdding()
 
         viewModel.onUriRead(VALID_URI)
 
-        assertThat(store.addCallCount).isEqualTo(1)
+        assertThat(viewModel.state.pendingName).isEqualTo("Boîtier 3")
+        assertThat(viewModel.state.isReaderModeExpected).isFalse()
+        // Rien n'est écrit avant la confirmation du nom.
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(log.types).containsExactly(TechnicalEventType.NFC_SCAN_VALID)
+    }
+
+    @Test
+    fun confirmingTheNameAddsTheBoxAndSaysBoitierAjoute() {
+        val viewModel = viewModel()
+        viewModel.onUriRead(VALID_URI)
+        viewModel.editor.onNameChanged("  Cuisine ")
+
+        viewModel.editor.confirmAdd()
+
         assertThat(
             store.boxes
                 .single()
                 .credential.boxId,
         ).isEqualTo(VALID_BOX_ID)
-        assertThat(store.boxes.single().name).isEqualTo("Boîtier 1")
-        assertThat(viewModel.state.pairedBoxIdPrefix).isEqualTo(VALID_BOX_ID.take(PairingTexts.BOX_ID_PREFIX_LENGTH))
-        assertThat(viewModel.state.message).isEqualTo(PairingTexts.PAIRED)
+        assertThat(store.boxes.single().name).isEqualTo("Cuisine")
+        assertThat(viewModel.state.pendingName).isNull()
+        assertThat(viewModel.state.boxes.map { it.name }).containsExactly("Cuisine")
+        assertThat(viewModel.state.message).isEqualTo(PairingTexts.BOX_ADDED)
+    }
+
+    @Test
+    fun aBlankOrTooLongNameIsRefusedWithoutWriting() {
+        val viewModel = viewModel()
+        viewModel.onUriRead(VALID_URI)
+
+        viewModel.editor.onNameChanged("   ")
+        assertThat(viewModel.state.canConfirmName).isFalse()
+        viewModel.editor.confirmAdd()
+
+        viewModel.editor.onNameChanged("a".repeat(31))
+        assertThat(viewModel.state.canConfirmName).isFalse()
+        viewModel.editor.confirmAdd()
+
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(viewModel.state.pendingName).isEqualTo("a".repeat(31))
+    }
+
+    @Test
+    fun cancellingTheNamePromptWritesNothing() {
+        val viewModel = viewModel()
+        viewModel.onUriRead(VALID_URI)
+
+        viewModel.editor.cancelAdd()
+
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(viewModel.state.pendingName).isNull()
+        assertThat(viewModel.state.boxes).isEmpty()
+    }
+
+    /** Lot 8 : un doublon de `boxId` est signalé, sans dialogue ni écriture. */
+    @Test
+    fun aTagAlreadyPairedSaysSoAndWritesNothing() {
+        store.boxes = listOf(PairedBoxDto(PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64)), "Boîtier 1"))
+        val viewModel = viewModel()
+        viewModel.startAdding()
+
+        viewModel.onUriRead(VALID_URI)
+
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(viewModel.state.pendingName).isNull()
+        assertThat(viewModel.state.message).isEqualTo(PairingTexts.ALREADY_PAIRED)
+    }
+
+    @Test
+    fun fiveBoxesHideAddAndShowTheMaximumMessage() {
+        store.boxes = (1..5).map { box(it) }
+        val viewModel = viewModel()
+
+        viewModel.startAdding()
+
+        assertThat(viewModel.state.isAtLimit).isTrue()
+        assertThat(viewModel.state.canAdd).isFalse()
+        assertThat(viewModel.state.isReaderModeExpected).isFalse()
+    }
+
+    @Test
+    fun renameWritesTheNewNameAndRefreshesTheList() {
+        store.boxes = listOf(box(1), box(2))
+        val viewModel = viewModel()
+        val second = viewModel.state.boxes[1].boxId
+
+        viewModel.editor.startRename(second)
+        assertThat(viewModel.state.renaming?.text).isEqualTo("Boîtier 2")
+        viewModel.editor.onNameChanged(" Cuisine ")
+        viewModel.editor.confirmRename()
+
+        assertThat(store.boxes.map { it.name }).containsExactly("Boîtier 1", "Cuisine").inOrder()
+        assertThat(viewModel.state.boxes.map { it.name }).containsExactly("Boîtier 1", "Cuisine").inOrder()
+        assertThat(viewModel.state.renaming).isNull()
+    }
+
+    @Test
+    fun aBlankRenameIsRefusedWithoutWriting() {
+        store.boxes = listOf(box(1))
+        val viewModel = viewModel()
+        viewModel.editor.startRename(
+            viewModel.state.boxes
+                .single()
+                .boxId,
+        )
+
+        viewModel.editor.onNameChanged(" ")
+        viewModel.editor.confirmRename()
+
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(viewModel.state.renaming).isNotNull()
+    }
+
+    @Test
+    fun removeDropsTheBoxAndRefreshesTheList() {
+        store.boxes = listOf(box(1), box(2), box(3))
+        val viewModel = viewModel()
+
+        viewModel.editor.remove(viewModel.state.boxes[1].boxId)
+
+        assertThat(store.boxes.map { it.name }).containsExactly("Boîtier 1", "Boîtier 3").inOrder()
+        assertThat(viewModel.state.boxes.map { it.name }).containsExactly("Boîtier 1", "Boîtier 3").inOrder()
+    }
+
+    /** Décision du 2026-10-17 : le trou laissé par un retrait est comblé en premier. */
+    @Test
+    fun afterRemovingBoitier2TheNextProposalIsBoitier2() {
+        store.boxes = listOf(box(1), box(2), box(3))
+        val viewModel = viewModel()
+        viewModel.editor.remove(viewModel.state.boxes[1].boxId)
+        viewModel.startAdding()
+
+        viewModel.onUriRead(OTHER_URI)
+
+        assertThat(viewModel.state.pendingName).isEqualTo("Boîtier 2")
+    }
+
+    @Test
+    fun removingTheLastBoxIsAllowedOutsideASession() {
+        store.boxes = listOf(box(1))
+        val viewModel = viewModel()
+
+        viewModel.editor.remove(
+            viewModel.state.boxes
+                .single()
+                .boxId,
+        )
+
+        assertThat(store.boxes).isEmpty()
+        assertThat(viewModel.state.canContinue).isFalse()
+    }
+
+    /** §11.1 : aucun ajout, retrait ni renommage pendant une session — la liste reste visible. */
+    @Test
+    fun aSessionInProgressDisablesEveryActionAndExplains() {
+        store.boxes = listOf(box(1), box(2))
+        val viewModel = viewModel()
+        viewModel.startAdding()
+        val first =
+            viewModel.state.boxes
+                .first()
+                .boxId
+
+        viewModel.onSessionStateChanged(isSessionInProgress = true)
+        viewModel.startAdding()
+        viewModel.onUriRead(OTHER_URI)
+        viewModel.editor.startRename(first)
+        viewModel.editor.remove(first)
+
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(viewModel.state.boxes).hasSize(2)
+        assertThat(viewModel.state.canAdd).isFalse()
+        assertThat(viewModel.state.isReaderModeExpected).isFalse()
+        assertThat(viewModel.state.pendingName).isNull()
+        assertThat(viewModel.state.renaming).isNull()
+        assertThat(viewModel.state.message).isEqualTo(PairingTexts.SESSION_IN_PROGRESS)
+    }
+
+    @Test
+    fun aSessionStartingWhileANameDialogIsOpenClosesItWithoutWriting() {
+        val viewModel = viewModel()
+        viewModel.onUriRead(VALID_URI)
+
+        viewModel.onSessionStateChanged(isSessionInProgress = true)
+        viewModel.editor.confirmAdd()
+
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(viewModel.state.pendingName).isNull()
+    }
+
+    @Test
+    fun aScanWhileANameDialogIsOpenIsIgnored() {
+        val viewModel = viewModel()
+        viewModel.onUriRead(VALID_URI)
+
+        viewModel.onUriRead(OTHER_URI)
+        viewModel.editor.confirmAdd()
+
+        assertThat(
+            store.boxes
+                .single()
+                .credential.boxId,
+        ).isEqualTo(VALID_BOX_ID)
+    }
+
+    /**
+     * Un tag tenu au bord de la zone émet plusieurs lectures (même constat qu'`ScanToModifyViewModel`).
+     * Les deux passent la garde avant que la lecture du dépôt rende la main : seule la première doit
+     * ouvrir le dialogue et journaliser le scan.
+     */
+    @Test
+    fun twoReadsOfTheSameTagWhileTheStoreIsReadOpenOneDialogAndLogOnce() {
+        val viewModel = viewModel()
+        val gate = CompletableDeferred<Unit>()
+        store.allGate = gate
+
+        viewModel.onUriRead(VALID_URI)
+        viewModel.onUriRead(OTHER_URI)
+        gate.complete(Unit)
+        viewModel.editor.confirmAdd()
+
         assertThat(log.types).containsExactly(TechnicalEventType.NFC_SCAN_VALID)
+        assertThat(
+            store.boxes
+                .single()
+                .credential.boxId,
+        ).isEqualTo(VALID_BOX_ID)
+    }
+
+    /** Un renommage ouvert pendant la lecture du dépôt l'emporte : jamais deux dialogues superposés. */
+    @Test
+    fun aRenameOpenedWhileAScanReadsTheStoreIsNotCoveredByANameDialog() {
+        store.boxes = listOf(box(1))
+        val viewModel = viewModel()
+        viewModel.startAdding()
+        val gate = CompletableDeferred<Unit>()
+        store.allGate = gate
+
+        viewModel.onUriRead(VALID_URI)
+        viewModel.editor.startRename(
+            viewModel.state.boxes
+                .single()
+                .boxId,
+        )
+        gate.complete(Unit)
+
+        assertThat(viewModel.state.renaming).isNotNull()
+        assertThat(viewModel.state.pendingName).isNull()
     }
 
     @Test
@@ -85,9 +379,8 @@ class PairingViewModelTest {
 
         viewModel.onUriRead("https://example.com/not-a-niumi-box")
 
-        assertThat(store.addCallCount).isEqualTo(0)
-        assertThat(store.boxes).isEmpty()
-        assertThat(viewModel.state.pairedBoxIdPrefix).isNull()
+        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(viewModel.state.pendingName).isNull()
         assertThat(viewModel.state.message).isEqualTo(PairingTexts.UNKNOWN_PAYLOAD)
         assertThat(log.types).containsExactly(TechnicalEventType.NFC_SCAN_INVALID)
     }
@@ -98,38 +391,19 @@ class PairingViewModelTest {
 
         viewModel.onUnreadableTag()
 
-        assertThat(store.addCallCount).isEqualTo(0)
+        assertThat(store.writeCallCount).isEqualTo(0)
         assertThat(viewModel.state.message).isEqualTo(PairingTexts.UNREADABLE)
         assertThat(log.types).containsExactly(TechnicalEventType.NFC_SCAN_INVALID)
     }
 
-    /** Lot 8 : un doublon de `boxId` est signalé, jamais réécrit — plus de dialogue de remplacement. */
     @Test
-    fun aValidTagForAnAlreadyPairedBoxShowsAlreadyPairedWithoutWriting() {
-        store.boxes = listOf(PairedBoxDto(PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64)), "Boîtier 1"))
+    fun aSecondDistinctBoxIsAddedAfterTheFirst() {
         val viewModel = viewModel()
 
-        viewModel.onUriRead(VALID_URI)
+        viewModel.addScanned(VALID_URI)
+        viewModel.addScanned(OTHER_URI)
 
-        assertThat(store.addCallCount).isEqualTo(1)
-        assertThat(store.boxes).hasSize(1)
-        assertThat(viewModel.state.message).isEqualTo(PairingTexts.ALREADY_PAIRED)
-    }
-
-    /** Lot 8 : un deuxième boîtier distinct s'ajoute à la liste, nommé par sa position. */
-    @Test
-    fun aSecondDistinctBoxIsAddedAndNamedByItsPosition() {
-        store.boxes =
-            listOf(
-                PairedBoxDto(
-                    PairedBoxCredentialDto(1, "11111111-1111-1111-1111-111111111111", "a".repeat(64)),
-                    "Boîtier 1",
-                ),
-            )
-        val viewModel = viewModel()
-
-        viewModel.onUriRead(OTHER_URI)
-
+        assertThat(store.boxes.map { it.credential.boxId }).containsExactly(VALID_BOX_ID, OTHER_BOX_ID).inOrder()
         assertThat(store.boxes.map { it.name }).containsExactly("Boîtier 1", "Boîtier 2").inOrder()
     }
 
@@ -142,7 +416,8 @@ class PairingViewModelTest {
     fun noTokenOrFingerprintEverReachesTheTechnicalLog() {
         val viewModel = viewModel()
 
-        viewModel.onUriRead(VALID_URI)
+        viewModel.addScanned(VALID_URI)
+        viewModel.startAdding()
         viewModel.onUriRead("niumi://box/v1/bad-uuid?token=AAAAAAAAAAAAAAAAAAAAAA")
         viewModel.onUnreadableTag()
 
@@ -150,13 +425,31 @@ class PairingViewModelTest {
             store.boxes
                 .single()
                 .credential.tokenSha256Hex
-        assertThat(log.entries).isNotEmpty()
+        assertThat(log.types)
+            .containsExactly(
+                TechnicalEventType.NFC_SCAN_VALID,
+                TechnicalEventType.NFC_SCAN_INVALID,
+                TechnicalEventType.NFC_SCAN_INVALID,
+            )
         log.entries.forEach { entry ->
             val details = entry.detailsJson.orEmpty()
             assertThat(details).doesNotContain(storedFingerprint)
             assertThat(details).doesNotContain("AAAAAAAAAAAAAAAAAAAAAA")
             assertThat(details).doesNotContain("token")
         }
+    }
+
+    /** L'état d'affichage ne porte ni empreinte ni token : l'écran ne doit rien pouvoir en montrer (§16). */
+    @Test
+    fun theUiStateNeverCarriesAFingerprint() {
+        val viewModel = viewModel()
+        viewModel.addScanned(VALID_URI)
+
+        assertThat(viewModel.state.toString()).doesNotContain(
+            store.boxes
+                .single()
+                .credential.tokenSha256Hex,
+        )
     }
 
     /**
@@ -167,9 +460,7 @@ class PairingViewModelTest {
      */
     @Test
     fun losingTheReaderClearsTheFeedbackOfAPreviousScan() {
-        val reader = FakeNfcReader(NfcAvailability.ENABLED)
-        val viewModel =
-            PairingViewModel(NiumiCoreFacade(), store, log, reader, SessionSnapshotPublisher())
+        val viewModel = viewModel()
         viewModel.onUnreadableTag()
         assertThat(viewModel.state.message).isEqualTo(PairingTexts.UNREADABLE)
 
@@ -183,9 +474,7 @@ class PairingViewModelTest {
     /** Le retour du lecteur ne réaffiche pas le message effacé : il n'a plus de raison d'être. */
     @Test
     fun recoveringTheReaderDoesNotBringBackTheClearedFeedback() {
-        val reader = FakeNfcReader(NfcAvailability.ENABLED)
-        val viewModel =
-            PairingViewModel(NiumiCoreFacade(), store, log, reader, SessionSnapshotPublisher())
+        val viewModel = viewModel()
         viewModel.onUnreadableTag()
         reader.availabilityValue = NfcAvailability.DISABLED
         viewModel.refreshAvailability()
@@ -197,17 +486,16 @@ class PairingViewModelTest {
         assertThat(viewModel.state.isReaderModeExpected).isTrue()
     }
 
-    /** Une association réussie reste affichée : elle décrit un fait, pas une action à réessayer. */
+    /** Un ajout réussi reste affiché : il décrit un fait, pas une action à réessayer. */
     @Test
-    fun aSuccessfulPairingSurvivesTheReaderComingBack() {
-        val reader = FakeNfcReader(NfcAvailability.ENABLED)
-        val viewModel =
-            PairingViewModel(NiumiCoreFacade(), store, log, reader, SessionSnapshotPublisher())
-        viewModel.onUriRead(VALID_URI)
+    fun aSuccessfulAdditionSurvivesTheReaderGoingAway() {
+        val viewModel = viewModel()
+        viewModel.addScanned(VALID_URI)
 
+        reader.availabilityValue = NfcAvailability.DISABLED
         viewModel.refreshAvailability()
 
-        assertThat(viewModel.state.message).isEqualTo(PairingTexts.PAIRED)
+        assertThat(viewModel.state.message).isEqualTo(PairingTexts.BOX_ADDED)
     }
 
     @Test
@@ -216,15 +504,5 @@ class PairingViewModelTest {
 
         assertThat(viewModel.state.nfcAvailability).isEqualTo(NfcAvailability.DISABLED)
         assertThat(viewModel.state.isReaderModeExpected).isFalse()
-    }
-
-    @Test
-    fun anExistingBoxIsShownOnEntryAsATruncatedIdentifier() {
-        store.boxes = listOf(PairedBoxDto(PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64)), "Boîtier 1"))
-
-        val state = viewModel().state
-
-        assertThat(state.pairedBoxIdPrefix).isEqualTo(VALID_BOX_ID.take(PairingTexts.BOX_ID_PREFIX_LENGTH))
-        assertThat(state.canContinue).isTrue()
     }
 }

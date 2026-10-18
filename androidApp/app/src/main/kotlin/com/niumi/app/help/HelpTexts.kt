@@ -66,6 +66,15 @@ object HelpTexts {
                     ),
             ),
             HelpSection(
+                title = "Boîtiers",
+                items =
+                    listOf(
+                        "Seuls les boîtiers associés au moment de l'activation terminent la session. Tant " +
+                            "qu'elle dure, tu ne peux ni en ajouter, ni en retirer, ni en renommer. Un boîtier " +
+                            "retiré ne termine plus rien.",
+                    ),
+            ),
+            HelpSection(
                 title = "Après un redémarrage ou une mise à jour",
                 items =
                     listOf(
@@ -81,6 +90,11 @@ object HelpTexts {
                         "Juste après un redémarrage, le diagnostic peut annoncer le NFC désactivé alors qu'il " +
                             "ne l'est pas : la pile NFC du système n'a pas fini de démarrer. Rouvrir Niumi corrige " +
                             "l'affichage.",
+                        "Juste après un redémarrage, l'écran de réveil et l'écran de scan peuvent aussi annoncer " +
+                            "le NFC désactivé : le message disparaît de lui-même dès que le NFC est prêt, en " +
+                            "général une vingtaine de secondes après le déverrouillage, et peut revenir une ou deux " +
+                            "secondes pendant que le téléphone relance son NFC. Attends qu'il ait disparu pour " +
+                            "scanner ton boîtier.",
                     ),
             ),
             HelpSection(

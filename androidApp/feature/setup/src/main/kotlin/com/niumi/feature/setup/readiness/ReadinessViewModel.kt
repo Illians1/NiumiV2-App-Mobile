@@ -9,6 +9,7 @@ import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck
+import com.niumi.system.readiness.ReadinessCheckId
 import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.ReadinessOutcome
 import com.niumi.system.readiness.toActivationPolicyInput
@@ -56,7 +57,7 @@ class ReadinessViewModel
             val items =
                 report.checks
                     .filter { it.outcome != ReadinessOutcome.NOT_APPLICABLE }
-                    .map(::toItem)
+                    .map { toItem(it, report.pairedBoxCount) }
             return ReadinessUiState(
                 items = items,
                 primary = items.firstOrNull { it.outcome == ReadinessOutcome.FAILED },
@@ -66,7 +67,10 @@ class ReadinessViewModel
             )
         }
 
-        private fun toItem(check: ReadinessCheck): ReadinessItem =
+        private fun toItem(
+            check: ReadinessCheck,
+            pairedBoxCount: Int,
+        ): ReadinessItem =
             ReadinessItem(
                 id = check.id,
                 message = ReadinessMessages.forCheck(check.id),
@@ -76,11 +80,15 @@ class ReadinessViewModel
                 action = check.action,
                 actionLabel = ReadinessMessages.actionLabelFor(check.id),
                 isActionAvailable = check.action !in UNAVAILABLE_ACTIONS,
+                satisfiedSummary =
+                    ReadinessMessages
+                        .pairedBoxCountDetail(pairedBoxCount)
+                        .takeIf { check.id == ReadinessCheckId.PAIRED_BOX },
             ).withRevisitLabel()
 
         /**
-         * Une étape de parcours satisfaite garde son action mais change de libellé : « Changer de
-         * boîtier » plutôt que « Associer mon boîtier », qui contredirait la ligne verte juste
+         * Une étape de parcours satisfaite garde son action mais change de libellé : « Gérer mes
+         * boîtiers » plutôt que « Associer un boîtier », qui contredirait la ligne verte juste
          * au-dessus (§15, ne jamais afficher un faux état).
          */
         private fun ReadinessItem.withRevisitLabel(): ReadinessItem =
