@@ -17,8 +17,6 @@
             android:name=".AlarmActivity"
             android:exported="false"
             android:directBootAware="true"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:theme="@style/Theme.Niumi" />

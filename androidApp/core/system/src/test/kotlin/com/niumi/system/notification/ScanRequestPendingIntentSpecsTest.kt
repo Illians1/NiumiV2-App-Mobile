@@ -20,15 +20,15 @@ class ScanRequestPendingIntentSpecsTest {
     }
 
     /**
-     * Régression : un code de requête partagé avec `AlarmPendingIntentSpecs.fullScreen` (même
+     * Régression : un code de requête partagé avec `AlarmPendingIntentSpecs.alarmScreen` (même
      * session, même composant, `FLAG_UPDATE_CURRENT`) écraserait silencieusement les extras de
      * l'un par ceux de l'autre.
      */
     @Test
-    fun tapSpecUsesADifferentRequestCodeThanTheRingingFullScreenIntent() {
+    fun tapSpecUsesADifferentRequestCodeThanTheRingingAlarmScreenIntent() {
         val scanSpec = ScanRequestPendingIntentSpecs.tap(sessionId)
-        val ringingFullScreenRequestCode = sessionId.hashCode()
+        val ringingAlarmScreenRequestCode = sessionId.hashCode()
 
-        assertThat(scanSpec.requestCode).isNotEqualTo(ringingFullScreenRequestCode)
+        assertThat(scanSpec.requestCode).isNotEqualTo(ringingAlarmScreenRequestCode)
     }
 }

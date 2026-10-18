@@ -24,14 +24,15 @@ import javax.inject.Inject
 /**
  * État de l'écran de réveil (SPEC_ANDROID §10.4). Lit la persistance **puis** suit le publisher,
  * jamais l'inverse : `SessionSnapshotPublisher` vit en mémoire et vaut `null` dans tout processus
- * neuf — c'est toujours le cas quand le plein écran ouvre l'activité après un réveil. Collecter le
+ * neuf — ce peut être le cas quand la notification de sonnerie ouvre l'activité après un réveil
+ * (mort du processus, reconstruction du service). Collecter le
  * flux brut fermerait l'écran avant même que le coordinateur ait publié quoi que ce soit, privant
  * l'utilisateur du seul accès au scan.
  *
  * N'écrit jamais : ni `dispatch`, ni `commit`. L'écran de réveil observe, le scan décide
  * (SPEC_ANDROID §3, §11.3) — d'où l'absence de `SessionCoordinator` ici.
  *
- * Les entrées locales à l'appareil (verrouillage, disponibilité NFC, dernier résultat de scan)
+ * Les entrées locales à l'appareil (disponibilité NFC, dernier résultat de scan)
  * sont poussées par l'activité : elles n'ont pas de source observable côté domaine, et les garder
  * ici évite à l'activité de recomposer elle-même un état déjà décrit par [AlarmUiState].
  */
@@ -45,7 +46,6 @@ class AlarmViewModel
         private var sessionState: SessionStateDto? = null
         private var releaseSteps: List<ReleaseStep> = emptyList()
         private var sessionConfirmedGone = false
-        private var deviceLocked = false
         private var nfcAvailability = NfcAvailability.ENABLED
         private var lastScanOutcome: ScanOutcome? = null
 
@@ -57,11 +57,6 @@ class AlarmViewModel
                 adoptLoaded(gateway.load())
                 snapshotPublisher.snapshot.filterNotNull().collect { adoptSnapshot(it, pendingEffects = null) }
             }
-        }
-
-        fun onDeviceLockChanged(locked: Boolean) {
-            deviceLocked = locked
-            recompute()
         }
 
         fun onNfcAvailabilityChanged(availability: NfcAvailability) {
@@ -122,7 +117,6 @@ class AlarmViewModel
                     else -> {
                         AlarmUiState.forSession(
                             sessionState = current,
-                            deviceLocked = deviceLocked,
                             nfcAvailability = nfcAvailability,
                             lastScanOutcome = lastScanOutcome,
                             releaseSteps = releaseSteps,

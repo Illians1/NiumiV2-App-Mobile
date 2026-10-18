@@ -35,8 +35,6 @@ class IncidentRemediationTest {
             .isEqualTo(ReadinessAction.OpenSoundSettings)
         assertThat(IncidentRemediation.actionFor(AndroidIncidentCodes.ALARM_MUTED_BY_DND))
             .isEqualTo(ReadinessAction.OpenDndSettings)
-        assertThat(IncidentRemediation.actionFor(AndroidIncidentCodes.FULL_SCREEN_REVOKED))
-            .isEqualTo(ReadinessAction.OpenFullScreenIntentSettings)
         assertThat(IncidentRemediation.actionFor(AndroidIncidentCodes.NOTIFICATIONS_REVOKED))
             .isInstanceOf(ReadinessAction.OpenChannelSettings::class.java)
         assertThat(IncidentRemediation.actionFor(IncidentCodes.NFC_DISABLED))
@@ -70,6 +68,15 @@ class IncidentRemediationTest {
         ).forEach { code ->
             assertThat(IncidentRemediation.actionFor(code)).isNull()
         }
+    }
+
+    /**
+     * Lot 9 : un incident « plein écran » d'une version antérieure peut encore être en base. Il
+     * reste affiché, sans recours : le réglage n'a plus d'effet sur Niumi.
+     */
+    @Test
+    fun theHistoricalFullScreenIncidentHasNoRecourse() {
+        assertThat(IncidentRemediation.actionFor(AndroidIncidentCodes.FULL_SCREEN_REVOKED)).isNull()
     }
 
     @Test

@@ -24,9 +24,10 @@ import org.junit.runner.RunWith
 
 /**
  * SPEC_ANDROID §13.1 : la vraie `Notification` d'avertissement n'est ni `ongoing`, ni porteuse
- * d'un plein écran, ni d'une action, et deux contrôles cassés produisent deux notifications
- * distinctes. Complément instrumenté de `SessionWarningNotificationSpecsTest`, qui ne couvre que
- * le spec pur. Nécessite un appareil ou un émulateur (`connectedDebugAndroidTest`).
+ * d'un plein écran, ni d'une action, deux contrôles cassés produisent deux notifications
+ * distinctes, et les identifiants restent ceux de la version antérieure (Lot 9). Complément
+ * instrumenté de `SessionWarningNotificationSpecsTest`, qui ne couvre que le spec pur. Nécessite
+ * un appareil ou un émulateur (`connectedDebugAndroidTest`).
  */
 @RunWith(AndroidJUnit4::class)
 class AndroidSessionWarningNotifierInstrumentedTest {
@@ -148,6 +149,50 @@ class AndroidSessionWarningNotifierInstrumentedTest {
             awaitNotifications(
                 description = "plus aucun avertissement actif",
                 read = ::warningNotifications,
+            ) { it.isEmpty() }
+        assertThat(remaining).isEmpty()
+    }
+
+    /** Lot 9 : les six avertissements gardent les identifiants de la version antérieure. */
+    @Test
+    fun theSixWarningsKeepTheirFrozenIds() {
+        MonitoredReadinessChecks.incidentCodes.keys.forEach { notifier.present(it) }
+
+        val ids =
+            awaitNotifications(
+                description = "les six avertissements publiés",
+                read = ::activeWarningIds,
+            ) { it.size == MonitoredReadinessChecks.incidentCodes.size }
+        assertThat(ids).containsExactly(3, 5, 6, 7, 8, 9)
+    }
+
+    /**
+     * Lot 9 : un avertissement « plein écran » (identifiant 4) publié par la version antérieure et
+     * encore affiché au moment de la mise à jour. Simulé en publiant directement l'identifiant 4
+     * sur le canal d'avertissement : `clearAll()` doit le retirer aussi.
+     */
+    @Test
+    fun clearAllAlsoWithdrawsTheRetiredFullScreenWarning() {
+        val retiredId = SessionWarningNotificationSpecs.retiredNotificationIds.single()
+        notificationManager.notify(
+            retiredId,
+            Notification
+                .Builder(context, NiumiNotificationChannels.sessionWarning.id)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("Vérifie ton réveil Niumi")
+                .build(),
+        )
+        awaitNotifications(
+            description = "l'ancien avertissement publié",
+            read = ::activeWarningIds,
+        ) { it == listOf(retiredId) }
+
+        notifier.clearAll()
+
+        val remaining =
+            awaitNotifications(
+                description = "plus aucun avertissement actif",
+                read = ::activeWarningIds,
             ) { it.isEmpty() }
         assertThat(remaining).isEmpty()
     }

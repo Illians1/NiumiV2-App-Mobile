@@ -21,7 +21,6 @@ class ReadinessActionIntentsTest {
             ReadinessAction.StartPairing,
             ReadinessAction.OpenAppPicker,
             ReadinessAction.ShowExactAlarmDiagnostic,
-            ReadinessAction.OpenFullScreenIntentSettings,
             ReadinessAction.RequestNotificationPermission,
             ReadinessAction.OpenChannelSettings("niumi_alarm_ringing"),
             ReadinessAction.OpenSoundSettings,

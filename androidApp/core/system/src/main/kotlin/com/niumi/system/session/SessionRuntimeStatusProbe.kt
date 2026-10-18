@@ -26,7 +26,6 @@ class DefaultSessionRuntimeStatusProbe(
             alarmScheduled = alarmScheduler.isScheduled(sessionId),
             accessibilityReady = accessibilityServiceStatus.isEnabled(),
             notificationReady = notificationAvailability.areNotificationsEnabled(),
-            fullScreenReady = notificationAvailability.canUseFullScreenIntent(),
             nfcReady = nfcReader.availability == NfcAvailability.ENABLED,
             audioReady = alarmVolumeSource.alarmStreamVolume() > 0,
             nfcEvaluable = nfcEvaluability.isEvaluable(),

@@ -20,9 +20,10 @@ object IncidentTexts {
 
     /**
      * Les codes d'incident sont des identifiants techniques (SPEC_CORE_KMP §7.1) : sont traduits
-     * les sept que la surveillance de §13.1 peut produire pendant une session, plus ceux du
-     * réconciliateur. Un code inconnu reste affiché tel quel plutôt que masqué — §15 interdit de
-     * présenter une session comme saine quand elle ne l'est pas.
+     * les six que la surveillance de §13.1 peut produire pendant une session, ceux du réconciliateur
+     * et l'ancien code du plein écran, historique depuis le Lot 9. Un code inconnu reste affiché
+     * tel quel plutôt que masqué — §15 interdit de présenter une session comme saine quand elle ne
+     * l'est pas.
      */
     fun label(code: String): String =
         when (code) {
@@ -46,8 +47,9 @@ object IncidentTexts {
                 "Les notifications de Niumi sont désactivées."
             }
 
+            // Historique (Lot 9) : plus jamais produit, mais un incident ancien reste lisible.
             "ANDROID_FULL_SCREEN_REVOKED" -> {
-                "Niumi ne peut plus ouvrir l'écran de réveil par-dessus l'écran verrouillé."
+                "L'autorisation plein écran avait été retirée (ancienne version de Niumi, sans objet depuis)."
             }
 
             "ANDROID_BATTERY_EXEMPTION_REVOKED" -> {

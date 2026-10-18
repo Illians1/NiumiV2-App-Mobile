@@ -6,7 +6,8 @@ import android.content.Context
 /**
  * État d'un canal de notification Niumi (SPEC_ANDROID §13 : contrôle « canal d'alarme actif »).
  * Un canal coupé par l'utilisateur laisse la notification se publier sans erreur mais sans
- * importance : le plein écran ne s'ouvre pas et l'utilisateur n'est pas réveillé.
+ * importance : la notification de sonnerie n'est pas présentée, et l'utilisateur perd le chemin
+ * qu'elle ouvre vers l'écran de scan.
  */
 fun interface NotificationChannelStatus {
     fun isChannelEnabled(channelId: String): Boolean

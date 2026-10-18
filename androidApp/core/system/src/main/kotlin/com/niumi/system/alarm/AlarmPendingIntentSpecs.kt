@@ -7,8 +7,9 @@ import com.niumi.system.intent.PendingIntentSpec
 
 /**
  * Construit les trois `PendingIntent` d'une alarme (SPEC_ANDROID §9.1) : le déclencheur qui
- * cible `AlarmReceiver`, celui qui ouvre l'accueil (`showPendingIntent`) et celui du
- * full-screen intent qui ouvre `AlarmActivity`. Le code de requête est `sessionId.hashCode()`
+ * cible `AlarmReceiver`, celui qui ouvre l'accueil (`showPendingIntent`) et le `contentIntent`
+ * de la notification de sonnerie, qui ouvre `AlarmActivity` (§10.3 ; c'était le full-screen
+ * intent jusqu'au Lot 9). Le code de requête est `sessionId.hashCode()`
  * pour les trois : stable pour une session donnée, ce qui garantit que `cancel()` retrouve et
  * annule exactement le `PendingIntent` programmé par `schedule()`.
  */
@@ -45,7 +46,7 @@ object AlarmPendingIntentSpecs {
             extras = mapOf("sessionId" to IntentExtraValue.Text(sessionId)),
         )
 
-    fun fullScreen(sessionId: String): PendingIntentSpec =
+    fun alarmScreen(sessionId: String): PendingIntentSpec =
         PendingIntentSpec(
             kind = PendingIntentSpec.Kind.ACTIVITY,
             target = NiumiComponent.ALARM_ACTIVITY,

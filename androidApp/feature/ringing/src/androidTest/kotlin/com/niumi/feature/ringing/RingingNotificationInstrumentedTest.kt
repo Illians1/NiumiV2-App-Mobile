@@ -20,9 +20,9 @@ import org.junit.runner.RunWith
 
 /**
  * La notification **réellement postée par `AlarmRingingService`** pendant la sonnerie
- * (SPEC_ANDROID §10.2, §10.3, §19.1) : aucune action d'arrêt, `ongoing`, `CATEGORY_ALARM`, et un
- * `fullScreenIntent` — c'est par lui que l'écran de réveil revient, donc que le scan reste
- * atteignable (§11.2). `RingingNotificationSpecsTest` (JVM) et
+ * (SPEC_ANDROID §10.2, §10.3, §19.1) : aucune action d'arrêt, `ongoing`, `CATEGORY_ALARM`,
+ * publique, un `contentIntent` et aucun plein écran (Lot 9) — c'est par son tap que l'écran de
+ * réveil s'ouvre, donc que le scan reste atteignable (§11.2). `RingingNotificationSpecsTest` (JVM) et
  * `RingingNotificationFactoryInstrumentedTest` couvrent le spec et la fabrique ; ici, c'est
  * l'objet posté par le service en conditions réelles.
  *
@@ -56,7 +56,7 @@ class RingingNotificationInstrumentedTest {
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
     @Test
-    fun theRingingNotificationOffersNoStopActionAndCarriesTheFullScreenIntent() {
+    fun theRingingNotificationOffersNoStopActionAndOpensTheAlarmScreenOnTap() {
         context.startForegroundService(
             Intent(context, AlarmRingingService::class.java)
                 .putExtra(AlarmReceiver.EXTRA_SESSION_ID, SESSION_ID)
@@ -69,9 +69,12 @@ class RingingNotificationInstrumentedTest {
         assertThat(notification.actions).isNull()
         assertThat(notification.category).isEqualTo(Notification.CATEGORY_ALARM)
         assertThat(notification.flags and Notification.FLAG_ONGOING_EVENT).isNotEqualTo(0)
-        // §10.3 : le plein écran est le seul mécanisme qui ramène l'écran de réveil.
-        assertThat(notification.fullScreenIntent).isNotNull()
+        // §10.3, Lot 9 : aucun écran imposé, le tap ouvre l'écran de réveil.
+        assertThat(notification.fullScreenIntent).isNull()
         assertThat(notification.contentIntent).isNotNull()
+        assertThat(notification.visibility).isEqualTo(Notification.VISIBILITY_PUBLIC)
+        // §10.3 : republiée chaque minute par l'alarme de secours, elle ne doit pas re-alerter.
+        assertThat(notification.flags and Notification.FLAG_ONLY_ALERT_ONCE).isNotEqualTo(0)
     }
 
     private fun awaitRingingNotification(): Notification {

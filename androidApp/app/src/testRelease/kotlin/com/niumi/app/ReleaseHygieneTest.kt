@@ -59,10 +59,11 @@ class ReleaseHygieneTest {
     /**
      * SPEC_ANDROID §14 fixe la liste exacte. Le test l'assert en **égalité** plutôt qu'en
      * absence des trois permissions interdites : une liste fermée attrape aussi celle qu'une
-     * dépendance ajouterait demain sans que personne ne pense à l'interdire nommément.
+     * dépendance ajouterait demain sans que personne ne pense à l'interdire nommément. Huit depuis
+     * le Lot 9 : `USE_FULL_SCREEN_INTENT` est retirée avec le plein écran (§4.1).
      */
     @Test
-    fun theReleaseManifestDeclaresExactlyTheNinePermissionsOfTheSpec() {
+    fun theReleaseManifestDeclaresExactlyTheEightPermissionsOfTheSpec() {
         val declared = usesPermissions().filterNot { it == GENERATED_RECEIVER_PERMISSION }
 
         assertThat(declared).containsExactlyElementsIn(SPEC_PERMISSIONS)
@@ -230,7 +231,6 @@ class ReleaseHygieneTest {
             setOf(
                 "android.permission.NFC",
                 "android.permission.USE_EXACT_ALARM",
-                "android.permission.USE_FULL_SCREEN_INTENT",
                 "android.permission.POST_NOTIFICATIONS",
                 "android.permission.FOREGROUND_SERVICE",
                 "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",

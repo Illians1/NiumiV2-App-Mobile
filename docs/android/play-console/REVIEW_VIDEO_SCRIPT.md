@@ -23,7 +23,7 @@ Le tournage lui-même reste une action humaine, sur appareil réel, et condition
 | 5 | Sélection des applications à bloquer | Le sélecteur, le choix d'au moins une application | 10 s |
 | 6 | Diagnostic avant activation | Le diagnostic passe au vert, y compris le contrôle de batterie optimisée (§13) | 10 s |
 | 7 | Activation d'une session | Confirmation, retour à l'accueil « session active » | 5 s |
-| 8 | Déclenchement de l'alarme | Écran verrouillé puis `AlarmActivity` au-dessus du verrouillage, son audible | 10 s |
+| 8 | Déclenchement de l'alarme | Écran verrouillé, sonnerie audible, notification sur l'écran de verrouillage, déverrouillage, tap sur la notification, écran de réveil | 15 s |
 | 9 | Tentative d'ouverture d'une application bloquée | Retour immédiat à l'accueil et overlay explicatif, texte lisible | 10 s |
 | 10 | Scan du boîtier associé | Alarme et blocage s'arrêtent en moins d'une seconde | 5 s |
 | 11 | Session terminée | Écran de fin de session | 5 s |

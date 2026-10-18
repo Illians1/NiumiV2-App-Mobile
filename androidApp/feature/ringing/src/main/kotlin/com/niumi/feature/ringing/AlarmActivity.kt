@@ -1,11 +1,8 @@
 package com.niumi.feature.ringing
 
 import android.app.Activity
-import android.app.KeyguardManager
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -48,7 +45,7 @@ import javax.inject.Inject
 private const val TRANSIENT_OUTCOME_DISPLAY_MS = 3_000L
 
 /**
- * Écran de réveil plein écran (SPEC_ANDROID §10.4). Ne touche jamais au service, ni dans
+ * Écran de réveil (SPEC_ANDROID §10.4). Ne touche jamais au service, ni dans
  * `onStop()`, ni dans `onDestroy()`, ni via le retour prédictif : la seule façon d'arrêter
  * l'alarme est le scan NFC (§11). Aucun bouton d'arrêt.
  *
@@ -60,6 +57,11 @@ private const val TRANSIENT_OUTCOME_DISPLAY_MS = 3_000L
  * [scanHandler] est `HandleValidNfcUseCase` (`:core:system`) depuis l'étape 18, liaison unique et
  * non optionnelle : c'est lui qui termine la session, et l'écran ne fait que suivre le snapshot
  * qu'il produit.
+ *
+ * **Jamais affiché par-dessus le verrouillage (Lot 9).** Ni affichage sur l'écran verrouillé, ni
+ * allumage de l'écran : le scan ne fonctionne pas tant que le téléphone est verrouillé (§4.4), et
+ * l'écran forcé gênait le déverrouillage. Il s'ouvre par le tap de la notification de sonnerie ou par l'icône de Niumi,
+ * une fois le téléphone déverrouillé ; d'où l'absence de tout texte ou receveur de déverrouillage.
  */
 @AndroidEntryPoint
 class AlarmActivity : ComponentActivity() {
@@ -91,34 +93,10 @@ class AlarmActivity : ComponentActivity() {
     private val viewModel: AlarmViewModel by viewModels()
 
     private val scanCoordinator by lazy { AlarmNfcScanCoordinator(vibrationController, technicalEventLog) }
-    private val keyguardManager by lazy { getSystemService(KeyguardManager::class.java) }
-
-    /**
-     * §10.4 : « recalculer son état quand le verrouillage de l'appareil change, et pas seulement
-     * dans `onResume()` ». Un écran affiché au-dessus du verrouillage reste visible après le
-     * déverrouillage, sans qu'aucun cycle de vie ne soit rejoué.
-     *
-     * §10.4 laisse le choix entre `ACTION_USER_PRESENT` et
-     * `KeyguardManager.addKeyguardLockedStateListener` (API 34+). **Le second est écarté** :
-     * il exige `SUBSCRIBE_TO_KEYGUARD_LOCKED_STATE`, absente de la liste figée de §14, et
-     * l'appeler sans elle lève une `SecurityException` qui tue le processus — donc la sonnerie —
-     * au moment précis où le plein écran ouvre cet écran. Mesuré sur appareil à l'étape 17 :
-     * l'alarme sonnait une seconde avant que le processus ne meure. `ACTION_USER_PRESENT` suffit
-     * au besoin réel, qui est de faire disparaître le texte de déverrouillage.
-     */
-    private val userPresentReceiver =
-        object : BroadcastReceiver() {
-            override fun onReceive(
-                context: Context?,
-                intent: Intent?,
-            ) = publishDeviceLockState()
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
 
         onBackPressedDispatcher.addCallback(
             this,
@@ -182,19 +160,9 @@ class AlarmActivity : ComponentActivity() {
         )
     }
 
-    override fun onStart() {
-        super.onStart()
-        registerReceiver(
-            userPresentReceiver,
-            IntentFilter(Intent.ACTION_USER_PRESENT),
-            Context.RECEIVER_NOT_EXPORTED,
-        )
-    }
-
     override fun onResume() {
         super.onResume()
         foregroundReadinessTrigger.evaluateAsync()
-        publishDeviceLockState()
         viewModel.onNfcAvailabilityChanged(nfcReader.availability)
         if (nfcReader.availability == NfcAvailability.DISABLED) {
             technicalEventLog.log(TechnicalEventType.NFC_DISABLED)
@@ -252,17 +220,12 @@ class AlarmActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        unregisterReceiver(userPresentReceiver)
         // N'arrête rien : le service continue même si l'activité n'est plus visible.
     }
 
     override fun onDestroy() {
         super.onDestroy()
         // N'arrête rien : cf. onStop().
-    }
-
-    private fun publishDeviceLockState() {
-        viewModel.onDeviceLockChanged(keyguardManager?.isDeviceLocked == true)
     }
 
     /** §15 : l'écran 10 (terminée) ou 11 (annulée) vit dans le `NavHost` de `MainActivity`. */

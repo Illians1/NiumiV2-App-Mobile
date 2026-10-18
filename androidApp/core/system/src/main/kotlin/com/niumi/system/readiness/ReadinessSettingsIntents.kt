@@ -1,7 +1,6 @@
 package com.niumi.system.readiness
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 
@@ -31,16 +30,6 @@ fun settingsIntentFor(
     when (action) {
         ReadinessAction.OpenNfcSettings -> {
             Intent(Settings.ACTION_NFC_SETTINGS)
-        }
-
-        ReadinessAction.OpenFullScreenIntentSettings -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, appUri(packageName))
-            } else {
-                // Le contrôle est NOT_APPLICABLE sous Android 14 : ce cas n'est pas atteignable
-                // depuis l'écran, la branche existe pour ne pas ouvrir un écran inexistant.
-                null
-            }
         }
 
         is ReadinessAction.OpenChannelSettings -> {
@@ -84,5 +73,3 @@ fun settingsIntentFor(
             null
         }
     }
-
-private fun appUri(packageName: String): Uri = Uri.fromParts("package", packageName, null)

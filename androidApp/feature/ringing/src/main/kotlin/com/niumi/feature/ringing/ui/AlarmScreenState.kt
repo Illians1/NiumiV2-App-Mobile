@@ -9,17 +9,19 @@ import com.niumi.system.nfc.ScanOutcome
  * 17, il est indexé par [SessionStateDto] — l'enum local `AlarmRingingPhase` qui l'anticipait a
  * disparu : l'écran reflète désormais l'état réel du moteur, jamais une phase devinée.
  *
- * Le texte affiché suit un ordre de priorité (SPEC_ANDROID §11.2, §4.4, §10.4) : nettoyage en
- * cours, matériel NFC absent, NFC désactivé, téléphone verrouillé, résultat d'un scan récent, puis
- * le texte d'état. `RELEASING` passe **avant** tous les rangs NFC : le scan a déjà eu lieu, et
- * demander de déverrouiller ou d'approcher le boîtier n'y décrirait plus rien.
+ * Le texte affiché suit un ordre de priorité (SPEC_ANDROID §11.2, §10.4) : nettoyage en cours,
+ * matériel NFC absent, NFC désactivé, résultat d'un scan récent, puis le texte d'état.
+ * `RELEASING` passe **avant** tous les rangs NFC : le scan a déjà eu lieu, et demander d'approcher
+ * le boîtier n'y décrirait plus rien.
+ *
+ * Aucun rang « téléphone verrouillé » depuis le Lot 9 : l'écran n'est jamais affiché par-dessus le
+ * verrouillage (§4.4), et un texte qu'aucune situation ne peut afficher serait un faux comportement.
  *
  * Les rangs « matériel absent », « NFC désactivé », « boîtier inconnu » et le texte de nettoyage
  * ne sont pas imposés mot pour mot par la spec — rédactions du plan (ETAPE-04.md, ETAPE-17.md).
  */
 data class AlarmScreenState(
     val sessionState: SessionStateDto,
-    val deviceLocked: Boolean,
     val nfcAvailability: NfcAvailability,
     val lastScanOutcome: ScanOutcome?,
     val instructionText: String,
@@ -29,17 +31,15 @@ data class AlarmScreenState(
     companion object {
         fun from(
             sessionState: SessionStateDto,
-            deviceLocked: Boolean,
             nfcAvailability: NfcAvailability = NfcAvailability.ENABLED,
             lastScanOutcome: ScanOutcome? = null,
             releaseSteps: List<ReleaseStep> = emptyList(),
         ): AlarmScreenState =
             AlarmScreenState(
                 sessionState = sessionState,
-                deviceLocked = deviceLocked,
                 nfcAvailability = nfcAvailability,
                 lastScanOutcome = lastScanOutcome,
-                instructionText = instructionText(sessionState, deviceLocked, nfcAvailability, lastScanOutcome),
+                instructionText = instructionText(sessionState, nfcAvailability, lastScanOutcome),
                 // Pendant le nettoyage, plus rien à scanner : le raccourci NFC n'aurait pas d'objet.
                 showsNfcSettingsShortcut =
                     nfcAvailability == NfcAvailability.DISABLED && sessionState != SessionStateDto.RELEASING,
@@ -48,7 +48,6 @@ data class AlarmScreenState(
 
         private fun instructionText(
             sessionState: SessionStateDto,
-            deviceLocked: Boolean,
             nfcAvailability: NfcAvailability,
             lastScanOutcome: ScanOutcome?,
         ): String =
@@ -56,7 +55,6 @@ data class AlarmScreenState(
                 sessionState == SessionStateDto.RELEASING -> RELEASING_TEXT
                 nfcAvailability == NfcAvailability.ABSENT -> ABSENT_TEXT
                 nfcAvailability == NfcAvailability.DISABLED -> DISABLED_TEXT
-                deviceLocked -> LOCKED_TEXT
                 lastScanOutcome == ScanOutcome.Unreadable -> UNREADABLE_TEXT
                 lastScanOutcome == ScanOutcome.UnknownBox -> UNKNOWN_BOX_TEXT
                 else -> textFor(sessionState)
@@ -97,8 +95,7 @@ data class AlarmScreenState(
                 }
             }
 
-        // SPEC_ANDROID §10.4 et §11.2, mot pour mot.
-        private const val LOCKED_TEXT = "Déverrouille ton téléphone, puis approche-le du boîtier."
+        // SPEC_ANDROID §11.2, mot pour mot.
         private const val UNREADABLE_TEXT = "Boîtier non reconnu. Réessaie."
 
         // Rédactions du plan, non imposées mot pour mot par la spec (ETAPE-04.md, ETAPE-17.md).

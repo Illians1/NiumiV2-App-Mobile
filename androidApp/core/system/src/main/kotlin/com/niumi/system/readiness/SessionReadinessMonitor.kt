@@ -131,8 +131,8 @@ class SessionReadinessMonitor(
     }
 
     /**
-     * Les cinq contrôles de réveil n'ont de sens qu'en `ARMED` : une fois la sonnerie commencée,
-     * avertir d'un volume d'alarme ou d'un plein écran perdu ne décrit plus rien d'actionnable.
+     * Les quatre contrôles de réveil n'ont de sens qu'en `ARMED` : une fois la sonnerie commencée,
+     * avertir d'un volume d'alarme ou d'une alarme exacte perdus ne décrit plus rien d'actionnable.
      * Les deux contrôles du blocage — service d'accessibilité et exemption d'énergie (C9) — sont
      * surveillés dans **tous** les états non finaux : le blocage court jusqu'au scan
      * (SPEC_ANDROID §3), et §12.2 exige que sa désactivation pendant une session soit détectée
@@ -215,7 +215,6 @@ class SessionReadinessMonitor(
                 ReadinessCheckId.EXACT_ALARM to TechnicalEventType.EXACT_ALARM_LOST,
                 ReadinessCheckId.ACCESSIBILITY_SERVICE to TechnicalEventType.ACCESSIBILITY_DISABLED,
                 ReadinessCheckId.DND_TOTAL_SILENCE to TechnicalEventType.ALARM_MUTED_BY_DND,
-                ReadinessCheckId.FULL_SCREEN_INTENT to TechnicalEventType.FULL_SCREEN_DENIED,
             )
     }
 }

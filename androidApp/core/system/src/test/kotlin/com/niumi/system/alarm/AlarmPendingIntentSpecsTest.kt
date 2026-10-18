@@ -51,8 +51,8 @@ class AlarmPendingIntentSpecsTest {
     }
 
     @Test
-    fun fullScreenSpecTargetsAlarmActivity() {
-        val spec = AlarmPendingIntentSpecs.fullScreen(sessionId)
+    fun alarmScreenSpecTargetsAlarmActivity() {
+        val spec = AlarmPendingIntentSpecs.alarmScreen(sessionId)
 
         assertThat(spec.kind).isEqualTo(PendingIntentSpec.Kind.ACTIVITY)
         assertThat(spec.target).isEqualTo(NiumiComponent.ALARM_ACTIVITY)
@@ -70,11 +70,11 @@ class AlarmPendingIntentSpecsTest {
     fun requestCodeIsSharedAcrossTheThreeSpecsOfTheSameSession() {
         val alarm = AlarmPendingIntentSpecs.alarm(sessionId, revision = 1L)
         val show = AlarmPendingIntentSpecs.show(sessionId)
-        val fullScreen = AlarmPendingIntentSpecs.fullScreen(sessionId)
+        val alarmScreen = AlarmPendingIntentSpecs.alarmScreen(sessionId)
 
         assertThat(alarm.requestCode).isEqualTo(sessionId.hashCode())
         assertThat(show.requestCode).isEqualTo(sessionId.hashCode())
-        assertThat(fullScreen.requestCode).isEqualTo(sessionId.hashCode())
+        assertThat(alarmScreen.requestCode).isEqualTo(sessionId.hashCode())
     }
 
     @Test

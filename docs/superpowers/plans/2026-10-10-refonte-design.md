@@ -2,6 +2,8 @@
 
 > **Pour l'agent chargé de l'exécution :** utiliser `superpowers:executing-plans` (une étape par session) ou `superpowers:subagent-driven-development`. Les cases `- [ ]` servent au suivi. S'arrêter aux portes de validation manuelle. Ne jamais commit ni push sans demande explicite, jamais de ligne `Co-Authored-By`. **Avant chaque étape, lire la ligne « Points ouverts touchés » et poser à Mehdi les questions non encore tranchées : ne jamais inventer une réponse** (`design-plan/CLAUDE-INSTRUCTIONS.md`).
 
+> **Note du 2026-10-18 — numérotation consommée.** Les numéros Lot 8 / étapes 29 à 31 (boîtiers multiples, 2026-10-13) et Lot 9 / étape 32 (réveil sans plein écran, 2026-10-18) ont été pris par le plan maître `2026-09-03-mvp-android.md`. Ce plan renumérote ses lots et étapes à son démarrage ; les numéros ci-dessous sont ceux de sa rédaction. Son « Point de départ » (clore l'étape 28) est périmé : le plan maître est allé jusqu'à l'étape 32. Depuis le Lot 9, Niumi n'utilise plus le plein écran (conception `docs/superpowers/specs/2026-10-18-reveil-sans-plein-ecran-design.md`) : les passages ci-dessous qui le citent sont corrigés en conséquence.
+
 **Objectif :** livrer l'app Android telle que la décrivent les 58 maquettes et `design-plan/SPECIFICATION.md` : réveil récurrent avec blocage automatique au coucher, accueil à cadran et trois états, plusieurs Niumi Points, sortie de secours, écran de réussite, réglages ; thème clair hors session et sombre pendant la session.
 
 **Architecture :** `:shared:core` reste l'unique autorité des transitions (contrat KMP 1.4 : planning récurrent, désarmement sans scan avant le coucher, libération par sortie de secours, plusieurs credentials, temps gagné). Le planning (jours, heures, interrupteur) est calculé en KMP et stocké en natif ; un `WakePlanScheduler` Android arme, désarme et ré-arme les sessions sous le verrou du coordinateur existant. `:core:designsystem` porte palette, police, formes, dimensions et composants ; aucun écran ne contient de couleur, taille ou forme en dur. Le thème est choisi d'après l'état de la session persistée, jamais d'après le réglage du téléphone.
@@ -115,7 +117,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 32 | D10, D18, M1 | Pas de tuile NFC ; « ? » retiré sur tuile accordée ; images du guide à produire | D10 oui ; garder « ? » ; emplacement vide sans texte de substitution tant que les images manquent |
 | 33 | Q3 | Compteur « N applications choisies » = sélection validée ; T9 clos par `<queries>` | Oui |
 | 34 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | Seulement feuille ouverte ; §10.4/§11.2 amendés |
-| 34 | Q5, E7 | Texte « Déverrouille ton téléphone… » (§4.4) ; deux textes « NFC coupé » | Garder le texte dans la feuille quand verrouillé ; chaque texte sur son écran |
+| 34 | Q5, E7 | Texte « Déverrouille ton téléphone… » (§4.4) ; deux textes « NFC coupé » | **Q5 tranché le 2026-10-18** : aucun texte « Déverrouille ton téléphone… », l'écran n'est jamais affiché verrouillé (Lot 9 du plan maître). E7 : chaque texte sur son écran |
 | 35 | Q6, T10 | Écran 7 affiché jusqu'à « Fermer » ; déclaration Play à refaire | Oui, dans la même étape |
 | 36 | Q7 | Durées : design Non/1/2/5/10 ou mesure de l'étape 28 (2/5/10/15, 1 min jugée trop rapide) ? | Suivre le design (Non/1/2/5/10) sauf avis contraire ; la rangée accepte cinq pastilles |
 | 36 | D7 | Cinq sons dans la maquette, quatre dans l'APK | Les quatre existants ; cinquième ligne absente jusqu'à décision |
@@ -135,7 +137,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 47 | M2, M3, M4, Q17 | Rubriques non écrites ; licences ; mentions légales ; « Version 1.0 » | Lignes absentes tant que non écrites ; OFL + « Copyright IBM Corp. » ; liens inertes ; `versionName` |
 | 48 | Q18, Q19, M12 | API du rappel ; « à chaque ouverture » ; bandeau/alerte sombres | `setWindow` 10 min (3e dérogation §9.1) ; chaque `onStart`, une fois ; palette sombre |
 | 49 | Q20 | Export du diagnostic (écran 12 ancien supprimé) | Dernier lien de la page À propos, sinon §17 perd son export |
-| 51 | T11 | Autorisation plein écran retirable | Couverte par l'alerte ; à mesurer |
+| 51 | T11 | Autorisation plein écran retirable | **Sans objet depuis le 2026-10-18** : plus de plein écran (Lot 9 du plan maître) |
 
 Hors périmètre Android, à ne pas traiter : D1, T1 à T8 (iPhone), D16 (sans effet sur le code).
 
@@ -425,7 +427,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Points ouverts touchés :** D10, D18, D19, M1, M8, Q1, Q2.
 
 **Fichiers :**
-- `:core:system` — créer `SYS/permissions/NiumiPermission.kt`, `PermissionStatusSource.kt`, `AndroidPermissionStatusSource.kt` (agrège `DeviceReadinessChecker.check()` : `ALARM` ⇐ `EXACT_ALARM` ∧ `FULL_SCREEN_INTENT` ; `APP_BLOCKING` ⇐ `ACCESSIBILITY_SERVICE` ∧ `BATTERY_OPTIMIZATION` ∧ `RECENTS_LOCK` selon Q1 ; `NOTIFICATIONS` ⇐ `NOTIFICATIONS` ∧ `ALARM_CHANNEL` ; `NOT_APPLICABLE` compte accordé), `SYS/permissions/di/PermissionsModule.kt`.
+- `:core:system` — créer `SYS/permissions/NiumiPermission.kt`, `PermissionStatusSource.kt`, `AndroidPermissionStatusSource.kt` (agrège `DeviceReadinessChecker.check()` : `ALARM` ⇐ `EXACT_ALARM` (plus de `FULL_SCREEN_INTENT` depuis le Lot 9 du plan maître) ; `APP_BLOCKING` ⇐ `ACCESSIBILITY_SERVICE` ∧ `BATTERY_OPTIMIZATION` ∧ `RECENTS_LOCK` selon Q1 ; `NOTIFICATIONS` ⇐ `NOTIFICATIONS` ∧ `ALARM_CHANNEL` ; `NOT_APPLICABLE` compte accordé), `SYS/permissions/di/PermissionsModule.kt`.
 - `:feature:setup` — créer `SETUP/permissions/PermissionsScreen.kt` (`PermissionsScreen(state, actions)`, `PermissionsRoute(onContinue, onOpenGuide)`), `PermissionsTexts.kt` (titre, texte, noms, phrases, `AUTHORIZE`, `CONTINUE`, `GUIDE_*`), `PermissionsViewModel.kt` (`state: PermissionsUiState(tiles: List<TileState>, canContinue)`, `refresh()` sur `ON_RESUME`, `authorize(permission)` → lance la demande système ou ouvre le réglage via `ReadinessSettingsIntents`), `PermissionGuideScreen.kt`, `PermissionGuideSteps.kt` (étapes par autorisation ; images = emplacement vide tant que M1) ; supprimer `SETUP/readiness/*`, `SETUP/accessibility/*` et leurs tests (`ReadinessMessages` conservé dans `:core:system` pour la notification §13.1).
 - `:app` — modifier `NiumiRoute.kt` (`Readiness`, `AccessibilityConsent` → `Permissions`, `PermissionGuide(permission)`), `NiumiNavHost.kt` (`Permissions.onContinue` → `Pairing` tant que l'étape 43 n'existe pas), `HomeDestination.kt`, `APP/navigation/DeepLinkDestination.kt` (tap de la notification §13.1 → `Permissions`), `SetupGate` si présent.
 - Tests : `PermissionStatusSourceTest` (table des agrégats, `NOT_APPLICABLE`), `PermissionsTextsTest`, `PermissionsViewModelTest` (trois accordées → `canContinue` ; refus → tuile non cochée, rien d'autre), `PermissionsScreenTest` (instrumenté : coche remplace « Autoriser » et « ? » selon D18 ; « Continuer » grisé).
@@ -471,7 +473,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Fichiers :**
 - `:core:system` — créer `SYS/nfc/ScanSheetState.kt`, `ScanFailureReason.kt`, `ScanOutcomeMapping.kt`.
 - `:core:designsystem` — créer `DS/component/NfcScanSheet.kt` (titre « Prêt à scanner », rond d'icône, phrase, bouton « Annuler » gris ; état `Failed` : titre, phrase d'aide, bouton « Réessayer » ou « Ouvrir les réglages », lien de secours facultatif), `DS/drawing/PhoneNearPointDrawing.kt` réutilisé.
-- `:feature:ringing` — modifier `RING/ui/AlarmScreen.kt` (date « Vendredi 2 octobre », heure 112, dessin, consigne 30, bouton « Scanner le Niumi Point », lien « Je n'ai pas accès à mon Niumi Point » **masqué jusqu'à l'étape 45**), `AlarmScreenState.kt` (textes `ScanTexts` : consigne, phrase de la feuille « Approche ton téléphone du Niumi Point », quatre échecs mot pour mot, « Déverrouille ton téléphone… » selon Q5), `AlarmUiState.kt` (+ `sheet: ScanSheetState`), `AlarmViewModel.kt` (`openScanSheet()`, `cancelScan()`, `retryScan()`, `onScanOutcome()`), `AlarmActivity.kt` (Reader Mode activé/désactivé avec la feuille, `AlarmNfcScanCoordinator` inchangé), `RING/ui/AlarmTexts.kt` (nouvel objet, remplace les constantes privées).
+- `:feature:ringing` — modifier `RING/ui/AlarmScreen.kt` (date « Vendredi 2 octobre », heure 112, dessin, consigne 30, bouton « Scanner le Niumi Point », lien « Je n'ai pas accès à mon Niumi Point » **masqué jusqu'à l'étape 45**), `AlarmScreenState.kt` (textes `ScanTexts` : consigne, phrase de la feuille « Approche ton téléphone du Niumi Point », quatre échecs mot pour mot, Q5 tranché : aucun texte de déverrouillage), `AlarmUiState.kt` (+ `sheet: ScanSheetState`), `AlarmViewModel.kt` (`openScanSheet()`, `cancelScan()`, `retryScan()`, `onScanOutcome()`), `AlarmActivity.kt` (Reader Mode activé/désactivé avec la feuille, `AlarmNfcScanCoordinator` inchangé), `RING/ui/AlarmTexts.kt` (nouvel objet, remplace les constantes privées).
 - Tests : remplacer `AlarmScreenNoStopActionTest` par `AlarmScreenActionsTest` (instrumenté : les seuls nœuds cliquables sont « Scanner le Niumi Point » et, feuille ouverte, « Annuler »/« Réessayer » ; aucun ne dispatche d'événement ; vérifié par un `AlarmViewModel` fake qui enregistre les appels) ; `AlarmViewModelTest` (feuille ouverte → Reader Mode demandé ; échec → `Failed(reason)` ; `RELEASING` → feuille fermée) ; `ScanOutcomeMappingTest` (table `ScanOutcome` × `NfcAvailability` → `ScanFailureReason`) ; `AlarmTextsTest` ; `AlarmScreenStateTest` mis à jour.
 
 **Produit :** l'écran 10 et sa feuille, les quatre échecs, sans aucune action d'arrêt.
@@ -481,7 +483,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - [ ] **Vérifier :** batterie standard ; `./gradlew :feature:ringing:connectedDebugAndroidTest`.
 - [ ] **Valider sur appareil, rédiger `ETAPE-34.md`.** SPEC_ANDROID §10.4 (bouton et feuille ; Reader Mode selon Q4), §11.2 (tableau des échecs réécrit avec les textes du design), §19.1 (nouveau garde-fou), §15.
 
-**Tests manuels :** alarme à l'heure → écran 10 sombre ; « Scanner » → feuille ; tag quelconque → « Ce n'est pas un Niumi Point. » ; tag inconnu → « Ce Niumi Point n'est pas enregistré. » ; NFC coupé → « Le NFC est coupé. » + « Ouvrir les réglages » ; le bon tag → `RELEASING`, feuille fermée ; écran verrouillé selon Q5.
+**Tests manuels :** alarme à l'heure → écran 10 sombre ; « Scanner » → feuille ; tag quelconque → « Ce n'est pas un Niumi Point. » ; tag inconnu → « Ce Niumi Point n'est pas enregistré. » ; NFC coupé → « Le NFC est coupé. » + « Ouvrir les réglages » ; le bon tag → `RELEASING`, feuille fermée ; écran verrouillé : la notification de sonnerie mène à l'écran 10 après déverrouillage (Q5 tranché).
 
 **Terminé quand :** quatre échecs mot pour mot (test) ; Reader Mode inactif feuille fermée (constaté avec Q4) ; aucune action n'arrête l'alarme (test).
 
@@ -871,7 +873,7 @@ grep -rln "IncidentDiagnostic\|ActiveSession\|WakeTime\|Summary\|ScanToModify\|R
 | Activation dans la période | Blocage immédiat, accueil sombre |
 | Annulation par scan | Clair, « Réveil désactivé », message |
 | Sortie de secours soir et matin | Atténuation pendant la frappe ; `releasedBy = EMERGENCY_EXIT` |
-| Ajout d'un Niumi Point en session, scan sur écran verrouillé | Accepté |
+| Ajout d'un Niumi Point en session, scan après déverrouillage et tap sur la notification de sonnerie | Accepté (le scan ne marche pas écran verrouillé, SPEC_ANDROID §4.4) |
 | Redémarrage avant le coucher, sans déverrouillage jusqu'après le coucher | Blocage appliqué en retard, `MISSED_BLOCKING_START_WINDOW` |
 | Retrait du service d'accessibilité | Alerte à l'ouverture ; notification §13.1 |
 | NFC coupé | Bandeau ; échec sur l'écran 10 |

@@ -1,12 +1,10 @@
 package com.niumi.feature.ringing
 
-import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
-import android.os.PowerManager
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.alarm.AlarmPendingIntentSpecs
@@ -97,8 +95,6 @@ class AlarmRingingService : Service() {
     // s'initialisent. Premier accès réel dans onStartCommand(), toujours après onCreate().
     private val serviceScope by lazy { CoroutineScope(defaultDispatcher + serviceJob) }
     private val notificationManager by lazy { getSystemService(NotificationManager::class.java) }
-    private val powerManager by lazy { getSystemService(PowerManager::class.java) }
-    private val keyguardManager by lazy { getSystemService(KeyguardManager::class.java) }
     private var wakeLockRenewalJob: Job? = null
     private var notificationWatchJob: Job? = null
     private val soundLock = Any()
@@ -176,7 +172,7 @@ class AlarmRingingService : Service() {
     ) {
         startForeground(
             NOTIFICATION_ID,
-            alarmNotification(sessionId, fullScreen = true),
+            alarmNotification(sessionId),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
         )
         wakeLockHolder.acquire()
@@ -200,7 +196,11 @@ class AlarmRingingService : Service() {
         }
     }
 
-    /** §10.2 : garantir que l'écran de réveil reste atteignable tant que la session sonne. */
+    /**
+     * §10.2 : garantir que l'écran de réveil reste atteignable tant que la session sonne. La
+     * notification revient avec son seul `contentIntent`, quel que soit l'état de l'appareil : aucun
+     * écran n'est imposé (Lot 9).
+     */
     private fun watchNotification(sessionId: String) {
         notificationWatchJob?.cancel()
         notificationWatchJob =
@@ -214,27 +214,13 @@ class AlarmRingingService : Service() {
 
     private fun republishNotificationIfNeeded(sessionId: String) {
         val isPosted = notificationManager.activeNotifications.any { it.id == NOTIFICATION_ID }
-        when (RingingNotificationWatch.decide(isPosted, deviceInUse(powerManager, keyguardManager))) {
-            RingingNotificationAction.NONE -> Unit
-            RingingNotificationAction.REPUBLISH_WITH_FULL_SCREEN -> republish(sessionId, fullScreen = true)
-            RingingNotificationAction.REPUBLISH_SILENTLY -> republish(sessionId, fullScreen = false)
+        if (RingingNotificationWatch.decide(isPosted) == RingingNotificationAction.REPUBLISH) {
+            notificationManager.notify(NOTIFICATION_ID, alarmNotification(sessionId))
         }
     }
 
-    private fun republish(
-        sessionId: String,
-        fullScreen: Boolean,
-    ) {
-        notificationManager.notify(NOTIFICATION_ID, alarmNotification(sessionId, fullScreen))
-    }
-
-    private fun alarmNotification(
-        sessionId: String,
-        fullScreen: Boolean,
-    ) = notificationFactory.create(
-        pendingIntentFactory.create(AlarmPendingIntentSpecs.fullScreen(sessionId)),
-        fullScreen = fullScreen,
-    )
+    private fun alarmNotification(sessionId: String) =
+        notificationFactory.create(pendingIntentFactory.create(AlarmPendingIntentSpecs.alarmScreen(sessionId)))
 
     private fun scheduleWakeLockRenewal() {
         wakeLockRenewalJob?.cancel()
@@ -266,14 +252,3 @@ class AlarmRingingService : Service() {
         const val WAKE_LOCK_RENEWAL_INTERVAL_MS = 8 * 60 * 1000L
     }
 }
-
-/**
- * Écran allumé **et** appareil déverrouillé : l'utilisateur se sert de son téléphone (§10.2).
- *
- * Fonction de fichier plutôt que membre de la classe : [AlarmRingingService] est au plafond
- * `TooManyFunctions` de detekt (11). Même motif que `UnlockAwarePersistenceGateway`.
- */
-private fun deviceInUse(
-    powerManager: PowerManager?,
-    keyguardManager: KeyguardManager?,
-): Boolean = powerManager?.isInteractive == true && keyguardManager?.isDeviceLocked != true

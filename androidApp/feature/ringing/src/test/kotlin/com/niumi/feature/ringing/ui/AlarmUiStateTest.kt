@@ -9,7 +9,7 @@ import org.junit.Test
  * §15). Aucun état n'est traité par défaut : un état ajouté au moteur casse la compilation ici.
  */
 class AlarmUiStateTest {
-    private fun forState(state: SessionStateDto) = AlarmUiState.forSession(state, deviceLocked = false)
+    private fun forState(state: SessionStateDto) = AlarmUiState.forSession(state)
 
     @Test
     fun theFourScanStatesAreDisplayed() {

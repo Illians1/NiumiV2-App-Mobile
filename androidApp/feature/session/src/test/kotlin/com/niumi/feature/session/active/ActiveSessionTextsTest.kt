@@ -144,6 +144,7 @@ class ActiveSessionTextsTest {
                 AndroidIncidentCodes.ALARM_MUTED_BY_DND,
                 AndroidIncidentCodes.ALARM_VOLUME_ZERO,
                 AndroidIncidentCodes.NOTIFICATIONS_REVOKED,
+                // Historique (Lot 9) : plus produit, mais un incident ancien peut rester en base.
                 AndroidIncidentCodes.FULL_SCREEN_REVOKED,
                 AndroidIncidentCodes.BATTERY_EXEMPTION_REVOKED,
                 // Lot 6 : un blocage appliqué en retard est un incident comme un autre (§15).

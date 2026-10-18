@@ -8,7 +8,6 @@ data class SessionRuntimeStatus(
     val alarmScheduled: Boolean,
     val accessibilityReady: Boolean,
     val notificationReady: Boolean,
-    val fullScreenReady: Boolean,
     val nfcReady: Boolean,
     val audioReady: Boolean,
     /**

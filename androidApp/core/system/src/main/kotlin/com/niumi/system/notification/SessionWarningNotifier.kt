@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Context
 import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
-import com.niumi.system.readiness.MonitoredReadinessChecks
 import com.niumi.system.readiness.ReadinessCheckId
 
 /**
@@ -53,15 +52,17 @@ class AndroidSessionWarningNotifier(
         return OperationResult.Success
     }
 
-    override fun clear(id: ReadinessCheckId): OperationResult {
-        val notificationId = SessionWarningNotificationSpecs.notificationId(id)
+    override fun clear(id: ReadinessCheckId): OperationResult =
+        cancel(SessionWarningNotificationSpecs.notificationId(id))
+
+    private fun cancel(notificationId: Int): OperationResult {
         val wasShowing = notificationManager.activeNotifications.any { it.id == notificationId }
         notificationManager.cancel(notificationId)
         return if (wasShowing) OperationResult.Success else OperationResult.AlreadySatisfied
     }
 
     override fun clearAll(): OperationResult {
-        val results = MonitoredReadinessChecks.incidentCodes.keys.map { clear(it) }
+        val results = SessionWarningNotificationSpecs.idsToClear().map { cancel(it) }
         return if (results.any { it is OperationResult.Success }) {
             OperationResult.Success
         } else {

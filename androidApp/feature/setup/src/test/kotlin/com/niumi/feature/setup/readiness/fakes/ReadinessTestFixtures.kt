@@ -33,7 +33,6 @@ fun actionOf(id: ReadinessCheckId): ReadinessAction =
         ReadinessCheckId.PAIRED_BOX -> ReadinessAction.StartPairing
         ReadinessCheckId.APP_SELECTION -> ReadinessAction.OpenAppPicker
         ReadinessCheckId.EXACT_ALARM -> ReadinessAction.ShowExactAlarmDiagnostic
-        ReadinessCheckId.FULL_SCREEN_INTENT -> ReadinessAction.OpenFullScreenIntentSettings
         ReadinessCheckId.NOTIFICATIONS -> ReadinessAction.RequestNotificationPermission
         ReadinessCheckId.ALARM_CHANNEL -> ReadinessAction.OpenChannelSettings("niumi_alarm_ringing")
         ReadinessCheckId.ALARM_VOLUME -> ReadinessAction.OpenSoundSettings

@@ -14,7 +14,6 @@ import org.junit.Test
 
 private const val NOW = 1_757_000_000_000L
 private const val ANDROID_10 = 29
-private const val ANDROID_12 = 31
 private const val ANDROID_13 = 33
 private const val ANDROID_14 = 34
 private const val ANDROID_16 = 36
@@ -150,29 +149,20 @@ class AndroidDeviceReadinessCheckerTest {
             assertThat(check.action).isEqualTo(ReadinessAction.ShowExactAlarmDiagnostic)
         }
 
+    /**
+     * Lot 9 : l'autorisation plein écran n'est plus demandée (SPEC_ANDROID §4.1, §13). Quatorze
+     * contrôles, et aucune action ne mène plus aux réglages du plein écran, quelle que soit la
+     * version d'Android.
+     */
     @Test
-    fun fullScreenIntentIsNotApplicableBeforeAndroid14() =
+    fun theDiagnosticHasFourteenChecksAndNoneAboutFullScreen() =
         runTest {
-            val sources = ReadinessTestSources()
-            sources.notificationAvailability.fullScreenAllowed = false
+            listOf(ANDROID_10, ANDROID_13, ANDROID_14, ANDROID_16).forEach { sdkInt ->
+                val report = report(ReadinessTestSources(), sdkInt)
 
-            listOf(ANDROID_10, ANDROID_12, ANDROID_13).forEach { sdkInt ->
-                assertThat(report(sources, sdkInt).check(ReadinessCheckId.FULL_SCREEN_INTENT).outcome)
-                    .isEqualTo(ReadinessOutcome.NOT_APPLICABLE)
+                assertThat(report.checks).hasSize(14)
+                assertThat(report.checks.map { it.id.name }.filter { "FULL_SCREEN" in it }).isEmpty()
             }
-        }
-
-    @Test
-    fun deniedFullScreenIntentFromAndroid14BlocksTheNiumiExperience() =
-        runTest {
-            val sources = ReadinessTestSources()
-            sources.notificationAvailability.fullScreenAllowed = false
-
-            val check = report(sources, ANDROID_14).check(ReadinessCheckId.FULL_SCREEN_INTENT)
-
-            assertThat(check.outcome).isEqualTo(ReadinessOutcome.FAILED)
-            assertThat(check.severity).isEqualTo(ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE)
-            assertThat(check.action).isEqualTo(ReadinessAction.OpenFullScreenIntentSettings)
         }
 
     @Test

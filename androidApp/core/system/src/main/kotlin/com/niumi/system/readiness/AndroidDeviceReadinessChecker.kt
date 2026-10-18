@@ -98,7 +98,7 @@ class AndroidDeviceReadinessChecker(
             ),
         )
 
-    /** Contrôles 5 à 8 : la chaîne qui amène le réveil jusqu'à l'écran de scan. */
+    /** Contrôles 5 à 7 : la chaîne qui amène le réveil jusqu'à l'écran de scan. */
     private fun deliveryChecks(): List<ReadinessCheck> =
         listOf(
             check(
@@ -109,21 +109,6 @@ class AndroidDeviceReadinessChecker(
                 // SCHEDULE_EXACT_ALARM, un échec signale un état anormal (§13, §14).
                 action = ReadinessAction.ShowExactAlarmDiagnostic,
             ),
-            if (sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                check(
-                    ReadinessCheckId.FULL_SCREEN_INTENT,
-                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
-                    passed = sources.notificationAvailability.canUseFullScreenIntent(),
-                    action = ReadinessAction.OpenFullScreenIntentSettings,
-                )
-            } else {
-                // Avant Android 14, aucune autorisation distincte n'existe : rien à contrôler.
-                notApplicable(
-                    ReadinessCheckId.FULL_SCREEN_INTENT,
-                    ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
-                    ReadinessAction.OpenFullScreenIntentSettings,
-                )
-            },
             check(
                 ReadinessCheckId.NOTIFICATIONS,
                 ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
@@ -146,7 +131,7 @@ class AndroidDeviceReadinessChecker(
         )
 
     /**
-     * Contrôles 9 à 11. Le silence total et « un autre mode » sont exclusifs : un seul des deux
+     * Contrôles 8 à 10. Le silence total et « un autre mode » sont exclusifs : un seul des deux
      * échoue à la fois, sinon l'écran afficherait deux fois la même cause. Mesure de l'étape 6 :
      * seul `INTERRUPTION_FILTER_NONE` mute réellement `STREAM_ALARM` et supprime l'écran de
      * réveil ; `PRIORITY` et `ALARMS` laissent le parcours garanti intact.
@@ -175,7 +160,7 @@ class AndroidDeviceReadinessChecker(
             ),
         )
 
-    /** Contrôles 12 à 15. */
+    /** Contrôles 11 à 14. */
     private fun sessionChecks(
         candidateTriggerAtEpochMillis: Long?,
         nowEpochMillis: Long,

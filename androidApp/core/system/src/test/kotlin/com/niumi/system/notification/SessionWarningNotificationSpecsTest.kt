@@ -13,7 +13,7 @@ import org.junit.Test
 
 /**
  * Canal et notification d'avertissement de SPEC_ANDROID §13.1 : importance haute, sans son ni
- * vibration, sans plein écran, `setOngoing(false)`, et un texte qui nomme le réglage en cause
+ * vibration, `setOngoing(false)`, et un texte qui nomme le réglage en cause
  * ainsi que sa conséquence.
  */
 class SessionWarningNotificationSpecsTest {
@@ -42,7 +42,6 @@ class SessionWarningNotificationSpecsTest {
             assertThat(spec.channelId).isEqualTo(NiumiNotificationChannels.sessionWarning.id)
             assertThat(spec.text).isNotEmpty()
             assertThat(spec.ongoing).isFalse()
-            assertThat(spec.hasFullScreenIntent).isFalse()
             assertThat(spec.actions).isEmpty()
         }
     }
@@ -70,11 +69,10 @@ class SessionWarningNotificationSpecsTest {
     }
 
     @Test
-    fun onlyTheSevenChecksOfTheSpecTableAreMonitored() {
+    fun onlyTheSixChecksOfTheSpecTableAreMonitored() {
         assertThat(MonitoredReadinessChecks.incidentCodes.keys)
             .containsExactly(
                 ReadinessCheckId.EXACT_ALARM,
-                ReadinessCheckId.FULL_SCREEN_INTENT,
                 ReadinessCheckId.NOTIFICATIONS,
                 ReadinessCheckId.ALARM_VOLUME,
                 ReadinessCheckId.DND_TOTAL_SILENCE,
@@ -84,16 +82,54 @@ class SessionWarningNotificationSpecsTest {
     }
 
     /**
-     * C9 : l'exemption d'énergie est ajoutée **en dernier** — l'ordre fixe l'identifiant de
-     * notification, et les avertissements déjà publiés (3 à 8) ne doivent pas changer d'identité.
+     * Lot 9 : les identifiants ne se déduisent plus de l'ordre de surveillance. Retirer le contrôle
+     * du plein écran (4) aurait décalé tous les suivants, et un avertissement publié par la version
+     * antérieure n'aurait plus été retiré après la mise à jour.
      */
     @Test
-    fun theBatteryExemptionWarningTakesTheNextFreeIdWithoutShiftingTheOthers() {
-        assertThat(SessionWarningNotificationSpecs.notificationId(ReadinessCheckId.EXACT_ALARM)).isEqualTo(3)
-        assertThat(SessionWarningNotificationSpecs.notificationId(ReadinessCheckId.ACCESSIBILITY_SERVICE))
-            .isEqualTo(8)
-        assertThat(SessionWarningNotificationSpecs.notificationId(ReadinessCheckId.BATTERY_OPTIMIZATION))
-            .isEqualTo(9)
+    fun warningIdsAreFrozenAcrossVersions() {
+        val ids =
+            MonitoredReadinessChecks.incidentCodes.keys.associateWith {
+                SessionWarningNotificationSpecs.notificationId(it)
+            }
+
+        assertThat(ids)
+            .containsExactly(
+                ReadinessCheckId.EXACT_ALARM,
+                3,
+                ReadinessCheckId.NOTIFICATIONS,
+                5,
+                ReadinessCheckId.ALARM_VOLUME,
+                6,
+                ReadinessCheckId.DND_TOTAL_SILENCE,
+                7,
+                ReadinessCheckId.ACCESSIBILITY_SERVICE,
+                8,
+                ReadinessCheckId.BATTERY_OPTIMIZATION,
+                9,
+            )
+    }
+
+    @Test
+    fun theRetiredFullScreenWarningIdIsFour() {
+        assertThat(SessionWarningNotificationSpecs.retiredNotificationIds).containsExactly(4)
+        val current =
+            MonitoredReadinessChecks.incidentCodes.keys.map {
+                SessionWarningNotificationSpecs.notificationId(
+                    it,
+                )
+            }
+        assertThat(current).containsNoneIn(SessionWarningNotificationSpecs.retiredNotificationIds)
+    }
+
+    /**
+     * Un avertissement « plein écran » encore affiché au moment de la mise à jour ne serait jamais
+     * retiré si `clearAll()` ne visait que les contrôles surveillés aujourd'hui.
+     */
+    @Test
+    fun clearAllAlsoWithdrawsTheRetiredFullScreenWarning() {
+        assertThat(SessionWarningNotificationSpecs.idsToClear())
+            .containsExactly(3, 4, 5, 6, 7, 8, 9)
     }
 
     /**

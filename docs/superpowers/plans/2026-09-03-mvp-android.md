@@ -590,6 +590,37 @@ data class SessionBox(val boxId: String, val tokenSha256Hex: String, val name: S
 //   satisfiedDetailFor(PAIRED_BOX, count) = « 1 boîtier associé » / « 3 boîtiers associés »
 ```
 
+### Ajouts du Lot 9 (étape 32)
+
+Conception : `docs/superpowers/specs/2026-10-18-reveil-sans-plein-ecran-design.md`. Aucun
+changement du contrat KMP.
+
+```kotlin
+// :core:system — notification
+data class NotificationSpec(channelId, category, title, text, ongoing, visibilityPublic = false, alertOnlyOnce = false, actions) // hasFullScreenIntent retiré
+object RingingNotificationSpecs { fun ringing(): NotificationSpec }                     // texte « Touche pour scanner ton boîtier et terminer la session. »
+class RingingNotificationFactory { fun create(alarmScreenPendingIntent: PendingIntent?): Notification }
+//   contentIntent seul + setVisibility(Notification.VISIBILITY_PUBLIC) + setOnlyAlertOnce(true) (ajouté à l'exécution, décision 6) ; jamais setFullScreenIntent
+enum class RingingNotificationAction { NONE, REPUBLISH }
+object RingingNotificationWatch { const val CHECK_INTERVAL_MS = 10_000L; fun decide(isPosted: Boolean): RingingNotificationAction }
+// AlarmPendingIntentSpecs.fullScreen(sessionId) -> alarmScreen(sessionId)                 // même cible, même code de requête
+interface NotificationAvailability { fun areNotificationsEnabled(): Boolean }           // canUseFullScreenIntent retiré
+// SessionRuntimeStatus.fullScreenReady retiré
+
+// :core:system — readiness
+// ReadinessCheckId : FULL_SCREEN_INTENT retiré (14 contrôles) ; ReadinessAction.OpenFullScreenIntentSettings retiré
+// MonitoredReadinessChecks.incidentCodes : 6 contrôles (ligne FULL_SCREEN_INTENT retirée)
+// AndroidIncidentCodes.FULL_SCREEN_REVOKED conservé, KDoc « historique, plus jamais émis »
+object SessionWarningNotificationSpecs {
+    fun notificationId(id: ReadinessCheckId): Int   // table figée : EXACT_ALARM 3, NOTIFICATIONS 5, ALARM_VOLUME 6,
+                                                    //   DND_TOTAL_SILENCE 7, ACCESSIBILITY_SERVICE 8, BATTERY_OPTIMIZATION 9
+    val retiredNotificationIds: Set<Int>            // { 4 } : ancien avertissement « plein écran », retiré par clearAll()
+}
+
+// :core:database — TechnicalEventType.FULL_SCREEN_DENIED conservé (relu par valueOf), plus jamais émis
+// :feature:ringing — AlarmScreenState sans deviceLocked ni LOCKED_TEXT ; AlarmViewModel sans onDeviceLockChanged
+```
+
 ---
 
 ## Phase A — Fondations
@@ -2251,6 +2282,144 @@ grep -rn "boxTokenSha256Hex\|\.boxId\b" androidApp --include='*.kt' | grep -v "/
 
 **Terminé quand :** chaque texte de §13 et §15 (Lot 8) est verrouillé par un test de textes ; les cinq lignes §20 sont renseignées ; les critères §21 du Lot 8 ont chacun une preuve ou un statut ouvert nommé ; l'écran de sonnerie ne laisse plus un faux « NFC désactivé » à la charge de l'utilisateur après un redémarrage, ou la limite est écrite dans `LIMITES.md` si la mesure la maintient ; aucune limite de l'aide n'est écrite sans mesure.
 
+## Phase L — Lot 9 : réveil sans plein écran
+
+**Lot ajouté le 2026-10-18**, après la clôture de l'étape 31 (`6c722ef`). Conception validée le
+même jour avec l'utilisateur : `docs/superpowers/specs/2026-10-18-reveil-sans-plein-ecran-design.md`
+— l'exécutant la lit en entier avant de commencer, le plan n'en recopie que ce que l'étape consomme.
+
+**Objectif.** Quand le réveil sonne, Niumi n'impose plus aucun écran : le son et la vibration
+partent, une notification lisible sur l'écran de verrouillage mène à l'écran de réveil une fois le
+téléphone déverrouillé. L'autorisation de plein écran, son contrôle de diagnostic et son incident
+disparaissent.
+
+**Pourquoi.** Le lecteur NFC n'est pas actif tant que le téléphone est verrouillé (mesuré aux
+étapes 4, 6 et 30) : l'écran forcé ne permettait pas de scanner, et il a gêné le déverrouillage
+le 2026-10-18 (`ETAPE-31.md`).
+
+**Contraintes propres au lot**, en plus des contraintes globales :
+- deux chemins vers le scan, toujours : la notification de sonnerie (republiée dans les 10 s si
+  elle disparaît) et l'icône de Niumi (redirection de `MainActivity`, §10.4) ;
+- aucune action, aucun bouton ni geste d'arrêt (§3, §15) ;
+- les identifiants des notifications d'avertissement ne changent pas (un avertissement publié par
+  l'ancienne version doit rester retirable) ;
+- `TechnicalEventType.FULL_SCREEN_DENIED` et `AndroidIncidentCodes.FULL_SCREEN_REVOKED` restent
+  lisibles (lignes anciennes en base) ;
+- limites de l'aide écrites **après mesure** seulement ;
+- `design-plan/` et le plan de refonte alignés dans le même changement (décision 4 de la
+  conception).
+
+**Points de vigilance (à tester, aucune tâche ne les couvrirait sinon) :**
+1. Retirer `FULL_SCREEN_INTENT` de `MonitoredReadinessChecks` décale les index : `notificationId`
+   doit devenir une table figée, verrouillée par un test.
+2. Un avertissement « plein écran » (identifiant 4) affiché au moment de la mise à jour ne serait
+   jamais retiré : `clearAll()` annule aussi `retiredNotificationIds`.
+3. Un incident `ANDROID_FULL_SCREEN_REVOKED` en base reste affiché avec un libellé historique, sans
+   recours (`IncidentRemediation`) ni contrôle à rejouer (`IncidentReadinessChecks.checkFor` →
+   `null`), sans lever.
+4. Le `when` exhaustif sur `ReadinessCheckId` casse la compilation à chaque endroit qui nommait
+   `FULL_SCREEN_INTENT` : c'est voulu, chaque site est relu.
+
+### Étape 32 : notification de sonnerie sans plein écran, diagnostic à quatorze contrôles, specs, design et mesures
+
+**Specs à lire :** la conception en entier ; SPEC_ANDROID §2, §4.1, §4.2, §4.4, §10.1 à §10.5,
+§11.2, §13, §13.1, §14, §15 (écran 12), §17, §19, §20, §21, §22, §23 ; SPEC_CORE_KMP (table de
+correspondance des plateformes) ; `design-plan/CLAUDE-INSTRUCTIONS.md`, `SPECIFICATION.md` §5, §14,
+`POINTS-OUVERTS.md` T11 ; plan de refonte (étapes 32, 34, 51, table des décisions Q5 et T11) ;
+`ETAPE-04.md`, `LOT-0.md`, `ETAPE-17.md` (plein écran et verrouillage mesurés), `ETAPE-31.md`.
+
+**Fichiers :**
+- Specs et documents, **premier travail de l'étape** : la liste de la conception §7, mot pour mot
+  (SPEC_ANDROID, SPEC_CORE_KMP, `design-plan/SPECIFICATION.md` §5 et §14, `POINTS-OUVERTS.md` T11,
+  plan de refonte, `play-console/FULL_SCREEN_INTENT.md` remplacé par une note de retrait datée,
+  `REVIEW_VIDEO_SCRIPT.md` plan 8, ce plan : hypothèse sur les Lots 8 à 16 corrigée).
+- `:core:system` — `notification/NotificationSpec.kt`, `RingingNotificationSpecs.kt`,
+  `RingingNotificationFactory.kt`, `RingingNotificationWatch.kt`, `ScanRequestNotificationSpecs.kt`,
+  `SessionWarningNotificationSpecs.kt`, `SessionWarningNotifier.kt` (`clearAll`),
+  `NotificationAvailability.kt` ; `alarm/AlarmPendingIntentSpecs.kt` ; `readiness/ReadinessCheckId.kt`,
+  `ReadinessAction.kt`, `ReadinessSettingsIntents.kt`, `AndroidDeviceReadinessChecker.kt`,
+  `MonitoredReadinessChecks.kt`, `SessionReadinessMonitor.kt`, `IncidentRemediation.kt` ;
+  `session/SessionRuntimeStatus.kt`, `SessionRuntimeStatusProbe.kt`.
+- `:feature:ringing` — `AndroidManifest.xml` (`showWhenLocked`, `turnScreenOn` retirés),
+  `AlarmRingingService.kt` (plus de `fullScreen`, `deviceInUse` retiré), `AlarmActivity.kt` (plus de
+  `setShowWhenLocked`, `setTurnScreenOn`, receveur `ACTION_USER_PRESENT`, `KeyguardManager`),
+  `AlarmViewModel.kt`, `ui/AlarmScreenState.kt`, `ui/AlarmUiState.kt`, `src/androidTest/AndroidManifest.xml`.
+- `:feature:setup` — `readiness/ReadinessMessages.kt` (trois entrées retirées ; message
+  `NOTIFICATIONS` : « Active les notifications de Niumi : c'est par elles que tu ouvres l'écran de
+  scan quand ton réveil sonne. ») ; `onboarding/OnboardingTexts.kt` (après mesure).
+- `:feature:session` — `incident/IncidentTexts.kt` (`ANDROID_FULL_SCREEN_REVOKED` : « L'autorisation
+  plein écran avait été retirée (ancienne version de Niumi, sans objet depuis). »),
+  `diagnostics/IncidentDiagnosticTexts.kt`, `active/ActiveSessionTexts.kt` si une entrée y nomme le
+  contrôle.
+- `:core:database` — `logging/TechnicalEventType.kt` (KDoc de `FULL_SCREEN_DENIED`).
+- `:app` — `AndroidManifest.xml` (`USE_FULL_SCREEN_INTENT` retirée), `help/HelpTexts.kt` (après
+  mesure), `src/testRelease/.../ReleaseHygieneTest.kt` (huit permissions).
+- Documents de fin : `LIMITES.md`, `QA_MATRIX.md`, `RELEASE_REPORT.md`, `RESTE_A_FAIRE.md`, `ETAPE-32.md`.
+
+**Produit :** aucun écran imposé ; notification publique sur l'écran de verrouillage ; diagnostic à
+quatorze contrôles, six contrôles surveillés ; huit permissions ; specs, design et refonte alignés ;
+comportement mesuré sur appareil.
+
+- [x] **Mettre à jour les specs et documents** (liste ci-dessus) avant tout code ; relire SPEC_ANDROID
+  §10 en entier pour qu'aucune phrase ne suppose encore que l'écran s'impose.
+- [x] **Notification de sonnerie (rouge d'abord).** Réécrire `RingingNotificationSpecsTest`
+  (`theRingingNotificationOpensTheAlarmScreenWithoutForcingIt` : texte « Touche pour scanner ton
+  boîtier et terminer la session. », `ongoing`, `CATEGORY_ALARM`, aucune action),
+  `RingingNotificationWatchTest` (`aMissingNotificationIsRepublishedWhateverTheDeviceState`,
+  `aPostedNotificationIsLeftAlone`), `AlarmPendingIntentSpecsTest` (`alarmScreen` cible
+  `ALARM_ACTIVITY`, même code de requête que `alarm`), `ScanRequestNotificationSpecsTest` (champ
+  retiré). Implémenter les interfaces « Ajouts du Lot 9 » ; `AlarmRingingService` publie et
+  republie par `create(pendingIntent)` seul.
+- [x] **Diagnostic et surveillance (rouge d'abord).** `AndroidDeviceReadinessCheckerTest`
+  (`theDiagnosticHasFourteenChecksAndNoneAboutFullScreen`, test `deniedFullScreenIntent…` supprimé),
+  `SessionReadinessMonitorTest` (six contrôles surveillés), `SessionWarningNotificationSpecsTest`
+  (`warningIdsAreFrozenAcrossVersions` : les six valeurs de la table ;
+  `theRetiredFullScreenWarningIdIsFour`), test JVM de la liste annulée par `clearAll`
+  (`clearAllAlsoWithdrawsTheRetiredFullScreenWarning`, sur `SessionWarningNotificationSpecs.idsToClear` : `AndroidSessionWarningNotifier` appelle `NotificationManager` sans faux JVM, l'annulation réelle est prouvée par le test instrumenté — corrigé à l'exécution), `IncidentRemediationTest` et
+  `IncidentReadinessChecksTest` (`ANDROID_FULL_SCREEN_REVOKED` → aucun recours, aucun contrôle),
+  `RuntimeStatusGapsTest`, `ReadinessMessagesTest` (message `NOTIFICATIONS`), `ReadinessViewModelTest`,
+  `ActiveSessionTextsTest`, `IncidentTextsTest` (libellé historique), `TechnicalEventTypeTest`
+  (`FULL_SCREEN_DENIED` toujours relisible). Implémenter ; adapter les faux (`ReadinessTestSources`,
+  `ReadinessTestFixtures`, `FakeSessionRuntimeStatusProbe`).
+- [x] **Écran de réveil (rouge d'abord).** `AlarmScreenStateTest` (l'instruction ne dépend plus du
+  verrouillage ; tests du texte de verrouillage supprimés), `AlarmViewModelTest`
+  (`theDeviceInputsAreMergedIntoTheDisplayedState` sans verrouillage), `AlarmUiStateTest`.
+  Implémenter : drapeaux du manifeste, `AlarmActivity`, `AlarmViewModel`, `AlarmScreenState`.
+- [x] **Permission.** `ReleaseHygieneTest` (huit permissions, rouge) ; retirer
+  `USE_FULL_SCREEN_INTENT` des deux manifestes.
+- [x] **Instrumentés.** `RingingNotificationFactoryInstrumentedTest` et
+  `RingingNotificationInstrumentedTest` : `fullScreenIntent == null`, `contentIntent != null`,
+  `visibility == Notification.VISIBILITY_PUBLIC` ; `ReadinessSettingsIntentsTest`,
+  `ReadinessActionIntentsTest`, `AndroidSessionWarningNotifierInstrumentedTest` (six identifiants,
+  `clearAll` retire aussi l'identifiant 4) ; `AlarmScreenNoStopActionTest` inchangé et vert.
+- [x] **Vérifier :**
+
+```bash
+./gradlew :shared:core:jvmTest testDebugUnitTest :app:testReleaseUnitTest
+./gradlew ktlintCheck detekt :app:lintDebug :app:lintRelease :app:assembleDebug
+grep -rn "fullScreen\|FullScreen\|FULL_SCREEN\|showWhenLocked\|turnScreenOn\|USER_PRESENT\|deviceLocked\|isDeviceLocked" androidApp --include='*.kt' --include='*.xml' | grep -v "/build/\|FULL_SCREEN_DENIED\|FULL_SCREEN_REVOKED"   # attendu : vide
+./gradlew connectedDebugAndroidTest       # appareil requis, avant tout essai manuel
+```
+
+- [x] **Dérouler les sept lignes §20 du Lot 9** (conception §10) sur l'appareil branché (`adb devices`
+  d'abord ; écran verrouillé **par code**, sans quoi `isDeviceLocked` ment — `ETAPE-17.md`) ; consigner
+  `dumpsys notification` (visibilité, absence de `fullScreenIntent`), si l'écran s'allume seul et le
+  réglage HyperOS « Afficher sur l'écran de verrouillage ».
+- [x] **Écrire les limites après mesure** : `LIMITES.md`, `HelpTexts.kt` et `OnboardingTexts.limits`
+  ensemble (`HelpTextsTest`, `OnboardingTextsTest`) ; remplir `QA_MATRIX.md` (sous-section « Réveil sans
+  plein écran (Lot 9) », ligne « plein écran refusé » retirée, intro et synthèse), `RELEASE_REPORT.md`
+  (critères du Lot 9 ; critères 3, 18, 21, 24 relus ; écart sur « plein écran refusé » retiré),
+  `RESTE_A_FAIRE.md`, la recette ci-dessous.
+- [x] **Vérifier :** la batterie complète (`:app:assembleRelease :app:bundleRelease` compris).
+- [x] **Rédiger `ETAPE-32.md`**, relecture finale par un relecteur à contexte neuf.
+
+**Tests manuels :** les sept lignes de la conception §10.
+
+**Terminé quand :** aucune occurrence du plein écran hors des deux constantes historiques (grep) ; la
+notification de sonnerie est publique, sans plein écran, mesurée sur l'écran de verrouillage ; les
+deux chemins vers le scan sont prouvés sur appareil ; les identifiants d'avertissement sont figés par
+un test ; specs, `design-plan/` et refonte ne mentionnent plus le plein écran comme exigence.
+
 ## Recette et critères d'acceptation
 
 Repris de SPEC_ANDROID §21 ; chaque point renvoie à l'étape qui le prouve. **Le détail des preuves
@@ -2314,6 +2483,15 @@ finale du MVP ; une case cochée signifie « prouvé », jamais « implémenté 
 - [x] Ni l'écran, ni l'export, ni le journal n'exposent une empreinte de token ; l'export nomme chaque boîtier figé avec huit caractères de son identifiant (étapes 30, 31). *Prouvé le 17/10 (tests JVM et instrumentés, journal et écran relevés sur appareil ; export non déclenché sur appareil ; critère 39).*
 - [x] Limites mesurées du Lot 8 écrites dans l'aide et `LIMITES.md` (étape 31). *Écrites le 18/10 après mesure (`HelpTextsTest` vert ; critère 40).*
 
+**Lot 9 — réveil sans plein écran (SPEC_ANDROID §21, critères à ajouter à l'étape 32).** Hors porte
+finale du MVP ; une case cochée signifie « prouvé », jamais « implémenté ».
+
+- [x] Quand le réveil sonne, aucun écran n'est imposé, verrouillé ou non ; la notification de sonnerie est lisible sur l'écran de verrouillage et ouvre l'écran de réveil une fois le téléphone déverrouillé (étape 32). *Prouvé le 18/10 (essais 1 et 5 : 67 s de sonnerie sans activité ni allumage, notification lisible, tap → code → écran 8 ; depuis Direct Boot aussi ; critère 41).*
+- [x] Une notification de sonnerie écartée revient dans les 10 s ; l'icône de Niumi mène à l'écran de réveil pendant tout état de scan (étape 32). *Prouvé le 18/10 (retours en 5,1 s et 6,1 s ; icône après redémarrage → écran 8 ; critère 42).*
+- [x] Ni le diagnostic, ni un incident, ni l'aide ne parlent plus du plein écran ; `USE_FULL_SCREEN_INTENT` n'est plus déclarée (étape 32). *Prouvé par les tests JVM et instrumentés, le manifeste fusionné release et `dumpsys package` sur appareil (critère 43).*
+- [x] Limites mesurées du Lot 9 écrites dans l'aide, l'onboarding et `LIMITES.md` (étape 32). *Écrites le 18/10 après les sept essais ; `HelpTextsTest`, `OnboardingTextsTest` verts (critère 44).*
+- [x] *Ajouté à l'exécution.* La notification de sonnerie n'alerte qu'à sa première publication et après un balayage, jamais aux republications de l'alarme de secours (étape 32, décision 6 de la conception). *Prouvé le 18/10 : alertes à 17:30:00, 17:32:50, 17:33:00 ; aucune à 17:31, 17:32, 17:34, 17:35.*
+
 ## Hypothèses et limites du plan
 
 - Le boîtier MVP contient un tag NDEF Type 2 (NFC-A) déjà écrit avec le payload canonique ; l'écriture industrielle et l'anti-clonage sont hors périmètre.
@@ -2323,4 +2501,4 @@ finale du MVP ; une case cochée signifie « prouvé », jamais « implémenté 
 - Aucun commit, push ni publication n'est effectué automatiquement.
 - Le Lot 6 (étapes 22 à 25, blocage différé) est postérieur au MVP et ne conditionne pas la porte finale de l'étape 21. Le mécanisme iOS du début différé (`DeviceActivityMonitor`) est un POC à mener, hors de ce plan ; seul le contrat commun et sa spécification iOS sont livrés ici.
 - Le Lot 7 (étapes 26 à 28, sonneries et volume progressif) est postérieur au MVP et ne conditionne pas la porte finale de l'étape 21. Les quatre fichiers audio sont fournis par l'utilisateur, qui en détient les droits d'usage ; le plan ne vérifie pas cette provenance. Les décisions 1 à 8 de la phase J ont été validées le 2026-09-30, avec trois changements (2, 4 et 5) consignés sous « Validation du 2026-09-30 ».
-- Les Lots 8 à 16 (étapes 29 à 51, refonte des écrans selon `design-plan/`) vivent dans `docs/superpowers/plans/2026-10-10-refonte-design.md`. Ils démarrent après la clôture de l'étape 28 ; pour les écrans, les textes, les parcours et l'apparence, `design-plan/` l'emporte sur les specs (décision du 2026-10-09).
+- Les Lots 8 à 16 (étapes 29 à 51, refonte des écrans selon `design-plan/`) vivent dans `docs/superpowers/plans/2026-10-10-refonte-design.md`. Ils démarrent après la clôture de l'étape 28 ; pour les écrans, les textes, les parcours et l'apparence, `design-plan/` l'emporte sur les specs (décision du 2026-10-09). *Corrigé le 2026-10-18 :* les numéros Lot 8 / étapes 29 à 31 (boîtiers multiples, 2026-10-13) et Lot 9 / étape 32 (réveil sans plein écran, 2026-10-18) ont été pris dans ce plan ; la refonte renumérote ses lots et étapes à son démarrage.

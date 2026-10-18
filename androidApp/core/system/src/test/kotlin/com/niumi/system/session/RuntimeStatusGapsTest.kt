@@ -5,7 +5,7 @@ import com.niumi.core.interop.SessionStateDto
 import org.junit.Test
 
 /**
- * SPEC_ANDROID §7.1, §18 (étape 20). Prouve que [RuntimeStatusGaps] ne recoupe jamais les quatre
+ * SPEC_ANDROID §7.1, §18 (étape 20). Prouve que [RuntimeStatusGaps] ne recoupe jamais les trois
  * contrôles déjà tenus par `SessionReadinessMonitor` (§13.1) — c'est ce test qui matérialise la
  * décision de l'étape 20 de ne brancher la sonde que sur son écart réel.
  */
@@ -15,7 +15,6 @@ class RuntimeStatusGapsTest {
             alarmScheduled = true,
             accessibilityReady = true,
             notificationReady = true,
-            fullScreenReady = true,
             nfcReady = true,
             audioReady = true,
             nfcEvaluable = true,
@@ -91,7 +90,7 @@ class RuntimeStatusGapsTest {
 
     @Test
     fun noGapOutlivesASession() {
-        val status = SessionRuntimeStatus(false, false, false, false, false, false, nfcEvaluable = true)
+        val status = SessionRuntimeStatus(false, false, false, false, false, nfcEvaluable = true)
 
         listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED).forEach { state ->
             assertThat(RuntimeStatusGaps.of(status, state)).isEmpty()
@@ -99,19 +98,18 @@ class RuntimeStatusGapsTest {
     }
 
     /**
-     * Les quatre contrôles déjà tenus par `SessionReadinessMonitor` — accessibilité,
-     * notifications, plein écran, audio — ne produisent **jamais** d'écart ici, quel que soit
+     * Les trois contrôles déjà tenus par `SessionReadinessMonitor` — accessibilité,
+     * notifications, audio — ne produisent **jamais** d'écart ici, quel que soit
      * l'état : un second contrôle sur les mêmes points recréerait les doublons d'incidents
      * corrigés à l'étape 16.
      */
     @Test
-    fun theFourChecksAlreadyOwnedByTheReadinessMonitorAreNeverReportedHere() {
+    fun theThreeChecksAlreadyOwnedByTheReadinessMonitorAreNeverReportedHere() {
         val status =
             SessionRuntimeStatus(
                 alarmScheduled = true,
                 accessibilityReady = false,
                 notificationReady = false,
-                fullScreenReady = false,
                 nfcReady = true,
                 audioReady = false,
                 nfcEvaluable = true,

@@ -73,7 +73,7 @@ fun AlarmScreen(
 private fun AlarmScreenRingingPreview() {
     NiumiTheme {
         AlarmScreen(
-            state = AlarmScreenState.from(SessionStateDto.RINGING, deviceLocked = false),
+            state = AlarmScreenState.from(SessionStateDto.RINGING),
             currentTimeText = "07:00",
         )
     }
@@ -87,7 +87,6 @@ private fun AlarmScreenNfcDisabledPreview() {
             state =
                 AlarmScreenState.from(
                     SessionStateDto.RINGING,
-                    deviceLocked = false,
                     nfcAvailability = NfcAvailability.DISABLED,
                 ),
             currentTimeText = "07:00",
@@ -103,7 +102,6 @@ private fun AlarmScreenReleasingPreview() {
             state =
                 AlarmScreenState.from(
                     SessionStateDto.RELEASING,
-                    deviceLocked = false,
                     releaseSteps = ReleaseProgress.from(replayableEffects = emptyList()),
                 ),
             currentTimeText = "07:02",

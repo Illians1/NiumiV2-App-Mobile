@@ -7,6 +7,10 @@ import com.niumi.core.domain.IncidentCodes
  * sous le préfixe `ANDROID_`, hors de `IncidentCodes` qui ne porte que le contrat commun).
  * Ceux-ci sont ceux du tableau de SPEC_ANDROID §13.1, tous de gravité `CRITICAL`.
  *
+ * [FULL_SCREEN_REVOKED] est **historique** (Lot 9, 2026-10-18) : plus jamais produit depuis le
+ * retrait du plein écran, conservé pour qu'un incident déjà en base reste lisible et affiché, sans
+ * recours ni contrôle à rejouer (SPEC_ANDROID §13.1).
+ *
  * [BATTERY_EXEMPTION_REVOKED] (C9, 2026-09-29) : l'exemption d'énergie n'est surveillée que depuis
  * qu'elle est détectée (étape 25) ; avant, elle reposait sur une confirmation de l'utilisateur.
  */
@@ -19,13 +23,14 @@ object AndroidIncidentCodes {
 }
 
 /**
- * Les sept contrôles surveillés pendant une session `ARMED` (SPEC_ANDROID §13.1) et le code
+ * Les six contrôles surveillés pendant une session `ARMED` (SPEC_ANDROID §13.1) et le code
  * d'incident de chacun. Les huit autres contrôles de §13 ne sont pas surveillés : ils portent
  * sur le parcours de préparation, figé une fois la session armée, ou ne se retirent qu'à la main
  * (verrou dans les récents).
  *
- * **L'ordre compte** : il fixe l'identifiant de notification de chaque avertissement
- * (`SessionWarningNotificationSpecs.notificationId`). Un nouveau contrôle s'ajoute à la fin.
+ * L'ordre est celui de l'évaluation. Il ne fixe plus l'identifiant de notification des
+ * avertissements depuis le Lot 9 : `SessionWarningNotificationSpecs` tient une table figée, pour
+ * que retirer une ligne ne décale jamais les identifiants des autres.
  *
  * Deux codes sont volontairement **communs** et non préfixés `ANDROID_` (§7.1) : une perte de
  * permission doit rester comparable entre Android et iOS.
@@ -34,7 +39,6 @@ object MonitoredReadinessChecks {
     val incidentCodes: Map<ReadinessCheckId, String> =
         linkedMapOf(
             ReadinessCheckId.EXACT_ALARM to IncidentCodes.ALARM_PERMISSION_REVOKED,
-            ReadinessCheckId.FULL_SCREEN_INTENT to AndroidIncidentCodes.FULL_SCREEN_REVOKED,
             ReadinessCheckId.NOTIFICATIONS to AndroidIncidentCodes.NOTIFICATIONS_REVOKED,
             ReadinessCheckId.ALARM_VOLUME to AndroidIncidentCodes.ALARM_VOLUME_ZERO,
             ReadinessCheckId.DND_TOTAL_SILENCE to AndroidIncidentCodes.ALARM_MUTED_BY_DND,
@@ -51,7 +55,7 @@ object MonitoredReadinessChecks {
      * - l'exemption d'énergie (C9, 2026-09-29) : sans elle, HyperOS gèle Niumi et le blocage cesse
      *   silencieusement après quelques minutes (§13, mesuré à l'étape 5).
      *
-     * Les cinq autres contrôles portent sur le déclenchement du réveil : une fois la sonnerie
+     * Les quatre autres contrôles portent sur le déclenchement du réveil : une fois la sonnerie
      * commencée, ils ne décrivent plus rien d'actionnable.
      */
     val blockingOnlyIncidentCodes: Map<ReadinessCheckId, String> =

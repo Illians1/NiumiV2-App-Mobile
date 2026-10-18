@@ -16,7 +16,8 @@ import com.niumi.system.notification.NiumiNotificationChannels
  * codes qu'aucun contrôle de §13.1 ne produit (`NFC_DISABLED`). `null` signifie « aucun recours » :
  * un incident qui consigne un fait passé (`TIME_CHANGED`, `MISSED_TRIGGER_WINDOW`) ou un défaut
  * interne (`SNAPSHOT_CORRUPTED`, `RELEASE_PARTIAL_FAILURE`) ne se répare pas depuis un réglage
- * système, et lui attacher un bouton afficherait un faux état de fiabilité (§15).
+ * système, et lui attacher un bouton afficherait un faux état de fiabilité (§15). Même réponse pour
+ * `ANDROID_FULL_SCREEN_REVOKED`, historique depuis le Lot 9 : le réglage n'a plus d'effet sur Niumi.
  *
  * **Aucune de ces actions ne touche à la session.** Elles rétablissent un sous-système ; le scan du
  * boîtier reste le seul chemin de sortie (§3, §10.2).
@@ -31,7 +32,6 @@ object IncidentRemediation {
             IncidentCodes.NFC_DISABLED to ReadinessAction.OpenNfcSettings,
             AndroidIncidentCodes.ALARM_VOLUME_ZERO to ReadinessAction.OpenSoundSettings,
             AndroidIncidentCodes.ALARM_MUTED_BY_DND to ReadinessAction.OpenDndSettings,
-            AndroidIncidentCodes.FULL_SCREEN_REVOKED to ReadinessAction.OpenFullScreenIntentSettings,
             AndroidIncidentCodes.NOTIFICATIONS_REVOKED to
                 ReadinessAction.OpenChannelSettings(NiumiNotificationChannels.alarmRinging.id),
             AndroidIncidentCodes.BATTERY_EXEMPTION_REVOKED to ReadinessAction.OpenBatterySettings,

@@ -82,7 +82,7 @@ Le module `:shared:core` contient:
 | NfcAdapter Reader Mode | Core NFC |
 | Room, DataStore et Direct Boot | SwiftData, App Group et Keychain |
 | packages Android sélectionnés | jetons opaques Family Controls |
-| notifications et plein écran | extensions de shield |
+| notifications (sans plein écran depuis le Lot 9 Android, 2026-10-18) | extensions de shield |
 
 Le code commun n'importe aucune API Android ou Apple. Il ne connaît ni `Context`, ni `AlarmManager`, ni `NfcAdapter`, ni `AlarmKit`, ni `ManagedSettingsStore`.
 

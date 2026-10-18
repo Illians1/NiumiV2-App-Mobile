@@ -34,6 +34,12 @@ class IncidentReadinessChecksTest {
         ).forEach { code -> assertThat(IncidentReadinessChecks.checkFor(code)).isNull() }
     }
 
+    /** Lot 9 : l'incident historique « plein écran » n'a plus de contrôle à rejouer, sans lever. */
+    @Test
+    fun theHistoricalFullScreenIncidentHasNoCheckToReplay() {
+        assertThat(IncidentReadinessChecks.checkFor(AndroidIncidentCodes.FULL_SCREEN_REVOKED)).isNull()
+    }
+
     /** Même périmètre que la remédiation : ce qui se répare depuis un réglage peut aussi se rétablir. */
     @Test
     fun resolvableCodesAreExactlyTheRemediableOnes() {

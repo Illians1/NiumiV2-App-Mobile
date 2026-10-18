@@ -10,7 +10,8 @@ import com.niumi.core.domain.IncidentCodes
  * Inverse de [MonitoredReadinessChecks.incidentCodes], plus `NFC_DISABLED`, produit par
  * `SessionRuntimeReconciler` et non par la surveillance de §13.1 — même périmètre que
  * [IncidentRemediation], et pour la même raison : ces sept codes décrivent un réglage qui peut
- * revenir. `null` pour tout autre code : un fait passé (`TIME_CHANGED`, `MISSED_TRIGGER_WINDOW`) ou
+ * revenir. `ANDROID_FULL_SCREEN_REVOKED`, historique depuis le Lot 9, n'en fait plus partie.
+ * `null` pour tout autre code : un fait passé (`TIME_CHANGED`, `MISSED_TRIGGER_WINDOW`) ou
  * un défaut interne (`SNAPSHOT_CORRUPTED`) n'a pas de contrôle à rejouer, et n'est **jamais** présumé
  * rétabli (§15, « ne jamais afficher un faux état de fiabilité »).
  */

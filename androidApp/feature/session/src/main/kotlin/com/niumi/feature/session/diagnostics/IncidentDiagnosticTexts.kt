@@ -93,7 +93,6 @@ object IncidentDiagnosticTexts {
             ReadinessCheckId.PAIRED_BOX -> "Boîtiers associés"
             ReadinessCheckId.APP_SELECTION -> "Applications choisies"
             ReadinessCheckId.EXACT_ALARM -> "Alarme exacte disponible"
-            ReadinessCheckId.FULL_SCREEN_INTENT -> "Alarme plein écran autorisée"
             ReadinessCheckId.NOTIFICATIONS -> "Notifications autorisées"
             ReadinessCheckId.ALARM_CHANNEL -> "Canal d'alarme actif"
             ReadinessCheckId.ALARM_VOLUME -> "Volume des alarmes"

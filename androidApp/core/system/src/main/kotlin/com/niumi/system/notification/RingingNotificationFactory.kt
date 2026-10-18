@@ -14,18 +14,15 @@ import android.content.Context
  * notification de premier plan sans encore connaître de session valide (extras absents, processus
  * recréé sans intent).
  *
- * [fullScreen] à `false` produit la republication silencieuse de [RingingNotificationWatch] : la
- * notification revient avec son `contentIntent` — l'accès au scan est préservé (§11.2) — mais sans
- * rouvrir l'écran de force (§10.4).
+ * Jamais de plein écran (Lot 9, §4.1) : l'écran n'est pas imposé par-dessus le
+ * verrouillage, il s'ouvre au tap. La visibilité publique de la spec est posée sur la notification
+ * elle-même, pour que son contenu reste lisible sur l'écran de verrouillage.
  */
 class RingingNotificationFactory(
     private val context: Context,
     private val iconResolver: NotificationIconResolver,
 ) {
-    fun create(
-        alarmScreenPendingIntent: PendingIntent?,
-        fullScreen: Boolean = true,
-    ): Notification {
+    fun create(alarmScreenPendingIntent: PendingIntent?): Notification {
         val spec = RingingNotificationSpecs.ringing()
         val builder =
             Notification
@@ -37,12 +34,9 @@ class RingingNotificationFactory(
                 .setContentTitle(spec.title)
                 .setContentText(spec.text)
                 .setOngoing(spec.ongoing)
-        if (alarmScreenPendingIntent != null) {
-            if (fullScreen) {
-                builder.setFullScreenIntent(alarmScreenPendingIntent, spec.hasFullScreenIntent)
-            }
-            builder.setContentIntent(alarmScreenPendingIntent)
-        }
+                .setOnlyAlertOnce(spec.alertOnlyOnce)
+        if (spec.visibilityPublic) builder.setVisibility(Notification.VISIBILITY_PUBLIC)
+        if (alarmScreenPendingIntent != null) builder.setContentIntent(alarmScreenPendingIntent)
         return builder.build()
     }
 }

@@ -18,8 +18,6 @@ sealed interface ReadinessAction {
 
     data object ShowExactAlarmDiagnostic : ReadinessAction
 
-    data object OpenFullScreenIntentSettings : ReadinessAction
-
     data object RequestNotificationPermission : ReadinessAction
 
     data class OpenChannelSettings(

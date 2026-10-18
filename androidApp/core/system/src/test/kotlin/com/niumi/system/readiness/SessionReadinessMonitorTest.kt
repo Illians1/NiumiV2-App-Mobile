@@ -92,10 +92,6 @@ class SessionReadinessMonitorTest {
                 sources.alarmScheduler.canScheduleExactValue = false
             }
 
-            ReadinessCheckId.FULL_SCREEN_INTENT -> {
-                sources.notificationAvailability.fullScreenAllowed = false
-            }
-
             ReadinessCheckId.NOTIFICATIONS -> {
                 sources.notificationAvailability.notificationsEnabled = false
             }
@@ -126,10 +122,6 @@ class SessionReadinessMonitorTest {
         when (id) {
             ReadinessCheckId.EXACT_ALARM -> {
                 sources.alarmScheduler.canScheduleExactValue = true
-            }
-
-            ReadinessCheckId.FULL_SCREEN_INTENT -> {
-                sources.notificationAvailability.fullScreenAllowed = true
             }
 
             ReadinessCheckId.NOTIFICATIONS -> {

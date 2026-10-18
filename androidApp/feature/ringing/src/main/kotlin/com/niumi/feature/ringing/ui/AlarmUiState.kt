@@ -24,9 +24,10 @@ enum class AlarmExitDestination {
  * Ce que l'écran de réveil affiche, pour un état de session donné (SPEC_ANDROID §10.4).
  *
  * [Loading] existe pour une raison précise : `SessionSnapshotPublisher` vit en mémoire et vaut
- * `null` dans tout processus neuf — et le processus est **toujours** neuf quand le plein écran
- * ouvre l'activité après un réveil. Traiter ce `null` comme « pas de session » fermerait l'écran
- * instantanément, privant l'utilisateur du seul accès au scan. Seule une absence **confirmée par
+ * `null` dans tout processus neuf — et le processus peut être neuf quand la notification de
+ * sonnerie ouvre l'activité après un réveil (mort du processus, reconstruction du service).
+ * Traiter ce `null` comme « pas de session » fermerait l'écran instantanément, privant
+ * l'utilisateur du seul accès au scan. Seule une absence **confirmée par
  * la persistance** ferme l'écran ; un snapshot illisible ne la confirme pas (SPEC_CORE_KMP §13).
  */
 sealed interface AlarmUiState {
@@ -45,7 +46,6 @@ sealed interface AlarmUiState {
     companion object {
         fun forSession(
             sessionState: SessionStateDto,
-            deviceLocked: Boolean,
             nfcAvailability: NfcAvailability = NfcAvailability.ENABLED,
             lastScanOutcome: ScanOutcome? = null,
             releaseSteps: List<ReleaseStep> = emptyList(),
@@ -59,7 +59,6 @@ sealed interface AlarmUiState {
                     Visible(
                         AlarmScreenState.from(
                             sessionState = sessionState,
-                            deviceLocked = deviceLocked,
                             nfcAvailability = nfcAvailability,
                             lastScanOutcome = lastScanOutcome,
                             releaseSteps = releaseSteps,

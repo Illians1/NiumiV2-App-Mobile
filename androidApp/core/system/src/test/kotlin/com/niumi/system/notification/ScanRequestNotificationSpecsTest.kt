@@ -5,9 +5,10 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * SPEC_ANDROID §10.5 — textes exacts, `CATEGORY_ALARM`, `ongoing`, et surtout **aucun full-screen
- * intent et aucune action** : cette notification ne doit jamais rallumer l'écran ni simuler une
- * alarme active (fenêtre de grâce de 15 minutes qui empêche justement une sonnerie tardive).
+ * SPEC_ANDROID §10.5 — textes exacts, `CATEGORY_ALARM`, `ongoing`, et surtout **aucune action** :
+ * cette notification ne doit jamais simuler une alarme active (fenêtre de grâce de 15 minutes qui
+ * empêche justement une sonnerie tardive). Aucune notification de Niumi ne porte de plein écran
+ * depuis le Lot 9 : le test instrumenté le vérifie sur la vraie `Notification`.
  */
 class ScanRequestNotificationSpecsTest {
     @Test
@@ -22,10 +23,11 @@ class ScanRequestNotificationSpecsTest {
     }
 
     @Test
-    fun awaitingScanSpecHasNoFullScreenIntentAndNoAction() {
+    fun awaitingScanSpecHasNoAction() {
         val spec = ScanRequestNotificationSpecs.awaitingScan()
 
-        assertThat(spec.hasFullScreenIntent).isFalse()
         assertThat(spec.actions).isEmpty()
+        // Publiée une fois par PRESENT_SCAN_REQUEST, jamais rejouée chaque minute : rien à taire.
+        assertThat(spec.alertOnlyOnce).isFalse()
     }
 }

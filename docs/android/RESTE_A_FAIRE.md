@@ -237,7 +237,7 @@ Seul **Android 16** a été couvert. La spécification en demande six.
 | --- | --- |
 | Android 10 ou 11 | le plancher de compatibilité annoncé |
 | Android 12 ou 13 | les alarmes exactes et les notifications |
-| Android 14 | l'accès spécial au plein écran |
+| Android 14 | le rejet par l'utilisateur de la notification d'un service au premier plan (l'accès plein écran n'est plus demandé depuis le Lot 9) |
 | Android 15 | l'arrêt forcé et l'annulation des alarmes |
 | Android 17 | l'audio d'alarme quand l'application est en arrière-plan |
 
@@ -280,6 +280,15 @@ Android 17 porte un critère d'acceptation à lui seul et n'a aucun appareil pou
       broadcast public n'annonce le changement (`ACTION_POWER_SAVE_WHITELIST_CHANGED` est `@hide`) :
       détection au premier plan, à chaque réconciliation (dont `PACKAGE_REPLACED`) et au réveil.
       L'aide, l'onboarding et `LIMITES.md` le disent depuis la mesure.
+- [ ] **C10. Trente minutes d'écran éteint avec le réveil sans plein écran.** La ligne « écran éteint
+      depuis 30 minutes » de §20 a été mesurée à l'étape 6 avec l'écran imposé d'alors. Le Lot 9
+      (étape 32) l'a remesurée avec 5 minutes d'écran éteint seulement : sonnerie à l'heure, écran
+      resté éteint, notification lisible au réveil de l'écran. À refaire avec 30 minutes, appareil
+      débranché, pour écarter un effet de Doze sur la publication de la notification.
+- [ ] **C11. Réglage HyperOS « Notifications sur l'écran de verrouillage » désactivé pour Niumi.**
+      Activé par défaut sur l'appareil de test (mesuré à l'étape 32), jamais désactivé. Si ce réglage
+      masque la notification de sonnerie, le seul chemin vers le scan devient l'icône de Niumi ; la
+      limite n'est pas écrite dans l'aide tant qu'elle n'est pas mesurée.
 
 ---
 

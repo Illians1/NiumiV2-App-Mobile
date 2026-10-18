@@ -6,10 +6,7 @@ import com.niumi.system.intent.IntentExtraValue
 import com.niumi.system.intent.NiumiComponent
 import com.niumi.system.intent.NiumiDeepLink
 import com.niumi.system.intent.PendingIntentSpec
-import com.niumi.system.readiness.MonitoredReadinessChecks
 import com.niumi.system.readiness.ReadinessCheckId
-
-private const val WARNING_NOTIFICATION_ID_BASE = 3
 
 /**
  * Textes des avertissements de SPEC_ANDROID §13.1 : chacun nomme le réglage en cause **et** sa
@@ -28,10 +25,9 @@ object SessionWarningNotificationSpecs {
         mapOf(
             ReadinessCheckId.EXACT_ALARM to
                 "L'accès aux alarmes exactes a été perdu. Ton réveil ne peut plus être programmé à l'heure.",
-            ReadinessCheckId.FULL_SCREEN_INTENT to
-                "L'autorisation plein écran a été retirée. L'écran de scan ne s'ouvrira pas au réveil.",
             ReadinessCheckId.NOTIFICATIONS to
-                "Les notifications de Niumi sont désactivées. L'écran du réveil ne pourra pas s'afficher.",
+                "Les notifications de Niumi sont désactivées. Au réveil, tu devras ouvrir Niumi " +
+                "toi-même pour scanner ton boîtier.",
             ReadinessCheckId.ALARM_VOLUME to
                 "Le volume des alarmes est à zéro. Ton réveil ne sera pas audible.",
             ReadinessCheckId.DND_TOTAL_SILENCE to
@@ -49,7 +45,6 @@ object SessionWarningNotificationSpecs {
             title = TITLE,
             text = requireNotNull(texts[id]) { "Contrôle non surveillé par SPEC_ANDROID §13.1 : $id" },
             ongoing = false,
-            hasFullScreenIntent = false,
             actions = emptyList(),
         )
 
@@ -57,9 +52,33 @@ object SessionWarningNotificationSpecs {
      * Un identifiant par contrôle : deux réglages cassés en même temps produisent deux
      * avertissements distincts, aucun n'écrase l'autre. 1 est pris par la sonnerie, 2 par la
      * demande de scan.
+     *
+     * **Table figée (Lot 9)**, et non plus l'index dans `MonitoredReadinessChecks` : retirer le
+     * contrôle du plein écran (4) aurait décalé les suivants, et un avertissement publié par une
+     * version antérieure n'aurait plus jamais été retiré. Un identifiant ne se réattribue pas.
      */
+    private val notificationIds: Map<ReadinessCheckId, Int> =
+        mapOf(
+            ReadinessCheckId.EXACT_ALARM to 3,
+            ReadinessCheckId.NOTIFICATIONS to 5,
+            ReadinessCheckId.ALARM_VOLUME to 6,
+            ReadinessCheckId.DND_TOTAL_SILENCE to 7,
+            ReadinessCheckId.ACCESSIBILITY_SERVICE to 8,
+            ReadinessCheckId.BATTERY_OPTIMIZATION to 9,
+        )
+
+    /** 4 : l'ancien avertissement « plein écran », retiré avec son contrôle au Lot 9. */
+    val retiredNotificationIds: Set<Int> = setOf(4)
+
     fun notificationId(id: ReadinessCheckId): Int =
-        WARNING_NOTIFICATION_ID_BASE + MonitoredReadinessChecks.incidentCodes.keys.indexOf(id)
+        requireNotNull(notificationIds[id]) { "Contrôle non surveillé par SPEC_ANDROID §13.1 : $id" }
+
+    /**
+     * Ce que `clearAll()` annule : les avertissements des contrôles surveillés **et** les
+     * identifiants retirés, pour qu'un avertissement publié avant la mise à jour ne reste pas
+     * affiché pour toujours.
+     */
+    fun idsToClear(): Set<Int> = (notificationIds.values + retiredNotificationIds).toSortedSet()
 
     /**
      * §13.1 : « Le tap de la notification ouvre `MainActivity`, qui redirige vers le diagnostic

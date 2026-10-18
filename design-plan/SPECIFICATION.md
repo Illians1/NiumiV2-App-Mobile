@@ -83,7 +83,7 @@ Un seul écran présente les autorisations, une tuile par autorisation, avec une
 
 | Tuile | Phrase | iPhone | Android |
 | --- | --- | --- | --- |
-| Alarme | Pour que ton réveil sonne à l'heure, même téléphone verrouillé. | Fenêtre du système | Rien à demander en principe pour une app de réveil. L'affichage plein écran peut être retiré par l'utilisateur |
+| Alarme | Pour que ton réveil sonne à l'heure, même téléphone verrouillé. | Fenêtre du système | Rien à demander en principe pour une app de réveil |
 | Blocage des applications | Pour bloquer les applications que tu choisis, et seulement celles-là. | Fenêtre du système (Temps d'écran) | Service d'accessibilité à activer dans les réglages, avec guidage. Approche courante, à valider avec Google Play |
 | Notifications | Pour pouvoir te tenir informé de tout ce qui est important. | Fenêtre du système | Fenêtre du système |
 
@@ -355,7 +355,7 @@ Le même texte sert le soir et le matin : il ne doit donc mentionner ni « ce so
 
 Images : `28_ecran-10-le-reveil-sonne` à `35_ecran-10-iphone-seulement-temps-de-scan-ecoule`. Thème sombre.
 
-L'écran ne dit qu'une chose : va scanner ton Niumi Point. Il n'a aucun bouton d'arrêt ni de report. Pendant que l'alarme sonne, c'est lui qui s'affiche, pas l'accueil.
+L'écran ne dit qu'une chose : va scanner ton Niumi Point. Il n'a aucun bouton d'arrêt ni de report. Pendant que l'alarme sonne, c'est lui qui s'affiche, pas l'accueil, dès que Niumi est ouvert — par la notification ou par son icône. L'écran n'est pas imposé par-dessus le verrouillage (décision du 18 octobre 2026).
 
 | Élément | Contenu |
 | --- | --- |
@@ -420,6 +420,8 @@ Risque à tester sur un iPhone : la relance dépend de l'avertissement que le sy
 ### Android
 
 L'écran est dessiné en entier par Niumi et la sonnerie continue jusqu'au scan.
+
+Quand l'alarme sonne, Niumi affiche une notification « Alarme Niumi en cours », visible sur l'écran de verrouillage. L'utilisateur déverrouille son téléphone comme d'habitude, touche la notification, et l'écran 10 s'ouvre. Le scan ne marche pas tant que le téléphone est verrouillé : c'est pour cela que l'écran n'est pas imposé (décision du 18 octobre 2026).
 
 ## 15. Écran 11 · Réussite
 

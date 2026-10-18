@@ -28,7 +28,6 @@ class FakeSessionRuntimeStatusProbe(
             alarmScheduled = alarmScheduler.isScheduled(sessionId),
             accessibilityReady = true,
             notificationReady = true,
-            fullScreenReady = true,
             nfcReady = nfcReady,
             audioReady = true,
             nfcEvaluable = nfcEvaluability.isEvaluable(),

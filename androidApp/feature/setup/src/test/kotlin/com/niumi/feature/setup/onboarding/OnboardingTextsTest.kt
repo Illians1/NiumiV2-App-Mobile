@@ -18,10 +18,10 @@ class OnboardingTextsTest {
     }
 
     @Test
-    fun explainsThatScanningOnALockedScreenIsNotGuaranteed() {
+    fun explainsThatScanningNeedsAnUnlockedPhone() {
         assertThat(OnboardingTexts.limits).contains(
-            "Le scan sur écran verrouillé n'est pas garanti : ton téléphone peut exiger un " +
-                "déverrouillage avant de lire le boîtier.",
+            "Le scan demande un téléphone déverrouillé : quand ça sonne, déverrouille-le, puis " +
+                "touche la notification Niumi ou ouvre l'application.",
         )
     }
 

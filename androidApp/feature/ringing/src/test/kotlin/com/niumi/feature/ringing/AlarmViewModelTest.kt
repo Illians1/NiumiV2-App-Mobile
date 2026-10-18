@@ -118,11 +118,9 @@ class AlarmViewModelTest {
             gateway.result = presentSession(SessionStateDto.RINGING)
             val viewModel = viewModel()
 
-            viewModel.onDeviceLockChanged(locked = true)
-            assertThat((viewModel.state as AlarmUiState.Visible).screen.instructionText)
-                .isEqualTo("Déverrouille ton téléphone, puis approche-le du boîtier.")
-
             viewModel.onNfcAvailabilityChanged(NfcAvailability.DISABLED)
+            assertThat((viewModel.state as AlarmUiState.Visible).screen.instructionText)
+                .isEqualTo("Le NFC est désactivé. Active-le pour scanner ton boîtier.")
             assertThat((viewModel.state as AlarmUiState.Visible).screen.showsNfcSettingsShortcut)
                 .isTrue()
         }
@@ -159,7 +157,7 @@ class AlarmViewModelTest {
             val viewModel = viewModel()
 
             publisher.publish(snapshotInState(SessionStateDto.RELEASING))
-            viewModel.onDeviceLockChanged(locked = true)
+            viewModel.onNfcAvailabilityChanged(NfcAvailability.DISABLED)
 
             assertThat(viewModel.state).isInstanceOf(AlarmUiState.Visible::class.java)
         }

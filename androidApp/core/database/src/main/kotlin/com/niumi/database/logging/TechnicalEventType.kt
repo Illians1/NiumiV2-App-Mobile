@@ -21,6 +21,11 @@ enum class TechnicalEventType {
     AUDIO_START_FAILED,
     RINGTONE_FALLBACK,
     AUDIO_LOOP_FALLBACK,
+
+    /**
+     * Historique (Lot 9, 2026-10-18) : plus jamais émis depuis le retrait du plein écran. Conservé
+     * parce que le journal relit ses lignes par `valueOf` : une ligne ancienne ferait sinon lever.
+     */
     FULL_SCREEN_DENIED,
     EXACT_ALARM_LOST,
     MISSED_TRIGGER_WINDOW,

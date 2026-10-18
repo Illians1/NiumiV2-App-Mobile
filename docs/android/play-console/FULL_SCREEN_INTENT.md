@@ -1,49 +1,29 @@
-# Justification Play Console — `USE_FULL_SCREEN_INTENT`
+# `USE_FULL_SCREEN_INTENT` — retirée (note de retrait)
 
-Document préparatoire à la déclaration de la permission sensible `USE_FULL_SCREEN_INTENT`
-(exigence Play depuis Android 14 : justifier l'usage d'un intent plein écran, réservé aux
-appels et alarmes). Statut : préparatoire, pas encore soumis.
+**Retirée le 2026-10-18 (Lot 9, étape 32).** Niumi ne déclare plus la permission
+`USE_FULL_SCREEN_INTENT` et n'a donc plus rien à justifier à ce titre sur Google Play. Le
+document préparatoire qui occupait ce fichier (jamais soumis) est conservé dans l'historique du
+dépôt, au commit `6c722ef` et avant.
 
-## Usage déclaré : alarme
+## Pourquoi
 
-Le plein écran est utilisé exclusivement pour présenter `AlarmActivity` au-dessus de l'écran
-verrouillé au moment du déclenchement du réveil — l'usage explicitement prévu par la politique
-Android pour cette permission (« Alarms » dans la liste des cas d'usage acceptés par Google,
-avec les appels entrants).
+La notification de sonnerie portait un `fullScreenIntent` qui présentait `AlarmActivity`
+au-dessus de l'écran verrouillé. Mesuré aux étapes 4, 6 et 30 (Xiaomi 25080RABDG / Android 16) :
+le lecteur NFC n'est pas actif tant que le téléphone est verrouillé, si bien que cet écran ne
+permettait pas de scanner le boîtier. Le 2026-10-18, il a en plus gêné le déverrouillage
+(`docs/android/implementation-reports/ETAPE-31.md`). Décision prise avec l'utilisateur :
+conception `docs/superpowers/specs/2026-10-18-reveil-sans-plein-ecran-design.md`.
 
-## Comment il est déclenché
+## Ce qui le remplace
 
-La notification de sonnerie (canal `niumi_alarm_ringing`, SPEC_ANDROID §10.3) porte :
+- La notification de sonnerie (`niumi_alarm_ringing`, `CATEGORY_ALARM`, `setOngoing(true)`,
+  visibilité publique, sans action) est visible sur l'écran de verrouillage ; son
+  `contentIntent` ouvre l'écran de réveil une fois le téléphone déverrouillé.
+- L'icône de Niumi mène à l'écran de réveil pendant tout état de scan.
+- SPEC_ANDROID §4.1, §4.4, §10.2 à §10.4, §11.2 et §14 (huit permissions).
 
-- `setCategory(NotificationCompat.CATEGORY_ALARM)` ;
-- `setOngoing(true)`, sans action d'arrêt ;
-- `setFullScreenIntent(fullScreenPendingIntent, true)`, ciblant explicitement `AlarmActivity`.
+## Ce qui change dans la déclaration Play
 
-Aucun autre déclencheur du plein écran n'existe dans l'application : ni promotion, ni
-notification marketing, ni rappel non urgent.
-
-## Ce que la permission garantit, et ce qu'elle ne garantit pas
-
-Le son de l'alarme (`USAGE_ALARM`, service au premier plan) démarre indépendamment de
-l'autorisation plein écran — l'un ne conditionne pas l'autre techniquement. Mais la politique
-produit du MVP exige l'accès immédiat à l'interface de scan NFC dès le déclenchement
-(SPEC_ANDROID §10.3 : « Cette distinction doit apparaître dans le diagnostic […] »). Sans
-plein écran, l'utilisateur devrait déverrouiller son téléphone et ouvrir l'application
-manuellement pour scanner le boîtier, ce qui contredit le parcours garanti (§4.1).
-
-## Comportement si l'autorisation est refusée
-
-Sur Android 14 et plus, `NotificationManager.canUseFullScreenIntent()` est vérifié par le
-diagnostic (`DeviceReadinessChecker`). Si l'autorisation manque :
-
-- le contrôle est classé `BLOCKING_FOR_NIUMI_EXPERIENCE` (le son pourrait techniquement
-  fonctionner, mais le parcours garanti de Niumi ne peut pas être tenu) ;
-- l'activation de la session est refusée ;
-- l'application propose l'intent `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT` pour guider
-  l'utilisateur vers le réglage, sans jamais l'ouvrir à sa place.
-
-## Preuve dans le code
-
-`RingingNotificationFactory`
-([`androidApp/core/system/.../notification/RingingNotificationFactory.kt`](../../../androidApp/core/system/src/main/kotlin/com/niumi/system/notification/RingingNotificationFactory.kt))
-est le seul point de construction de la notification portant `setFullScreenIntent()`.
+- Aucune déclaration « intent plein écran » n'est à remplir.
+- La vidéo de revue (`REVIEW_VIDEO_SCRIPT.md`, plan 8) montre la notification sur l'écran de
+  verrouillage, le déverrouillage et le tap, et non plus un écran imposé.

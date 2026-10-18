@@ -7,11 +7,13 @@ import com.niumi.system.readiness.ReadinessCheckId
  * non dans `:core:system`, qui reste sans interface.
  *
  * Cinq messages sont repris **mot pour mot** de §13 (`EXACT_ALARM`, `NOTIFICATIONS`,
- * `NFC_ENABLED`, `ALARM_VOLUME`, `DND_OTHER_MODE`) ; les neuf autres ont été rédigés à l'étape
+ * `NFC_ENABLED`, `ALARM_VOLUME`, `DND_OTHER_MODE`) ; les autres ont été rédigés à l'étape
  * 12b et ajoutés à §13 dans le même changement, la spec restant la source de vérité. Chacun nomme
- * le réglage en cause **et** sa conséquence, en tutoiement (§15).
+ * le réglage en cause **et** sa conséquence, en tutoiement (§15). Lot 9 : le contrôle du plein
+ * écran est retiré, et le message `NOTIFICATIONS` revu — la notification de sonnerie est devenue
+ * le chemin vers l'écran de scan.
  *
- * Les `when` sont exhaustifs sans branche `else` : un seizième contrôle casserait la compilation
+ * Les `when` sont exhaustifs sans branche `else` : un quinzième contrôle casserait la compilation
  * ici plutôt que d'atterrir silencieusement sur un texte générique.
  */
 object ReadinessMessages {
@@ -40,13 +42,9 @@ object ReadinessMessages {
                     "disponible sur cet appareil."
             }
 
-            ReadinessCheckId.FULL_SCREEN_INTENT -> {
-                "Autorise les alarmes plein écran, sinon l'écran de réveil ne s'ouvrira pas tout " +
-                    "seul au moment de sonner."
-            }
-
             ReadinessCheckId.NOTIFICATIONS -> {
-                "Active les notifications pour que l'écran du réveil puisse s'afficher."
+                "Active les notifications de Niumi : c'est par elles que tu ouvres l'écran de scan " +
+                    "quand ton réveil sonne."
             }
 
             ReadinessCheckId.ALARM_CHANNEL -> {
@@ -59,8 +57,8 @@ object ReadinessMessages {
             }
 
             ReadinessCheckId.DND_TOTAL_SILENCE -> {
-                "Le silence total coupe le son des alarmes et empêche l'écran de réveil de " +
-                    "s'afficher. Désactive-le avant de démarrer la session."
+                "Le silence total coupe le son et la vibration des alarmes et cache la notification " +
+                    "du réveil sur l'écran de verrouillage. Désactive-le avant de démarrer la session."
             }
 
             ReadinessCheckId.DND_OTHER_MODE -> {
@@ -102,7 +100,6 @@ object ReadinessMessages {
             ReadinessCheckId.PAIRED_BOX -> "Boîtiers associés"
             ReadinessCheckId.APP_SELECTION -> "Applications choisies"
             ReadinessCheckId.EXACT_ALARM -> "Accès aux alarmes exactes"
-            ReadinessCheckId.FULL_SCREEN_INTENT -> "Alarmes plein écran autorisées"
             ReadinessCheckId.NOTIFICATIONS -> "Notifications autorisées"
             ReadinessCheckId.ALARM_CHANNEL -> "Canal du réveil actif"
             ReadinessCheckId.ALARM_VOLUME -> "Volume des alarmes audible"
@@ -122,7 +119,6 @@ object ReadinessMessages {
             ReadinessCheckId.PAIRED_BOX -> "Associer un boîtier"
             ReadinessCheckId.APP_SELECTION -> "Choisir mes applications"
             ReadinessCheckId.EXACT_ALARM -> "Comprendre ce blocage"
-            ReadinessCheckId.FULL_SCREEN_INTENT -> "Ouvrir les réglages plein écran"
             ReadinessCheckId.NOTIFICATIONS -> "Autoriser les notifications"
             ReadinessCheckId.ALARM_CHANNEL -> "Ouvrir les réglages du canal"
             ReadinessCheckId.ALARM_VOLUME -> "Ouvrir les réglages du son"

@@ -13,16 +13,16 @@ object OnboardingTexts {
             "boîtier. Voilà ce qu'il ne peut pas garantir."
 
     /**
-     * Six limites, une par contrainte documentée : arrêt forcé (§4.2), scan sur écran verrouillé
-     * (§4.4), désactivation du service d'accessibilité (§4.3), absence de secours logiciel (§3,
+     * Six limites, une par contrainte documentée : arrêt forcé (§4.2), scan appareil déverrouillé
+     * (§4.4, mesuré à l'étape 32), désactivation du service d'accessibilité (§4.3), absence de secours logiciel (§3,
      * §4.5), réinitialisation de l'exemption d'énergie par une mise à jour (§13), et avertissement
      * jamais garanti immédiat (§13.1).
      */
     val limits =
         listOf(
             "Un arrêt forcé depuis les réglages supprime le réveil programmé : Niumi ne sonnera pas.",
-            "Le scan sur écran verrouillé n'est pas garanti : ton téléphone peut exiger un " +
-                "déverrouillage avant de lire le boîtier.",
+            "Le scan demande un téléphone déverrouillé : quand ça sonne, déverrouille-le, puis " +
+                "touche la notification Niumi ou ouvre l'application.",
             "Le service d'accessibilité peut être désactivé à tout moment dans les réglages " +
                 "Android, ce qui arrête le blocage.",
             "Il n'existe aucun secours logiciel pendant une session : ni code, ni délai, ni " +

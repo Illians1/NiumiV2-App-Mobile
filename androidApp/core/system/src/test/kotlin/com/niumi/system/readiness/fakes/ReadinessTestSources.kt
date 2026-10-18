@@ -105,11 +105,8 @@ class FakeAppSelectionSource(
 
 class FakeNotificationAvailability(
     var notificationsEnabled: Boolean = true,
-    var fullScreenAllowed: Boolean = true,
 ) : NotificationAvailability {
     override fun areNotificationsEnabled(): Boolean = notificationsEnabled
-
-    override fun canUseFullScreenIntent(): Boolean = fullScreenAllowed
 }
 
 class FakeNotificationChannelStatus(

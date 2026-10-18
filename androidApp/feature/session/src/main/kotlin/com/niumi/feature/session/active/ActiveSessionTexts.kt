@@ -145,8 +145,6 @@ object ActiveSessionTexts {
 
             ReadinessAction.OpenDndSettings -> "Ouvrir les réglages Ne pas déranger"
 
-            ReadinessAction.OpenFullScreenIntentSettings -> "Ouvrir les réglages d'alarme plein écran"
-
             is ReadinessAction.OpenChannelSettings -> "Ouvrir les réglages de notification"
 
             ReadinessAction.OpenNfcSettings -> "Ouvrir les réglages NFC"

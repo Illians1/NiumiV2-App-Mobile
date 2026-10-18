@@ -7,7 +7,7 @@ import com.niumi.system.intent.PendingIntentSpec
 
 /**
  * `PendingIntent` du tap sur la notification d'attente de scan (SPEC_ANDROID §10.5 : ouvre
- * `AlarmActivity` en mode scan). Code de requête distinct de `AlarmPendingIntentSpecs.fullScreen`
+ * `AlarmActivity` en mode scan). Code de requête distinct de `AlarmPendingIntentSpecs.alarmScreen`
  * (même session, même composant cible) : les deux notifications ne portent pas le même contrat
  * d'extras, elles ne doivent jamais partager l'identité d'un `PendingIntent`.
  */

@@ -35,7 +35,23 @@ class ReadinessMessagesTest {
     @Test
     fun notificationsMessageMatchesTheSpecWordForWord() {
         assertThat(ReadinessMessages.forCheck(ReadinessCheckId.NOTIFICATIONS))
-            .isEqualTo("Active les notifications pour que l'écran du réveil puisse s'afficher.")
+            .isEqualTo(
+                "Active les notifications de Niumi : c'est par elles que tu ouvres l'écran de scan " +
+                    "quand ton réveil sonne.",
+            )
+    }
+
+    /**
+     * Réécrit à l'étape 32 d'après la mesure : en silence total, ni son, ni vibration, ni
+     * notification visible sur l'écran de verrouillage.
+     */
+    @Test
+    fun totalSilenceMessageMatchesTheSpecWordForWord() {
+        assertThat(ReadinessMessages.forCheck(ReadinessCheckId.DND_TOTAL_SILENCE))
+            .isEqualTo(
+                "Le silence total coupe le son et la vibration des alarmes et cache la notification " +
+                    "du réveil sur l'écran de verrouillage. Désactive-le avant de démarrer la session.",
+            )
     }
 
     @Test

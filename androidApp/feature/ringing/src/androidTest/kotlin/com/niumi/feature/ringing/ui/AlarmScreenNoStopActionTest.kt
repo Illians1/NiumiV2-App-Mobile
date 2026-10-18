@@ -23,7 +23,7 @@ class AlarmScreenNoStopActionTest {
     fun alarmScreenExposesNoClickableNode() {
         composeRule.setContent {
             AlarmScreen(
-                state = AlarmScreenState.from(SessionStateDto.RINGING, deviceLocked = false),
+                state = AlarmScreenState.from(SessionStateDto.RINGING),
                 currentTimeText = "07:00",
             )
         }

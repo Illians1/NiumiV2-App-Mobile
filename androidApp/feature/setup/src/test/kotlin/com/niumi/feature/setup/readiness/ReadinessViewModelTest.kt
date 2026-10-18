@@ -58,11 +58,11 @@ class ReadinessViewModelTest {
 
     @Test
     fun notApplicableChecksAreNeverDisplayed() {
-        report = reportWith(notApplicable = setOf(ReadinessCheckId.FULL_SCREEN_INTENT))
+        report = reportWith(notApplicable = setOf(ReadinessCheckId.RECENTS_LOCK))
 
         val state = viewModel().state
 
-        assertThat(state.items.map { it.id }).doesNotContain(ReadinessCheckId.FULL_SCREEN_INTENT)
+        assertThat(state.items.map { it.id }).doesNotContain(ReadinessCheckId.RECENTS_LOCK)
         assertThat(state.items).hasSize(ReadinessCheckId.entries.size - 1)
     }
 

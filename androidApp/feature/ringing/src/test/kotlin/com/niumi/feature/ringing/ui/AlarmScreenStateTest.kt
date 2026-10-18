@@ -13,11 +13,10 @@ import org.junit.Test
 class AlarmScreenStateTest {
     private fun stateFor(
         sessionState: SessionStateDto = SessionStateDto.RINGING,
-        deviceLocked: Boolean = false,
         nfcAvailability: NfcAvailability = NfcAvailability.ENABLED,
         lastScanOutcome: ScanOutcome? = null,
         releaseSteps: List<ReleaseStep> = emptyList(),
-    ) = AlarmScreenState.from(sessionState, deviceLocked, nfcAvailability, lastScanOutcome, releaseSteps)
+    ) = AlarmScreenState.from(sessionState, nfcAvailability, lastScanOutcome, releaseSteps)
 
     @Test
     fun ringingAsksForTheScanToStopTheAlarm() {
@@ -50,13 +49,12 @@ class AlarmScreenStateTest {
             .isEqualTo("Ton scan est validé. Niumi termine la session.")
     }
 
-    /** Le scan a déjà eu lieu : ni le verrouillage ni l'état du NFC ne décrivent plus rien. */
+    /** Le scan a déjà eu lieu : l'état du NFC ne décrit plus rien. */
     @Test
-    fun releasingOutranksTheLockedAndNfcMessages() {
+    fun releasingOutranksTheNfcMessages() {
         val state =
             stateFor(
                 sessionState = SessionStateDto.RELEASING,
-                deviceLocked = true,
                 nfcAvailability = NfcAvailability.DISABLED,
                 lastScanOutcome = ScanOutcome.UnknownBox,
             )
@@ -74,17 +72,27 @@ class AlarmScreenStateTest {
         assertThat(state.releaseSteps).isEqualTo(steps)
     }
 
+    /**
+     * Lot 9 : l'écran n'est jamais affiché verrouillé, il s'ouvre par la notification ou l'icône
+     * une fois le téléphone déverrouillé. Aucun texte de déverrouillage n'existe donc plus : un
+     * texte qu'aucune situation ne peut afficher serait un faux comportement.
+     */
     @Test
-    fun aLockedDeviceAsksToUnlockFirst() {
-        assertThat(stateFor(deviceLocked = true).instructionText)
-            .isEqualTo("Déverrouille ton téléphone, puis approche-le du boîtier.")
+    fun theInstructionNeverAsksToUnlock() {
+        val texts =
+            SessionStateDto.entries.flatMap { session ->
+                (listOf<ScanOutcome?>(null) + ScanOutcome.Unreadable + ScanOutcome.UnknownBox).flatMap { outcome ->
+                    NfcAvailability.entries.map { stateFor(session, it, outcome).instructionText }
+                }
+            }
+
+        assertThat(texts.filter { "errouill" in it }).isEmpty()
     }
 
     @Test
     fun missingNfcHardwareOutranksEverythingAndOffersNoShortcut() {
         val state =
             stateFor(
-                deviceLocked = true,
                 nfcAvailability = NfcAvailability.ABSENT,
                 lastScanOutcome = ScanOutcome.UnknownBox,
             )
@@ -94,20 +102,12 @@ class AlarmScreenStateTest {
     }
 
     @Test
-    fun disabledNfcOutranksTheLockedMessageAndOffersTheShortcut() {
-        val state = stateFor(deviceLocked = true, nfcAvailability = NfcAvailability.DISABLED)
+    fun disabledNfcOutranksAScanOutcomeAndOffersTheShortcut() {
+        val state = stateFor(nfcAvailability = NfcAvailability.DISABLED, lastScanOutcome = ScanOutcome.Unreadable)
 
         assertThat(state.instructionText)
             .isEqualTo("Le NFC est désactivé. Active-le pour scanner ton boîtier.")
         assertThat(state.showsNfcSettingsShortcut).isTrue()
-    }
-
-    @Test
-    fun aLockedDeviceOutranksAScanOutcome() {
-        val state = stateFor(deviceLocked = true, lastScanOutcome = ScanOutcome.Unreadable)
-
-        assertThat(state.instructionText)
-            .isEqualTo("Déverrouille ton téléphone, puis approche-le du boîtier.")
     }
 
     @Test

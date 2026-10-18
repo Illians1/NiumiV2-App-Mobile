@@ -89,7 +89,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | --- | --- | --- |
 | T9 | Lister les applications installées | L'autorisation QUERY_ALL_PACKAGES est réservée par Google Play aux apps dont la fonction principale en a besoin |
 | T10 | Bloquer les applications par un service d'accessibilité | Approche courante, à valider avec les règles de Google Play |
-| T11 | L'affichage plein écran de l'alarme | L'utilisateur peut retirer cette autorisation |
+| T11 | ~~L'affichage plein écran de l'alarme~~ | **Tranché le 18 octobre 2026, sans objet** : Niumi n'utilise plus l'affichage plein écran. L'alarme sonne et une notification visible sur l'écran de verrouillage ouvre l'écran 10 |
 
 ## 4. Ce qui n'est pas encore dessiné ou écrit
 
@@ -129,3 +129,4 @@ Le journal des décisions (`annexes/journal-des-decisions.md`) contient des pass
 | E9 | Palette | Le début de la section dit qu'aucune palette n'est choisie | Clair hors session, sombre pendant la session (8 et 9 octobre) |
 | E10 | Écran 11 | « Le point ambre du logo se lève comme un soleil » | Même dessin, avec le soleil en dégradé (9 octobre) |
 | E11 | Sortie de secours, le matin | « L'accueil affiche le message « Session annulée… » », sans distinguer le soir du matin | Ce message est retenu pour le soir seulement. Le matin reste ouvert : voir D2 |
+| E12 | Écran 2, tuile « Alarme » sur Android | « L'affichage plein écran peut être retiré par l'utilisateur » | Retiré : Niumi n'utilise plus l'affichage plein écran (18 octobre, voir T11) |

@@ -15,7 +15,7 @@ data class ReadinessCheck(
 
 /**
  * [NOT_APPLICABLE] distingue « contrôle réussi » de « contrôle sans objet sur cet appareil ou à
- * ce stade du parcours » : autorisation plein écran avant Android 14, activation du NFC sur un
+ * ce stade du parcours » : activation du NFC sur un
  * appareil sans matériel NFC, et validité de l'instant de réveil tant qu'aucune heure n'est
  * choisie. Un contrôle sans objet ne peut ni bloquer ni rassurer : il est exclu de
  * `ActivationPolicyInputDto`.

@@ -26,16 +26,18 @@ l'application. La couverture Pixel et Samsung reste la première dette de cette 
 fait un critère d'acceptation (« l'alarme sonne hors ligne avec l'écran éteint sur la matrice P0 »).
 
 **Versions Android.** §20 demande Android 10/11, 12/13, 14, 15, 16 et 17. Seul **Android 16** a été
-couvert. Le plancher `minSdk 29` (Android 10), les alarmes exactes d'Android 12/13, l'accès plein
-écran d'Android 14, l'arrêt forcé d'Android 15 et l'audio d'arrière-plan d'Android 17 n'ont jamais
-été exécutés sur l'appareil correspondant. Trois de ces comportements ont pourtant été observés
+couvert. Le plancher `minSdk 29` (Android 10), les alarmes exactes d'Android 12/13, le rejet des
+notifications de service au premier plan d'Android 14 (l'accès plein écran n'est plus demandé depuis
+le Lot 9), l'arrêt forcé d'Android 15 et l'audio d'arrière-plan d'Android 17 n'ont jamais été
+exécutés sur l'appareil correspondant. Trois de ces comportements ont pourtant été observés
 indirectement sur Android 16, qui les inclut tous : ils sont notés comme tels ci-dessous, sans être
 comptés comme une couverture de version.
 
 ## Permissions au moment des essais
 
 Sauf mention contraire dans une ligne : `NFC` accordée, `POST_NOTIFICATIONS` accordée,
-`USE_FULL_SCREEN_INTENT` en `allow`, exemption d'énergie AOSP active, exemption de la restriction
+`USE_FULL_SCREEN_INTENT` en `allow` jusqu'à l'étape 31 (permission retirée au Lot 9, plus
+déclarée depuis l'étape 32), exemption d'énergie AOSP active, exemption de la restriction
 d'énergie **constructeur** active (sans elle le blocage est inopérant après ~60 s, étape 5),
 service d'accessibilité activé à la main, NFC du téléphone actif.
 
@@ -53,10 +55,10 @@ mesures détaillées, dans `docs/android/implementation-reports/`.
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Retard mesuré | Source |
 | --- | --- | --- | --- | --- |
-| écran éteint depuis 30 minutes | alarme à l'heure, écran présenté | **OK** — écran éteint 31 min, `AlarmActivity` au premier plan par-dessus le verrouillage. L'appareil n'est pas entré en Doze de lui-même (USB branché) : valide « écran éteint », pas « 30 min en Doze » | 1 s | `LOT-0.md` |
+| écran éteint depuis 30 minutes | sonnerie à l'heure, notification de sonnerie lisible sur l'écran de verrouillage (Lot 9) | **OK** — écran éteint 31 min, sonnerie à l'heure (`LOT-0.md`, avec l'écran imposé d'alors). Depuis le Lot 9, l'écran n'est plus imposé : la ligne « écran éteint et verrouillé par code » ci-dessous (18/10, 5 min d'écran éteint) mesure le nouveau comportement ; 30 min d'écran éteint **non remesurées** avec lui. L'appareil n'est pas entré en Doze de lui-même (USB branché) | 1 s | `LOT-0.md`, `ETAPE-32.md` |
 | Doze forcé | alarme à l'heure | **OK** — Doze profond réel, appareil débranché et immobile (`deep=IDLE` pendant 21 min), cible 19:06:42, déclenchement 19:06:41. Réserve : l'appareil était sorti du Doze depuis ~7 min à l'échéance ; `FLAG_WAKE_FROM_IDLE` reste la garantie système pour un déclenchement *pendant* `IDLE` | nul | `LOT-0.md` |
 | mode économie d'énergie | alarme à l'heure dans le périmètre pris en charge | **non testé** — non exécuté sur cet appareil | — | — |
-| Ne pas déranger autorisant les alarmes | sonnerie audible | **OK** — `zen_mode=1`, écran rallumé, `AlarmActivity` au premier plan, focus `USAGE_ALARM`. Audibilité non confirmée à l'oreille sur cet essai précis : le son n'est prouvé qu'indirectement | nul | `LOT-0.md` |
+| Ne pas déranger autorisant les alarmes | sonnerie audible | **OK** — `zen_mode=1`, écran rallumé, `AlarmActivity` au premier plan (écran imposé d'avant le Lot 9), focus `USAGE_ALARM`. Audibilité non confirmée à l'oreille sur cet essai précis : le son n'est prouvé qu'indirectement | nul | `LOT-0.md` |
 | Ne pas déranger interdisant les alarmes | diagnostic et comportement consignés, aucune fausse garantie | **Réveil inopérant, limite établie et traitée** — `STREAM_ALARM Muted: true`, écran reste `Dozing`, `AlarmActivity` ne s'ouvre pas, Reader Mode jamais activé. L'horloge d'Android ne sonne pas davantage (vérifié). Décision produit : contrôle `BLOCKING_FOR_ALARM`, incident `ANDROID_ALARM_MUTED_BY_DND`, §4.1/§4.2/§13/§17 mises à jour | service démarré sans retard | `LOT-0.md`, `ETAPE-06.md` |
 | Ne pas déranger « alarmes seules » (hors §20) | sonnerie audible | **OK** — `zen_mode=3`, `Muted: false`, écran rallumé. Essai ajouté pour délimiter la règle : seul le silence total est en cause | nul | `LOT-0.md` |
 | mode silencieux, volume d'alarme actif | sonnerie audible | **OK** — `mode = SILENT`, volume alarme 12, audibilité confirmée à l'oreille | nul | `LOT-0.md` |
@@ -87,7 +89,6 @@ mesures détaillées, dans `docs/android/implementation-reports/`.
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Source |
 | --- | --- | --- | --- |
 | notifications refusées | activation refusée | **OK** (2026-09-15) — permission refusée : `✗ Active les notifications pour que l'écran du réveil puisse s'afficher.` ; accordée : `✓ Notifications autorisées`. Aucun chemin vers le choix de l'heure tant qu'un contrôle est rouge | `ETAPE-21.md` |
-| plein écran refusé | activation refusée sur Android 14+ | **OK** (2026-09-15) — refusé : `✗ Autorise les alarmes plein écran, sinon l'écran de réveil ne s'ouvrira pas tout seul au moment de sonner.` ; autorisé : `✓ Alarmes plein écran autorisées`. **Le refus doit être posé au niveau UID** (`appops set --uid`) : au seul niveau paquet, le mode UID reste `allow` et `canUseFullScreenIntent()` répond vrai | `ETAPE-21.md` |
 | accessibilité désactivée avant activation | activation refusée | **OK** (2026-09-15) — inactif : `✗ Le service d'accessibilité de Niumi est inactif. Sans lui, les applications choisies ne seront pas bloquées.` ; actif : `✓ Service d'accessibilité actif`, service lié par le système | `ETAPE-21.md` |
 | réglage changé depuis le volet rapide, écran ouvert (hors §20, écart 10) | écrans 2, 6, 7 et 12 à jour sans quitter l'écran | **OK** (2026-09-29) — écran 2 : NFC coupé et rallumé (trois allers-retours), Ne pas déranger « interruptions importantes » → avertissement « autre mode » puis retrait ; écran 6 : bouton grisé et « ton appareil n'est pas prêt » NFC coupé, rétabli NFC rallumé ; écran 7 (session armée) : encadré NFC, puis « Rétabli depuis. », **un seul** `NFC_DISABLED` en base, enregistré 130 ms après la coupure ; écran 12 : « NFC activé » en échec puis « OK ». Le retour du focus seul ne suffisait pas au rallumage : le NFC met ~1,4 s à s'allumer et le focus revenait avant 8 fois sur 9 ; l'annonce `ADAPTER_STATE_CHANGED` a porté la mise à jour dans ces cas. Panneau de volume : ne prend pas le focus, replié comme déplié (curseur « Alarme » déplacé de 10 à 12 puis 10, aucun changement de focus) — un volume changé ainsi n'est vu qu'au retour sur l'écran | `RELEASE_REPORT.md` (écart 10) |
 
@@ -135,7 +136,7 @@ contrôle visuel, fait à l'œil pendant les campagnes.
 | scan d'un autre tag | sonnerie maintenue | **OK** (17/10) — tag Niumi valide hors de la liste figée, scanné pendant la sonnerie : `NFC_SCAN_INVALID`, vibration d'erreur ressentie, sonnerie maintenue jusqu'au scan d'un boîtier figé 21 s plus tard (ligne Lot 8 n° 1). Jusqu'au 2026-10-17, un seul tag physique était disponible | `ETAPE-04.md`, `ETAPE-31.md` |
 | NFC désactivé pendant la sonnerie | instruction de réactivation, sonnerie maintenue | **OK** — incident `NFC_DISABLED` `CRITICAL` unique, session toujours `RINGING` | `ETAPE-04.md`, `ETAPE-20.md` |
 | NFC réactivé pendant la sonnerie | Reader Mode restauré, scan accepté | **OK** | `ETAPE-04.md` |
-| scan sur écran verrouillé | déverrouillage demandé si l'appareil l'exige | **Limite constructeur confirmée** — le boîtier n'est lu qu'après déverrouillage sur cet appareil. `AlarmActivity` s'affiche bien par-dessus le verrouillage (§4.4) | `ETAPE-04.md` |
+| scan sur écran verrouillé | déverrouillage demandé si l'appareil l'exige | **Limite constructeur confirmée** — le boîtier n'est lu qu'après déverrouillage sur cet appareil (étape 4, quand `AlarmActivity` s'affichait encore par-dessus le verrouillage). Depuis le Lot 9, l'écran n'est plus affiché verrouillé : le scan demande un téléphone déverrouillé (§4.4, aide) | `ETAPE-04.md`, `ETAPE-32.md` |
 
 ### Blocage différé (Lot 6)
 
@@ -209,6 +210,38 @@ du bouton, tag approché hors lecture sans effet — **OK** (17/10), base et `ui
 **non écouté** ; la taille de la liste annoncée est prouvée par `PairingScreenTest`, pas sur
 appareil.
 
+### Réveil sans plein écran (Lot 9)
+
+Sept lignes ajoutées à §20 à l'étape 32, mesurées le 18 octobre 2026 (après-midi, 11:35 à 17:55)
+sur l'APK de debug issu de l'arbre de travail de l'étape, `6c722ef` plus les changements du Lot 9.
+Sources des relevés : `dumpsys notification --noredact` à la sonnerie (`vis=PUBLIC`,
+`fullscreenIntent=null`, `contentIntent` présent, drapeaux `ONGOING_EVENT|ONLY_ALERT_ONCE|NO_CLEAR|
+FOREGROUND_SERVICE`), le journal d'événements du système (`logcat -b events` : `notification_enqueue`,
+`notification_alert`, `notification_visibility`, `notification_canceled`, `notification_clicked`),
+`dumpsys trust` et `dumpsys power` toutes les 0,3 s (verrouillage, allumage de l'écran), l'historique
+de `dumpsys nfc` (`reader_mode_change`) et le journal technique de Niumi (Room). Réglage HyperOS
+« Notifications sur l'écran de verrouillage » **activé par défaut** pour Niumi, non modifié.
+`appops get com.niumi.app` ne liste plus `USE_FULL_SCREEN_INTENT` parmi les permissions déclarées
+(`dumpsys package`), seul le mode `default` générique reste affiché.
+
+| Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Retard mesuré | Source |
+| --- | --- | --- | --- | --- |
+| écran éteint et verrouillé par code, sonnerie | son et vibration à l'heure ; aucune activité ouverte ; notification lisible sur l'écran de verrouillage ; déverrouillage, tap → écran 8 → scan accepté | **OK** (11:35) — service démarré à 11:35:01,4 ; accueil HyperOS resté l'activité au premier plan, `isKeyguardShowing=true`, `deviceLocked=1`, `mWakefulness=Dozing` pendant 67 s : **l'écran ne s'est pas allumé seul**. Notification publique sans `fullscreenIntent`. Allumage par l'utilisateur à 11:36:08, notification lisible, tap depuis l'écran de verrouillage → code → `AlarmActivity` à 11:36:12, scan accepté du premier coup, `COMPLETED` 11:36:25 | 1,4 s | `ETAPE-32.md` |
+| notification de sonnerie balayée, téléphone verrouillé puis déverrouillé | republiée dans les 10 s, sans ouvrir aucun écran ; tap → écran 8 | **OK** (17:14, refaite 17:30) — **sur l'écran de verrouillage, la notification ne se balaie pas** (HyperOS). Déverrouillé, balayage dans le volet à 17:15:05,06 → republiée à 17:15:10,20 (**5,1 s**), aucun écran ouvert (accueil resté au premier plan) ; tap 17:16:59 → écran 8 → scan 17:17:02. Refaite avec `setOnlyAlertOnce` : balayage 17:32:44,24 → retour 17:32:50,37 (**6,1 s**) avec bannière ; second balayage 17:32:59,22 → retour 17:33:00,35 par le tic de la minute, bannière visible 5,5 s | 5,1 s et 6,1 s | `ETAPE-32.md` |
+| réveil pendant l'usage d'une autre application | bannière « heads-up », aucun écran imposé ; tap → écran 8 | **OK** (17:14) — bannière visible de 17:14:01,2 à 17:14:06,8 (**5,5 s**), accueil HyperOS resté au premier plan ; **constat** : sans `setOnlyAlertOnce`, la republication de l'alarme de secours re-présentait la bannière à chaque minute pleine (17:15:00, 17:16:00, 17:17:00, `notification_alert` avec vibration), y compris par-dessus l'écran de réveil une seconde après son ouverture. Décision du 18/10 : `setOnlyAlertOnce(true)` ; remesuré 17:30 à 17:35 : alerte au départ (17:30:00), **aucune** aux republications de 17:31, 17:32, 17:34, 17:35 (`buzz=0`), alerte de nouveau après chaque balayage | — | `ETAPE-32.md` |
+| verrouillage pendant l'écran 8, puis déverrouillage | l'écran 8 revient, Reader Mode actif, scan accepté | **OK** (11:36) — verrouillage volontaire à 11:36:16 pendant l'écran 8 ; déverrouillage 11:36:22, `AlarmActivity` de nouveau au premier plan sans geste, scan accepté à 11:36:23 (Reader Mode actif) | — | `ETAPE-32.md` |
+| redémarrage sans déverrouillage avant l'heure | sonnerie à l'heure depuis la projection Direct Boot, notification sur l'écran de verrouillage, scan après déverrouillage et tap | **OK** (17:47 → 17:55) — `adb reboot` 17:47:26, `boot_completed` 17:48:06, `ALARM_RESCHEDULED` 17:48:08 depuis la projection v4, utilisateur `RUNNING_LOCKED` jusqu'à 17:53:23 ; `RINGING_STARTED` 17:52:00,3, notification publiée depuis le contexte protégé, écran resté éteint ; allumage par l'utilisateur 17:53:16, notification lisible sur l'écran de verrouillage. Fin par l'icône (ligne suivante) et non par le tap, déjà prouvé deux fois | 0,3 s | `ETAPE-32.md` |
+| silence total pendant la sonnerie | comportement consigné sans fausse garantie (présentation de la notification) | **Limite établie** (17:36 → 17:44) — silence total posé par `cmd notification set_dnd none` pendant `ARMED` (`zen_mode=2`, `mInterruptionFilter=3`) : incidents `ANDROID_ALARM_MUTED_BY_DND` et `ANDROID_ALARM_VOLUME_ZERO` à 17:36:07 avec leurs avertissements (identifiants 6 et 7, retirés à 17:43:41 à la sortie d'`ARMED`). À 17:39:00 : service démarré, lecteur `USAGE_ALARM` lancé mais `STREAM_ALARM` `Muted: true` : **ni son, ni vibration** ; notification publiée, **non alertée** (`notification_alert` sans son ni vibration) et **invisible sur l'écran de verrouillage** (constat de l'utilisateur) ; le volet après déverrouillage n'a pas été regardé. Seul chemin : Niumi déjà ouvert avant le verrouillage, sa tâche est revenue sur l'écran 8 au déverrouillage (17:43:41) ; scan 17:44:05. Mode Ne pas déranger rétabli à `off` ensuite | — | `ETAPE-32.md` |
+| Niumi ouvert par son icône pendant la sonnerie | écran 8 (non-régression) | **OK** (17:53) — après le redémarrage ci-dessus, tâche Niumi inexistante : icône du lanceur à 17:53:26 → `MainActivity` → redirection → `AlarmActivity` à 17:53:27 (`LAUNCH_SINGLE_TASK`), sans passer par l'accueil. « Le NFC est désactivé… » affiché quelques secondes puis effacé seul (`NFC_DISABLED` 17:53:27, pile NFC `ON` 17:53:37, Reader Mode de Niumi activé 17:53:33 et 17:53:37 d'après `dumpsys nfc`) ; premier scan passé trop vite refusé 17:54:35 (`NFC_SCAN_INVALID`, « Boîtier non reconnu. Réessaie. »), second accepté 17:54:52 | — | `ETAPE-32.md` |
+
+Contrôles hors §20 : `dumpsys notification` conforme à chaque sonnerie (ci-dessus) ; le manifeste
+fusionné release ne déclare plus `USE_FULL_SCREEN_INTENT` (huit permissions, `ReleaseHygieneTest`) ;
+diagnostic à quatorze contrôles prouvé par `AndroidDeviceReadinessCheckerTest`, pas relu à l'écran
+sur appareil ; aucun avertissement « plein écran » publiable (identifiant 4 retiré,
+`clearAllAlsoWithdrawsTheRetiredFullScreenWarning` instrumenté vert). Hors des sept lignes :
+la ligne « écran éteint depuis 30 minutes » n'a pas été remesurée avec le nouveau comportement
+(5 min d'écran éteint seulement).
+
 ### Arrêts système et corruption
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Source |
@@ -234,9 +267,9 @@ en fonctionnement.
 
 | | Lignes |
 | --- | --- |
-| Mesurées et conformes | 49 (dont 8 des 9 lignes du blocage différé, 10 des 11 lignes des sonneries, 3 des 5 lignes des boîtiers multiples — dont une avec réserve, l'incident `TIME_CHANGED` —, le scan d'un autre tag mesuré le 17/10, et le retrait des récents, conforme avec parade) |
+| Mesurées et conformes | 54 (dont 8 des 9 lignes du blocage différé, 10 des 11 lignes des sonneries, 3 des 5 lignes des boîtiers multiples — dont une avec réserve, l'incident `TIME_CHANGED` —, 6 des 7 lignes du réveil sans plein écran, le scan d'un autre tag mesuré le 17/10, et le retrait des récents, conforme avec parade) ; la ligne « plein écran refusé » est retirée de §20 avec l'autorisation (Lot 9) |
 | Mesurées partiellement | 3 (boucle des quatre sonneries : « Oiseaux » seule réécoutée avec le lecteur `AudioTrack` ; boîtier ajouté après l'activation : identité du tag refusé non relevée ; « Boîtier 1 » à l'écran 6 après la mise à jour : lu en base, pas vu à l'écran) |
-| Mesurées, limite établie et documentée | 5 (silence total, arrêt forcé, NFC verrouillé, restriction d'énergie constructeur, **processus tué avant l'heure de début** — mesurée à l'étape 25 : sur HyperOS, le service d'accessibilité n'est plus relié après la mort du processus) |
+| Mesurées, limite établie et documentée | 6 (silence total à l'activation, **silence total pendant la sonnerie** — mesuré à l'étape 32 : ni son, ni vibration, notification absente de l'écran de verrouillage —, arrêt forcé, NFC verrouillé, restriction d'énergie constructeur, **processus tué avant l'heure de début** — mesurée à l'étape 25 : sur HyperOS, le service d'accessibilité n'est plus relié après la mort du processus) |
 | Non reproductibles sur cet appareil | 1 (arrêt du seul FGS) |
 | Non testées faute d'appareil ou de matériel audio | 11 |
 | Non testées sur le build release | 2 |

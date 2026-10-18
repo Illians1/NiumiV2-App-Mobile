@@ -35,16 +35,17 @@ object HelpTexts {
                         "Un arrêt forcé depuis les réglages supprime le réveil programmé : Niumi ne sonnera pas.",
                         "Le système peut arrêter le service qui fait sonner l'alarme. Niumi ne peut pas l'en " +
                             "empêcher.",
-                        "Le mode Ne pas déranger en silence total coupe le son de l'alarme et empêche l'écran " +
-                            "de réveil de s'afficher. Niumi refuse d'activer une session dans cet état, et ne " +
-                            "modifie jamais ce réglage à ta place.",
+                        "Le mode Ne pas déranger en silence total coupe le son et la vibration de l'alarme, et " +
+                            "la notification du réveil n'apparaît pas sur l'écran de verrouillage : pour scanner, " +
+                            "déverrouille ton téléphone et ouvre Niumi toi-même. Niumi refuse d'activer une " +
+                            "session dans cet état, et ne modifie jamais ce réglage à ta place.",
                         "Le service d'accessibilité peut être désactivé à tout moment dans les réglages " +
                             "Android, ce qui arrête le blocage.",
                         "Le blocage renvoie les applications choisies à l'accueil ; il ne les rend pas " +
                             "impossibles à ouvrir. Désactiver le service, arrêter Niumi ou le désinstaller suffit à " +
                             "le contourner.",
-                        "Le scan sur écran verrouillé n'est pas garanti : ton téléphone peut exiger un " +
-                            "déverrouillage avant de lire le boîtier.",
+                        "Le scan demande un téléphone déverrouillé : quand ça sonne, déverrouille-le, puis " +
+                            "touche la notification Niumi ou ouvre l'application.",
                         "Il n'existe aucun secours logiciel pendant une session : ni code, ni délai, ni bouton " +
                             "« Arrêter quand même ». Sans ton boîtier, il te reste l'arrêt forcé ou l'extinction du " +
                             "téléphone.",
@@ -111,6 +112,11 @@ object HelpTexts {
                 title = "Notifications et avertissements",
                 items =
                     listOf(
+                        "Quand ça sonne, Niumi n'ouvre aucun écran de lui-même et n'allume pas l'écran : la " +
+                            "notification « Alarme Niumi en cours » est visible sur l'écran de verrouillage et " +
+                            "dans le volet, et revient en quelques secondes si tu la balaies. Si tu utilises ton " +
+                            "téléphone à ce moment-là, sa bannière disparaît au bout de quelques secondes ; le son " +
+                            "continue.",
                         "La notification qui te demande de scanner ton boîtier peut être balayée. Depuis " +
                             "Android 14, Niumi ne peut pas l'en empêcher. Elle revient dès que tu rouvres " +
                             "l'application, et l'écran de blocage te rappelle le scan.",

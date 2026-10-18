@@ -84,9 +84,9 @@ class MainActivity : ComponentActivity() {
      * - une redirection posée sur l'accueil ne s'exécutait jamais, le `NavHost` étant sur
      *   `ActiveSession` après l'armement ;
      * - une redirection posée sur le seul `onResume` ne se déclenchait pas quand l'alarme sonnait
-     *   **pendant** que l'utilisateur était déjà dans Niumi : `onResume` ne se rejoue pas, et le
-     *   plein écran de la notification n'est honoré par Android que si l'appareil est verrouillé
-     *   ou l'écran éteint.
+     *   **pendant** que l'utilisateur était déjà dans Niumi : `onResume` ne se rejoue pas, et
+     *   aucune notification n'ouvre l'écran de réveil sans un tap (sans plein écran depuis le
+     *   Lot 9).
      *
      * `repeatOnLifecycle(RESUMED)` suspend la collecte dès que l'écran de réveil passe devant :
      * aucune relance en boucle. `distinctUntilChanged` n'agit qu'aux transitions, pour qu'une
