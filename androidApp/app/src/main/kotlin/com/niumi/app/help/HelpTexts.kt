@@ -117,6 +117,9 @@ object HelpTexts {
                             "dans le volet, et revient en quelques secondes si tu la balaies. Si tu utilises ton " +
                             "téléphone à ce moment-là, sa bannière disparaît au bout de quelques secondes ; le son " +
                             "continue.",
+                        "Sur Xiaomi, si les notifications de Niumi sont masquées sur l'écran de verrouillage, la " +
+                            "notification du réveil n'y apparaît pas : déverrouille ton téléphone, puis touche-la " +
+                            "dans le volet ou ouvre Niumi. Le diagnostic ne peut pas voir ce réglage.",
                         "La notification qui te demande de scanner ton boîtier peut être balayée. Depuis " +
                             "Android 14, Niumi ne peut pas l'en empêcher. Elle revient dès que tu rouvres " +
                             "l'application, et l'écran de blocage te rappelle le scan.",

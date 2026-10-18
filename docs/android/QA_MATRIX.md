@@ -55,7 +55,7 @@ mesures détaillées, dans `docs/android/implementation-reports/`.
 
 | Scénario | Résultat attendu | Xiaomi 25080RABDG / Android 16 | Retard mesuré | Source |
 | --- | --- | --- | --- | --- |
-| écran éteint depuis 30 minutes | sonnerie à l'heure, notification de sonnerie lisible sur l'écran de verrouillage (Lot 9) | **OK** — écran éteint 31 min, sonnerie à l'heure (`LOT-0.md`, avec l'écran imposé d'alors). Depuis le Lot 9, l'écran n'est plus imposé : la ligne « écran éteint et verrouillé par code » ci-dessous (18/10, 5 min d'écran éteint) mesure le nouveau comportement ; 30 min d'écran éteint **non remesurées** avec lui. L'appareil n'est pas entré en Doze de lui-même (USB branché) | 1 s | `LOT-0.md`, `ETAPE-32.md` |
+| écran éteint depuis 30 minutes | sonnerie à l'heure, notification de sonnerie lisible sur l'écran de verrouillage (Lot 9) | **OK** — écran éteint 31 min, sonnerie à l'heure (`LOT-0.md`, avec l'écran imposé d'alors, USB branché). **Remesuré avec le Lot 9 le 18/10 (C10)** : armé 18:47:21, ~37 min d'écran éteint et verrouillé, USB débranché, téléphone posé ; Doze léger entré à 19:20:03 (Doze profond resté en attente, état 2) ; 19:25:00,003 `device_idle_wake_from_idle` sur l'alarme de Niumi, `RINGING_STARTED` 19:25:00,49, notification publiée et alertée 19:25:00,32 ; écran resté éteint ; allumé par l'utilisateur 19:25:28, notification lisible sur l'écran de verrouillage ; tap → écran 8 → scan, `COMPLETED` 19:25:40, aucun incident | 1 s ; 0,5 s | `LOT-0.md`, `ETAPE-32.md` |
 | Doze forcé | alarme à l'heure | **OK** — Doze profond réel, appareil débranché et immobile (`deep=IDLE` pendant 21 min), cible 19:06:42, déclenchement 19:06:41. Réserve : l'appareil était sorti du Doze depuis ~7 min à l'échéance ; `FLAG_WAKE_FROM_IDLE` reste la garantie système pour un déclenchement *pendant* `IDLE` | nul | `LOT-0.md` |
 | mode économie d'énergie | alarme à l'heure dans le périmètre pris en charge | **non testé** — non exécuté sur cet appareil | — | — |
 | Ne pas déranger autorisant les alarmes | sonnerie audible | **OK** — `zen_mode=1`, écran rallumé, `AlarmActivity` au premier plan (écran imposé d'avant le Lot 9), focus `USAGE_ALARM`. Audibilité non confirmée à l'oreille sur cet essai précis : le son n'est prouvé qu'indirectement | nul | `LOT-0.md` |
@@ -238,9 +238,12 @@ Contrôles hors §20 : `dumpsys notification` conforme à chaque sonnerie (ci-de
 fusionné release ne déclare plus `USE_FULL_SCREEN_INTENT` (huit permissions, `ReleaseHygieneTest`) ;
 diagnostic à quatorze contrôles prouvé par `AndroidDeviceReadinessCheckerTest`, pas relu à l'écran
 sur appareil ; aucun avertissement « plein écran » publiable (identifiant 4 retiré,
-`clearAllAlsoWithdrawsTheRetiredFullScreenWarning` instrumenté vert). Hors des sept lignes :
-la ligne « écran éteint depuis 30 minutes » n'a pas été remesurée avec le nouveau comportement
-(5 min d'écran éteint seulement).
+`clearAllAlsoWithdrawsTheRetiredFullScreenWarning` instrumenté vert). Réglage HyperOS « Notifications de l'écran de verrouillage » **désactivé** pour Niumi (C11, 18/10
+18:43) : notification publiée (`vis=PUBLIC`) mais absente de l'écran de verrouillage, présente dans le
+volet après déverrouillage, flux d'alarme audible, première publication sans `notification_alert` ;
+icône → écran 8 → scan ; diagnostic vert, le réglage n'apparaissant dans aucune donnée Android
+lisible. Limite écrite dans l'aide. La ligne « écran éteint depuis 30 minutes » a été remesurée avec le nouveau comportement (C10,
+ci-dessus), en Doze léger seulement.
 
 ### Arrêts système et corruption
 

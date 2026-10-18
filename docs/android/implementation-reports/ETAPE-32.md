@@ -96,9 +96,10 @@ décisions de l'utilisateur du 2026-10-18). Point de départ : `6c722ef` (étape
    qui vérifient précisément l'absence du plein écran (`fullScreenIntent == null`, identifiant 4
    retiré, libellé historique) et dans les KDoc. Le code de production n'en contient plus hors des
    deux constantes historiques — c'est ce que le plan visait.
-6. **Limite HyperOS « Notifications sur l'écran de verrouillage » non écrite** : le réglage était
-   **activé par défaut** pour Niumi et n'a pas été désactivé pendant les essais. Rien n'est écrit
-   sans mesure (`RESTE_A_FAIRE.md` C11).
+6. **Réglage HyperOS « Notifications de l'écran de verrouillage »** : activé par défaut pour Niumi.
+   Mesuré désactivé le 2026-10-18 à 18:43, après le commit `8d36d33` (C11) : notification absente de
+   l'écran de verrouillage, présente dans le volet, son inchangé, diagnostic vert (réglage illisible
+   par Niumi). Limite écrite dans l'aide et `LIMITES.md` après validation du texte par l'utilisateur.
 
 ## Specs et documents modifiés dans le même changement
 
@@ -241,11 +242,26 @@ automatique (`g:Aggregate_AlertingSection`, identifiant 0) quand plus de trois n
 `AndroidSessionWarningNotifierInstrumentedTest`. Après le déverrouillage de l'essai 5, l'alarme de
 secours est réarmée depuis la passe `USER_UNLOCKED` (tics à 17:54:25 et non 17:54:00).
 
+## Essais complémentaires (après le commit `8d36d33`)
+
+- **Passe instrumentée des deux assertions `FLAG_ONLY_ALERT_ONCE`** : verte à 18:40 (voir
+  « Incertitudes »).
+- **C11, réglage HyperOS « Notifications de l'écran de verrouillage » désactivé (18:43)** :
+  notification publiée (`vis=PUBLIC`) mais absente de l'écran de verrouillage, présente dans le
+  volet après déverrouillage ; flux d'alarme audible ; première publication sans
+  `notification_alert`. Le réglage n'apparaît dans aucune donnée Android lisible (`AppSettings`,
+  canaux, `settings`, comparés avant et après) : diagnostic vert. Icône → écran 8 → scan, 18:44:26.
+  Limite écrite dans l'aide et `LIMITES.md` (texte validé par l'utilisateur), SPEC_ANDROID §10.3.
+  Réglage remis à sa valeur par défaut ensuite.
+- **C10, ~37 min d'écran éteint, USB débranché (18:47 → 19:25)** : Doze léger à 19:20:03, Doze
+  profond resté en attente ; l'alarme sort l'appareil de veille à 19:25:00,003,
+  `RINGING_STARTED` 19:25:00,49 (+0,5 s) ; notification publiée et alertée ; écran resté éteint ;
+  notification lisible sur l'écran de verrouillage à l'allumage (19:25:28) ; tap → scan,
+  `COMPLETED` 19:25:40, aucun incident.
+
 ## Observations hors périmètre, non corrigées
 
-- **Trente minutes d'écran éteint** non remesurées avec le nouveau comportement (5 min seulement, USB
-  branché) : `RESTE_A_FAIRE.md` C10.
-- **Réglage HyperOS d'affichage sur l'écran de verrouillage désactivé** : non mesuré (C11).
+- **Doze profond au moment du réveil** non obtenu avec le nouveau comportement (C10 : Doze léger).
 - `TIME_CHANGED` après un redémarrage pendant `ARMED` (étape 31) : non revu ici ; aucun incident de
   ce type n'a été consigné pendant le redémarrage de l'essai 5 (`session_incident` vide pour la
   session, horloge inchangée).
@@ -286,10 +302,11 @@ commit (`IncidentTextsTest.kt`, ce rapport, la conception).
 
 ## Incertitudes et limites
 
-- **Les deux assertions `FLAG_ONLY_ALERT_ONCE` des tests instrumentés** ont été ajoutées après la
-  passe instrumentée complète et vérifiées par compilation seulement ; la notification réelle porte
-  bien le drapeau (`dumpsys notification` à 17:30, 17:39 et 17:52), mais les deux tests n'ont pas été
-  rejoués. À rejouer avec la prochaine passe `connectedDebugAndroidTest`.
+- **Les deux assertions `FLAG_ONLY_ALERT_ONCE` des tests instrumentés**, ajoutées après la passe
+  complète du matin, ont été rejouées sur l'appareil le 2026-10-18 à 18:40, après le commit
+  `8d36d33` : `RingingNotificationFactoryInstrumentedTest` (1 test) et
+  `RingingNotificationInstrumentedTest` (1 test), 0 échec. Les autres tests instrumentés n'ont pas
+  été rejoués depuis le matin ; aucun code qu'ils couvrent n'a changé depuis, hors cette notification.
 - **Diagnostic à quatorze lignes** prouvé par test JVM, pas relu à l'écran 2 sur appareil.
 - **Affichage des nouveaux textes d'aide** (écran 13, onboarding) non relu à l'écran ; les tests de
   textes font foi.
