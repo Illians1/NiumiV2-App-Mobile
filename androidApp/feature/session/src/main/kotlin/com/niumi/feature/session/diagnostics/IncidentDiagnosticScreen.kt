@@ -29,6 +29,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.database.logging.TechnicalEventEntry
 import com.niumi.designsystem.effect.WindowFocusRegainedEffect
+import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.ReadinessCheck
@@ -81,7 +82,7 @@ fun IncidentDiagnosticScreen(
 private fun StorageFailureBanner(reason: String?) {
     if (reason == null) return
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        colors = CardDefaults.cardColors(containerColor = LocalNiumiPalette.current.tileGrey),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -91,12 +92,12 @@ private fun StorageFailureBanner(reason: String?) {
             Text(
                 text = IncidentDiagnosticTexts.STORAGE_FAILURE_TITLE,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = LocalNiumiPalette.current.ink,
             )
             Text(
                 text = IncidentDiagnosticTexts.STORAGE_FAILURE_MESSAGE,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = LocalNiumiPalette.current.ink,
             )
         }
     }
@@ -110,7 +111,7 @@ private fun StorageFailureBanner(reason: String?) {
 private fun CriticalIncidents(incidents: List<SessionIncidentDto>) {
     if (incidents.isEmpty()) return
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        colors = CardDefaults.cardColors(containerColor = LocalNiumiPalette.current.tileGrey),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -121,7 +122,7 @@ private fun CriticalIncidents(incidents: List<SessionIncidentDto>) {
                 Text(
                     text = IncidentDiagnosticTexts.incidentLabel(incident.code),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    color = LocalNiumiPalette.current.ink,
                 )
             }
         }
@@ -231,7 +232,7 @@ fun IncidentDiagnosticRoute(viewModel: IncidentDiagnosticViewModel = hiltViewMod
 @Preview(showBackground = true)
 @Composable
 private fun IncidentDiagnosticScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         IncidentDiagnosticScreen(state = IncidentDiagnosticUiState(isLoading = false), onExport = {})
     }
 }

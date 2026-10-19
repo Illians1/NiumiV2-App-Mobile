@@ -37,7 +37,7 @@ object WakeTimeTexts {
 
     /**
      * Refus d'antériorité (SPEC_CORE_KMP §8.3, `NOT_BEFORE_TRIGGER`). Ce n'est pas un incident : le
-     * texte explique la règle et nomme la sortie, sans couleur d'alerte à l'écran (§15, charte §5).
+     * texte explique la règle et nomme la sortie, sans couleur d'alerte à l'écran (§15).
      * L'écran 6 affiche la **même** phrase pour le même fait — `SummaryTexts` délègue ici.
      */
     const val BLOCKING_NOT_BEFORE_TRIGGER_MESSAGE =

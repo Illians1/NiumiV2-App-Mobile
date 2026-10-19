@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Logo de l'écran de démarrage (Android 12+). Une icône sans fond est dessinée sur 288 dp et
+    coupée à un cercle de 192 dp (Android Developers, « Splash screens ») : le logo doit tenir
+    dans un cercle des deux tiers du carré. Un InsetDrawable étire son contenu aux bornes
+    restantes : 63 % × 15,06 % du carré gardent le rapport du logo (506,5 × 121) et tiennent dans
+    ce cercle, soit environ 181 × 43 dp à l'écran.
+
+    Marges en pourcentage, jamais en dp : le système ne dessine pas l'icône à sa taille nominale,
+    et des marges fixes y laissaient une zone aux mauvaises proportions (mesuré le 2026-10-19 sur
+    HyperOS : logo rogné et étiré deux fois en hauteur). NiumiLaunchThemeTest vérifie le rapport,
+    le cercle et l'unité.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/niumi_logo_dark"
+    android:insetLeft="18.5%"
+    android:insetRight="18.5%"
+    android:insetTop="42.47%"
+    android:insetBottom="42.47%" />

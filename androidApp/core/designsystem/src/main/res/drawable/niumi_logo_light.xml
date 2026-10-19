@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Logo Niumi pour fond clair, converti à la main depuis design-plan/logo/niumi-logo-fond-clair.svg
+    (fourni par Mehdi le 2026-10-19) : mêmes six traits de 16 à bouts plats et même point ambre,
+    viewBox SVG « 0 9 506.5 121 » reproduit par la translation du groupe. Couleurs mesurées dans
+    le fichier du logo (VALEURS-DE-DESIGN.md §2, « Couleurs du logo ») : ce sont les seules
+    valeurs de couleur du logo, qui n'est jamais teinté par la palette.
+    Taille intrinsèque au quart du dessin ; le composant NiumiLogo (étape 34) la fixe.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="126.625dp"
+    android:height="30.25dp"
+    android:viewportWidth="506.5"
+    android:viewportHeight="121">
+    <group android:translateY="-9">
+        <path
+            android:pathData="M8,122 L8,84 A38,38 0,0 1,84 84 L84,122"
+            android:strokeWidth="16"
+            android:strokeColor="#FF0B0B0B"
+            android:strokeLineCap="butt" />
+        <path
+            android:pathData="M131,122 L131,46"
+            android:strokeWidth="16"
+            android:strokeColor="#FF0B0B0B"
+            android:strokeLineCap="butt" />
+        <path
+            android:pathData="M178,46 L178,84 A38,38 0,0 0,254 84 L254,46"
+            android:strokeWidth="16"
+            android:strokeColor="#FF0B0B0B"
+            android:strokeLineCap="butt" />
+        <path
+            android:pathData="M293,122 L293,84 A38,38 0,0 1,369 84 A38,38 0,0 1,445 84 L445,122"
+            android:strokeWidth="16"
+            android:strokeColor="#FF0B0B0B"
+            android:strokeLineCap="butt" />
+        <path
+            android:pathData="M369,84 L369,122"
+            android:strokeWidth="16"
+            android:strokeColor="#FF0B0B0B"
+            android:strokeLineCap="butt" />
+        <path
+            android:pathData="M492,122 L492,46"
+            android:strokeWidth="16"
+            android:strokeColor="#FF0B0B0B"
+            android:strokeLineCap="butt" />
+        <path
+            android:pathData="M477.5,23.5 A14.5,14.5 0,1 0,506.5 23.5 A14.5,14.5 0,1 0,477.5 23.5 Z"
+            android:fillColor="#FFE9A23B" />
+    </group>
+</vector>

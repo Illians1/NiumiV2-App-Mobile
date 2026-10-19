@@ -8,7 +8,6 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.designsystem.ui.theme.applyNiumiWindowTheme
 import com.niumi.feature.ringing.ui.AlarmExitDestination
 import com.niumi.feature.ringing.ui.AlarmScreen
 import com.niumi.feature.ringing.ui.AlarmScreenState
@@ -96,7 +96,9 @@ class AlarmActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // L'écran de réveil n'existe que pendant une session : toujours sombre (étape 33,
+        // VALEURS-DE-DESIGN.md §1), barres système comprises, quel que soit le réglage du téléphone.
+        applyNiumiWindowTheme(dark = true)
 
         onBackPressedDispatcher.addCallback(
             this,
@@ -124,7 +126,7 @@ class AlarmActivity : ComponentActivity() {
         }
 
         setContent {
-            NiumiTheme {
+            NiumiTheme(dark = true) {
                 when (val current = viewModel.state) {
                     // Le publisher d'un processus neuf vaut `null` : ne jamais conclure « pas de
                     // session » avant que la persistance ait répondu.

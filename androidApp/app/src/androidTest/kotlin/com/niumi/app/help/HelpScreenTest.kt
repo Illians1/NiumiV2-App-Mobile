@@ -26,7 +26,7 @@ class HelpScreenTest {
      */
     @Test
     fun everyLimitIsDisplayed() {
-        composeRule.setContent { NiumiTheme { HelpScreen() } }
+        composeRule.setContent { NiumiTheme(dark = false) { HelpScreen() } }
 
         HelpTexts.sections.forEach { section ->
             composeRule.onNodeWithText(section.title, substring = true).performScrollTo().assertExists()
@@ -43,7 +43,7 @@ class HelpScreenTest {
      */
     @Test
     fun theHelpScreenOffersNoAction() {
-        composeRule.setContent { NiumiTheme { HelpScreen() } }
+        composeRule.setContent { NiumiTheme(dark = false) { HelpScreen() } }
 
         val clickableNodes = composeRule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
 

@@ -91,7 +91,7 @@ fun OnboardingRoute(
 @Preview(showBackground = true)
 @Composable
 private fun OnboardingScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         OnboardingScreen(state = OnboardingUiState(), onAcknowledgedChange = {}, onContinue = {})
     }
 }

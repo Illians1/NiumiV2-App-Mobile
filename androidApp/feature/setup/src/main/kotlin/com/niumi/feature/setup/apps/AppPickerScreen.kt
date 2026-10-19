@@ -163,7 +163,7 @@ fun AppPickerRoute(
 @Preview(showBackground = true)
 @Composable
 private fun AppPickerScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         AppPickerScreen(
             state =
                 AppPickerUiState(

@@ -57,7 +57,7 @@ fun HelpScreen(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun HelpScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         HelpScreen()
     }
 }

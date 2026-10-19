@@ -28,6 +28,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.designsystem.effect.WindowFocusRegainedEffect
+import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.feature.session.ui.AlarmSoundRow
 import com.niumi.system.nfc.nfcAdapterSettledChanges
@@ -121,7 +122,7 @@ private fun CriticalIncidents(
 ) {
     if (incidents.isEmpty()) return
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        colors = CardDefaults.cardColors(containerColor = LocalNiumiPalette.current.tileGrey),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -131,13 +132,13 @@ private fun CriticalIncidents(
             Text(
                 text = ActiveSessionTexts.CRITICAL_INCIDENTS_TITLE,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = LocalNiumiPalette.current.ink,
             )
             incidents.forEach { incident ->
                 Text(
                     text = ActiveSessionTexts.incidentLabel(incident.code),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    color = LocalNiumiPalette.current.ink,
                 )
                 RemediationAction(incident, onRemediate)
             }
@@ -173,8 +174,8 @@ private fun HealthSection(state: ActiveSessionUiState) {
 /**
  * Instant de début du blocage, tant qu'il n'est pas atteint (§15, Lot 6), lu dans le fuseau
  * d'activation et, s'il diffère, dans le fuseau courant — même règle que le réveil (§8). Rien
- * n'apparaît une fois le blocage appliqué, ni pour une session à blocage immédiat. Charte §10 : une
- * information secondaire d'une session en cours, atténuée et sans Ambre — rien n'y est « actif ».
+ * n'apparaît une fois le blocage appliqué, ni pour une session à blocage immédiat. Information
+ * secondaire, en texte secondaire.
  */
 @Composable
 private fun BlockingStartSection(state: ActiveSessionUiState) {
@@ -183,13 +184,13 @@ private fun BlockingStartSection(state: ActiveSessionUiState) {
     Text(
         text = display.sentence,
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = LocalNiumiPalette.current.textSecondary,
     )
     state.blockingDisplayInCurrentZone?.let { inCurrentZone ->
         Text(
             text = "${ActiveSessionTexts.CURRENT_ZONE_TITLE} : ${inCurrentZone.sentence}",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = LocalNiumiPalette.current.textSecondary,
         )
     }
 }
@@ -212,7 +213,7 @@ private fun BlockedAppsSection(state: ActiveSessionUiState) {
 /**
  * Les `CRITICAL` encore à vérifier sont déjà en tête : ce bloc porte le reste, consigné sans
  * alarmer — dont les `CRITICAL` rétablis (§15, étape 25), avec leur gravité et la mention
- * [ActiveSessionTexts.INCIDENT_RESOLVED], atténuée : une information, pas une alerte (charte §5).
+ * [ActiveSessionTexts.INCIDENT_RESOLVED], atténuée : une information, pas une alerte.
  */
 @Composable
 private fun OtherIncidents(
@@ -233,7 +234,7 @@ private fun OtherIncidents(
             Text(
                 text = ActiveSessionTexts.INCIDENT_RESOLVED,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = LocalNiumiPalette.current.textSecondary,
             )
         }
         RemediationAction(incident, onRemediate)
@@ -300,7 +301,7 @@ fun ActiveSessionRoute(
 @Preview(showBackground = true)
 @Composable
 private fun ActiveSessionScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = true) {
         ActiveSessionScreen(
             state = ActiveSessionUiState(isLoading = false),
             actions = ActiveSessionActions(onModifyOrCancel = {}),

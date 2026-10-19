@@ -22,6 +22,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.system.nfc.ScanOutcome
 import com.niumi.system.nfc.nfcAdapterSettledChanges
@@ -53,7 +54,7 @@ fun ScanToModifyScreen(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error,
+                    color = LocalNiumiPalette.current.ink,
                 )
             }
 
@@ -65,7 +66,7 @@ fun ScanToModifyScreen(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error,
+                    color = LocalNiumiPalette.current.ink,
                 )
             }
         }
@@ -154,7 +155,7 @@ private fun Context.findActivity(): Activity? {
 @Preview(showBackground = true)
 @Composable
 private fun ScanToModifyScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = true) {
         ScanToModifyScreen(state = ScanToModifyUiState())
     }
 }

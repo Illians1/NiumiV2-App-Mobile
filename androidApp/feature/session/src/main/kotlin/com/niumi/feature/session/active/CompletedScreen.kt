@@ -51,7 +51,7 @@ fun CompletedScreen(
 @Preview(showBackground = true)
 @Composable
 private fun CompletedScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         CompletedScreen(onBackHome = {})
     }
 }

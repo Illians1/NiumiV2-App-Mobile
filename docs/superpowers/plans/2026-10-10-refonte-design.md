@@ -90,7 +90,7 @@ SPEC_ANDROID §15 adopte la numérotation du design-plan à l'étape 54, avec ce
 6. **Direct Boot et planning** : le planning et les Niumi Points vivent dans le stockage chiffré ; un ré-armement ne se fait qu'après `USER_UNLOCKED` ; une session `COMPLETED` sur appareil verrouillé laisse l'appareil sans session jusqu'au déverrouillage (§9.3 réconciliation). Le scan exige un appareil déverrouillé (SPEC_ANDROID §4.4, Lot 9 du plan maître) : la vérification lit toujours l'ensemble courant dans Room, et la projection Direct Boot v5 cesse de porter les boîtiers (étape 43).
 7. **`ReleaseHygieneTest`** compte les sites `AlarmManager` : le rappel du soir en ajoute un (`setWindow`, 3e dérogation §9.1, décision Q18). Pas de `TODO` dans le code de production (le mot est interdit par le test) : un emplacement d'image non produite se nomme `PermissionGuideImagePlaceholder` sans ce mot.
 8. **Sessions successives** : `CLEAR_ACTIVE_SESSION` puis `ACTIVATION_REQUESTED` sous le même mutex ; garde Direct Boot scopée par `sessionId` ; jamais de ré-armement pendant `RELEASING` ; `EventFingerprintTest` reprend ses témoins au schéma 3.
-9. **Thème au démarrage** : `SessionSnapshotPublisher.snapshot` vaut `null` avant la première lecture ; `MainActivity` lit la persistance avant de composer ; `AlarmActivity` est toujours sombre (`Theme.Niumi.Dark`).
+9. **Thème au démarrage** : `SessionSnapshotPublisher.snapshot` vaut `null` avant la première lecture ; `MainActivity` lit la persistance avant de composer ; `AlarmActivity` est toujours sombre (`Theme.Niumi.Dark`). Depuis l'étape 33 (décision de Mehdi du 2026-10-19) : écran de démarrage sombre avec le logo (`Theme.Niumi.Launch`), tenu tant que le thème est inconnu, sans minimum, trois secondes au plus ; aucun fond clair avant un accueil sombre.
 10. **Trois invariants KMP tombent** (liste de boîtiers figée à l'activation, décisions 11 et 16 du contrat 1.4 ; `nfcVerifiedAt` avant `RELEASING` ; aucun secours) : chaque amendement a sa ligne SPEC_CORE_KMP §17, sa ligne SPEC_IOS §19, et `SessionEngineForbiddenTransitionsTest` reste exhaustif (10 états × 14 événements).
 11. **Point ouvert T9 déjà résolu par le code** : SPEC_ANDROID §12.1 et §14 utilisent `<queries>` ciblé, pas `QUERY_ALL_PACKAGES`. À reporter dans `POINTS-OUVERTS.md` à l'étape 37.
 12. **`DeviceReadinessChecker`, `SessionReadinessMonitor` et la notification §13.1 ne sont jamais supprimés** : ils alimentent les trois tuiles, l'alerte et le bandeau.
@@ -119,9 +119,9 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 
 | Étape | Point | Question | Recommandation |
 | --- | --- | --- | --- |
-| 33 | D9 | Bouton inactif en clair : `#E8E8E4`/`#5C5C60` (écran 2) ou `#C6C6C2`/blanc (écran 4) ? | Le premier, partout |
-| 33 | D13 | Apostrophe typographique (’) dans l'app ? | Oui, portée par les `Texts` et testée |
-| 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | Valider la règle ; 28 |
+| 33 | D9 | Bouton inactif en clair : `#E8E8E4`/`#5C5C60` (écran 2) ou `#C6C6C2`/blanc (écran 4) ? | **Tranché le 2026-10-19** : le premier, partout |
+| 33 | D13 | Apostrophe typographique (’) dans l'app ? | **Tranché le 2026-10-19** : oui, portée par les `Texts` et testée (dès l'étape 35) |
+| 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28 |
 | 35 | D12 | Point final des titres de l'écran 1 ? | Sans point sur les deux panneaux |
 | 36 | Q1 | Batterie, verrou des récents (HyperOS), Ne pas déranger, volume : aucune place dans le design. Où ? | Batterie et récents = étapes 2 et 3 du guide « Blocage » (coche exigeant les trois contrôles) ; DND et volume restent dans la notification §13.1 et le rapport, sans écran |
 | 36 | Q2 | Garder la notification d'avertissement §13.1 pendant `ARMED` ? | Oui ; son tap ouvre l'écran 2 |
@@ -363,17 +363,17 @@ Refus ajoutés à §5.2 : `DISARM_REQUESTED` avec blocage appliqué → `BLOCKIN
 
 **Produit :** l'application actuelle, sur la nouvelle palette, la nouvelle police et la règle clair/sombre par état.
 
-- [ ] **Écrire `NiumiPaletteTest` et `NiumiTypeTest`**, vérifier l'échec, implémenter jetons, police, formes, dimensions.
-- [ ] **Étendre `SessionStatesTest`**, implémenter `isSessionDark()`, `NiumiTheme(dark)`, les deux thèmes XML, `MainActivity` et `AlarmActivity`.
-- [ ] **Remplacer toutes les lectures de couleurs** dans les écrans existants ; supprimer `NiumiColors.kt`.
-- [ ] **Vérifier :** batterie standard, puis :
+- [x] **Écrire `NiumiPaletteTest` et `NiumiTypeTest`**, vérifier l'échec, implémenter jetons, police, formes, dimensions. *(2026-10-19 : plus `NiumiShapesAndDimensTest`, `NiumiBrandAssetsTest`, `NiumiColorSchemeTest` ; voir `ETAPE-33.md`.)*
+- [x] **Étendre `SessionStatesTest`**, implémenter `isSessionDark()`, `NiumiTheme(dark)`, les deux thèmes XML, `MainActivity` et `AlarmActivity`. *(2026-10-19 : `SessionStatesTest` n'existait pas, il est créé ; lecture de la persistance au démarrage portée par `SessionThemeSource` et `SessionThemeViewModel`.)*
+- [x] **Remplacer toutes les lectures de couleurs** dans les écrans existants ; supprimer `NiumiColors.kt`. *(2026-10-19 : charte V2 `docs/CHARTE_GRAPHIQUE_APP_MOBILE.md` supprimée aussi, décision de Mehdi.)*
+- [x] **Vérifier :** batterie standard, puis :
 
 ```bash
 grep -rn "isSystemInDarkTheme\|NiumiColors\|DayNight" androidApp --include=*.kt --include=*.xml   # attendu : rien
 grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt                           # attendu : rien
 ```
 
-- [ ] **Valider sur appareil, rédiger `ETAPE-33.md`.**
+- [x] **Valider sur appareil, rédiger `ETAPE-33.md`.** *(2026-10-19 : 188 tests instrumentés, cinq essais manuels conformes ; écran de démarrage sombre ajouté sur demande de Mehdi.)*
 
 **Tests manuels :** téléphone en mode sombre système, app hors session → claire ; armer une session (ancien parcours) avec blocage immédiat → l'accueil et l'écran de session passent en sombre ; blocage différé → clair jusqu'à l'heure, puis sombre ; écran de réveil sombre ; après le scan, écran « terminée » clair. Police visible (chiffres à largeur fixe sur l'heure).
 
@@ -868,13 +868,13 @@ grep -rln "IncidentDiagnostic\|ActiveSession\|WakeTime\|Summary\|ScanToModify\|R
 
 **Terminé quand :** les deux greps sont vides ; `docs/android/RESTE_A_FAIRE.md` section D mise à jour.
 
-### Étape 54 : charte V3 et specs finales
+### Étape 54 : specs finales
 
-**Fichiers :** réécrire `docs/CHARTE_GRAPHIQUE_APP_MOBILE.md` en V3 à partir de `VALEURS-DE-DESIGN.md` (palette clair/sombre, IBM Plex Sans, règle de l'ambre, clair hors session / sombre en session, formes, cadran, contrastes ; sections objet/photo/site conservées seulement si Mehdi le demande) ; SPEC_ANDROID §15 (numérotation du design-plan avec table des anciens numéros, renvois internes corrigés : lignes citant « écran 7 », « écran 8 », etc.), §1, §2, §3, §4.5, §11.1, §12.2, §13, §22 (Lots 10 à 18), §21 (critères réécrits) ; SPEC_CORE_KMP relecture d'ensemble 1.5 ; SPEC_IOS parité des sections KMP ; `docs/android/LIMITES.md` v2 (limites des Lots 8 et 9 du plan maître relues : « un boîtier ajouté après l'activation ne termine pas la session » disparaît ; « le scan demande un téléphone déverrouillé » et le réglage HyperOS restent) ; `play-console/*` ; `POINTS-OUVERTS.md` annoté des décisions prises (sans supprimer les questions ouvertes). `CLAUDE.md` n'est pas touché.
+**Fichiers :** `docs/CHARTE_GRAPHIQUE_APP_MOBILE.md` (charte V2) a été supprimée à l'étape 33 sur décision de Mehdi du 2026-10-19 : `design-plan/VALEURS-DE-DESIGN.md` est la seule référence visuelle ; une charte V3 n'est recréée que si Mehdi la demande ; SPEC_ANDROID §15 (numérotation du design-plan avec table des anciens numéros, renvois internes corrigés : lignes citant « écran 7 », « écran 8 », etc.), §1, §2, §3, §4.5, §11.1, §12.2, §13, §22 (Lots 10 à 18), §21 (critères réécrits) ; SPEC_CORE_KMP relecture d'ensemble 1.5 ; SPEC_IOS parité des sections KMP ; `docs/android/LIMITES.md` v2 (limites des Lots 8 et 9 du plan maître relues : « un boîtier ajouté après l'activation ne termine pas la session » disparaît ; « le scan demande un téléphone déverrouillé » et le réglage HyperOS restent) ; `play-console/*` ; `POINTS-OUVERTS.md` annoté des décisions prises (sans supprimer les questions ouvertes). `CLAUDE.md` n'est pas touché.
 
 - [ ] **Réécrire, relire, vérifier** que chaque amendement KMP a sa ligne SPEC_IOS ; **rédiger `ETAPE-54.md`.**
 
-**Terminé quand :** aucune section de spec ne décrit un écran supprimé ; la charte V3 ne contredit plus `VALEURS-DE-DESIGN.md`.
+**Terminé quand :** aucune section de spec ne décrit un écran supprimé ; aucun document du dépôt ne contredit `VALEURS-DE-DESIGN.md`.
 
 ### Étape 55 : validation sur appareil et rapport de release
 

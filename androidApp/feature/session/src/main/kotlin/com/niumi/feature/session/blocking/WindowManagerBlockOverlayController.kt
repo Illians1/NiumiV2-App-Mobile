@@ -9,7 +9,7 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.compose.ui.graphics.toArgb
-import com.niumi.designsystem.ui.theme.NiumiColors
+import com.niumi.designsystem.ui.theme.NiumiPalettes
 import com.niumi.feature.session.R
 import com.niumi.system.common.OperationResult
 
@@ -23,9 +23,10 @@ private const val TOP_MARGIN_DP = 48
  * `TYPE_ACCESSIBILITY_OVERLAY` non focusable et non touchable (SPEC_ANDROID §12.2) : un
  * bandeau en haut d'écran, jamais plein écran, pour que « le téléphone reste utilisable »
  * pendant son affichage. Retrait automatique après 3 s, ou plus tôt sur [hide] explicite dès
- * que le package bloqué n'est plus au premier plan. Couleurs de
- * `docs/CHARTE_GRAPHIQUE_APP_MOBILE.md` (fond Surface, texte clair, rayon de coin modéré,
- * sans capsule ni Terracotta : le blocage est le fonctionnement attendu, pas une alerte).
+ * que le package bloqué n'est plus au premier plan. Couleurs du
+ * thème sombre (`NiumiPalettes.Dark` : surface, texte principal), le blocage n'ayant lieu que
+ * pendant une session ; aucune couleur d'alerte : le blocage est le fonctionnement attendu. Remplacé
+ * par l'écran 7 du design-plan à l'étape 39.
  *
  * [context] **doit être le `AccessibilityService` lui-même**, jamais l'`@ApplicationContext` :
  * seul le service porte le token de fenêtre autorisant `TYPE_ACCESSIBILITY_OVERLAY`. Avec le
@@ -84,7 +85,7 @@ class WindowManagerBlockOverlayController(
     private fun createOverlayView(): TextView {
         val density = context.resources.displayMetrics.density
         return TextView(context).apply {
-            setTextColor(NiumiColors.TextPrincipal.toArgb())
+            setTextColor(NiumiPalettes.Dark.ink.toArgb())
             setPadding(
                 (HORIZONTAL_PADDING_DP * density).toInt(),
                 (VERTICAL_PADDING_DP * density).toInt(),
@@ -93,7 +94,7 @@ class WindowManagerBlockOverlayController(
             )
             background =
                 GradientDrawable().apply {
-                    setColor(NiumiColors.Surface.toArgb())
+                    setColor(NiumiPalettes.Dark.surface.toArgb())
                     cornerRadius = CORNER_RADIUS_DP * density
                 }
         }

@@ -71,7 +71,7 @@ fun AlarmScreen(
 @Preview(showBackground = true)
 @Composable
 private fun AlarmScreenRingingPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = true) {
         AlarmScreen(
             state = AlarmScreenState.from(SessionStateDto.RINGING),
             currentTimeText = "07:00",
@@ -82,7 +82,7 @@ private fun AlarmScreenRingingPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun AlarmScreenNfcDisabledPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = true) {
         AlarmScreen(
             state =
                 AlarmScreenState.from(
@@ -97,7 +97,7 @@ private fun AlarmScreenNfcDisabledPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun AlarmScreenReleasingPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = true) {
         AlarmScreen(
             state =
                 AlarmScreenState.from(

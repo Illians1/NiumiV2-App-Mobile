@@ -1,18 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-        Thème plateforme minimal : l'interface est entièrement rendue par Jetpack Compose
-        (NiumiTheme). Ce thème ne sert qu'à fixer la fenêtre avant que Compose ne prenne
-        la main (pas de barre d'action, bord à bord, suit le mode sombre système).
+        Thèmes plateforme minimaux : l'interface est entièrement rendue par Jetpack Compose
+        (NiumiTheme). Ils ne fixent que la fenêtre avant que Compose ne prenne la main.
 
-        Vit dans :core:designsystem plutôt que :app : AlarmActivity (:feature:ringing) le
+        Niumi ne suit jamais le mode sombre du téléphone (VALEURS-DE-DESIGN.md §1) : aucun parent
+        jour/nuit, aucun dossier values-night. Le thème clair est celui de l'application et de
+        MainActivity, qui bascule ensuite selon l'état de la session (isSessionDark, étape 33) ;
+        le thème sombre est celui d'AlarmActivity, qui n'est affichée que pendant une session.
+
+        Vivent dans :core:designsystem plutôt que :app : AlarmActivity (:feature:ringing) les
         référence aussi dans son manifeste, et un module feature ne peut pas dépendre de :app
-        (SPEC_ANDROID §6). Sans ce déplacement, l'APK de test propre à :feature:ringing
-        (androidTest) échoue à la liaison des ressources : @style/Theme.Niumi n'existe que
-        dans le graphe de :app, jamais fusionné dans l'APK de test d'un module library.
+        (SPEC_ANDROID §6). Sans cela, l'APK de test propre à :feature:ringing échoue à la
+        liaison des ressources.
     -->
-    <style name="Theme.Niumi" parent="android:Theme.DeviceDefault.DayNight">
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowNoTitle">true</item>
+    <style name="Theme.Niumi" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/niumi_background_light</item>
     </style>
+
+    <style name="Theme.Niumi.Dark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/niumi_background_dark</item>
+    </style>
+
+    <!--
+        Thème de lancement de MainActivity (décision de Mehdi du 2026-10-19) : tant que Niumi ne
+        sait pas s'il y a une session, la fenêtre de démarrage reste affichée, et elle est sombre,
+        pour qu'aucun fond clair ne précède jamais un accueil sombre. En journée, l'ouverture passe
+        donc du sombre au clair. Android 10 et 11 affichent ici le seul fond de fenêtre ; Android 12
+        et plus l'écran de démarrage système avec le logo (values-v31). MainActivity remplace
+        ensuite le fond de fenêtre par celui du thème de la session.
+    -->
+    <style name="Theme.Niumi.Launch" parent="Theme.Niumi.Dark" />
 </resources>

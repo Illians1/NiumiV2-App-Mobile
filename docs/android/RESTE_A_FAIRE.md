@@ -155,7 +155,26 @@ service de premier plan permanent (même priorité, contraire au MVP), surveilla
 répare rien, troisième dérogation à §9.1).
 
 **Reste** : le cas sans objet (appareil sans verrou HyperOS) n'est pas mesurable sur le Xiaomi ;
-le comportement des récents sur Pixel et Samsung relève de B1 et B2.
+le comportement des récents sur Pixel et Samsung relève de B1 et B2. Le trou mesuré le 2026-10-19
+est suivi en A8.
+
+---
+
+### A8. Carte de Niumi visible dans les récents ouverts depuis Niumi
+
+- [ ] **À décider**
+
+**Pourquoi.** Mesuré le 2026-10-19 (Xiaomi 25080RABDG, Android 16, HyperOS OS3.0.302.0, essais de
+l'étape 33) : session armée, carte marquée exclue (`0x00800000`), l'utilisateur ouvre les récents
+**depuis Niumi** : la carte est affichée, il la balaie. HyperOS tue Niumi (`SwipeUpClean`, 14:52:37),
+le service d'accessibilité passe « en panne », n'est plus lié, et le blocage est coupé jusqu'à sa
+réactivation manuelle. Cause : Android garde dans les récents la tâche la plus récente même exclue
+(AOSP, `RecentTasks.isInVisibleRange`). Ouverts depuis l'accueil, les récents ne montrent pas la
+carte (confirmé par l'utilisateur). La parade A7 a donc un trou que l'application ne peut pas
+fermer seule : aucune API ne retire des récents la tâche au premier plan.
+
+**À décider** : traitement (limite écrite dans l'aide, mesure d'un service dans un processus
+séparé, ou autre). Rien n'est implémenté.
 
 ---
 

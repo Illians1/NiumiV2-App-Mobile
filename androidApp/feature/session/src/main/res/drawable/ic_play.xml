@@ -4,7 +4,7 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <!-- Pré-écoute (écran 14, SPEC_ANDROID §15, Lot 7) : triangle plein, forme géométrique simple,
-         conforme à la charte §15 (contours simples, peu de détails). -->
+         contours simples, peu de détails. -->
     <path
         android:fillColor="@android:color/white"
         android:pathData="M8,5v14l11,-7z" />

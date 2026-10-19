@@ -2,22 +2,27 @@ package com.niumi.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.app.navigation.NiumiNavHost
 import com.niumi.app.navigation.NiumiRoute
 import com.niumi.app.navigation.deepLinkDestinationFor
 import com.niumi.app.navigation.requiresAlarmScreen
+import com.niumi.app.theme.SessionThemeViewModel
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.designsystem.ui.theme.applyNiumiWindowTheme
 import com.niumi.feature.ringing.AlarmActivity
 import com.niumi.system.intent.NiumiDeepLink
 import com.niumi.system.readiness.SessionReadinessWatcher
@@ -26,6 +31,7 @@ import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.isSessionInProgress
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -52,9 +58,18 @@ class MainActivity : ComponentActivity() {
      */
     private var deepLinkDestination by mutableStateOf<NiumiRoute?>(null)
 
+    /**
+     * Thème clair ou sombre d'après la session persistée, jamais d'après le réglage du téléphone
+     * (étape 33, `isSessionDark`). Inconnu (`null`) le temps de la première lecture.
+     */
+    private val themeViewModel: SessionThemeViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Fenêtre sombre, comme l'écran de démarrage (`Theme.Niumi.Launch`), le temps de la
+        // première lecture ; puis celle du thème de la session à chaque changement.
+        applyNiumiWindowTheme(dark = true)
+        followSessionThemeWithWindow()
         deepLinkDestination = destinationOf(intent)
         // SPEC_ANDROID §13.1, « à chaque passage de l'application au premier plan ». L'évaluation
         // est lancée sans être attendue : elle traverse le verrou du coordinateur et ne doit pas
@@ -69,10 +84,38 @@ class MainActivity : ComponentActivity() {
         openAlarmScreenWhileSessionAwaitsScan()
         hideRecentsCardWhileSessionIsInProgress()
         setContent {
-            NiumiTheme {
-                NiumiNavHost(deepLinkDestination = deepLinkDestination)
+            val dark by themeViewModel.dark.collectAsStateWithLifecycle()
+            // Rien n'est composé avant que la persistance ait dit si une session est en cours :
+            // l'écran de démarrage sombre reste affiché (voir keepLaunchScreenUntilThemeIsKnown).
+            dark?.let { sessionDark ->
+                NiumiTheme(dark = sessionDark) {
+                    NiumiNavHost(deepLinkDestination = deepLinkDestination)
+                }
             }
         }
+        keepLaunchScreenUntilThemeIsKnown()
+    }
+
+    /**
+     * Décision de Mehdi du 2026-10-19 : aucun fond clair ne précède un accueil sombre. L'écran de
+     * démarrage (sombre, avec le logo sur Android 12 et plus) disparaît à la première image de
+     * l'activité ; cette image est donc retenue tant que le thème de la session est inconnu.
+     * Méthode officielle sans bibliothèque (`OnPreDrawListener` sur le contenu). Aucun minimum :
+     * l'app s'ouvre dès que la session est lue ; au plus trois secondes, borne portée par
+     * `SessionThemeSource`. Après une rotation, le ViewModel connaît déjà le thème : rien n'est
+     * retenu.
+     */
+    private fun keepLaunchScreenUntilThemeIsKnown() {
+        val content = findViewById<View>(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    val known = themeViewModel.dark.value != null
+                    if (known) content.viewTreeObserver.removeOnPreDrawListener(this)
+                    return known
+                }
+            },
+        )
     }
 
     /**
@@ -122,6 +165,17 @@ class MainActivity : ComponentActivity() {
                     .map { it?.state.isSessionInProgress() }
                     .distinctUntilChanged()
                     .collect { inProgress -> recentsCard.setHidden(inProgress) }
+            }
+        }
+    }
+
+    /** Barres système et fond de fenêtre accordés au thème de la session (`NiumiWindowTheme`). */
+    private fun followSessionThemeWithWindow() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                themeViewModel.dark
+                    .filterNotNull()
+                    .collect { dark -> applyNiumiWindowTheme(dark) }
             }
         }
     }

@@ -188,7 +188,7 @@ fun HomeRoute(
 @Preview(showBackground = true)
 @Composable
 private fun HomeScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         HomeScreen(state = HomeUiState(), actions = HomeActions(onPrepare = {}))
     }
 }

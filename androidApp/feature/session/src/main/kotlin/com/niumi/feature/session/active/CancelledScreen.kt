@@ -50,7 +50,7 @@ fun CancelledScreen(
 @Preview(showBackground = true)
 @Composable
 private fun CancelledScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         CancelledScreen(onPrepareAgain = {})
     }
 }

@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.feature.session.R
 import com.niumi.feature.session.ui.AlarmSoundTexts
@@ -46,9 +47,9 @@ import com.niumi.system.audio.VolumeRampDurations
 
 /**
  * Écran 14 (SPEC_ANDROID §15, Lot 7). Composable pur et sans état. La sonnerie choisie est signalée
- * par l'Ambre **et** le gras (décision utilisateur du 2026-10-01) : la charte §3 interdit qu'une
- * information dépende uniquement de la couleur, et §15 impose « l'entrée choisie en Ambre ». Le
- * rôle `RadioButton` porte la sélection pour TalkBack, au-delà de la couleur et du gras.
+ * par le gras (l'ambre, retenu le 2026-10-01, a été retiré à l'étape 33 : il ne porte jamais de
+ * texte sur fond clair, D14). Le rôle `RadioButton` porte la sélection pour TalkBack. L'écran
+ * devient une feuille à l'étape 40.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +80,7 @@ fun RingtoneScreen(
             }
 
             if (state.isAlarmVolumeZero) {
-                // Aucune couleur d'alerte : ce n'est pas un incident (§15, charte §5).
+                // Aucune couleur d'alerte : ce n'est pas un incident (§15).
                 Text(text = RingtoneTexts.ALARM_VOLUME_ZERO, style = MaterialTheme.typography.bodyMedium)
             }
 
@@ -115,7 +116,9 @@ private fun RingtoneRow(
             text = ringtone.label,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            // Depuis l'étape 33, la sonnerie choisie se signale par le gras seul : l'ambre ne porte
+            // jamais de texte sur fond clair (règle de l'ambre, D14, VALEURS-DE-DESIGN.md §2).
+            color = LocalNiumiPalette.current.ink,
             modifier = Modifier.weight(1f),
         )
         val previewDescription =
@@ -137,9 +140,9 @@ private fun RingtoneRow(
                 colorFilter =
                     ColorFilter.tint(
                         if (state.isAlarmVolumeZero) {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                            LocalNiumiPalette.current.textSecondary.copy(alpha = 0.38f)
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            LocalNiumiPalette.current.textSecondary
                         },
                     ),
             )
@@ -150,8 +153,8 @@ private fun RingtoneRow(
 /**
  * Section « Volume » (§15) : interrupteur, sous-texte recalculé sur la durée **qu'on obtiendrait**
  * en l'activant (§27, un interrupteur coupé ne doit pas afficher la dernière durée perdue), puis le
- * choix segmenté seulement quand il est actif. Rayon de 8 dp, comme `WakeTimeScreen` (charte §16,
- * décision 1 de `ETAPE-24.md`).
+ * choix segmenté seulement quand il est actif. Rayon de 8 dp, comme `WakeTimeScreen`
+ * (décision 1 de `ETAPE-24.md`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -171,17 +174,17 @@ private fun VolumeSection(
     Text(
         text = RingtoneTexts.rampDescription(descriptionSeconds),
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = LocalNiumiPalette.current.textSecondary,
     )
     if (rampEnabled) {
         val rampColors =
             SegmentedButtonDefaults.colors(
-                activeContainerColor = MaterialTheme.colorScheme.primary,
-                activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                activeBorderColor = MaterialTheme.colorScheme.primary,
-                inactiveContainerColor = MaterialTheme.colorScheme.background,
-                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                inactiveBorderColor = MaterialTheme.colorScheme.outline,
+                activeContainerColor = LocalNiumiPalette.current.ink,
+                activeContentColor = LocalNiumiPalette.current.onInk,
+                activeBorderColor = LocalNiumiPalette.current.ink,
+                inactiveContainerColor = LocalNiumiPalette.current.background,
+                inactiveContentColor = LocalNiumiPalette.current.textSecondary,
+                inactiveBorderColor = LocalNiumiPalette.current.border,
             )
         SingleChoiceSegmentedButtonRow {
             VolumeRampDurations.SECONDS.forEachIndexed { index, seconds ->
@@ -240,7 +243,7 @@ fun RingtoneRoute(viewModel: RingtoneViewModel = hiltViewModel()) {
 @Preview(showBackground = true)
 @Composable
 private fun RingtoneScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         RingtoneScreen(
             state = RingtoneUiState(isLoading = false),
             actions = RingtoneActions({}, {}, {}, {}),

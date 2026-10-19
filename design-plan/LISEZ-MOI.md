@@ -17,7 +17,7 @@ Il a été préparé par Claude à partir de deux sources : le document « Niumi
 | `maquettes/INDEX.md` | La liste des 58 maquettes, avec leur thème, leur téléphone et la section correspondante |
 | `maquettes/images/` | Une image par maquette |
 | `maquettes/sources/` | Le fichier source de chaque maquette, pour lire les valeurs exactes |
-| `logo/` | Le logo, sur fond clair et sur fond sombre |
+| `logo/` | Le logo, sur fond clair et sur fond sombre : deux images des maquettes (684 × 168 pixels, celle pour fond sombre a un fond opaque `#0E0E10`) et deux fichiers vectoriels `niumi-logo-fond-clair.svg` et `niumi-logo-fond-sombre.svg` (fond transparent), ajoutés par Mehdi le 19 octobre 2026. L'app utilise les fichiers vectoriels |
 | `police/` | La source de la police et ce que demande sa licence |
 | `A-AJOUTER-DANS-CLAUDE.md` | Les lignes à copier dans le fichier `CLAUDE.md` du dépôt |
 | `annexes/journal-des-decisions.md` | L'historique de la conception. À ne pas implémenter tel quel |
@@ -52,7 +52,6 @@ Il a été préparé par Claude à partir de deux sources : le document « Niumi
 
 - Aucun code de l'app.
 - Les fichiers de la police. Voir `police/LISEZ-MOI.md`.
-- Une version vectorielle du logo. Les deux images de `logo/` sont celles des maquettes (684 × 168 pixels). Celle pour fond sombre a un fond opaque `#0E0E10`. Si Mehdi a un fichier vectoriel du logo, il vaut mieux l'utiliser.
 - Les images du guide des autorisations, les rubriques d'aide non écrites et les autres éléments listés dans `POINTS-OUVERTS.md`, section 4.
 
 ## Comment ce dossier a été vérifié

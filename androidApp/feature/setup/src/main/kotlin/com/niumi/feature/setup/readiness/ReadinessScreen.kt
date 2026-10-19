@@ -218,7 +218,7 @@ private fun applicationDetails(packageName: String): Intent =
 @Preview(showBackground = true)
 @Composable
 private fun ReadinessScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         ReadinessScreen(
             state =
                 ReadinessUiState(

@@ -27,8 +27,8 @@ Le passage au clair se fait au moment où la session se termine : écran de réu
 | Texte secondaire | `#5C5C60` | Sous-titres, phrases d'aide, liens discrets |
 | Bordure | `#85858A` | Cartes au trait, cases de pièce, jours non cochés, pastilles de durée non choisies |
 | Séparateur | `#DCDCD8` | Lignes entre les rangées des listes |
-| Piste | `#E8E8E4` | Piste du cadran, bouton « Annuler » de la feuille de scan, bouton inactif de l'écran 2 |
-| Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé », bouton inactif de l'écran 4 |
+| Piste | `#E8E8E4` | Piste du cadran, bouton « Annuler » de la feuille de scan, bouton inactif (tous les écrans, D9) |
+| Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé » (le bouton inactif de l'écran 4 de la maquette n'est pas repris, D9) |
 | Tuile grise | `#EFEFEB` | Tuiles d'autorisation, rond de l'icône de scan |
 | Case grisée | `#F1F1EE` | Emplacements des icônes d'applications quand l'accueil est grisé (« Réveil désactivé ») |
 | Ambre | `#E9A23B` | Interrupteur activé, poignée du réveil sur le cadran, point des Niumi Points, pastille du cadenas (écran 1), soleil (écran 11) |
@@ -60,7 +60,7 @@ Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F`
 
 ### Règles d'emploi de l'ambre
 
-- Sur fond clair, l'ambre seul a un contraste d'environ 2:1. Il ne porte donc jamais de texte, et il est toujours posé sur l'encre ou réservé à un dessin. Cette règle a été proposée par Claude et n'a pas été validée mot pour mot (voir `POINTS-OUVERTS.md`).
+- Sur fond clair, l'ambre seul a un contraste d'environ 2:1. Il ne porte donc jamais de texte, et il est toujours posé sur l'encre ou réservé à un dessin. Règle validée par Mehdi le 19 octobre 2026 (`POINTS-OUVERTS.md`, D14).
 - Sur fond sombre, l'ambre atteint 8:1 à 9:1.
 - Un détail ambre par dessin : pastille du cadenas (écran 1, panneau 1), point du Niumi Point (tous les dessins), soleil (écran 11).
 - Les icônes restent noires en clair et blanc cassé en sombre. Pas d'ambre dans les icônes.
@@ -89,7 +89,7 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | 30 | 600 | Consigne de l'écran de réveil (« Scanne ton Niumi Point », « Ton alarme va reprendre. ») |
 | 30 | 500 | « Désactivé » au centre du cadran |
 | 28 | 600 | Titres d'écran : écrans 1, 3 bis et 4, « Réglages », « Aide », titres des pages d'aide. Valeur de la carte « Temps gagné » |
-| 26 | 600 | Titre de l'écran 2 (« Trois autorisations »). C'est le seul titre d'écran à 26 au lieu de 28 : écart non tranché |
+| 26 | 600 | Titre de l'écran 2 (« Trois autorisations ») dans la maquette. Tranché le 19 octobre 2026 (D19) : l'app l'affiche en 28, comme les autres titres d'écran |
 | 26 | 400 | « Prêt à scanner », dans la feuille de scan |
 | 24 | 600 | Titres des feuilles et des échecs, titre de l'écran de blocage |
 | 24 | 400 | Valeurs voisines du milieu dans la roue |
@@ -147,9 +147,9 @@ Dans les maquettes, les carrés gris qui tiennent la place des icônes d'applica
 | Secondaire au trait | Bord `#0E0E10` d'un pixel, texte encre | Bord `#FAFAF8` d'un pixel, texte blanc cassé |
 | Lien discret | Texte souligné `#5C5C60`, taille 14 | Texte souligné `#A9A9AE`, taille 14 |
 | « Annuler » de la feuille de scan | Fond `#E8E8E4` | Fond `#34343A` |
-| Inactif | Voir la remarque ci-dessous | Fond `#2A2A2F`, texte `#74747B` |
+| Inactif | Fond `#E8E8E4`, texte `#5C5C60` (voir la remarque ci-dessous) | Fond `#2A2A2F`, texte `#74747B` |
 
-**Remarque : deux boutons inactifs différents en clair.** Les maquettes validées en montrent deux : fond `#E8E8E4` avec texte `#5C5C60` sur l'écran 2, et fond `#C6C6C2` avec texte `#FFFFFF` sur l'écran 4. L'écart n'a pas été tranché. Voir `POINTS-OUVERTS.md`.
+**Bouton inactif en clair.** Les maquettes validées en montrent deux : fond `#E8E8E4` avec texte `#5C5C60` sur l'écran 2, et fond `#C6C6C2` avec texte `#FFFFFF` sur l'écran 4. Tranché le 19 octobre 2026 (D9) : le premier, partout.
 
 ## 5. Le cadran de l'accueil
 

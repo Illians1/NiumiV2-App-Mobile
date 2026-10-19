@@ -1,6 +1,6 @@
 # Niumi · Points ouverts
 
-État au 9 octobre 2026, complété le 18 octobre (T11, E12) et le 19 octobre 2026 (D21, M13, §2). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
+État au 9 octobre 2026, complété le 18 octobre (T11, E12) et le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, §2). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
 
 Cinq listes :
 
@@ -22,17 +22,17 @@ Cinq listes :
 | D6 | Feuille de sonnerie | Que montre la mention « Volume max en 2 min » quand la sonnerie progressive est sur « Non » ? Rien n'est dit |
 | D7 | Sonnerie | Quels sont les vrais sons et leurs noms ? Ceux des maquettes sont des exemples |
 | D8 | Sortie de secours | Quels autres textes à recopier ? Un seul est validé, et le texte doit changer à chaque sortie |
-| D9 | Bouton inactif en clair | Deux styles coexistent dans les maquettes validées : fond `#E8E8E4` et texte `#5C5C60` sur l'écran 2, fond `#C6C6C2` et texte blanc sur l'écran 4. Lequel garder ? |
+| D9 | ~~Bouton inactif en clair~~ | **Tranché le 19 octobre 2026** : fond `#E8E8E4` et texte `#5C5C60` (style de l'écran 2), partout. Le style de l'écran 4 (`#C6C6C2`, texte blanc) n'est pas repris |
 | D10 | Écran 2 | Le NFC n'a pas de tuile sur l'écran des autorisations, alors que l'ancien tableau le listait. Confirmer qu'il est géré seulement au moment du scan et par le bandeau |
 | D11 | Écran 3, choix de la pièce | « Continuer » est-il grisé tant qu'aucune pièce n'est choisie ? Rien n'est dit |
 | D12 | Ponctuation des titres | Le titre du panneau 1 de l'écran 1 n'a pas de point final, celui du panneau 2 en a un. Harmoniser ? |
-| D13 | Apostrophes | Les maquettes utilisent l'apostrophe droite ('). Passer à l'apostrophe typographique (’) dans l'app ? |
-| D14 | Règle de l'ambre | « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » Règle proposée par Claude, appliquée partout, jamais validée mot pour mot |
+| D13 | ~~Apostrophes~~ | **Tranché le 19 octobre 2026** : apostrophe typographique (’) dans les textes de l'app. À la recopie depuis la spécification, l'apostrophe droite devient ’ |
+| D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » |
 | D15 | Écran 11 | Le soleil en dégradé est gardé « pour l'instant ». L'écran peut encore changer |
 | D16 | Règles communes | Dans la liste de ce qui est exclu de l'app, que vise exactement le mot « confirmation » ? L'app a depuis des confirmations (écran 8, suppression d'un Niumi Point) |
 | D17 | Accueil | Que se passe-t-il quand plus aucun jour n'est coché ? L'ancien écran 5 affichait « Choisis au moins un jour. », mais cet écran est supprimé et rien n'est dit pour l'accueil |
 | D18 | Écran 2 | Sur une tuile accordée, la maquette retire le bouton « ? » en même temps que « Autoriser ». Le guide doit-il rester accessible ? |
-| D19 | Écran 2 | Le titre « Trois autorisations » est en taille 26 dans la maquette, alors que les autres titres d'écran sont en 28. Harmoniser ? |
+| D19 | ~~Écran 2, taille du titre~~ | **Tranché le 19 octobre 2026** : 28, comme tous les titres d'écran |
 | D20 | Sortie de secours, iPhone | Que fait l'alarme pendant la recopie sur iPhone ? Le journal ne le dit que pour Android : la sonnerie baisse tant que la saisie avance et remonte si elle s'arrête |
 | D21 | ~~Niumi Points : libellés de l'option d'ajout sur l'écran 8, du refus « déjà enregistré » et de la limite de dix~~ | **Tranché le 19 octobre 2026** : troisième bouton au trait « Ajouter un Niumi Point » sous « Recopier le texte » (écran 8, pendant l'alarme seulement) ; « Ce Niumi Point est déjà enregistré. » avec « Réessayer » ; à dix, la ligne « Ajouter un Niumi Point » grisée avec « Tu as déjà dix Niumi Points. » Reporté dans `SPECIFICATION.md` §6, §13, §16 |
 

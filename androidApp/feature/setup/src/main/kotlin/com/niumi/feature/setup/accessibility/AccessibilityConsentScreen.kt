@@ -87,7 +87,7 @@ fun AccessibilityConsentRoute(viewModel: AccessibilityConsentViewModel = hiltVie
 @Preview(showBackground = true)
 @Composable
 private fun AccessibilityConsentScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         AccessibilityConsentScreen(state = AccessibilityConsentUiState(isServiceEnabled = false), onOpenSettings = {})
     }
 }

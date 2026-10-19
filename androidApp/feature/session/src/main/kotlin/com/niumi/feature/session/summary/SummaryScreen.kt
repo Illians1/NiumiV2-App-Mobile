@@ -175,7 +175,7 @@ fun SummaryRoute(
 @Preview(showBackground = true)
 @Composable
 private fun SummaryScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         SummaryScreen(state = SummaryUiState(isLoading = false), onActivate = {}, onChangeTime = {})
     }
 }

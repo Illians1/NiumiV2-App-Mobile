@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.readiness.ReadinessAction
@@ -47,12 +48,13 @@ import com.niumi.system.readiness.settingsIntentFor
  * Écran 3 — « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8). Composable pur et sans état, testé
  * en isolation : aucun clic n'y est simulé, seuls les textes et l'état des actions sont vérifiés.
  *
- * Charte : liste sans carte, l'espace sépare les lignes (§16) ; nom en `titleMedium`, préfixe en
- * `bodySmall`. L'Ambre reste rare (§3) : seuls « Continuer » et la confirmation d'un dialogue le
- * portent ; les dix actions de ligne possibles, « Ajouter un boîtier » et « Annuler » prennent la
- * couleur du texte ([neutralTextButton], [neutralOutlinedButton]) — l'Ambre sur Crème n'atteint
- * pas le contraste d'un petit texte. Le token n'apparaît nulle part, ni son empreinte : seul un
- * préfixe de `boxId` est affiché (§16).
+ * Liste sans carte, l'espace sépare les lignes ; nom en `titleMedium`, préfixe en `bodySmall`.
+ * Depuis l'étape 33, « Continuer » et la confirmation d'un dialogue sont à l'encre (bouton
+ * principal du design-plan) ; les actions de ligne, « Ajouter un boîtier » et « Annuler » prennent
+ * la couleur du texte ([neutralTextButton], [neutralOutlinedButton]). L'ambre ne porte jamais de
+ * texte sur fond clair (`design-plan/VALEURS-DE-DESIGN.md` §2, D14). L'écran est remplacé à
+ * l'étape 47. Le token n'apparaît nulle part, ni son empreinte : seul un préfixe de `boxId` est
+ * affiché (§16).
  */
 @Composable
 fun PairingScreen(
@@ -273,11 +275,11 @@ private fun NameDialog(
 
 @Composable
 private fun neutralTextButton(): ButtonColors =
-    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+    ButtonDefaults.textButtonColors(contentColor = LocalNiumiPalette.current.ink)
 
 @Composable
 private fun neutralOutlinedButton(): ButtonColors =
-    ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+    ButtonDefaults.outlinedButtonColors(contentColor = LocalNiumiPalette.current.ink)
 
 /**
  * Point d'entrée réel. Le Reader Mode est branché ici et non dans le ViewModel :
@@ -358,7 +360,7 @@ private fun Context.findActivity(): Activity? {
 @Preview(showBackground = true)
 @Composable
 private fun PairingScreenPreview() {
-    NiumiTheme {
+    NiumiTheme(dark = false) {
         PairingScreen(
             state =
                 PairingUiState(

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Android 12 et plus : écran de démarrage système sombre, logo blanc cassé (décision de
+        Mehdi du 2026-10-19). Il reste affiché tant que MainActivity retient sa première image,
+        c'est-à-dire tant que la session n'est pas lue (3 secondes au plus). Voir values/themes.xml.
+    -->
+    <style name="Theme.Niumi.Launch" parent="Theme.Niumi.Dark">
+        <item name="android:windowSplashScreenBackground">@color/niumi_background_dark</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/niumi_splash_icon</item>
+    </style>
+</resources>

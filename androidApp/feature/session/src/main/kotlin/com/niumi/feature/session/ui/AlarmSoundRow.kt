@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.feature.session.R
 
 /**
@@ -52,14 +53,14 @@ fun AlarmSoundRow(
             Text(
                 text = summary,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = LocalNiumiPalette.current.textSecondary,
             )
         }
         if (onClick != null) {
             Image(
                 painter = painterResource(R.drawable.ic_chevron_right),
                 contentDescription = null,
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
+                colorFilter = ColorFilter.tint(LocalNiumiPalette.current.textSecondary),
                 modifier = Modifier.semantics { contentDescription = "" },
             )
         }
