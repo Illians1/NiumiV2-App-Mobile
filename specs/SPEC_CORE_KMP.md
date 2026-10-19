@@ -1,7 +1,7 @@
 # Niumi Core KMP: spécification métier commune
 
 Statut: contrat proposé pour le MVP Android et iOS
-Version du contrat: 1.3 (blocage différé, 15 septembre 2026 ; 1.2 du 2 septembre 2026)
+Version du contrat: 1.4 (boîtiers multiples, 13 octobre 2026 ; 1.3 du 15 septembre 2026 ; 1.2 du 2 septembre 2026)
 Date de référence: 2 septembre 2026
 Plateformes: Android natif et iOS natif
 Module partagé: Kotlin Multiplatform
@@ -48,7 +48,7 @@ Les décisions suivantes s'appliquent aux deux applications:
 13. Le MVP ne propose aucun secours logiciel immédiat si le boîtier ou le NFC est indisponible.
 14. Un état qui attend le scan sans présentation d'alarme active demande explicitement ce scan à l'utilisateur, sous réserve de l'exception iOS documentée en section 11.2.
 15. Le blocage commence à l'activation, ou à un instant de début choisi par l'utilisateur et strictement antérieur au réveil. L'alarme est programmée dès l'activation dans les deux cas, et l'engagement est pris à l'activation : avant le début d'un blocage différé, une modification ou une annulation exige le scan, comme le point 4 l'impose. Décision validée le 2026-09-15 (contrat 1.3).
-16. L'utilisateur associe de un à cinq boîtiers (`PairedBoxLimit`, section 9.2), chacun nommé par lui. Le scan de n'importe lequel des boîtiers figés à l'activation termine ou annule la session ; un boîtier associé après l'activation ne la termine pas. Décision validée le 2026-10-13 (contrat 1.4). Ce que l'on accepte en le décidant : un second boîtier gardé près du lit permet de contourner le réveil — la vérification n'a jamais protégé l'utilisateur contre lui-même, seulement contre un tag étranger (9.2 : un tag NDEF reste clonable).
+16. L'utilisateur associe de un à cinq boîtiers (`PairedBoxLimit`, section 9.2), chacun nommé par lui. Le scan de n'importe lequel des boîtiers figés à l'activation termine ou annule la session ; un boîtier associé après l'activation ne la termine pas. Décision validée le 2026-10-13 (contrat 1.4). Ce que l'on accepte en le décidant : un second boîtier gardé près du lit permet de contourner le réveil — la vérification n'a jamais protégé l'utilisateur contre lui-même, seulement contre un tag étranger (9.2 : un tag NDEF reste clonable). *Révision décidée le 2026-10-19 pour le contrat 1.5 (`docs/superpowers/plans/2026-10-10-refonte-design.md`, étape 42) : les boîtiers s'ajouteront, se renommeront et se supprimeront en session, de un à dix, et n'importe quel boîtier enregistré au moment du scan terminera la session. Les décisions 11 et 16 seront réécrites à cette étape ; le code suit encore la règle ci-dessus.*
 
 L'absence de secours logiciel est une contrainte produit assumée. L'activation vérifie que le NFC est disponible et qu'au moins un boîtier associé a été validé; l'application ne présente ni délai, ni code, ni bouton de déblocage comme solution de récupération.
 

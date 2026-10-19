@@ -20,7 +20,7 @@ Une **session** va de l'heure du coucher jusqu'au scan du matin.
 | Coucher | Le blocage démarre seul à l'heure du coucher. Si l'heure du coucher est plus tardive que l'heure du réveil, le coucher a lieu la veille du réveil. Sinon, il a lieu le jour même |
 | Rappel | Notification 30 minutes avant le coucher, sans bouton |
 | Avant le coucher | Tout se modifie. Un réveil s'annule en décochant le jour. Un interrupteur général désactive tout le planning |
-| Du coucher au scan | Heures, jours et applications sont verrouillés. La sonnerie reste modifiable. Un scan avant l'alarme annule la session |
+| Du coucher au scan | Heures, jours et applications sont verrouillés. La sonnerie et les Niumi Points restent modifiables (décision du 19 octobre 2026). Un scan avant l'alarme annule la session |
 | Fin normale | Scan, le matin, d'un Niumi Point enregistré. N'importe lequel convient |
 | Sortie de secours | Un long texte à recopier remplace le scan. Elle compte comme un scan |
 | Exclu de l'app | Lancement anticipé, confirmation, essai à blanc, historique, compte. Ce sont les mots de la règle d'origine. Le mot « confirmation » ne vise pas les confirmations décidées depuis (écran 8, suppression d'un Niumi Point) **(ouvert : sens exact à confirmer)** |
@@ -145,11 +145,12 @@ Rien ne dit si « Continuer » est grisé tant qu'aucune pièce n'est choisie **
 | Pas un Niumi Point | Ce n'est pas un Niumi Point. | Réessayer |
 | Lecture ratée | Ton Niumi Point n'a pas pu être lu. Rapproche ton téléphone et réessaie. | Réessayer |
 | NFC coupé (Android) | Le NFC est coupé sur ton téléphone. | Ouvrir les réglages |
+| Déjà enregistré | Ce Niumi Point est déjà enregistré. | Réessayer |
 | iPhone, feuille fermée après 60 secondes | Le temps de scan est écoulé. Relance le scan une fois devant ton Niumi Point. | Réessayer, et un lien « Annuler » qui referme la feuille |
 
-L'affichage de ces échecs n'est pas dessiné pour cet écran **(ouvert)**. Sur l'écran 10, ils s'affichent dans une feuille du bas (section 14).
+L'affichage de ces échecs n'est pas dessiné pour cet écran **(ouvert)** ; le cas « déjà enregistré » a été ajouté le 19 octobre 2026. Sur l'écran 10, ils s'affichent dans une feuille du bas (section 14).
 
-Plusieurs Niumi Points peuvent être enregistrés. Ce parcours sert aussi à en ajouter un depuis les réglages.
+Jusqu'à dix Niumi Points peuvent être enregistrés (décision du 19 octobre 2026). Ce parcours sert aussi à en ajouter un depuis les réglages, à tout moment, et pendant l'alarme depuis l'écran 8 (section 13).
 
 ## 7. Écran 3 bis · Temps pour sortir du lit
 
@@ -319,8 +320,11 @@ Une feuille monte du bas, par-dessus l'accueil en session le soir, par-dessus l'
 | Texte, pendant l'alarme | L'alarme s'arrêtera et tes applications seront débloquées. Pour sortir, tu devras recopier un long texte. |
 | Bouton principal | Rester dans la session |
 | Bouton secondaire, au trait | Recopier le texte |
+| Troisième bouton, au trait, pendant l'alarme seulement | Ajouter un Niumi Point |
 
 Le bouton principal est celui qui fait rester. Sortir demande un geste volontaire sur le second.
+
+**Pendant l'alarme, l'écran 8 propose aussi d'ajouter un Niumi Point** (décision du 19 octobre 2026) : le parcours de l'écran 3 s'ouvre par-dessus l'écran de réveil (scan, puis choix de la pièce), puis l'écran 10 revient avec la feuille de scan ouverte, et le nouveau Niumi Point arrête l'alarme comme les autres. L'option est un troisième bouton au trait, sous « Recopier le texte » : « Ajouter un Niumi Point ». Pas de maquette dédiée : la feuille de l'écran 8 et ce texte suffisent (décision du 19 octobre 2026). Le soir, l'ajout passe par les réglages ; le bouton n'est pas proposé sur l'écran 8 du soir.
 
 ### Écran 9 · Recopie
 
@@ -421,7 +425,7 @@ Risque à tester sur un iPhone : la relance dépend de l'avertissement que le sy
 
 L'écran est dessiné en entier par Niumi et la sonnerie continue jusqu'au scan.
 
-Quand l'alarme sonne, Niumi affiche une notification « Alarme Niumi en cours », visible sur l'écran de verrouillage. L'utilisateur déverrouille son téléphone comme d'habitude, touche la notification, et l'écran 10 s'ouvre. Le scan ne marche pas tant que le téléphone est verrouillé : c'est pour cela que l'écran n'est pas imposé (décision du 18 octobre 2026).
+Quand l'alarme sonne, Niumi affiche une notification « Alarme Niumi en cours », visible sur l'écran de verrouillage. L'utilisateur déverrouille son téléphone comme d'habitude, touche la notification, et l'écran 10 s'ouvre. Le scan ne marche pas tant que le téléphone est verrouillé : c'est pour cela que l'écran n'est pas imposé (décision du 18 octobre 2026). Son texte : « Touche pour scanner ton Niumi Point et terminer la session. » Quand la session attend encore le scan sans que la sonnerie joue, la notification d'attente dit « Scanne ton Niumi Point pour terminer la session. » (textes du 19 octobre 2026 ; ils remplacent les versions qui disaient « boîtier »).
 
 ## 15. Écran 11 · Réussite
 
@@ -472,7 +476,7 @@ Chaque page a une flèche de retour en haut à gauche.
 - **Supprimer** demande une confirmation dans une feuille du bas : titre « Supprimer le Niumi Point « Cuisine » ? », texte « Pour l'utiliser de nouveau, il faudra le scanner et l'ajouter. », boutons « Supprimer » et « Annuler ».
 - **Il doit toujours rester au moins un Niumi Point.** Quand il n'en reste qu'un, « Supprimer » est grisé dans le menu, avec « Tu dois garder au moins un Niumi Point. »
 - **Ajouter un Niumi Point** reprend le parcours de l'écran 3.
-- L'ajout et la suppression restent possibles pendant une session.
+- L'ajout, le renommage et la suppression restent possibles pendant une session, y compris pendant l'alarme (écran 8, section 13). Dix Niumi Points au maximum (décision du 19 octobre 2026) : la ligne « Ajouter un Niumi Point » reste visible mais grisée, avec la mention « Tu as déjà dix Niumi Points. »
 
 ### Aide
 

@@ -1,6 +1,6 @@
 # Niumi · Points ouverts
 
-État au 9 octobre 2026. Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
+État au 9 octobre 2026, complété le 18 octobre (T11, E12) et le 19 octobre 2026 (D21, M13, §2). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
 
 Cinq listes :
 
@@ -34,6 +34,7 @@ Cinq listes :
 | D18 | Écran 2 | Sur une tuile accordée, la maquette retire le bouton « ? » en même temps que « Autoriser ». Le guide doit-il rester accessible ? |
 | D19 | Écran 2 | Le titre « Trois autorisations » est en taille 26 dans la maquette, alors que les autres titres d'écran sont en 28. Harmoniser ? |
 | D20 | Sortie de secours, iPhone | Que fait l'alarme pendant la recopie sur iPhone ? Le journal ne le dit que pour Android : la sonnerie baisse tant que la saisie avance et remonte si elle s'arrête |
+| D21 | ~~Niumi Points : libellés de l'option d'ajout sur l'écran 8, du refus « déjà enregistré » et de la limite de dix~~ | **Tranché le 19 octobre 2026** : troisième bouton au trait « Ajouter un Niumi Point » sous « Recopier le texte » (écran 8, pendant l'alarme seulement) ; « Ce Niumi Point est déjà enregistré. » avec « Réessayer » ; à dix, la ligne « Ajouter un Niumi Point » grisée avec « Tu as déjà dix Niumi Points. » Reporté dans `SPECIFICATION.md` §6, §13, §16 |
 
 ## 2. Textes à relire
 
@@ -57,6 +58,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | Écran 4, liste Android | Valider |
 | Sonnerie | Il se règle dans les réglages de ton téléphone. |
 | Accueil en session | Modifiable après avoir scanné ton Niumi Point. |
+| Notifications Android de sonnerie et d'attente de scan | ~~Disaient « boîtier »~~ **Tranché le 19 octobre 2026** : « Touche pour scanner ton Niumi Point et terminer la session. » et « Scanne ton Niumi Point pour terminer la session. » (`SPECIFICATION.md` §14, partie Android) |
 | Annulation, Android | Approche ton téléphone du Niumi Point pour annuler la session |
 | Niumi Points | N'importe lequel de tes Niumi Points arrête l'alarme. |
 | Niumi Points | Pour l'utiliser de nouveau, il faudra le scanner et l'ajouter. |
@@ -107,6 +109,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | M10 | Le message « Modifiable après avoir scanné ton Niumi Point. » | Le texte existe, sa forme n'est pas dessinée |
 | M11 | L'écran 4 ouvert depuis l'accueil pour modifier la sélection | Même écran. Le retour vers l'accueil n'est pas dessiné |
 | M12 | Le bandeau de problème et l'alerte d'autorisations pendant une session | Versions sombres non dessinées. Les quatre maquettes existantes sont claires |
+| M13 | ~~L'écran 8 pendant l'alarme avec l'option d'ajout d'un Niumi Point~~ | **Tranché le 19 octobre 2026, sans maquette dédiée** : la feuille de l'écran 8 et le texte de D21 suffisent |
 
 Pour les versions sombres manquantes, la règle est connue : mêmes mises en page et mêmes textes, avec les couleurs du thème sombre de `VALEURS-DE-DESIGN.md`.
 
