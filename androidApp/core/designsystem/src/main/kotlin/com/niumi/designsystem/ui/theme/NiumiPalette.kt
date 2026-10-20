@@ -56,4 +56,6 @@ data class NiumiPalette(
     val disabledText: Color,
     /** Fond du mot fautif dans la recopie (écran 9). */
     val mismatchTint: Color,
+    /** Bord d'un jour non coché grisé (accueil « Réveil désactivé ») ou verrouillé (session). */
+    val disabledBorder: Color,
 )

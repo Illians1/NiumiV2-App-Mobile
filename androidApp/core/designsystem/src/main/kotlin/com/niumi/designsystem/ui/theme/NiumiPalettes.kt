@@ -56,6 +56,8 @@ object NiumiPalettes {
             disabledText = Color(0xFF5C5C60),
             // Le mot signalé n'est dessiné qu'en sombre ; en clair, la teinte ambre.
             mismatchTint = Color(0xFFFCF1DF),
+            // « Désactivé » : bord des jours non cochés de l'accueil « Réveil désactivé » (maquette 13).
+            disabledBorder = Color(0xFFC6C6C2),
         )
 
     val Dark =
@@ -102,6 +104,8 @@ object NiumiPalettes {
             disabledText = Color(0xFF74747B),
             // « Teinte du mot signalé »
             mismatchTint = Color(0xFF3D2C0E),
+            // « Bord de menu » : aussi le bord des jours non cochés verrouillés en session (maquette 15).
+            disabledBorder = Color(0xFF3A3A40),
         )
 
     /**

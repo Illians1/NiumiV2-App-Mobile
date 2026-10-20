@@ -1,6 +1,6 @@
 # Niumi · Points ouverts
 
-État au 9 octobre 2026, complété le 18 octobre (T11, E12) et le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, T12, §2). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
+État au 9 octobre 2026, complété le 18 octobre (T11, E12) le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, T12, §2) et le 20 octobre 2026 (D14 précisé). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
 
 Cinq listes :
 
@@ -27,7 +27,7 @@ Cinq listes :
 | D11 | Écran 3, choix de la pièce | « Continuer » est-il grisé tant qu'aucune pièce n'est choisie ? Rien n'est dit |
 | D12 | Ponctuation des titres | Le titre du panneau 1 de l'écran 1 n'a pas de point final, celui du panneau 2 en a un. Harmoniser ? |
 | D13 | ~~Apostrophes~~ | **Tranché le 19 octobre 2026** : apostrophe typographique (’) dans les textes de l'app. À la recopie depuis la spécification, l'apostrophe droite devient ’ |
-| D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » |
+| D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » **Précisé le 20 octobre 2026** : « pas d'ambre dans les icônes » vise les icônes de navigation et d'action ; le cadenas ambre de la carte « Blocage en cours » et le point ambre de l'icône du Niumi Point restent tels quels (`VALEURS-DE-DESIGN.md` §2) |
 | D15 | Écran 11 | Le soleil en dégradé est gardé « pour l'instant ». L'écran peut encore changer |
 | D16 | Règles communes | Dans la liste de ce qui est exclu de l'app, que vise exactement le mot « confirmation » ? L'app a depuis des confirmations (écran 8, suppression d'un Niumi Point) |
 | D17 | Accueil | Que se passe-t-il quand plus aucun jour n'est coché ? L'ancien écran 5 affichait « Choisis au moins un jour. », mais cet écran est supprimé et rien n'est dit pour l'accueil |

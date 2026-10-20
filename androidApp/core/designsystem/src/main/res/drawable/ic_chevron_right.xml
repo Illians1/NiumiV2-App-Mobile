@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Chevron des rangées de liste (maquettes 14, 37) : trait de 1,8.
+    Tracé recopié de la source HTML de la maquette (viewBox 24 × 24, trait seul, bouts ronds).
+    Noir dans le fichier : le composant teinte l'icône (encre en clair, blanc cassé en sombre,
+    VALEURS-DE-DESIGN.md §2). Icône de navigation ou d'action : jamais ambre (VALEURS §2,
+    règles d'emploi de l'ambre, précisées le 2026-10-20).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M9,5l7,7 -7,7"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

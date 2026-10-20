@@ -18,8 +18,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.niumi.designsystem.R
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
-import com.niumi.feature.session.R
 
 /**
  * Ligne « Sonnerie », partagée par les écrans 5, 6 et 7 (SPEC_ANDROID §15, Lot 7) : même titre,

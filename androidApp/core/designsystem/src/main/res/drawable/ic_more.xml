@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Menu « trois points » d'une rangée de Niumi Point (maquette 47) : trois disques pleins de 1,8.
+    Noir dans le fichier : le composant teinte l'icône (encre en clair, blanc cassé en sombre,
+    VALEURS-DE-DESIGN.md §2). Icône de navigation ou d'action : jamais ambre (VALEURS §2,
+    règles d'emploi de l'ambre, précisées le 2026-10-20).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M5,10.2a1.8,1.8 0,1 1,0 3.6a1.8,1.8 0,1 1,0 -3.6zM12,10.2a1.8,1.8 0,1 1,0 3.6a1.8,1.8 0,1 1,0 -3.6zM19,10.2a1.8,1.8 0,1 1,0 3.6a1.8,1.8 0,1 1,0 -3.6z" />
+</vector>

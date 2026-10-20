@@ -33,7 +33,8 @@ class NiumiPaletteTest {
             "separateur" to listOf(NiumiPalette::separator),
             // VALEURS §2 et §4 : piste du cadran, « Annuler » de la feuille de scan, bouton inactif (D9).
             "piste" to listOf(NiumiPalette::track, NiumiPalette::cancelButton, NiumiPalette::disabledFill),
-            "desactive" to listOf(NiumiPalette::disabled),
+            // VALEURS §2 : éléments grisés, et bord des jours non cochés grisés (maquette 13, étape 34).
+            "desactive" to listOf(NiumiPalette::disabled, NiumiPalette::disabledBorder),
             "tuileGrise" to listOf(NiumiPalette::tileGrey),
             "caseGrisee" to listOf(NiumiPalette::cellGrey),
             "ambre" to listOf(NiumiPalette::amber),
@@ -64,7 +65,9 @@ class NiumiPaletteTest {
                     NiumiPalette::cellGrey,
                 ),
             "fondDesactive" to listOf(NiumiPalette::disabled),
-            "bordMenu" to listOf(NiumiPalette::menuBorder),
+            // VALEURS §2 sombre : menu « trois points », et bord des jours non cochés verrouillés
+            // pendant la session (maquette 15, étape 34).
+            "bordMenu" to listOf(NiumiPalette::menuBorder, NiumiPalette::disabledBorder),
             "boutonGris" to listOf(NiumiPalette::cancelButton),
             "ambre" to listOf(NiumiPalette::amber),
             "teinteMotSignale" to listOf(NiumiPalette::mismatchTint, NiumiPalette::amberTint),
@@ -136,7 +139,7 @@ class NiumiPaletteTest {
                 .map { it.name }
                 .toSet() + "onInkSecondary"
 
-        assertThat(roles).hasSize(21)
+        assertThat(roles).hasSize(22)
         assertWithMessage("rôles clairs sans origine").that(roles - lightCovered).isEmpty()
         assertWithMessage("rôles sombres sans origine").that(roles - darkCovered).isEmpty()
     }

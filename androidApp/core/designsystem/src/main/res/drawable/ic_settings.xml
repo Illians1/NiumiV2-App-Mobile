@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Icône des réglages de l'accueil (maquettes 13 à 15) : deux curseurs, trait de 1,6.
+    Tracé recopié de la source HTML de la maquette (viewBox 24 × 24, trait seul, bouts ronds).
+    Noir dans le fichier : le composant teinte l'icône (encre en clair, blanc cassé en sombre,
+    VALEURS-DE-DESIGN.md §2). Icône de navigation ou d'action : jamais ambre (VALEURS §2,
+    règles d'emploi de l'ambre, précisées le 2026-10-20).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,7h10M18,7h2M4,17h2M10,17h10"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M16,5a2,2 0,1 1,0 4a2,2 0,1 1,0 -4z"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M8,15a2,2 0,1 1,0 4a2,2 0,1 1,0 -4z"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

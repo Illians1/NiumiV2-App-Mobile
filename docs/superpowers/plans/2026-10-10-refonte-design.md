@@ -122,7 +122,8 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | --- | --- | --- | --- |
 | 33 | D9 | Bouton inactif en clair : `#E8E8E4`/`#5C5C60` (écran 2) ou `#C6C6C2`/blanc (écran 4) ? | **Tranché le 2026-10-19** : le premier, partout |
 | 33 | D13 | Apostrophe typographique (’) dans l'app ? | **Tranché le 2026-10-19** : oui, portée par les `Texts` et testée (dès l'étape 35) |
-| 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28 |
+| 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28. **D14 précisé le 2026-10-20** (étape 34) : icônes de navigation sans ambre ; cadenas de la carte « Blocage en cours » et point du Niumi Point restent ambre |
+| 34 | — | Marges haut et bas sur Android : marge de la maquette ajoutée aux barres système, ou la plus grande des deux ? | **Tranché le 2026-10-20** : la plus grande des deux, de chaque côté (VALEURS §4, SPEC_ANDROID §15) |
 | 35 | D12 | Point final des titres de l'écran 1 ? | Sans point sur les deux panneaux |
 | 36 | Q1 | Batterie, verrou des récents (HyperOS), Ne pas déranger, volume : aucune place dans le design. Où ? | Batterie et récents = étapes 2 et 3 du guide « Blocage » (coche exigeant les trois contrôles) ; DND et volume restent dans la notification §13.1 et le rapport, sans écran |
 | 36 | Q2 | Garder la notification d'avertissement §13.1 pendant `ARMED` ? | Oui ; son tap ouvre l'écran 2 |
@@ -168,6 +169,7 @@ Définies ici une fois, créées à l'étape indiquée, consommées ensuite sans
     val amber: Color, val amberTint: Color, val onInk: Color, val onInkSecondary: Color, val veil: Color,
     val sheetOutline: Color, val menuBorder: Color, val cancelButton: Color, val disabledFill: Color,
     val disabledText: Color, val mismatchTint: Color,
+    val disabledBorder: Color,   // étape 34 : bord des jours non cochés grisés (#C6C6C2) ou verrouillés (#3A3A40)
 )
 object NiumiPalettes { val Light: NiumiPalette; val Dark: NiumiPalette }            // valeurs = valeurs-de-design.json
 val LocalNiumiPalette: ProvidableCompositionLocal<NiumiPalette>
@@ -181,26 +183,35 @@ object NiumiDimens { val screenHorizontal = 24.dp; val screenBottom = 34.dp; val
 @Composable fun NiumiTheme(dark: Boolean, content: @Composable () -> Unit)        // fournit LocalNiumiPalette + MaterialTheme dérivé
 
 // :core:designsystem — com.niumi.designsystem.component (étapes 34, 38, 45, 52)
-@Composable fun NiumiPrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true, modifier: Modifier = Modifier)
+// Signatures livrées à l'étape 34 (2026-10-20). Écarts au plan initial : trois états des champs (décision de Mehdi
+// du 2026-10-20) ; libellés d'accessibilité passés par l'écran ; pilule d'action séparée de la pilule de choix.
+enum class NiumiFieldState { Normal, Greyed /* grisé, modifiable */, Locked /* grisé, verrouillé, « Verrouillé » */ }
+object NiumiComponentTexts { const val LOCKED = "Verrouillé"; const val LOGO = "niumi" }
+@Composable fun NiumiPrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true)
 @Composable fun NiumiOutlinedButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier)
 @Composable fun NiumiDiscreetLink(text: String, onClick: () -> Unit, modifier: Modifier = Modifier)
-@Composable fun NiumiPillButton(text: String, selected: Boolean, onClick: () -> Unit, height: Dp = 44.dp)
-@Composable fun NiumiBottomSheet(onDismiss: () -> Unit, title: String?, showClose: Boolean, content: @Composable ColumnScope.() -> Unit)
-@Composable fun NiumiCard(filled: Boolean, content: @Composable ColumnScope.() -> Unit)                 // filled = encre (carte « Réveil activé »)
-@Composable fun NiumiListRow(title: String, trailing: @Composable RowScope.() -> Unit, onClick: (() -> Unit)?, enabled: Boolean = true, locked: Boolean = false)
-@Composable fun NiumiDayChip(label: String, checked: Boolean, enabled: Boolean, onToggle: () -> Unit)
-@Composable fun NiumiSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true)
-@Composable fun NiumiTopBar(onBack: (() -> Unit)?, title: String?)                                      // flèche de retour + titre 28
-@Composable fun NiumiScreenScaffold(bottom: @Composable (() -> Unit)?, content: @Composable ColumnScope.() -> Unit)
-@Composable fun NiumiLogo(modifier: Modifier = Modifier)                                                  // logo clair/sombre selon la palette
-@Composable fun NiumiPageIndicator(count: Int, current: Int)
+@Composable fun NiumiPillButton(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, height: Dp = NiumiDimens.pillButton) // radio (durées)
+@Composable fun NiumiActionPill(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, filled: Boolean = false, height: Dp = NiumiDimens.pillButton) // « Modifier », « Choisir les applications »
+@Composable fun NiumiBottomSheet(onDismiss: () -> Unit, title: String?, modifier: Modifier = Modifier, closeLabel: String? = null /* null = sans croix */,
+                                 titleStyle: TextStyle = if (closeLabel != null) NiumiType.alertTitle22 else NiumiType.sheetTitle24, content: @Composable ColumnScope.() -> Unit)
+@Composable fun NiumiCard(filled: Boolean, modifier: Modifier = Modifier, contentPadding: PaddingValues = NiumiDimens.cardPadding, content: @Composable ColumnScope.() -> Unit) // filled = encre (carte « Réveil activé »)
+@Composable fun NiumiListRow(title: String, onClick: (() -> Unit)?, modifier: Modifier = Modifier, state: NiumiFieldState = Normal, onLockedClick: (() -> Unit)? = null,
+                             bottomSeparator: Boolean = false, trailing: @Composable RowScope.() -> Unit = {})
+@Composable fun NiumiDayChip(label: String, accessibilityLabel: String, checked: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier,
+                             state: NiumiFieldState = Normal, onLockedClick: (() -> Unit)? = null)
+@Composable fun NiumiSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, contentDescription: String? = null, enabled: Boolean = true)
+@Composable fun NiumiTopBar(onBack: (() -> Unit)?, backLabel: String?, title: String?, modifier: Modifier = Modifier)   // flèche de retour + titre 28
+@Composable fun NiumiScreenScaffold(modifier: Modifier = Modifier, bottom: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit)
+@Composable fun NiumiLogo(modifier: Modifier = Modifier, height: Dp = NiumiDimens.logoHeight)                           // logo clair/sombre selon la palette
+@Composable fun NiumiPageIndicator(count: Int, current: Int, label: String, modifier: Modifier = Modifier)               // label = « Panneau 1 sur 2 »
 @Composable fun NfcScanSheet(state: ScanSheetState, phrase: String, onCancel: () -> Unit, onRetry: () -> Unit,
                              onOpenNfcSettings: () -> Unit, onEmergencyExit: (() -> Unit)?)             // étape 38
 @Composable fun NiumiDial(state: DialState, onBedtimeChanged: ((LocalTime) -> Unit)?, onWakeTimeChanged: ((LocalTime) -> Unit)?) // étape 45
 sealed interface DialState { data class Scheduled(...); data class Disabled(...); data class InSession(...) } // bedtime, wake, now
 @Composable fun NiumiProblemBanner(text: String, linkText: String, onLink: () -> Unit)                   // étape 52
 @Composable fun NiumiAlertDialog(title: String, body: @Composable () -> Unit, primary: String, onPrimary: () -> Unit, secondaryLink: String, onSecondary: () -> Unit)
-object NiumiTimeFormat { fun clock(time: LocalTime): String /* "7:00", "22:30" */; fun duration(minutes: Int): String /* "9 h 26", "56 min" */; fun sleep(minutes: Int): String /* "8 h 30 de sommeil" */ }
+// :core:designsystem — com.niumi.designsystem.format (étape 34)
+object NiumiTimeFormat { fun clock(time: LocalTime): String /* "7:00", "22:30" */; fun duration(minutes: Int): String /* "9 h 26", "56 min", "1 h 00" */; fun sleep(minutes: Int): String /* "8 h 30 de sommeil" */ }
 
 // :core:system — com.niumi.system.session (étapes 33, 43)
 fun SessionSnapshotDto?.isSessionDark(): Boolean   // voir « Contraintes globales », thème par état
@@ -387,15 +398,15 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Points ouverts touchés :** D9 (bouton inactif), D13.
 
 **Fichiers :**
-- `:core:designsystem` — créer `DS/component/NiumiPrimaryButton.kt`, `NiumiOutlinedButton.kt`, `NiumiDiscreetLink.kt`, `NiumiPillButton.kt`, `NiumiBottomSheet.kt` (socle `ModalBottomSheet`, coins 28, pleine largeur, poignée, voile 45 %/60 %, liseré 1 px en sombre), `NiumiCard.kt`, `NiumiListRow.kt` (séparateur 1 px, chevron ou cadenas, grisé si `enabled = false`), `NiumiDayChip.kt`, `NiumiSwitch.kt` (52 × 32, pastille 26, ambre si activé), `NiumiTopBar.kt`, `NiumiScreenScaffold.kt` (marges 24/34/56, bord à bord), `NiumiLogo.kt`, `NiumiPageIndicator.kt`, `DS/format/NiumiTimeFormat.kt` ; `res/drawable/ic_chevron_right.xml`, `ic_lock.xml`, `ic_close.xml`, `ic_back.xml`, `ic_settings.xml`, `ic_check.xml`, `ic_more.xml` (traits simples, pas d'ambre dans les icônes) ; déplacer `ic_chevron_right.xml` depuis `:feature:session`.
-- Tests : `NiumiTimeFormatTest` (7:00, 22:30, 0:05 ; « 9 h 26 », « 56 min », « 1 h 00 » ; « 8 h 30 de sommeil ») ; instrumentés `NiumiComponentsSemanticsTest` (chaque composant cliquable a un rôle, une zone ≥ 44 dp, et aucun `onClick` quand `enabled = false`), `NiumiBottomSheetTest` (titre, croix, fermeture par le voile).
+- `:core:designsystem` — créer `DS/component/NiumiPrimaryButton.kt`, `NiumiOutlinedButton.kt`, `NiumiDiscreetLink.kt`, `NiumiPillButton.kt`, `NiumiBottomSheet.kt` (socle `ModalBottomSheet`, coins 28, pleine largeur, poignée, voile 45 %/60 %, liseré 1 px en sombre), `NiumiCard.kt`, `NiumiListRow.kt` (séparateur 1 px, chevron ou cadenas, grisé si `enabled = false`), `NiumiDayChip.kt`, `NiumiSwitch.kt` (52 × 32, pastille 26, ambre si activé), `NiumiTopBar.kt`, `NiumiScreenScaffold.kt` (marges 24/34/56 posées sur les barres système, la plus grande des deux, décision du 2026-10-20), `NiumiLogo.kt`, `NiumiPageIndicator.kt`, `DS/format/NiumiTimeFormat.kt` ; `res/drawable/ic_chevron_right.xml`, `ic_lock.xml`, `ic_close.xml`, `ic_back.xml`, `ic_settings.xml`, `ic_check.xml`, `ic_more.xml` (traits simples, icônes de navigation sans ambre) ; déplacer `ic_chevron_right.xml` depuis `:feature:session`.
+- Tests : `NiumiTimeFormatTest` (7:00, 22:30, 0:05 ; « 9 h 26 », « 56 min », « 1 h 00 » ; « 8 h 30 de sommeil ») ; instrumentés `NiumiComponentsSemanticsTest` (chaque composant cliquable a un rôle, une zone ≥ 44 dp, aucun `onClick` pour un bouton ou un interrupteur inactif ; pour les champs de l'accueil, `Greyed` reste modifiable et `Locked` n'appelle jamais l'action, décision du 2026-10-20), `NiumiBottomSheetTest` (titre, croix, fermeture par le voile, par le contenu, une seule fermeture).
 
 **Produit :** une bibliothèque de composants avec `@Preview` clair et sombre, utilisée par toutes les étapes suivantes.
 
-- [ ] **Écrire `NiumiTimeFormatTest`**, implémenter le formateur.
-- [ ] **Écrire `NiumiComponentsSemanticsTest` et `NiumiBottomSheetTest`**, implémenter les composants un par un avec leurs deux `@Preview`.
-- [ ] **Vérifier :** batterie standard ; `./gradlew :core:designsystem:connectedDebugAndroidTest` (appareil).
-- [ ] **Rédiger `ETAPE-34.md`.**
+- [x] **Écrire `NiumiTimeFormatTest`**, implémenter le formateur.
+- [x] **Écrire `NiumiComponentsSemanticsTest` et `NiumiBottomSheetTest`**, implémenter les composants un par un avec leurs deux `@Preview`. *(2026-10-20 : trois états des champs, `NiumiActionPill`, rôle `disabledBorder`, `NiumiComponentsCaptureTest` ; voir `ETAPE-34.md`.)*
+- [x] **Vérifier :** batterie standard ; `./gradlew :core:designsystem:connectedDebugAndroidTest` (appareil). *(37 tests ; suite complète : un échec préexistant de `:app`, A8, voir le rapport.)*
+- [x] **Rédiger `ETAPE-34.md`.** *(Essai TalkBack fait le 2026-10-20 : pastilles annoncées en une fois, « Verrouillé » dit.)*
 
 **Tests manuels :** l'écran de `@Preview` de chaque composant comparé à sa maquette, en clair et en sombre ; TalkBack annonce rôle et état.
 

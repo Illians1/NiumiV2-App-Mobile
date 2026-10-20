@@ -28,7 +28,7 @@ Le passage au clair se fait au moment où la session se termine : écran de réu
 | Bordure | `#85858A` | Cartes au trait, cases de pièce, jours non cochés, pastilles de durée non choisies |
 | Séparateur | `#DCDCD8` | Lignes entre les rangées des listes |
 | Piste | `#E8E8E4` | Piste du cadran, bouton « Annuler » de la feuille de scan, bouton inactif (tous les écrans, D9) |
-| Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé » (le bouton inactif de l'écran 4 de la maquette n'est pas repris, D9) |
+| Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé », dont le bord des jours non cochés (maquette 13) ; poignée des feuilles du bas ; traits inactifs de l'indicateur de panneau (le bouton inactif de l'écran 4 de la maquette n'est pas repris, D9) |
 | Tuile grise | `#EFEFEB` | Tuiles d'autorisation, rond de l'icône de scan |
 | Case grisée | `#F1F1EE` | Emplacements des icônes d'applications quand l'accueil est grisé (« Réveil désactivé ») |
 | Ambre | `#E9A23B` | Interrupteur activé, poignée du réveil sur le cadran, point des Niumi Points, pastille du cadenas (écran 1), soleil (écran 11) |
@@ -50,8 +50,8 @@ Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F`
 | Texte secondaire | `#A9A9AE` | Sous-titres, phrases d'aide, liens discrets |
 | Bordure, texte désactivé | `#74747B` | Bord d'un pixel des cartes et des cases, libellés grisés pendant la session |
 | Piste | `#2A2A2F` | Piste du cadran, fond du bouton inactif, rond de l'icône de scan |
-| Fond désactivé | `#4A4A50` | Jours grisés pendant la session |
-| Bord de menu | `#3A3A40` | Menu « trois points » |
+| Fond désactivé | `#4A4A50` | Jours grisés pendant la session, poignée des feuilles du bas |
+| Bord de menu | `#3A3A40` | Menu « trois points », bord des jours non cochés grisés pendant la session (maquette 15) |
 | Bouton gris | `#34343A` | Bouton « Annuler » de la feuille de scan |
 | Ambre | `#E9A23B` | Partie parcourue du cadran, cadenas, point des Niumi Points, soulignement du mot signalé |
 | Teinte du mot signalé | `#3D2C0E` | Fond du mot fautif dans la recopie |
@@ -63,7 +63,8 @@ Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F`
 - Sur fond clair, l'ambre seul a un contraste d'environ 2:1. Il ne porte donc jamais de texte, et il est toujours posé sur l'encre ou réservé à un dessin. Règle validée par Mehdi le 19 octobre 2026 (`POINTS-OUVERTS.md`, D14).
 - Sur fond sombre, l'ambre atteint 8:1 à 9:1.
 - Un détail ambre par dessin : pastille du cadenas (écran 1, panneau 1), point du Niumi Point (tous les dessins), soleil (écran 11).
-- Les icônes restent noires en clair et blanc cassé en sombre. Pas d'ambre dans les icônes.
+- Les icônes de navigation et d'action (chevron, flèche de retour, croix, réglages, coche, trois points, cadenas des rangées) restent noires en clair et blanc cassé en sombre, sans ambre.
+- Deux icônes du design font exception, et elles restent telles quelles (décision de Mehdi du 20 octobre 2026) : le cadenas de la carte « Blocage en cours », ambre au trait épais sur fond sombre (§5, images 15 et 18 à 27), et le point ambre de l'icône du Niumi Point (image 47), qui est le détail ambre de ce dessin. Aucune autre icône ne prend l'ambre sans décision écrite ici.
 
 ### Couleurs du logo
 
@@ -119,7 +120,7 @@ Les valeurs exactes de chaque écran sont dans les fichiers de `maquettes/source
 
 | Élément | Valeur |
 | --- | --- |
-| Marges de l'écran | 24 à gauche et à droite, 34 en bas, 56 en haut (sous la barre d'état) |
+| Marges de l'écran | 24 à gauche et à droite, 34 en bas, 56 en haut. Sur la maquette iPhone, les 56 du haut couvrent la barre d'état et les 34 du bas la barre d'accueil. Sur Android, de chaque côté, la plus grande de la marge et de la barre système (barre d'état, barre de navigation, encoche, clavier), jamais leur somme (décision de Mehdi du 20 octobre 2026). Même règle pour les côtés et le bas d'une feuille du bas |
 | Zone de toucher minimale | 44 de haut |
 | Bouton principal | 56 de haut, coins arrondis de 14, pleine largeur |
 | Bouton d'une alerte ou de la feuille de scan | 52 de haut, coins de 14 |
