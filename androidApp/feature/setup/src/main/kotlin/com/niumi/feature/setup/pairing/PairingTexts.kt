@@ -4,7 +4,7 @@ import com.niumi.database.pairing.PairedBoxName
 
 /**
  * Textes de l'écran 3 « Mes boîtiers » (SPEC_ANDROID §15 Lot 8, §11.1). Tutoiement partout.
- * `object` pur, testable en JVM, même motif qu'`OnboardingTexts`.
+ * `object` pur, testable en JVM, même motif que `PresentationTexts`.
  *
  * Aucun texte ne mentionne le token ni son empreinte : §16 interdit de les afficher comme de les
  * journaliser. Seul un préfixe de `boxId` est montré, pour que l'utilisateur distingue deux

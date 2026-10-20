@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ fun NiumiPillButton(
     Box(
         modifier =
             modifier
+                .minimumInteractiveComponentSize()
                 .height(height)
                 .widthIn(min = NiumiDimens.minTouch)
                 .clip(NiumiShapes.pill)
@@ -84,6 +86,7 @@ fun NiumiActionPill(
     Box(
         modifier =
             modifier
+                .minimumInteractiveComponentSize()
                 .height(height)
                 .widthIn(min = NiumiDimens.minTouch)
                 .clip(NiumiShapes.pill)

@@ -8,16 +8,16 @@ data class HelpSection(
 
 /**
  * Contenu de l'écran 13 « Aide et limites » (SPEC_ANDROID §15, étape 21). `object` pur, testable
- * en JVM, comme `OnboardingTexts` et `AccessibilityConsentTexts`.
+ * en JVM, comme `PresentationTexts` et `AccessibilityConsentTexts`.
  *
  * **Ce texte est celui de `docs/android/LIMITES.md`**, mot pour mot, sections et puces comprises.
  * `HelpTextsTest` compare les deux à chaque build : le document est la version lisible hors de
  * l'application — `PRIVACY_POLICY.md` y renvoie le lecteur de la fiche Play — et l'écran en est
  * la restitution, jamais une reformulation.
  *
- * Les six limites de [com.niumi.feature.setup.onboarding.OnboardingTexts] s'y retrouvent à
- * l'identique : l'aide est un sur-ensemble de l'onboarding, pas un second discours sur les mêmes
- * faits.
+ * Depuis l'étape 35 de la refonte (décision de Mehdi du 2026-10-20), l'aide est le seul écran à
+ * porter les limites : l'onboarding qui les énonçait avant la première session a laissé la place à
+ * l'écran 1 · Présentation, qui ne les reprend pas.
  */
 object HelpTexts {
     const val TITLE = "Aide et limites"

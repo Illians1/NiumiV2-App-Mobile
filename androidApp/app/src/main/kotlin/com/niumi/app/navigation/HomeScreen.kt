@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -143,8 +144,9 @@ fun HomeScreen(
 }
 
 /**
- * Point d'entrée réel : relit l'accusé de réception de l'onboarding à chaque retour au premier
- * plan. La redirection automatique vers l'écran 8 vit dans `MainActivity` (§10.4) — elle doit
+ * Point d'entrée réel : relit l'accusé de lecture de la présentation à chaque retour au premier
+ * plan, et ouvre la présentation d'elle-même tant qu'elle n'a pas été lue ([onOpenPresentation],
+ * étape 35). La redirection automatique vers l'écran 8 vit dans `MainActivity` (§10.4) — elle doit
  * s'appliquer quelle que soit la destination du `NavHost`, pas seulement depuis l'accueil.
  */
 @Composable
@@ -152,6 +154,7 @@ fun HomeRoute(
     onNavigate: (NiumiRoute) -> Unit,
     onOpenDiagnostic: () -> Unit,
     onOpenHelp: () -> Unit,
+    onOpenPresentation: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -164,6 +167,10 @@ fun HomeRoute(
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(viewModel.state.presentationRequired) {
+        if (viewModel.state.presentationRequired) onOpenPresentation()
     }
 
     HomeScreen(

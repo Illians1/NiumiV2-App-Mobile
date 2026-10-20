@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -199,6 +200,7 @@ private fun CloseButton(
         modifier =
             Modifier
                 .offset(x = -NiumiDimens.closeButtonInset)
+                .minimumInteractiveComponentSize()
                 .size(NiumiDimens.minTouch)
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = label },

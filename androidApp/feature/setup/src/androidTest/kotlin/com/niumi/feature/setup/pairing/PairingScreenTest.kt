@@ -31,7 +31,7 @@ private fun row(
 
 /**
  * Écran 3 « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8, §16). Composable pur : l'état est
- * fourni, aucun clic n'est simulé — même convention que `OnboardingScreenTest`.
+ * fourni, aucun clic n'est simulé.
  */
 @RunWith(AndroidJUnit4::class)
 class PairingScreenTest {

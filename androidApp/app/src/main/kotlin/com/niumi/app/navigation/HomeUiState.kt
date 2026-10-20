@@ -18,11 +18,17 @@ package com.niumi.app.navigation
  * armée et le blocage en place, exactement le « faux état de fiabilité » que §15 interdit. Le
  * signal ne pouvait pas vivre dans [destination] seul : celle-ci n'est lue qu'au clic du bouton
  * principal, jamais pour naviguer d'elle-même.
+ *
+ * [presentationRequired] (étape 35 de la refonte) : la présentation n'a jamais été lue, aucune
+ * session n'est en cours et l'état est lisible. L'accueil ouvre alors l'écran 1 de lui-même, à la
+ * première ouverture (`SPECIFICATION.md` §4). Faux tant que l'accusé n'est pas lu : une lecture
+ * lente ne doit pas faire passer un utilisateur déjà configuré par la présentation.
  */
 data class HomeUiState(
-    val destination: NiumiRoute = NiumiRoute.Onboarding,
+    val destination: NiumiRoute = NiumiRoute.Presentation,
     val hasActiveSession: Boolean = false,
     val alarmScreenRequired: Boolean = false,
     val pendingAlarmScreen: Boolean = false,
     val storageUnreadable: Boolean = false,
+    val presentationRequired: Boolean = false,
 )

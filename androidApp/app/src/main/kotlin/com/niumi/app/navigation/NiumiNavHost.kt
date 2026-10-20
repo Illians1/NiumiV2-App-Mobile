@@ -21,8 +21,8 @@ import com.niumi.feature.session.wake.WakeTimeChoice
 import com.niumi.feature.session.wake.WakeTimeRoute
 import com.niumi.feature.setup.accessibility.AccessibilityConsentRoute
 import com.niumi.feature.setup.apps.AppPickerRoute
-import com.niumi.feature.setup.onboarding.OnboardingRoute
 import com.niumi.feature.setup.pairing.PairingRoute
+import com.niumi.feature.setup.presentation.PresentationRoute
 import com.niumi.feature.setup.readiness.ReadinessRoute
 
 /**
@@ -49,6 +49,13 @@ fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
                 onNavigate = { route -> navController.navigate(route) },
                 onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
                 onOpenHelp = { navController.navigate(NiumiRoute.Help) },
+                // Écran 1 à la place de l'accueil : le retour système sur le panneau 1 quitte
+                // l'app au lieu de ramener à un accueil qui la rouvrirait.
+                onOpenPresentation = {
+                    navController.navigate(NiumiRoute.Presentation) {
+                        popUpTo(NiumiRoute.Home) { inclusive = true }
+                    }
+                },
             )
         }
         setupDestinations(navController)
@@ -76,19 +83,20 @@ fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
 }
 
 /**
- * Destinations du parcours de préparation (écrans 2, 3 et 4), extraites pour tenir sous
+ * Destinations du parcours de préparation (écran 1 · Présentation, écrans 2, 3 et 4), extraites pour tenir sous
  * `LongMethod` de detekt quand l'écran 12 s'est ajouté au graphe (étape 16). Le choix de l'heure et
  * le récapitulatif restent dans [NiumiNavHost] : ils portent un argument de route.
  */
 private fun NavGraphBuilder.setupDestinations(navController: NavHostController) {
-    composable<NiumiRoute.Onboarding> {
-        OnboardingRoute(
-            onContinue = {
-                navController.navigate(NiumiRoute.Readiness) {
-                    // L'onboarding n'est présenté qu'une fois : y revenir par le bouton
-                    // Retour après l'avoir acquitté n'aurait aucun sens.
-                    popUpTo(NiumiRoute.Onboarding) { inclusive = true }
+    composable<NiumiRoute.Presentation> {
+        PresentationRoute(
+            onConfigure = {
+                // La présentation n'est montrée qu'une fois : elle quitte la pile et l'accueil y
+                // reprend sa place, sous le diagnostic (navigation transitoire jusqu'à l'étape 45).
+                navController.navigate(NiumiRoute.Home) {
+                    popUpTo(NiumiRoute.Presentation) { inclusive = true }
                 }
+                navController.navigate(NiumiRoute.Readiness)
             },
         )
     }
@@ -198,7 +206,7 @@ private fun NavController.navigateToHome() {
 
 /**
  * « Préparer un nouveau réveil » (écran 11) rejoint le diagnostic, entrée du parcours de
- * préparation quand l'onboarding est acquitté — ce qu'il est nécessairement, une session ayant
+ * préparation quand la présentation est acquittée — ce qu'il est nécessairement, une session ayant
  * déjà été armée (voir [homeDestinationFor]). L'écran 11 quitte la pile pour la même raison
  * qu'il y est entré.
  */

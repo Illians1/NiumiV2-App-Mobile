@@ -15,8 +15,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * L'accusé de réception de l'onboarding est relu à chaque `ON_RESUME` : il change pendant la vie
- * de l'écran, l'utilisateur pouvant revenir de l'onboarding. Le snapshot de session, lui, est un
+ * L'accusé de lecture de la présentation (écran 1) est relu à chaque `ON_RESUME` : il change
+ * pendant la vie de l'écran, l'utilisateur pouvant revenir de la présentation. `null` tant qu'il
+ * n'a pas été lu. Le snapshot de session, lui, est un
  * `StateFlow` collecté en continu — une session peut être armée ou libérée par une réconciliation
  * pendant que l'accueil est affiché.
  *
@@ -36,7 +37,7 @@ class HomeViewModel
         private val snapshotPublisher: SessionSnapshotPublisher,
         private val storageIntegrity: StorageIntegrityState,
     ) : ViewModel() {
-        private var onboardingAcknowledged = false
+        private var onboardingAcknowledged: Boolean? = null
         private var alarmScreenAcknowledged = false
 
         var state by mutableStateOf(HomeUiState())
@@ -69,15 +70,19 @@ class HomeViewModel
         private fun recompute() {
             val sessionState = snapshotPublisher.snapshot.value?.state
             val storageUnreadable = storageIntegrity.failure.value != null
-            val launcher = launcherDestinationFor(sessionState, onboardingAcknowledged)
+            val acknowledged = onboardingAcknowledged ?: false
+            val launcher = launcherDestinationFor(sessionState, acknowledged)
+            val destination = homeDestinationFor(sessionState, acknowledged, storageUnreadable)
             state =
                 HomeUiState(
-                    destination = homeDestinationFor(sessionState, onboardingAcknowledged, storageUnreadable),
+                    destination = destination,
                     hasActiveSession = sessionState.isSessionInProgress(),
                     alarmScreenRequired = launcher == LauncherDestination.AlarmScreen,
                     pendingAlarmScreen =
                         launcher == LauncherDestination.AlarmScreen && !alarmScreenAcknowledged,
                     storageUnreadable = storageUnreadable,
+                    presentationRequired =
+                        onboardingAcknowledged == false && destination == NiumiRoute.Presentation,
                 )
         }
     }

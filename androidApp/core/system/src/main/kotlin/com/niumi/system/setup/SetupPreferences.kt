@@ -17,8 +17,10 @@ import javax.inject.Provider
 /**
  * Trois préférences de la mise en route, persistées hors Room (SPEC_ANDROID §4.5, §15) :
  *
- * - `onboardingAcknowledged` : l'utilisateur a lu les limites du produit avant sa première
- *   activation, notamment l'absence de tout secours logiciel pendant une session ;
+ * - `onboardingAcknowledged` : l'utilisateur a lu l'écran 1 · Présentation jusqu'à « Configurer
+ *   Niumi » (étape 35 de la refonte). La clé `onboarding_acknowledged` date de l'ancien onboarding
+ *   des limites et n'est pas renommée : la renommer ferait revenir la présentation chez ceux qui
+ *   l'avaient déjà acquitté ;
  * - `lastWakeTimeIso` (étape 14) : dernière heure choisie sur l'écran de choix de l'heure, pour
  *   que le cadran s'ouvre dessus plutôt que sur 07:00 à chaque nouvelle préparation. `null` tant
  *   qu'aucune heure n'a jamais été confirmée ;

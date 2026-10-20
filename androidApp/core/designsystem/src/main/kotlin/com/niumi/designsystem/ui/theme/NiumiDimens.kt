@@ -28,8 +28,15 @@ object NiumiDimens {
     /** Marges du contenu d'une feuille du bas : côtés et bas de l'écran, rien en haut (poignée). */
     val sheetMargins = PaddingValues(start = screenHorizontal, end = screenHorizontal, bottom = screenBottom)
 
-    /** Zone de toucher minimale. */
+    /** Zone de toucher minimale des maquettes : la taille visible des éléments touchables. */
     val minTouch = 44.dp
+
+    /**
+     * Zone tactile réservée sur Android autour de tout élément touchable plus petit (décision de
+     * Mehdi du 2026-10-20, VALEURS §4) : 48, la recommandation de Google, posée par
+     * `minimumInteractiveComponentSize()` de Material 3. Le dessin garde [minTouch].
+     */
+    val touchTarget = 48.dp
 
     /** Bouton principal, pleine largeur. */
     val primaryButton = 56.dp
@@ -84,8 +91,11 @@ object NiumiDimens {
     /** Espace entre la valeur d'une rangée et son chevron (maquette 37). */
     val trailingGap = 8.dp
 
-    /** Retrait de la flèche de retour, pour aligner son tracé sur la marge (maquette 37). */
-    val backButtonInset = (-12).dp
+    /**
+     * Retrait de la flèche de retour, pour aligner son tracé sur la marge (maquette 37) : -12 pour
+     * la boîte de 44 de la maquette, -14 avec la zone de 48 réservée autour (décision du 2026-10-20).
+     */
+    val backButtonInset = (-14).dp
 
     /** Espace entre la barre de retour et le titre de l'écran (maquette 37). */
     val titleTop = 8.dp
@@ -104,8 +114,11 @@ object NiumiDimens {
     val sheetHeaderTop = 8.dp
     val sheetHeaderHeight = 48.dp
 
-    /** Retrait de la croix, pour aligner son tracé sur la marge (maquettes 11, 16). */
-    val closeButtonInset = (-10).dp
+    /**
+     * Retrait de la croix, pour aligner son tracé sur la marge (maquettes 11, 16) : -10 pour la
+     * boîte de 44 de la maquette, -12 avec la zone de 48 réservée autour (décision du 2026-10-20).
+     */
+    val closeButtonInset = (-12).dp
 
     /** Indicateur de panneau : traits de 24 × 6, espacés de 8 (maquette 01). */
     val pageIndicatorWidth = 24.dp
@@ -127,4 +140,23 @@ object NiumiDimens {
 
     /** Écart entre la pastille et le bord de l'interrupteur (maquette 14). */
     val switchThumbInset = 3.dp
+
+    // Écran 1 · Présentation (étape 35), relevées dans les sources des maquettes 01 et 02.
+
+    /** Dessin d'un panneau : 342 × 240 au plus, réduit en gardant ses proportions sur un écran étroit. */
+    val illustrationWidth = 342.dp
+    val illustrationHeight = 240.dp
+
+    /** Largeur maximale du titre et du texte d'un panneau, centrés. */
+    val presentationTitleMaxWidth = 320.dp
+    val presentationBodyMaxWidth = 300.dp
+
+    /** Espace entre le dessin et le titre d'un panneau. */
+    val illustrationGap = 24.dp
+
+    /** Espace entre le titre et le texte d'un panneau. */
+    val titleBodyGap = 12.dp
+
+    /** Espace entre l'indicateur de panneau et le bouton principal. */
+    val pageIndicatorButtonGap = 18.dp
 }

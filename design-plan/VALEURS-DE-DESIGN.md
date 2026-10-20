@@ -121,7 +121,7 @@ Les valeurs exactes de chaque écran sont dans les fichiers de `maquettes/source
 | Élément | Valeur |
 | --- | --- |
 | Marges de l'écran | 24 à gauche et à droite, 34 en bas, 56 en haut. Sur la maquette iPhone, les 56 du haut couvrent la barre d'état et les 34 du bas la barre d'accueil. Sur Android, de chaque côté, la plus grande de la marge et de la barre système (barre d'état, barre de navigation, encoche, clavier), jamais leur somme (décision de Mehdi du 20 octobre 2026). Même règle pour les côtés et le bas d'une feuille du bas |
-| Zone de toucher minimale | 44 de haut |
+| Zone de toucher minimale | 44 de haut. Sur Android, 48 dp de zone tactile sont réservés autour de tout élément touchable plus petit, sans changer son dessin : c'est la recommandation de Google (décision de Mehdi du 20 octobre 2026) |
 | Bouton principal | 56 de haut, coins arrondis de 14, pleine largeur |
 | Bouton d'une alerte ou de la feuille de scan | 52 de haut, coins de 14 |
 | Bouton de la recopie (au-dessus du clavier) | 48 de haut, coins de 14 |

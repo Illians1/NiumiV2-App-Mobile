@@ -23,7 +23,7 @@ import com.niumi.designsystem.ui.theme.NiumiTheme
  * font du scan du boîtier la seule sortie, et un bouton ici serait précisément le recours logiciel
  * que §4.5 exclut. Le geste Retour du système suffit, comme sur les autres écrans du dépôt.
  *
- * Page unique défilante, comme l'onboarding : tout le contenu passe devant l'utilisateur dans
+ * Page unique défilante : tout le contenu passe devant l'utilisateur dans
  * l'ordre, y compris sous TalkBack (§15).
  */
 @Composable

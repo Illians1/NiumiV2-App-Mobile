@@ -57,6 +57,7 @@ Valeurs copiées des sources ; chaque étape les respecte implicitement.
 - Règles techniques conservées : garde de déverrouillage sur tout dépôt (`Provider<Context>` jamais résolu avant `isUserUnlocked`, SPEC_ANDROID §7.3) ; aucune action d'arrêt dans le parcours de sonnerie (la sortie de secours n'en est pas une : elle est une libération prouvée, SPEC_CORE_KMP 1.5 §12) ; `setAlarmClock()` pour le réveil avec les dérogations §9.1 ; permissions du manifeste §14 sans ajout ; journal technique §17.
 - **Ne rien recréer des Lots 8 et 9 du plan maître** : partir des noms listés au « Point de départ » ; chaque interface des « Interfaces transverses » est un delta sur eux.
 - Un écran obsolète est supprimé, avec son `Texts`, son `TextsTest` et sa route, **à l'étape qui le remplace** ; l'étape 53 balaie ce qui n'a pas de remplaçant.
+- **Accessibilité (décisions de Mehdi du 2026-10-20).** Chaque écran refait active les contrôles automatiques de l'Accessibility Test Framework dans son test instrumenté (`enableAccessibilityChecks()`, dépendance de test `compose-ui-test-junit4-accessibility` ajoutée au module à ce moment-là). Passage TalkBack manuel seulement sur les écrans à risque : écran 10 et feuille de scan (38), écran 7 (39), feuilles du bas (40, 46, 47, 49), cadran de l'accueil (45) ; revue complète à l'étape 55. Zone tactile de 48 dp réservée autour des éléments de 44 (`NiumiDimens.touchTarget`), dessin inchangé.
 - Rien de `design-plan/POINTS-OUVERTS.md` n'est décidé : chaque étape liste les points qu'elle touche ; sans réponse, l'étape s'arrête ou laisse l'élément de côté en le signalant dans le rapport.
 
 ## Table de correspondance des écrans
@@ -124,7 +125,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 33 | D13 | Apostrophe typographique (’) dans l'app ? | **Tranché le 2026-10-19** : oui, portée par les `Texts` et testée (dès l'étape 35) |
 | 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28. **D14 précisé le 2026-10-20** (étape 34) : icônes de navigation sans ambre ; cadenas de la carte « Blocage en cours » et point du Niumi Point restent ambre |
 | 34 | — | Marges haut et bas sur Android : marge de la maquette ajoutée aux barres système, ou la plus grande des deux ? | **Tranché le 2026-10-20** : la plus grande des deux, de chaque côté (VALEURS §4, SPEC_ANDROID §15) |
-| 35 | D12 | Point final des titres de l'écran 1 ? | Sans point sur les deux panneaux |
+| 35 | D12 | Point final des titres de l'écran 1 ? | **Tranché le 2026-10-20** : sans point sur les deux panneaux. Même jour : les six limites de l'onboarding ne sont plus montrées avant la première activation, l'aide les porte seule (SPEC_ANDROID §3) |
 | 36 | Q1 | Batterie, verrou des récents (HyperOS), Ne pas déranger, volume : aucune place dans le design. Où ? | Batterie et récents = étapes 2 et 3 du guide « Blocage » (coche exigeant les trois contrôles) ; DND et volume restent dans la notification §13.1 et le rapport, sans écran |
 | 36 | Q2 | Garder la notification d'avertissement §13.1 pendant `ARMED` ? | Oui ; son tap ouvre l'écran 2 |
 | 36 | D10, D18, M1 | Pas de tuile NFC ; « ? » retiré sur tuile accordée ; images du guide à produire | D10 oui ; garder « ? » ; emplacement vide sans texte de substitution tant que les images manquent |
@@ -436,10 +437,10 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** les deux panneaux, impossibles à passer, qui mènent à l'écran 2.
 
-- [ ] **Écrire `PresentationTextsTest` et `PresentationViewModelTest`**, implémenter textes, ViewModel, écran et dessins.
-- [ ] **Mettre à jour les routes et `HelpTextsTest`**, supprimer l'onboarding.
-- [ ] **Vérifier :** batterie standard ; `grep -rn "OnboardingTexts" androidApp` vide.
-- [ ] **Valider sur appareil, rédiger `ETAPE-35.md`.** SPEC_ANDROID §15 : écran 1 décrit, écran 2a retiré.
+- [x] **Écrire `PresentationTextsTest` et `PresentationViewModelTest`**, implémenter textes, ViewModel, écran et dessins. *(2026-10-20 : socle `NiumiIllustration` ; l'accueil ouvre la présentation de lui-même, `HomeViewModel.presentationRequired` ; voir `ETAPE-35.md`.)*
+- [x] **Mettre à jour les routes et `HelpTextsTest`**, supprimer l'onboarding.
+- [x] **Vérifier :** batterie standard ; `grep -rn "OnboardingTexts" androidApp` vide.
+- [x] **Valider sur appareil, rédiger `ETAPE-35.md`.** SPEC_ANDROID §15 : écran 1 décrit, écran 2a retiré. *(2026-10-20 : neuf essais conformes ; TalkBack manuel non fait, par décision ; contrôles d'accessibilité automatiques et zone tactile de 48 dp ajoutés.)*
 
 **Tests manuels :** première ouverture → panneau 1 → Continuer → panneau 2 → retour → panneau 1 → Configurer Niumi → écran 2 ; relancer l'app : la présentation ne revient pas.
 
@@ -906,7 +907,7 @@ grep -rln "IncidentDiagnostic\|ActiveSession\|WakeTime\|Summary\|ScanToModify\|R
 | Redémarrage avant le coucher, sans déverrouillage jusqu'après le coucher | Blocage appliqué en retard, `MISSED_BLOCKING_START_WINDOW` |
 | Retrait du service d'accessibilité | Alerte à l'ouverture ; notification §13.1 |
 | NFC coupé | Bandeau ; échec sur l'écran 10 |
-| TalkBack sur accueil, écran 10, écran 9 | Rôles et états annoncés |
+| TalkBack, revue complète de tous les écrans refaits (décision du 2026-10-20) | Ordre de lecture, rôles, états et libellés annoncés ; aucun élément sauté ni lu deux fois |
 
 - [ ] **Dérouler, consigner modèle et version Android, rédiger `ETAPE-55.md`**, mettre à jour `QA_MATRIX.md`, `RELEASE_REPORT.md`, `RESTE_A_FAIRE.md`.
 

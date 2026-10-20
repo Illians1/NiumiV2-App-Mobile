@@ -67,7 +67,9 @@ Le logo est en haut des deux panneaux. Un repère à deux traits indique le pann
 | Panneau | Dessin | Titre | Texte | Bouton |
 | --- | --- | --- | --- | --- |
 | 1 | Un téléphone dont les applications sont verrouillées, avec un cadenas dans une pastille ambre | À l'heure de te coucher, tes distractions sont bloquées | À l'heure que tu choisis, Niumi bloque les applications que tu as désignées. | Continuer |
-| 2 | Le téléphone approché du Niumi Point (le même dessin que sur l'écran 10) | Le matin, Niumi t'aide à te lever. | Ton alarme sonne jusqu'à ce que tu scannes le Niumi Point situé dans la pièce de ton choix. | Configurer Niumi |
+| 2 | Le téléphone approché du Niumi Point (le même dessin que sur l'écran 10) | Le matin, Niumi t'aide à te lever | Ton alarme sonne jusqu'à ce que tu scannes le Niumi Point situé dans la pièce de ton choix. | Configurer Niumi |
+
+Les deux titres s'écrivent sans point final (D12, tranché le 20 octobre 2026). L'image `02_ecran-1-panneau-2` montre encore le point : c'est ce texte qui fait foi.
 
 ## 5. Écran 2 · Autorisations
 

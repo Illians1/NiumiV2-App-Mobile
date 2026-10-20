@@ -39,9 +39,9 @@ class HomeDestinationTest {
     }
 
     @Test
-    fun noSessionAndNoAcknowledgementLeadsToOnboarding() {
+    fun noSessionAndNoAcknowledgementLeadsToThePresentation() {
         assertThat(homeDestinationFor(state = null, onboardingAcknowledged = false))
-            .isEqualTo(NiumiRoute.Onboarding)
+            .isEqualTo(NiumiRoute.Presentation)
     }
 
     @Test
@@ -51,14 +51,14 @@ class HomeDestinationTest {
     }
 
     @Test
-    fun anUnacknowledgedOnboardingNeverSkipsAheadOfADiagnostic() {
+    fun anUnacknowledgedPresentationNeverSkipsAheadOfADiagnostic() {
         assertThat(homeDestinationFor(SessionStateDto.COMPLETED, onboardingAcknowledged = false))
-            .isEqualTo(NiumiRoute.Onboarding)
+            .isEqualTo(NiumiRoute.Presentation)
     }
 
     /**
      * SPEC_ANDROID §18, §20 : une persistance illisible prime sur tout le reste — ni l'état d'une
-     * session en cours ni l'accusé d'onboarding ne sont fiables si Niumi ne peut plus les lire.
+     * session en cours ni l'accusé de la présentation ne sont fiables si Niumi ne peut plus les lire.
      */
     @Test
     fun anUnreadableStorageSendsTheUserToTheIncidentDiagnosticBeforeAnythingElse() {

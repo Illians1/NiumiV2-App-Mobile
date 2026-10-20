@@ -1,7 +1,6 @@
 package com.niumi.app.help
 
 import com.google.common.truth.Truth.assertThat
-import com.niumi.feature.setup.onboarding.OnboardingTexts
 import org.junit.Test
 import java.io.File
 
@@ -35,18 +34,6 @@ class HelpTextsTest {
         val documentBullets = limitesMarkdown.filter { it.startsWith("- ") }.map { it.removePrefix("- ") }
 
         assertThat(HelpTexts.sections.flatMap { it.items }).containsExactlyElementsIn(documentBullets).inOrder()
-    }
-
-    /**
-     * L'onboarding énonce six limites avant la première session (§4.5, §19.1). L'aide les reprend
-     * **mot pour mot** : deux formulations différentes du même fait laisseraient l'utilisateur
-     * croire à deux règles distinctes, et §15 interdit tout état de fiabilité ambigu.
-     */
-    @Test
-    fun everyLimitOfTheOnboardingIsRepeatedWordForWord() {
-        val helpItems = HelpTexts.sections.flatMap { it.items }
-
-        assertThat(helpItems).containsAtLeastElementsIn(OnboardingTexts.limits)
     }
 
     /** §15 : tutoiement partout. Le vouvoiement se glisse par recopie d'une source externe. */

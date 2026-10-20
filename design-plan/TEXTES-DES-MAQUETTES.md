@@ -24,6 +24,8 @@ Libellés d'accessibilité présents dans le fichier source :
 Fichier : `02_ecran-1-panneau-2`
 
 - Le matin, Niumi t'aide à te lever.
+
+Le titre s'écrit sans point final dans l'app (D12, tranché le 20 octobre 2026, `SPECIFICATION.md` §4) ; la transcription ci-dessus reste celle de l'image.
 - Ton alarme sonne jusqu'à ce que tu scannes le Niumi Point situé dans la pièce de ton choix.
 - Configurer Niumi
 

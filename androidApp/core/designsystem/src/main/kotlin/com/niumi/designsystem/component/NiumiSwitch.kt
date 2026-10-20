@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -55,6 +56,7 @@ fun NiumiSwitch(
     Box(
         modifier =
             modifier
+                .minimumInteractiveComponentSize()
                 .heightIn(min = NiumiDimens.minTouch)
                 .then(action)
                 .semantics { if (contentDescription != null) this.contentDescription = contentDescription },

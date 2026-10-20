@@ -1,6 +1,6 @@
 # Niumi · Points ouverts
 
-État au 9 octobre 2026, complété le 18 octobre (T11, E12) le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, T12, §2) et le 20 octobre 2026 (D14 précisé). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
+État au 9 octobre 2026, complété le 18 octobre (T11, E12) le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, T12, §2) et le 20 octobre 2026 (D14 précisé, D12). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
 
 Cinq listes :
 
@@ -25,7 +25,7 @@ Cinq listes :
 | D9 | ~~Bouton inactif en clair~~ | **Tranché le 19 octobre 2026** : fond `#E8E8E4` et texte `#5C5C60` (style de l'écran 2), partout. Le style de l'écran 4 (`#C6C6C2`, texte blanc) n'est pas repris |
 | D10 | Écran 2 | Le NFC n'a pas de tuile sur l'écran des autorisations, alors que l'ancien tableau le listait. Confirmer qu'il est géré seulement au moment du scan et par le bandeau |
 | D11 | Écran 3, choix de la pièce | « Continuer » est-il grisé tant qu'aucune pièce n'est choisie ? Rien n'est dit |
-| D12 | Ponctuation des titres | Le titre du panneau 1 de l'écran 1 n'a pas de point final, celui du panneau 2 en a un. Harmoniser ? |
+| D12 | ~~Ponctuation des titres~~ | **Tranché le 20 octobre 2026** : les deux titres de l'écran 1 s'écrivent sans point final, comme les autres titres de l'app (`SPECIFICATION.md` §4) |
 | D13 | ~~Apostrophes~~ | **Tranché le 19 octobre 2026** : apostrophe typographique (’) dans les textes de l'app. À la recopie depuis la spécification, l'apostrophe droite devient ’ |
 | D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » **Précisé le 20 octobre 2026** : « pas d'ambre dans les icônes » vise les icônes de navigation et d'action ; le cadenas ambre de la carte « Blocage en cours » et le point ambre de l'icône du Niumi Point restent tels quels (`VALEURS-DE-DESIGN.md` §2) |
 | D15 | Écran 11 | Le soleil en dégradé est gardé « pour l'instant ». L'écran peut encore changer |

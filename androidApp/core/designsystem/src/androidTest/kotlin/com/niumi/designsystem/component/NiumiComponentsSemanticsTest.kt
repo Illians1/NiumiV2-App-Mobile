@@ -15,12 +15,17 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.isHeading
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.niumi.designsystem.drawing.LockedPhoneDrawing
+import com.niumi.designsystem.drawing.PhoneNearPointDrawing
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import org.junit.Rule
@@ -38,8 +43,15 @@ class NiumiComponentsSemanticsTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    /**
+     * Affiche [content] puis le soumet aux contrôles automatiques de l'Accessibility Test Framework
+     * (libellés, zones de toucher, contraste, ordre de lecture ; décision du 2026-10-20). Ils sont
+     * rejoués à chaque `performClick` qui suit.
+     */
     private fun show(content: @Composable () -> Unit) {
         composeRule.setContent { NiumiTheme(dark = false, content = content) }
+        composeRule.enableAccessibilityChecks()
+        composeRule.onRoot().tryPerformAccessibilityChecks()
     }
 
     private fun SemanticsNodeInteraction.assertRole(role: Role) =
@@ -390,5 +402,24 @@ class NiumiComponentsSemanticsTest {
         composeRule
             .onNodeWithContentDescription("Panneau 1 sur 2")
             .assertNoClickAction()
+    }
+
+    // Dessins (étape 35)
+
+    @Test
+    fun eachDrawingIsAnnouncedOnceAsAnImage() {
+        show {
+            Column {
+                LockedPhoneDrawing(contentDescription = "Téléphone verrouillé")
+                PhoneNearPointDrawing(contentDescription = "Téléphone et Niumi Point")
+            }
+        }
+
+        listOf("Téléphone verrouillé", "Téléphone et Niumi Point").forEach { label ->
+            composeRule
+                .onNodeWithContentDescription(label)
+                .assertRole(Role.Image)
+                .assertNoClickAction()
+        }
     }
 }

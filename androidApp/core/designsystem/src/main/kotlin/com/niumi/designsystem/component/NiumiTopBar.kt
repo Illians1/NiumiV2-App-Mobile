@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,8 +26,9 @@ import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiType
 
 /**
- * Haut d'écran (maquette 37) : une rangée de 44 avec la flèche de retour, dont le tracé s'aligne
- * sur la marge, puis le titre 28/600 à 8 dessous, annoncé comme intertitre. [backLabel] dit où
+ * Haut d'écran (maquette 37) : une rangée avec la flèche de retour, dont le tracé s'aligne sur la
+ * marge, haute de 48 et non de 44 : la zone tactile réservée sur Android (décision du
+ * 2026-10-20). Puis le titre 28/600 à 8 dessous, annoncé comme intertitre. [backLabel] dit où
  * mène la flèche (« Retour », « Retour aux réglages », « Retour à l'accueil »…) : il vient du
  * `Texts` de l'écran. Sans [onBack], ni flèche ni rangée.
  */
@@ -40,11 +42,12 @@ fun NiumiTopBar(
     val palette = LocalNiumiPalette.current
     Column(modifier = modifier.fillMaxWidth()) {
         if (onBack != null) {
-            Box(modifier = Modifier.height(NiumiDimens.minTouch), contentAlignment = Alignment.CenterStart) {
+            Box(modifier = Modifier.height(NiumiDimens.touchTarget), contentAlignment = Alignment.CenterStart) {
                 Box(
                     modifier =
                         Modifier
                             .offset(x = NiumiDimens.backButtonInset)
+                            .minimumInteractiveComponentSize()
                             .size(NiumiDimens.minTouch)
                             .clickable(role = Role.Button, onClick = onBack)
                             .semantics { if (backLabel != null) contentDescription = backLabel },

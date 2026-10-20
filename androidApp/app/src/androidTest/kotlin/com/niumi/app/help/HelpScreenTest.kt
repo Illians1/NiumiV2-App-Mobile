@@ -22,7 +22,7 @@ class HelpScreenTest {
 
     /**
      * Une page longue : sans `performScrollTo`, les dernières limites ne seraient jamais
-     * composées et le test passerait en n'ayant rien vérifié (même piège qu'`OnboardingScreenTest`).
+     * composées et le test passerait en n'ayant rien vérifié.
      */
     @Test
     fun everyLimitIsDisplayed() {

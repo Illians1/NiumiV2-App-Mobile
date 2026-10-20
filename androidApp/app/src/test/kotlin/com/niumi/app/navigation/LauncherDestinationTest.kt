@@ -41,7 +41,7 @@ class LauncherDestinationTest {
         assertThat(launcherDestinationFor(state = null, onboardingAcknowledged = true))
             .isEqualTo(LauncherDestination.InApp(NiumiRoute.Readiness))
         assertThat(launcherDestinationFor(state = null, onboardingAcknowledged = false))
-            .isEqualTo(LauncherDestination.InApp(NiumiRoute.Onboarding))
+            .isEqualTo(LauncherDestination.InApp(NiumiRoute.Presentation))
     }
 
     @Test

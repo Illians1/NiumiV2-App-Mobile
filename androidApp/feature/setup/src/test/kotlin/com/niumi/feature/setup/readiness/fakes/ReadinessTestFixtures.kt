@@ -84,9 +84,13 @@ class FakeSetupPreferences(
     private var lastWakeTimeIsoValue: String? = null,
     private var lastBlockingStartTimeIsoValue: String? = null,
 ) : SetupPreferences {
+    var acknowledgeCallCount = 0
+        private set
+
     override suspend fun isOnboardingAcknowledged(): Boolean = onboardingAcknowledged
 
     override suspend fun acknowledgeOnboarding() {
+        acknowledgeCallCount++
         onboardingAcknowledged = true
     }
 

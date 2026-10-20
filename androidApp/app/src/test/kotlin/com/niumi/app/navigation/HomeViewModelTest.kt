@@ -8,6 +8,7 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.StorageIntegrityState
 import com.niumi.system.setup.SetupPreferences
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -19,9 +20,14 @@ import org.junit.Before
 import org.junit.Test
 
 private class FakeSetupPreferences(
-    private var acknowledged: Boolean = true,
+    var acknowledged: Boolean = true,
+    /** Retient la lecture de l'accusé tant qu'il n'est pas complété : simule un `DataStore` lent. */
+    val readGate: CompletableDeferred<Unit>? = null,
 ) : SetupPreferences {
-    override suspend fun isOnboardingAcknowledged(): Boolean = acknowledged
+    override suspend fun isOnboardingAcknowledged(): Boolean {
+        readGate?.await()
+        return acknowledged
+    }
 
     override suspend fun acknowledgeOnboarding() {
         acknowledged = true
@@ -44,7 +50,7 @@ private class FakeSetupPreferences(
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
     private val publisher = SessionSnapshotPublisher()
-    private val preferences = FakeSetupPreferences()
+    private var preferences = FakeSetupPreferences()
     private val storageIntegrity = StorageIntegrityState()
 
     @Before
@@ -170,5 +176,56 @@ class HomeViewModelTest {
             storageIntegrity.reportUnreadable("SQLITE_CORRUPT")
 
             assertThat(viewModel.state.destination).isEqualTo(NiumiRoute.IncidentDiagnostic)
+        }
+
+    /**
+     * Écran 1 (`SPECIFICATION.md` §4) : sans accusé de lecture, la première ouverture mène droit à
+     * la présentation (étape 35).
+     */
+    @Test
+    fun withoutTheAcknowledgementThePresentationIsRequired() =
+        runTest {
+            preferences = FakeSetupPreferences(acknowledged = false)
+
+            val state = viewModel().state
+
+            assertThat(state.presentationRequired).isTrue()
+            assertThat(state.destination).isEqualTo(NiumiRoute.Presentation)
+        }
+
+    /** Tant que l'accusé n'est pas lu, rien n'est décidé : pas d'ouverture de la présentation à tort. */
+    @Test
+    fun nothingIsRequiredBeforeTheAcknowledgementIsRead() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            preferences = FakeSetupPreferences(acknowledged = false, readGate = gate)
+            val viewModel = viewModel()
+
+            assertThat(viewModel.state.presentationRequired).isFalse()
+
+            gate.complete(Unit)
+
+            assertThat(viewModel.state.presentationRequired).isTrue()
+        }
+
+    @Test
+    fun anAcknowledgedPresentationIsNotShownAgain() =
+        runTest {
+            assertThat(viewModel().state.presentationRequired).isFalse()
+        }
+
+    @Test
+    fun aSessionInProgressOrAnUnreadableStorageNeverOpensThePresentation() =
+        runTest {
+            preferences = FakeSetupPreferences(acknowledged = false)
+            publisher.publish(snapshot(SessionStateDto.ARMED))
+            val viewModel = viewModel()
+            assertThat(viewModel.state.presentationRequired).isFalse()
+
+            publisher.publish(snapshot(SessionStateDto.COMPLETED))
+            assertThat(viewModel.state.presentationRequired).isTrue()
+
+            storageIntegrity.reportUnreadable("SQLITE_CORRUPT")
+            assertThat(viewModel.state.presentationRequired).isFalse()
         }
 }

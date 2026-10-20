@@ -17,8 +17,9 @@ sealed interface NiumiRoute {
     @Serializable
     data object Home : NiumiRoute
 
+    /** Écran 1 · Présentation (étape 35 de la refonte), remplace l'onboarding des limites. */
     @Serializable
-    data object Onboarding : NiumiRoute
+    data object Presentation : NiumiRoute
 
     @Serializable
     data object Readiness : NiumiRoute

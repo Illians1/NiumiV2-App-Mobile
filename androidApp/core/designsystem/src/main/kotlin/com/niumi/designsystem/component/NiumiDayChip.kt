@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +73,7 @@ fun NiumiDayChip(
     Box(
         modifier =
             modifier
+                .minimumInteractiveComponentSize()
                 .size(NiumiDimens.dayChip)
                 .clip(NiumiShapes.pill)
                 .background(colors.fill)

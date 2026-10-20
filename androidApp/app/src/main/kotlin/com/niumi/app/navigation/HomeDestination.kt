@@ -17,7 +17,7 @@ import com.niumi.system.session.isSessionInProgress
  * l'étape 13 : il était redéclaré ici et l'aurait été une troisième fois par `SetupGate`.
  *
  * [storageUnreadable] prend le pas sur tout le reste (étape 20) : si Niumi ne peut plus lire son
- * état enregistré, ni l'état d'une session en cours ni l'accusé de l'onboarding ne sont fiables —
+ * état enregistré, ni l'état d'une session en cours ni l'accusé de la présentation ne sont fiables —
  * l'écran de diagnostic est la seule destination honnête, et le blocage, lui, n'est jamais retiré
  * par ce chemin (§18).
  */
@@ -30,5 +30,5 @@ fun homeDestinationFor(
         storageUnreadable -> NiumiRoute.IncidentDiagnostic
         state.isSessionInProgress() -> NiumiRoute.ActiveSession
         onboardingAcknowledged -> NiumiRoute.Readiness
-        else -> NiumiRoute.Onboarding
+        else -> NiumiRoute.Presentation
     }
