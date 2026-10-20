@@ -80,7 +80,7 @@ Valeurs copiées des specs ; chaque étape les respecte implicitement.
 | Hilt / androidx.hilt | 2.60.1 / 1.4.0 | Reconfirmé à l'étape 1 |
 | KSP | 2.3.11 | Reconfirmé à l'étape 1 ; versionnage découplé de Kotlin depuis KSP 2.3.0 |
 | kotlinx-datetime | 0.8.0 | `Instant` et `Clock` viennent de `kotlin.time` |
-| kotlinx-serialization | 1.11.0 | |
+| kotlinx-serialization | 1.12.0 | Montée depuis 1.11.0 le 2026-10-20 (CI rouge sur `NewerVersionAvailable`), voir « Montée de kotlinx-serialization-json du 2026-10-20 » ci-dessous |
 | ktlint | plugin `org.jlleitschuh.gradle.ktlint` 14.2.0, CLI 1.8.0 épinglé | Le plugin embarque 1.5.0 par défaut ; épinglé pour éviter la dérive entre patchs |
 | detekt | `dev.detekt` 2.0.0-alpha.6, épinglé, bloquant | Construite contre Kotlin 2.4.x ; la dernière stable (1.23.8) embarque Kotlin 2.0.21 et échoue sur Kotlin 2.4+. Vérifiée verte sous Kotlin 2.4.20 à l'étape 12a. Voir SPEC_ANDROID §5 et `ETAPE-01.md` |
 
@@ -137,6 +137,30 @@ reste en 2.3.11 (versionnage découplé) et detekt 2.0.0-alpha.6 reste vert. Dé
 l'utilisateur le 2026-10-13 ; batterie complète rejouée après la montée — tests JVM de tous les
 modules, framework iOS, `assembleDebug`, ktlint, detekt, `lintDebug`, `lintRelease`,
 `assembleRelease`, `bundleRelease` — tous verts.
+
+### Montée de kotlinx-serialization-json du 2026-10-20
+
+Le run CI n° 13 (commit `e288dc4`, correctif A8) a échoué sur `:app:lintRelease` :
+`NewerVersionAvailable` sur `kotlinx-serialization-json` 1.11.0, la 1.12.0 ayant été publiée sur
+Maven Central le 2026-10-19 à 18:29 UTC, entre le run 12 (vert) et le run 13. Le commit A8 n'y est
+pour rien ; l'échec se reproduit sur sa copie exacte dès que lint n'est plus servi par le cache de
+build (`--rerun-tasks`). Notes de version consultées (1.12.0 et 1.12.0-RC) :
+
+- bibliothèque construite sur Kotlin 2.4.10, même ligne que le Kotlin 2.4.21 du projet ; seule la
+  bibliothèque d'exécution change, KGP, KSP, AGP et detekt restent tels quels ;
+- stabilisation d'API (`JsonNamingStrategy`, `ContextualSerializer`…), dépréciation de
+  `ChunkedDecoder` et masquage des setters de `JsonConfiguration` : aucun usage dans le projet ;
+- **changement de comportement** : toute exception levée pendant la désérialisation est désormais
+  enveloppée dans une `JsonException`. Le seul `catch` de production autour d'un décodage,
+  `FileDirectBootStore`, capture `SerializationException`, classe parente de `JsonException` :
+  couvert. `SessionEffectMapper` et `AppSelectionCodec` ne capturent rien : comportement inchangé.
+
+Désactiver `NewerVersionAvailable` a été envisagé et écarté : la règle reste le signal de
+fraîcheur des dépendances hors Google. Décidé avec l'utilisateur le 2026-10-20 ; batterie
+complète rejouée après la montée — tests JVM de tous les modules, framework iOS, `assembleDebug`,
+ktlint, detekt, `lintDebug`, `lintRelease`, `assembleRelease`, `bundleRelease` — tous verts, lint
+de `:app` réexécuté sans cache. Résolution vérifiée : `kotlinx-serialization-json` et `-core`
+en 1.12.0 sur le classpath release.
 
 ## Points de vigilance sur les specs
 
