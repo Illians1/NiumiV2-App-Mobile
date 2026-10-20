@@ -42,6 +42,10 @@ class TechnicalEventTypeTest {
                 "BLOCKING_START_RECEIVED",
                 "BLOCKING_STARTED",
                 "MISSED_BLOCKING_START_WINDOW",
+                // Correctif A8 (SPEC_ANDROID §12.5) : service de garde du blocage.
+                "BLOCKING_GUARD_STARTED",
+                "BLOCKING_GUARD_STOPPED",
+                "BLOCKING_GUARD_START_REFUSED",
                 "ACCESSIBILITY_DISABLED",
                 "PROCESS_RECREATED",
                 "OEM_RESTRICTION_SUSPECTED",

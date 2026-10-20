@@ -5,6 +5,7 @@ import com.niumi.system.common.DeviceProtected
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
 import com.niumi.system.notification.AndroidSessionWarningNotifier
+import com.niumi.system.notification.BlockingGuardNotificationFactory
 import com.niumi.system.notification.NotificationIconResolver
 import com.niumi.system.notification.RingingNotificationFactory
 import com.niumi.system.notification.SessionWarningNotifier
@@ -40,6 +41,17 @@ object SystemNotificationModule {
         @ApplicationContext context: Context,
         iconResolver: NotificationIconResolver,
     ): RingingNotificationFactory = RingingNotificationFactory(context, iconResolver)
+
+    /**
+     * Sur le contexte protégé par appareil : le service de garde peut passer au premier plan avant
+     * le premier déverrouillage, après un redémarrage pendant le blocage (SPEC_ANDROID §12.5).
+     */
+    @Provides
+    @Singleton
+    fun provideBlockingGuardNotificationFactory(
+        @DeviceProtected context: Context,
+        iconResolver: NotificationIconResolver,
+    ): BlockingGuardNotificationFactory = BlockingGuardNotificationFactory(context, iconResolver)
 
     @Provides
     @Singleton

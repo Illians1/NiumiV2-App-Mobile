@@ -68,6 +68,24 @@ object WakeScheduleFormatter {
             ?.let { localTime -> (if (use24Hour) TIME_FORMATTER_24H else TIME_FORMATTER_12H).format(localTime) }
 
     /**
+     * Heure seule d'un instant, pour le titre de la notification du service de garde du blocage
+     * (SPEC_ANDROID §12.5) : mêmes formateurs et mêmes locales que [format], dans le fuseau de
+     * l'activation comme l'écran de session. `null` si le fuseau persisté est illisible : un service
+     * de premier plan ne doit jamais tomber pour un libellé.
+     */
+    fun formatTime(
+        epochMillis: Long,
+        zoneId: String,
+        use24Hour: Boolean,
+    ): String? =
+        try {
+            (if (use24Hour) TIME_FORMATTER_24H else TIME_FORMATTER_12H)
+                .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.of(zoneId)))
+        } catch (_: DateTimeException) {
+            null
+        }
+
+    /**
      * Non nul seulement quand le fuseau affiché est celui de l'activation : un fuseau d'affichage
      * différent (§8, heure recalculée dans le fuseau courant) n'est pas un trou d'heure d'été et
      * ne doit pas déclencher l'explication.

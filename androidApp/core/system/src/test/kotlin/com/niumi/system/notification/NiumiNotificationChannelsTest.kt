@@ -31,6 +31,26 @@ class NiumiNotificationChannelsTest {
         assertThat(spec.visibilityPublic).isTrue()
     }
 
+    /** §12.5 : permanente pendant le blocage, elle ne doit jamais sonner ni s'afficher en bannière. */
+    @Test
+    fun blockingGuardChannelIsLowImportanceAndSilent() {
+        val spec = NiumiNotificationChannels.blockingGuard
+
+        assertThat(spec.id).isEqualTo("niumi_blocking_guard")
+        assertThat(spec.importance).isEqualTo(NotificationManager.IMPORTANCE_LOW)
+        assertThat(spec.hasSound).isFalse()
+        assertThat(spec.hasVibration).isFalse()
+        assertThat(spec.visibilityPublic).isTrue()
+    }
+
+    @Test
+    fun everyChannelIsRegisteredWithADistinctId() {
+        val ids = NiumiNotificationChannels.all.map { it.id }
+
+        assertThat(ids).containsNoDuplicates()
+        assertThat(ids).contains(NiumiNotificationChannels.blockingGuard.id)
+    }
+
     @Test
     fun theTwoChannelsHaveDistinctIds() {
         assertThat(NiumiNotificationChannels.alarmRinging.id)

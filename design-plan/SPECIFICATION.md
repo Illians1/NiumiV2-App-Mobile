@@ -505,6 +505,17 @@ Elle part 30 minutes avant chaque coucher et ne porte aucun bouton. La toucher o
 | Titre | Tu te réveilles toujours demain à 7:00 ? |
 | Texte | Ton heure de coucher est programmée à 22:30, 6 applications seront bloquées. |
 
+### Notification de session (Android)
+
+Ajoutée le 20 octobre 2026 (décisions du 19 octobre, correctif A8). Pendant toute la session, de l'activation au scan, une notification Niumi discrète reste affichée : sans son, sans vibration, sans bannière, sans bouton. La toucher ouvre Niumi. L'utilisateur peut l'écarter ; elle ne revient pas, sauf au moment du coucher, où son texte change. Elle tient Niumi en vie : sur certains téléphones (Xiaomi), retirer Niumi des applications récentes sans elle arrêtait le blocage.
+
+| Moment | Titre | Texte |
+| --- | --- | --- |
+| Avant le coucher | Réveil programmé à 07:00 | Tes applications choisies seront bloquées à partir de 22:30. |
+| Après le coucher | Blocage en cours jusqu'à 07:00 | Tes applications choisies restent bloquées jusqu'au réveil. |
+
+Elle n'est pas dessinée : c'est une notification standard d'Android, avec l'icône de Niumi.
+
 ### Bandeau de problème
 
 Images : `55_bandeau-nfc-coupe-android`, `56_bandeau-aucun-niumi-point-au-cas-ou`.

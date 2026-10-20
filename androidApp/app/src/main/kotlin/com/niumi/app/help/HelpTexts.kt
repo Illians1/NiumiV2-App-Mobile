@@ -51,11 +51,12 @@ object HelpTexts {
                             "téléphone.",
                         "Si une permission est retirée, le volume d'alarme coupé ou l'exemption d'énergie perdue " +
                             "après l'activation, Niumi le signale par un incident. Il ne peut pas le corriger seul.",
-                        "Sur Xiaomi, « Tout effacer » dans les applications récentes arrête le blocage tant que " +
-                            "Niumi n'y est pas verrouillé : le diagnostic le demande une fois. Pendant une session, " +
-                            "Niumi n'apparaît pas dans les applications récentes, pour qu'aucun geste ne puisse " +
-                            "l'en retirer : reviens-y par son icône.",
-                        "Sur Xiaomi, si Niumi est arrêté pendant une session — plantage ou arrêt forcé — le " +
+                        "Pendant une session, une notification Niumi reste affichée : tu peux l'écarter, ta " +
+                            "session continue. Sur Xiaomi, « Tout effacer » dans les applications récentes arrête " +
+                            "le blocage tant que Niumi n'y est pas verrouillé : le diagnostic le demande une fois. " +
+                            "Hors session, balayer Niumi dans les applications récentes oblige à réactiver son " +
+                            "service d'accessibilité avant la session suivante : le diagnostic te le dira.",
+                        "Si Niumi est arrêté pendant une session — plantage ou arrêt forcé — le " +
                             "blocage ne reprend pas tant que tu n'as pas réactivé le service d'accessibilité. " +
                             "Niumi te prévient dès qu'il tourne à nouveau, et un blocage différé commence alors " +
                             "en retard.",

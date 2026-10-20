@@ -145,14 +145,16 @@ l'a pas réactivé. **Le blocage est coupé**, l'alarme conservée.
 **Ce qui a été fait.** Décidé avec l'utilisateur et mesuré sur appareil (`ETAPE-25.md`) :
 
 - **carte cachée pendant la session** (`RecentsCard`, `setExcludeFromRecents`) : plus de carte à
-  balayer ; elle revient à la fin de la session ;
+  balayer ; elle revient à la fin de la session. **Remplacée le 2026-10-19** par le service de
+  garde de session (A8) : la carte ne couvrait pas les récents ouverts depuis Niumi ;
 - **verrou HyperOS exigé par le diagnostic** (contrôle `RECENTS_LOCK`, bloquant sur HyperOS, sans
   objet ailleurs) : seul moyen mesuré d'échapper à « Tout effacer », qui tue même une tâche cachée
   et un processus sans tâche. Le verrou est par application et durable : il se pose une fois.
 
 Écartés : supprimer la tâche en quittant Niumi (« Tout effacer » tue même sans tâche, mesuré),
-service de premier plan permanent (même priorité, contraire au MVP), surveillance périodique (ne
-répare rien, troisième dérogation à §9.1).
+service de premier plan permanent (même priorité, contraire au MVP — **démenti le 2026-10-19** :
+à priorité égale, seul le service de premier plan est épargné par le balayage, A8), surveillance
+périodique (ne répare rien, troisième dérogation à §9.1).
 
 **Reste** : le cas sans objet (appareil sans verrou HyperOS) n'est pas mesurable sur le Xiaomi ;
 le comportement des récents sur Pixel et Samsung relève de B1 et B2. Le trou mesuré le 2026-10-19
@@ -162,7 +164,7 @@ est suivi en A8.
 
 ### A8. Carte de Niumi visible dans les récents ouverts depuis Niumi
 
-- [ ] **À décider**
+- [x] **Fait** (2026-10-20), sous réserve de la déclaration Play du type `specialUse` (A6)
 
 **Pourquoi.** Mesuré le 2026-10-19 (Xiaomi 25080RABDG, Android 16, HyperOS OS3.0.302.0, essais de
 l'étape 33) : session armée, carte marquée exclue (`0x00800000`), l'utilisateur ouvre les récents
@@ -173,8 +175,52 @@ réactivation manuelle. Cause : Android garde dans les récents la tâche la plu
 carte (confirmé par l'utilisateur). La parade A7 a donc un trou que l'application ne peut pas
 fermer seule : aucune API ne retire des récents la tâche au premier plan.
 
-**À décider** : traitement (limite écrite dans l'aide, mesure d'un service dans un processus
-séparé, ou autre). Rien n'est implémenté.
+**Mesuré le 2026-10-19, après-midi** (`A8-RECENTS.md`) : retirer la tâche de Niumi à la pause,
+quand l'utilisateur le quitte en session (`finishAndRemoveTask()`), **ne protège pas**. Le lanceur
+HyperOS garde la carte en cache, la balayer tue quand même le processus (`SwipeUpClean`, par nom
+de paquet), et la parade dégradait le verrouillage. Code retiré. Le même journal montre que le
+balayage tue tous les processus du paquet (Firefox, trois processus) : un service d'accessibilité
+dans un processus séparé ne survivrait pas non plus. Brick, application de blocage du même genre,
+subit la même mort (14:25). Le non-rétablissement du service est une règle d'Android, pas de
+HyperOS (`mCrashedServices`, SPEC_ANDROID §15) : seul le kill est propre à la surcouche.
+
+**Mesuré ensuite, même séance, sur décision de Mehdi** : avec un service de premier plan (POC
+jetable, type `mediaPlayback`, notification silencieuse), le balayage retire la tâche mais **le
+processus survit** et le service d'accessibilité reste lié (17:46:29, `doSwapUPClean` sans
+`am_kill`). Seule parade qui tient, mesurée une fois.
+
+**Décidé avec Mehdi le 2026-10-19 et implémenté** (SPEC_ANDROID §12.5, `A8-RECENTS.md`) :
+
+- **service de garde de session** (`BlockingGuardService`, type `specialUse`) pendant toute la
+  session, de l'armement au scan, avec une notification silencieuse à deux textes (« Réveil
+  programmé à 07:00 » avant le coucher, « Blocage en cours jusqu'à 07:00 » après) ; une
+  notification écartée n'est jamais ramenée ;
+- **carte de Niumi rendue aux récents** : `RecentsCard` retiré ;
+- **verrou HyperOS toujours exigé** : mesuré le 2026-10-19 à 18:49, « Tout effacer » tue Niumi
+  malgré le service de garde quand le verrou est retiré.
+
+Mesuré sur appareil : balayage de la carte pendant le blocage, notification affichée (19:01) ou
+écartée (19:04), et avant le coucher (2026-10-20, 12:27) : processus et service d'accessibilité
+intacts, blocage appliqué à l'heure (12:30) ; arrêt du service au scan (12:35:34) ; relance seule
+après une mort du processus (18:52) et après un redémarrage, avant le déverrouillage (12:49:55).
+
+**Reste** : déclaration Play du type `specialUse` (`play-console/FGS_SPECIAL_USE.md`, à soumettre
+avec A6) ; hors session, balayer la carte plante encore le service d'accessibilité sur HyperOS
+(mesuré le 2026-10-20 à 09:06), signalé par le diagnostic à l'activation suivante ; Pixel et
+Samsung non mesurés (B1, B2).
+
+---
+
+### A9. Verrou HyperOS perdu sans geste de l'utilisateur
+
+- [ ] **À comprendre**
+
+**Pourquoi.** Le 2026-10-19, le verrou de Niumi dans les récents (`locked_apps`) a disparu deux
+fois pendant des essais de balayage, sans que l'utilisateur retire le cadenas ; une première
+perte avait déjà été vue le 2026-09-28 (`ETAPE-25.md`). Le diagnostic le redemande avant
+l'activation suivante, mais un verrou perdu **pendant** une session n'est pas surveillé (13.1) et
+laisserait « Tout effacer » arrêter le blocage. **Fini quand** la cause est isolée, ou la perte
+écartée par une série de balayages sans perte.
 
 ---
 

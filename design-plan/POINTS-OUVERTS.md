@@ -1,6 +1,6 @@
 # Niumi · Points ouverts
 
-État au 9 octobre 2026, complété le 18 octobre (T11, E12) et le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, §2). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
+État au 9 octobre 2026, complété le 18 octobre (T11, E12) et le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, T12, §2). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
 
 Cinq listes :
 
@@ -91,6 +91,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | --- | --- | --- |
 | T9 | Lister les applications installées | L'autorisation QUERY_ALL_PACKAGES est réservée par Google Play aux apps dont la fonction principale en a besoin |
 | T10 | Bloquer les applications par un service d'accessibilité | Approche courante, à valider avec les règles de Google Play |
+| T12 | ~~Garder Niumi en vie quand on le retire des applications récentes~~ | **Tranché le 19 octobre 2026** : sur Xiaomi, retirer Niumi des récents arrêtait le blocage. Une notification discrète reste affichée pendant toute la session, avec deux textes (avant et après le coucher) ; elle peut être écartée et ne revient pas. Niumi n'est plus caché des récents. « Tout effacer » demande toujours de verrouiller Niumi (`SPECIFICATION.md` §17, SPEC_ANDROID §12.5) |
 | T11 | ~~L'affichage plein écran de l'alarme~~ | **Tranché le 18 octobre 2026, sans objet** : Niumi n'utilise plus l'affichage plein écran. L'alarme sonne et une notification visible sur l'écran de verrouillage ouvre l'écran 10 |
 
 ## 4. Ce qui n'est pas encore dessiné ou écrit

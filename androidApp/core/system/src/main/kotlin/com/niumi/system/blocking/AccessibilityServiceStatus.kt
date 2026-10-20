@@ -28,9 +28,9 @@ interface AccessibilityServiceStatus {
  * processus — est un état **transitoire** juste après le déverrouillage : Android relie les
  * services d'accessibilité après celui-ci, pas instantanément (mesuré le 2026-09-27 : l'état
  * existait 0,3 s après le déverrouillage et avait disparu 15 s plus tard ; liaison relevée 2,3 à
- * 3,6 s après). C'est aussi un état **durable** après une mort du processus sur HyperOS, où
- * Android ne relie plus le service tant que l'utilisateur ne l'a pas réactivé (mesuré le
- * 2026-09-25). Seule la durée les distingue.
+ * 3,6 s après). C'est aussi un état **durable** après une mort du processus, où Android ne relie
+ * plus le service tant que l'utilisateur ne l'a pas réactivé (mesuré le 2026-09-25 sur HyperOS ;
+ * règle AOSP des services plantés, SPEC_ANDROID §15). Seule la durée les distingue.
  */
 enum class AccessibilityServiceState {
     ENABLED,

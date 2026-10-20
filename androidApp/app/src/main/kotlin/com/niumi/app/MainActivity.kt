@@ -24,11 +24,10 @@ import com.niumi.app.theme.SessionThemeViewModel
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.designsystem.ui.theme.applyNiumiWindowTheme
 import com.niumi.feature.ringing.AlarmActivity
+import com.niumi.system.blocking.guard.BlockingGuardWatcher
 import com.niumi.system.intent.NiumiDeepLink
 import com.niumi.system.readiness.SessionReadinessWatcher
-import com.niumi.system.recents.RecentsCard
 import com.niumi.system.session.SessionSnapshotPublisher
-import com.niumi.system.session.isSessionInProgress
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -45,7 +44,7 @@ class MainActivity : ComponentActivity() {
     lateinit var sessionSnapshotPublisher: SessionSnapshotPublisher
 
     @Inject
-    lateinit var recentsCard: RecentsCard
+    lateinit var blockingGuardWatcher: BlockingGuardWatcher
 
     /**
      * Destination demandée par l'`Intent` qui a ouvert l'activité (SPEC_ANDROID §13.1). Un `State`
@@ -78,11 +77,14 @@ class MainActivity : ComponentActivity() {
             object : DefaultLifecycleObserver {
                 override fun onResume(owner: LifecycleOwner) {
                     sessionReadinessWatcher.evaluateAsync()
+                    // SPEC_ANDROID §12.5 : Android autorise toujours le démarrage d'un service de
+                    // premier plan depuis une activité visible ; un démarrage refusé en arrière-plan
+                    // est rejoué ici.
+                    blockingGuardWatcher.retryRefused()
                 }
             },
         )
         openAlarmScreenWhileSessionAwaitsScan()
-        hideRecentsCardWhileSessionIsInProgress()
         setContent {
             val dark by themeViewModel.dark.collectAsStateWithLifecycle()
             // Rien n'est composé avant que la persistance ait dit si une session est en cours :
@@ -144,27 +146,6 @@ class MainActivity : ComponentActivity() {
                     .collect { required ->
                         if (required) startActivity(AlarmActivity.intent(this@MainActivity))
                     }
-            }
-        }
-    }
-
-    /**
-     * Pas de carte dans les récents tant qu'une session court (étape 25, `RecentsCard`) : sur HyperOS,
-     * la balayer tue Niumi et coupe le blocage jusqu'à la réactivation manuelle du service
-     * d'accessibilité — mesuré le 2026-09-28, verrou de la carte compris. La carte revient quand la
-     * session atteint un état final.
-     *
-     * `CREATED` et non `RESUMED`, contrairement à la redirection ci-dessus : une session peut se
-     * terminer pendant que l'activité est en arrière-plan, et la carte doit revenir sans attendre son
-     * retour au premier plan. La règle est celle de `isSessionInProgress`, jamais recopiée.
-     */
-    private fun hideRecentsCardWhileSessionIsInProgress() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
-                sessionSnapshotPublisher.snapshot
-                    .map { it?.state.isSessionInProgress() }
-                    .distinctUntilChanged()
-                    .collect { inProgress -> recentsCard.setHidden(inProgress) }
             }
         }
     }

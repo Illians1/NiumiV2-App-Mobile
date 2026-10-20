@@ -1,6 +1,7 @@
 package com.niumi.app
 
 import android.app.Application
+import com.niumi.system.blocking.guard.BlockingGuardWatcher
 import com.niumi.system.boot.SystemEventsRegistrar
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
 import com.niumi.system.readiness.SessionReadinessWatcher
@@ -22,6 +23,9 @@ class NiumiApplication : Application() {
     @Inject
     lateinit var systemEventsRegistrar: SystemEventsRegistrar
 
+    @Inject
+    lateinit var blockingGuardWatcher: BlockingGuardWatcher
+
     override fun onCreate() {
         super.onCreate()
         // Les canaux doivent exister avant toute notification : poster sur un canal inconnu
@@ -29,6 +33,11 @@ class NiumiApplication : Application() {
         // tue le service). Les créer ici les rend aussi visibles dans les réglages Android
         // avant même la première session. `createNotificationChannel` est idempotent.
         notificationChannelRegistrar.registerAll()
+        // SPEC_ANDROID §12.5 : le service de garde suit les snapshots publiés, y compris celui que
+        // la réconciliation ci-dessous republie au démarrage. Lancé avant elle pour ne manquer
+        // aucune publication ; ici et non dans une activité, parce que le blocage peut entrer en
+        // vigueur sans interface (début différé, redémarrage).
+        blockingGuardWatcher.start()
         // SPEC_ANDROID §13.1 : seul changement de réglage surveillé qu'Android diffuse
         // publiquement. Le receveur est enregistré à chaud et meurt avec le processus, ce que
         // §13.1 assume explicitement — aucune surveillance continue n'est promise.

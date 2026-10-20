@@ -234,6 +234,8 @@ class ReleaseHygieneTest {
                 "android.permission.POST_NOTIFICATIONS",
                 "android.permission.FOREGROUND_SERVICE",
                 "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+                // Service de garde du blocage (SPEC_ANDROID §12.5, correctif A8 du 2026-10-19).
+                "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
                 "android.permission.RECEIVE_BOOT_COMPLETED",
                 "android.permission.WAKE_LOCK",
                 "android.permission.VIBRATE",

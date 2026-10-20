@@ -120,7 +120,13 @@ Repris des étapes 19 et 20 plutôt que présentés comme résolus.
    contre « Tout effacer » (survie à 14:37 et après redémarrage). Ce qui reste ouvert : le verrou
    appartient à l'utilisateur, qui peut le retirer hors session (le diagnostic bloque alors
    l'activation suivante) ; le contrôle est sans objet hors HyperOS, où le comportement des récents
-   n'est pas mesuré (B1, B2).
+   n'est pas mesuré (B1, B2). **Trou mesuré le 2026-10-19** : les récents ouverts depuis Niumi
+   montrent sa carte malgré l'exclusion (règle AOSP), et retirer la tâche à la sortie ne protège
+   pas, le lanceur tuant par paquet depuis sa carte en cache. **Traité le 2026-10-20** : un service
+   de garde de session (`specialUse`, notification à deux textes) tient le processus au premier plan
+   pendant toute la session, et la carte n'est plus cachée ; balayer la carte n'arrête plus rien
+   (mesuré avant et pendant le blocage). « Tout effacer » exige toujours le verrou (`A8-RECENTS.md`,
+   SPEC_ANDROID §12.5). Le non-rétablissement du service est une règle d'Android, pas de HyperOS.
 9. **Même mécanisme pour toute mort du processus** (essai 3, 2026-09-25) : alarme de début
    conservée, blocage suspendu jusqu'à la réactivation du service. C'est ce qui sépare le critère 26
    de la ligne §20 « processus tué avant l'heure de début ». Sa détection dépend de l'écart 12. Sans parade connue : Android ne laisse pas une

@@ -10,10 +10,11 @@ import javax.inject.Singleton
  *
  * `Settings.Secure.ACCESSIBILITY_ENABLED` servait d'indice jusque-là ; c'est un interrupteur
  * **global**, à 1 dès qu'un service d'accessibilité quelconque tourne. Mesuré le 2026-10-15 sur
- * Xiaomi 25080RABDG / Android 16 : après une mort du processus, HyperOS ne reliait plus Niumi
- * (« Crashed services »), mais une autre application d'accessibilité tenait l'interrupteur à 1 —
- * le diagnostic lisait « actif », et l'incident `BLOCKING_PERMISSION_REVOKED` n'était jamais
- * consigné. Les mesures de l'étape 25 n'avaient réussi que parce que Niumi était alors seul.
+ * Xiaomi 25080RABDG / Android 16 : après une mort du processus, Android ne reliait plus Niumi
+ * (« Crashed services », règle AOSP : SPEC_ANDROID §15), mais une autre application
+ * d'accessibilité tenait l'interrupteur à 1 — le diagnostic lisait « actif », et l'incident
+ * `BLOCKING_PERMISSION_REVOKED` n'était jamais consigné. Les mesures de l'étape 25 n'avaient
+ * réussi que parce que Niumi était alors seul.
  *
  * L'état meurt avec le processus : un processus neuf, y compris celui qu'Android relance après
  * une mort, lit « non relié » tant que le système n'a pas effectivement reconnecté le service. Le

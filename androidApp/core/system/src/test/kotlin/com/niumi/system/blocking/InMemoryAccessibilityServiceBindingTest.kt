@@ -6,8 +6,8 @@ import org.junit.Test
 /**
  * Le service d'accessibilité annonce lui-même sa liaison dans ce processus (SPEC_ANDROID §13.1,
  * décision du 2026-10-15) : faux tant qu'`onServiceConnected` n'a pas eu lieu, donc faux dans tout
- * processus neuf — y compris celui qu'Android relance après une mort du processus, quand HyperOS ne
- * relie plus le service.
+ * processus neuf — y compris celui qu'Android relance après une mort du processus, quand il ne relie
+ * plus le service (services plantés, SPEC_ANDROID §15).
  */
 class InMemoryAccessibilityServiceBindingTest {
     private val binding = InMemoryAccessibilityServiceBinding()

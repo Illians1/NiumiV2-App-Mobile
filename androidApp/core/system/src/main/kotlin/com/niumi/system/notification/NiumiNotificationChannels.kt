@@ -3,7 +3,7 @@ package com.niumi.system.notification
 import android.app.NotificationManager
 
 /**
- * Les trois canaux de notification de Niumi (SPEC_ANDROID §10.3, §10.5, §13.1).
+ * Les quatre canaux de notification de Niumi (SPEC_ANDROID §10.3, §10.5, §12.5, §13.1).
  * `sessionAwaitingScan` est créé dès l'étape 3 même si sa notification n'est publiée qu'à
  * partir de l'étape 17 (`PRESENT_SCAN_REQUEST`) : créer un canal n'exige pas que l'événement
  * qui le déclenche existe déjà. `sessionWarning` suit la même logique depuis l'étape 12.
@@ -41,5 +41,19 @@ object NiumiNotificationChannels {
             visibilityPublic = true,
         )
 
-    val all = listOf(alarmRinging, sessionAwaitingScan, sessionWarning)
+    /**
+     * Notification du service de garde du blocage (SPEC_ANDROID §12.5) : permanente pendant toute
+     * la phase de blocage, donc **importance basse** — ni bannière, ni son, ni vibration. Elle
+     * cohabite avec la notification de sonnerie sans jamais lui disputer l'attention.
+     */
+    val blockingGuard =
+        NotificationChannelSpec(
+            id = "niumi_blocking_guard",
+            importance = NotificationManager.IMPORTANCE_LOW,
+            hasSound = false,
+            hasVibration = false,
+            visibilityPublic = true,
+        )
+
+    val all = listOf(alarmRinging, sessionAwaitingScan, sessionWarning, blockingGuard)
 }

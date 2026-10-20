@@ -52,6 +52,15 @@ enum class TechnicalEventType {
     BLOCKING_START_RECEIVED,
     BLOCKING_STARTED,
     MISSED_BLOCKING_START_WINDOW,
+
+    /**
+     * Service de garde du blocage (SPEC_ANDROID §12.5, correctif A8 du 2026-10-19) : démarré quand le
+     * blocage entre en vigueur, arrêté à la fin de la session, ou refusé par Android depuis
+     * l'arrière-plan (`errorCode` contrôlé).
+     */
+    BLOCKING_GUARD_STARTED,
+    BLOCKING_GUARD_STOPPED,
+    BLOCKING_GUARD_START_REFUSED,
     ACCESSIBILITY_DISABLED,
     PROCESS_RECREATED,
     OEM_RESTRICTION_SUSPECTED,

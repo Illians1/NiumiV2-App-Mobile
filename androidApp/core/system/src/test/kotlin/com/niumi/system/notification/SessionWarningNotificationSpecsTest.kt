@@ -27,10 +27,11 @@ class SessionWarningNotificationSpecsTest {
         assertThat(spec.hasVibration).isFalse()
     }
 
+    /** Quatre depuis le service de garde du blocage (SPEC_ANDROID §12.5). */
     @Test
-    fun theThreeChannelsAreRegisteredWithDistinctIds() {
-        assertThat(NiumiNotificationChannels.all).hasSize(3)
-        assertThat(NiumiNotificationChannels.all.map { it.id }.toSet()).hasSize(3)
+    fun theFourChannelsAreRegisteredWithDistinctIds() {
+        assertThat(NiumiNotificationChannels.all).hasSize(4)
+        assertThat(NiumiNotificationChannels.all.map { it.id }.toSet()).hasSize(4)
         assertThat(NiumiNotificationChannels.all).contains(NiumiNotificationChannels.sessionWarning)
     }
 

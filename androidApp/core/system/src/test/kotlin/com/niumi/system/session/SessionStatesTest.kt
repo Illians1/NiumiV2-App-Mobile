@@ -65,6 +65,27 @@ class SessionStatesTest {
         }
     }
 
+    /**
+     * Une seule règle pour le thème et le service de garde du blocage (SPEC_ANDROID §12.5) : le
+     * thème est sombre exactement quand le blocage est en vigueur, sur tous les états, blocage
+     * différé appliqué ou non.
+     */
+    @Test
+    fun theDarkThemeFollowsExactlyTheBlockingInForce() {
+        val snapshots =
+            SessionStateDto.entries.map(::inState) +
+                SessionDtoFixtures.deferredArmedSnapshot(blockingAppliedAtEpochMillis = null) +
+                SessionDtoFixtures.deferredArmedSnapshot(blockingAppliedAtEpochMillis = 1_500L)
+        val none: SessionSnapshotDto? = null
+
+        assertThat(none.isBlockingInForce()).isFalse()
+        snapshots.forEach { snapshot ->
+            assertWithMessage(
+                snapshot.state.name,
+            ).that(snapshot.isSessionDark()).isEqualTo(snapshot.isBlockingInForce())
+        }
+    }
+
     /** `PREPARING` n'a encore rien bloqué : l'app est claire. */
     @Test
     fun aSessionStillPreparingIsLight() {

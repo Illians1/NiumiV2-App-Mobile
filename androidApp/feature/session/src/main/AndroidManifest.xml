@@ -20,6 +20,24 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/niumi_accessibility_service" />
         </service>
+
+        <!--
+            Service de garde du blocage (SPEC_ANDROID §12.5, correctif A8) : tient le processus au
+            premier plan tant que le blocage est en vigueur, pour que le nettoyeur de HyperOS
+            l'épargne quand l'utilisateur balaie la carte de Niumi dans les récents. directBootAware :
+            il peut devoir repasser au premier plan avant le premier déverrouillage, après un
+            redémarrage pendant le blocage. La propriété décrit l'usage pour la revue Google Play
+            (obligatoire pour le type specialUse).
+        -->
+        <service
+            android:name=".blocking.guard.BlockingGuardService"
+            android:exported="false"
+            android:directBootAware="true"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the user's app-blocking session alive while the apps they chose are blocked, until they scan their NFC tag at wake-up. Shows a persistent notification; no media, no sync, no location." />
+        </service>
     </application>
 
 </manifest>

@@ -176,6 +176,25 @@ class WakeScheduleFormatterTest {
         assertThat(WakeScheduleFormatter.formatLocalTime("", use24Hour = false)).isNull()
     }
 
+    // Heure seule d'un instant : titre de la notification du service de garde (SPEC_ANDROID §12.5).
+
+    @Test
+    fun anInstantIsRenderedAsATimeInTheActivationZone() {
+        val sevenInParis = ZonedDateTime.of(2026, 10, 20, 7, 0, 0, 0, ZoneId.of("Europe/Paris"))
+        val epochMillis = sevenInParis.toInstant().toEpochMilli()
+
+        assertThat(WakeScheduleFormatter.formatTime(epochMillis, "Europe/Paris", use24Hour = true)).isEqualTo("07:00")
+        assertThat(
+            WakeScheduleFormatter.formatTime(epochMillis, "Europe/Paris", use24Hour = false),
+        ).isEqualTo("7:00 AM")
+        assertThat(WakeScheduleFormatter.formatTime(epochMillis, "Europe/London", use24Hour = true)).isEqualTo("06:00")
+    }
+
+    @Test
+    fun anUnreadableZoneHasNoTime() {
+        assertThat(WakeScheduleFormatter.formatTime(0L, "Pas/UnFuseau", use24Hour = true)).isNull()
+    }
+
     @Test
     fun theEchoKeepsLatinDigitsRegardlessOfTheJvmDefaultLocale() {
         Locale.setDefault(Locale.forLanguageTag("ar-EG"))
