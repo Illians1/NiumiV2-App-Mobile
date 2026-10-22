@@ -12,8 +12,11 @@ package com.niumi.system.apps
  * donc résolus par intents publics (écart documenté à l'étape 13, SPEC_ANDROID §12.1).
  */
 interface PackageQuery {
-    /** `ACTION_MAIN` + `CATEGORY_LAUNCHER`, une entrée par activité de lancement résolue. */
-    fun launcherEntries(): List<InstalledApp>
+    /**
+     * `ACTION_MAIN` + `CATEGORY_LAUNCHER`, une entrée par activité de lancement résolue, dans
+     * l'ordre de la requête. `suspend` : noms et icônes se lisent en parallèle.
+     */
+    suspend fun launcherEntries(): List<InstalledApp>
 
     /** Tous les lanceurs installés, pas seulement celui par défaut. */
     fun homePackages(): Set<String>

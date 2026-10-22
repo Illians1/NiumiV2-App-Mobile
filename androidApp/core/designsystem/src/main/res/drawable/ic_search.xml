@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Loupe du champ « Rechercher » (maquette 11) : cercle de rayon 6,5 et manche, trait de 1,8.
+    Tracé recopié de la source HTML de la maquette (viewBox 24 × 24, trait seul, bouts ronds).
+    Noir dans le fichier : l'écran teinte l'icône (texte secondaire, VALEURS-DE-DESIGN.md §2).
+    Icône d'action : jamais ambre (VALEURS §2).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M11,4.5a6.5,6.5 0,1 1,0 13a6.5,6.5 0,1 1,0 -13z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FF000000" />
+    <path
+        android:pathData="M16,16l4.5,4.5"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round" />
+</vector>

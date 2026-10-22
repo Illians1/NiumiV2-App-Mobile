@@ -28,4 +28,19 @@ object NiumiShapes {
 
     /** Emplacement d'icône d'application : coins de 7. */
     val appIcon = RoundedCornerShape(7.dp)
+
+    // Écran 4 (étape 37) : valeurs propres à l'écran, relevées dans les sources des maquettes 10 à 12
+    // (VALEURS §3 : « les valeurs exactes de chaque écran sont dans les sources »).
+
+    /** Carte de sélection des applications : coins de 20, plus ronds que la carte d'état. */
+    val selectionCard = RoundedCornerShape(20.dp)
+
+    /** Case d'icône de la carte de sélection : coins de 10. */
+    val appSlot = RoundedCornerShape(10.dp)
+
+    /** Case d'icône de la grille de la feuille : coins de 14. */
+    val appTile = RoundedCornerShape(14.dp)
+
+    /** Champ « Rechercher » de la feuille : coins de 14. */
+    val searchField = RoundedCornerShape(14.dp)
 }

@@ -220,4 +220,72 @@ object NiumiDimens {
      */
     val grantedBadge = 28.dp
     val grantedBadgeCheck = 16.dp
+
+    // Écran 4 · Choix des applications (étape 37), relevées dans les sources des maquettes 10 à 12.
+
+    /** Espace entre le titre de l'écran et son texte. */
+    val appSelectionTitleBodyGap = 10.dp
+
+    /** Espace au-dessus du titre, sous la marge du haut. */
+    val appSelectionTitleTop = 24.dp
+
+    /** Carte de sélection : 26 en haut et en bas, 20 sur les côtés, 16 entre ses éléments. */
+    val selectionCardPadding = PaddingValues(horizontal = 20.dp, vertical = 26.dp)
+    val selectionCardGap = 16.dp
+
+    /** Case d'icône de la carte : 40, espacées de 10 ; trait pointillé de 1,5 quand elle est vide. */
+    val appSlot = 40.dp
+    val appSlotGap = 10.dp
+    val appSlotDashedStroke = 1.5.dp
+
+    /** Pointillé des cases vides : tirets de 4, espaces de 3 (rendu du `dashed` des navigateurs). */
+    val appSlotDash = 4.dp
+    val appSlotDashGap = 3.dp
+
+    /** Espace entre la mention du bas et le bouton « Continuer ». */
+    val appSelectionHintGap = 12.dp
+
+    /** Champ « Rechercher » : 48 de haut, 14 de marge, loupe de 20 à 10 du texte, 8 sous le titre. */
+    val searchFieldHeight = 48.dp
+    val searchFieldPadding = 14.dp
+    val searchIcon = 20.dp
+    val searchIconGap = 10.dp
+    val searchFieldTop = 8.dp
+
+    /**
+     * Croix qui vide la recherche (décision du 2026-10-22, sans maquette) : décalée de 15 vers la
+     * droite (13 pour la boîte de 44, 2 de plus pour la zone de 48 réservée), pour que son tracé de
+     * 18 finisse à 14 du bord du champ, comme la loupe commence.
+     */
+    val clearSearchInset = 15.dp
+
+    /** Grille : 20 sous la recherche (et 8 de plus pour la pastille), 18 entre rangées, 10 entre colonnes. */
+    val appGridTop = 20.dp
+    val appGridInnerTop = 8.dp
+    val appGridRowGap = 18.dp
+    val appGridColumnGap = 10.dp
+
+    /** Case de la grille : 56, bord de 2 si cochée, 6 au-dessus du libellé. */
+    val appTile = 56.dp
+    val appTileCheckedBorder = 2.dp
+    val appTileLabelGap = 6.dp
+
+    /** Pastille de la coche : rond de 22 débordant de 8 en haut à droite, coche de 14. */
+    val appTileBadge = 22.dp
+    val appTileBadgeOverflow = 8.dp
+    val appTileBadgeCheck = 14.dp
+
+    /** Pied de la page : 12 au-dessus du compteur, 12 entre le compteur et « Valider ». */
+    val appSelectionFooterTop = 12.dp
+    val appSelectionFooterGap = 12.dp
+
+    /** Titre d'une section de la grille (« Choisies »), et l'espace qui le sépare des cases. */
+    val appSectionTitleGap = 12.dp
+
+    /**
+     * Indicateur de chargement (décision du 2026-10-22) : cercle de 32, trait de 3. Aucune maquette
+     * ne le dessine ; valeurs choisies à l'étape 37.
+     */
+    val loadingIndicator = 32.dp
+    val loadingIndicatorStroke = 3.dp
 }

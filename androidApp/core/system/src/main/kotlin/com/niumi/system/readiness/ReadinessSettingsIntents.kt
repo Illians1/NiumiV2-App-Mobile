@@ -67,7 +67,7 @@ fun settingsIntentFor(
         }
 
         ReadinessAction.StartPairing,
-        ReadinessAction.OpenAppPicker,
+        ReadinessAction.OpenAppSelection,
         ReadinessAction.RequestNotificationPermission,
         ReadinessAction.ShowExactAlarmDiagnostic,
         ReadinessAction.FixTime,

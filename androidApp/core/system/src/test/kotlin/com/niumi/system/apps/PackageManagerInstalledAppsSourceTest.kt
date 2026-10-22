@@ -23,7 +23,7 @@ class PackageManagerInstalledAppsSourceTest {
         var settings: String? = null,
         var dialers: Set<String> = emptySet(),
     ) : PackageQuery {
-        override fun launcherEntries(): List<InstalledApp> = entries
+        override suspend fun launcherEntries(): List<InstalledApp> = entries
 
         override fun homePackages(): Set<String> = home
 

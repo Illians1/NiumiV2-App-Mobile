@@ -21,13 +21,14 @@ import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
 
 /**
- * Croix de fermeture d'une feuille du bas (maquettes 11, 16) ou d'une fenêtre d'alerte (étape 36,
- * décision du 2026-10-21) : icône de 22 dans une zone de 44, 48 réservés, décalée vers le bord
- * pour que son tracé s'aligne sur la marge. [label] vient du `Texts` de l'écran (« Fermer »,
- * « Fermer sans enregistrer »).
+ * Croix de fermeture d'une feuille du bas (maquette 16), d'une fenêtre d'alerte (étape 36,
+ * décision du 2026-10-21) ou de la page « Applications à bloquer » (maquette 11, en pleine page
+ * depuis le 2026-10-22) : icône de 22 dans une zone de 44, 48 réservés, décalée vers le bord pour
+ * que son tracé s'aligne sur la marge. [label] vient du `Texts` de l'écran (« Fermer », « Fermer
+ * sans enregistrer »).
  */
 @Composable
-internal fun NiumiCloseButton(
+fun NiumiCloseButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

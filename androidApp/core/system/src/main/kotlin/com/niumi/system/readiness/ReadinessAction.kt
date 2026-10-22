@@ -14,7 +14,7 @@ sealed interface ReadinessAction {
 
     data object StartPairing : ReadinessAction
 
-    data object OpenAppPicker : ReadinessAction
+    data object OpenAppSelection : ReadinessAction
 
     data object ShowExactAlarmDiagnostic : ReadinessAction
 

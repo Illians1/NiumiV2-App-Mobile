@@ -35,6 +35,7 @@ class NiumiBottomSheetTest {
     val composeRule = createComposeRule()
 
     private var dismissals = 0
+    private var contentActions = 0
 
     private fun showSheet(closeLabel: String?) {
         composeRule.setContent {
@@ -46,6 +47,7 @@ class NiumiBottomSheetTest {
                 ) { requestClose ->
                     Text("Scanne ton Niumi Point pour annuler.")
                     NiumiPrimaryButton(text = "Rester dans la session", onClick = requestClose)
+                    NiumiOutlinedButton(text = "Valider", onClick = { contentActions++ })
                 }
             }
         }
@@ -93,6 +95,39 @@ class NiumiBottomSheetTest {
         composeRule.waitForIdle()
 
         assertThat(dismissals).isEqualTo(1)
+    }
+
+    /**
+     * Une fois la fermeture demandée, le contenu ne répond plus : « Valider » touché pendant
+     * l'animation de la croix n'enregistre rien (relecture de l'étape 37).
+     */
+    @Test
+    fun theContentIgnoresTouchesOnceClosingStarted() {
+        showSheet(closeLabel = "Fermer")
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.onNodeWithContentDescription("Fermer").performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithText("Valider").performClick()
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        assertThat(contentActions).isEqualTo(0)
+        assertThat(dismissals).isEqualTo(1)
+    }
+
+    /** Témoin du test précédent : horloge arrêtée, le même toucher sans la croix agit bien. */
+    @Test
+    fun withTheClockStoppedAContentTouchStillActs() {
+        showSheet(closeLabel = "Fermer")
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithText("Valider").performClick()
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        assertThat(contentActions).isEqualTo(1)
     }
 
     /** Un bouton du contenu (« Rester dans la session ») range la feuille comme la croix. */

@@ -153,7 +153,7 @@ object ActiveSessionTexts {
 
             ReadinessAction.ShowExactAlarmDiagnostic,
             ReadinessAction.StartPairing,
-            ReadinessAction.OpenAppPicker,
+            ReadinessAction.OpenAppSelection,
             ReadinessAction.RequestNotificationPermission,
             ReadinessAction.FixTime,
             ReadinessAction.LockInRecents,

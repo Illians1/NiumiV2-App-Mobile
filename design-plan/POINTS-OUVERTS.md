@@ -89,7 +89,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 
 | N° | Quoi | Pourquoi |
 | --- | --- | --- |
-| T9 | Lister les applications installées | L'autorisation QUERY_ALL_PACKAGES est réservée par Google Play aux apps dont la fonction principale en a besoin |
+| T9 | ~~Lister les applications installées~~ | **Résolu le 22 octobre 2026** (étape 37 du plan Android) : la liste vient d'une requête ciblée (`<queries>` sur les activités de lancement, SPEC_ANDROID §12.1) ; `QUERY_ALL_PACKAGES` n'est pas demandée |
 | T10 | Bloquer les applications par un service d'accessibilité | Approche courante, à valider avec les règles de Google Play |
 | T12 | ~~Garder Niumi en vie quand on le retire des applications récentes~~ | **Tranché le 19 octobre 2026** : sur Xiaomi, retirer Niumi des récents arrêtait le blocage. Une notification discrète reste affichée pendant toute la session, avec deux textes (avant et après le coucher) ; elle peut être écartée et ne revient pas. Niumi n'est plus caché des récents. « Tout effacer » demande toujours de verrouiller Niumi (`SPECIFICATION.md` §17, SPEC_ANDROID §12.5) |
 | T11 | ~~L'affichage plein écran de l'alarme~~ | **Tranché le 18 octobre 2026, sans objet** : Niumi n'utilise plus l'affichage plein écran. L'alarme sonne et une notification visible sur l'écran de verrouillage ouvre l'écran 10 |

@@ -23,7 +23,7 @@ class ReadinessSettingsIntentsTest {
         listOf(
             ReadinessAction.OpenNfcSettings,
             ReadinessAction.StartPairing,
-            ReadinessAction.OpenAppPicker,
+            ReadinessAction.OpenAppSelection,
             ReadinessAction.ShowExactAlarmDiagnostic,
             ReadinessAction.RequestNotificationPermission,
             ReadinessAction.OpenChannelSettings("niumi_alarm_ringing"),
@@ -87,7 +87,7 @@ class ReadinessSettingsIntentsTest {
     fun inAppRecoursesProduceNoSettingsIntent() {
         listOf(
             ReadinessAction.StartPairing,
-            ReadinessAction.OpenAppPicker,
+            ReadinessAction.OpenAppSelection,
             ReadinessAction.RequestNotificationPermission,
             ReadinessAction.ShowExactAlarmDiagnostic,
             ReadinessAction.FixTime,

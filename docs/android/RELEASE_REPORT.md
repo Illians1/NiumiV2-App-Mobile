@@ -37,7 +37,7 @@ relecture finale ; `ktlintCheck`, `detekt`, `:app:lintRelease`, `:app:assembleRe
 | 13 | Un tag invalide ne modifie ni l'état, ni le blocage, ni le son | `commonTest` ; `ScanToModifyViewModelTest` |
 | 14 | La fin valide arrête le son et débloque en moins d'une seconde | Essai sur appareil, `ETAPE-04.md` et `ETAPE-20.md` (essai 7) |
 | 15 | Le blocage renvoie chaque application sélectionnée à l'accueil sans toucher les autres | `tools/validate_blocking.sh`, huit essais vérifiés par `dumpsys`, `ETAPE-05.md` |
-| 16 | Une sélection de plus de 50 applications est refusée | `commonTest` (0, 1, 50 et 51 applications) ; `AppPickerViewModelTest` |
+| 16 | Une sélection de plus de 50 applications est refusée | `commonTest` (0, 1, 50 et 51 applications) ; `AppSelectionViewModelTest` (étape 37 de la refonte : cases non cochées inactives à 50) |
 | 17 | Un redémarrage restaure l'alarme avant le premier déverrouillage | **Mesuré à l'étape 19**, trois essais, permission OEM de démarrage automatique refusée. Repris ici sans être refait |
 | 18 | `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` affichent toujours une notification de scan, sans son ni vibration ni plein écran, y compris avant le premier déverrouillage ; retirée par un scan valide | **Mesuré à l'étape 19**, essais 5 à 7. Repris ici sans être refait |
 | 19 | Un changement d'heure ou de fuseau réenregistre le même instant | `commonTest` (heure d'été, heure d'hiver, changement de fuseau) ; essais sur appareil `ETAPE-19.md` |

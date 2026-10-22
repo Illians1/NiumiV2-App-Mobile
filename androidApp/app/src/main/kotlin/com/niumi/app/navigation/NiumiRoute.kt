@@ -32,9 +32,9 @@ sealed interface NiumiRoute {
     @Serializable
     data object Pairing : NiumiRoute
 
-    /** Étape 13. */
+    /** Écran 4 · Choix des applications (étape 13, refait à l'étape 37 de la refonte). */
     @Serializable
-    data object AppPicker : NiumiRoute
+    data object AppSelection : NiumiRoute
 
     /** Étape 14. */
     @Serializable

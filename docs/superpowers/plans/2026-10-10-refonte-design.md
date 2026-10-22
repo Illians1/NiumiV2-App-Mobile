@@ -131,7 +131,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 36 | D10, D18, M1 | Pas de tuile NFC ; « ? » retiré sur tuile accordée ; images du guide à produire | **Tranché le 2026-10-20** : D10 oui ; guide reporté (M1) : ni « ? » ni route `PermissionGuide` tant que textes et images manquent, D18 sans objet |
 | 36 | — | Divulgation Google Play avant les réglages d'accessibilité | **Tranché le 2026-10-20, révisé le 2026-10-21** : fenêtre centrée sur l'écran 2 (`NiumiAlertDialog`, croix, toucher à côté), ouverte par « Autoriser » de la tuile « Blocage » ; même forme pour le verrou des récents et l'alarme exacte ; la page plein écran et sa route sont supprimées ; le guide facultatif ne peut pas porter la divulgation |
 | 36 | — | Icônes des tuiles en ambre | **Essai demandé le 2026-10-20, abandonné le 2026-10-22** : icônes à l'encre ; la coche d'une tuile accordée passe dans une pastille ambre (exception écrite à D14, VALEURS §2) |
-| 37 | Q3 | Compteur « N applications choisies » = sélection validée ; T9 clos par `<queries>` | Oui |
+| 37 | Q3 | Compteur « N applications choisies » = sélection validée ; T9 clos par `<queries>` | **Tranché le 2026-10-22** : oui. Même jour : limite de 50 par grisé et phrase, « +N » sur la carte, liste en pleine page au lieu de la feuille, section « Applications déjà choisies », indicateur de chargement, croix d'effacement de la recherche |
 | 38 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | Seulement feuille ouverte ; §10.4/§11.2 amendés |
 | 38 | Q5, E7 | Texte « Déverrouille ton téléphone… » (§4.4) ; deux textes « NFC coupé » | **Q5 tranché le 2026-10-18** : aucun texte « Déverrouille ton téléphone… », l'écran n'est jamais affiché verrouillé (Lot 9 du plan maître). E7 : chaque texte sur son écran |
 | 39 | Q6, T10 | Écran 7 affiché jusqu'à « Fermer » ; déclaration Play à refaire | Oui, dans la même étape |
@@ -484,9 +484,9 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** l'écran 4 et sa feuille Android, la sélection enregistrée seulement à « Valider ».
 
-- [ ] **Écrire `AppSelectionViewModelTest`, `AppSelectionTextsTest`**, implémenter écran, feuille, textes.
-- [ ] **Vérifier :** batterie standard ; `grep -rn "AppPicker" androidApp` vide.
-- [ ] **Valider sur appareil, rédiger `ETAPE-37.md`.** SPEC_ANDROID §12.1, §15 ; `POINTS-OUVERTS.md` T9 annoté « résolu : `<queries>` ciblé ».
+- [x] **Écrire `AppSelectionViewModelTest`, `AppSelectionTextsTest`**, implémenter écran, feuille, textes. *(2026-10-22 : la feuille devient une pleine page `AppSelectionPage.kt`, décision de Mehdi ; lecture parallèle des applications ; voir `ETAPE-37.md`.)*
+- [x] **Vérifier :** batterie standard ; `grep -rn "AppPicker" androidApp` vide. *(1 515 JVM ; 246 instrumentés.)*
+- [x] **Valider sur appareil, rédiger `ETAPE-37.md`.** SPEC_ANDROID §12.1, §15 ; `POINTS-OUVERTS.md` T9 annoté « résolu : `<queries>` ciblé ». *(2026-10-22 : dix essais conformes sur Xiaomi / Android 16 / HyperOS ; phrase de la tuile Batterie revue et limite HyperOS écrite en §13 ; logo mis à jour d'après les sources, changement à part.)*
 
 **Tests manuels :** choisir 6 applications, fermer par la croix → « Aucune application choisie » ; recommencer et valider → icônes, « 6 applications choisies », « Modifier » ; rechercher « insta ».
 

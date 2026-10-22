@@ -19,7 +19,7 @@ import com.niumi.feature.session.ringtone.RingtoneRoute
 import com.niumi.feature.session.summary.SummaryRoute
 import com.niumi.feature.session.wake.WakeTimeChoice
 import com.niumi.feature.session.wake.WakeTimeRoute
-import com.niumi.feature.setup.apps.AppPickerRoute
+import com.niumi.feature.setup.apps.AppSelectionRoute
 import com.niumi.feature.setup.pairing.PairingRoute
 import com.niumi.feature.setup.permissions.PermissionsRoute
 import com.niumi.feature.setup.presentation.PresentationRoute
@@ -111,13 +111,13 @@ private fun NavGraphBuilder.setupDestinations(navController: NavHostController) 
     }
     composable<NiumiRoute.Pairing> {
         PairingRoute(
-            onContinue = { navController.navigate(NiumiRoute.AppPicker) },
+            onContinue = { navController.navigate(NiumiRoute.AppSelection) },
             onSessionInProgress = { navController.popBackStack() },
         )
     }
-    composable<NiumiRoute.AppPicker> {
-        AppPickerRoute(
-            onConfirmed = { navController.navigate(NiumiRoute.WakeTime) },
+    composable<NiumiRoute.AppSelection> {
+        AppSelectionRoute(
+            onContinue = { navController.navigate(NiumiRoute.WakeTime) },
             onSessionInProgress = { navController.popBackStack() },
         )
     }

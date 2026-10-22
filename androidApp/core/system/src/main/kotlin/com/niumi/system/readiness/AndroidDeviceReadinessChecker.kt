@@ -94,7 +94,7 @@ class AndroidDeviceReadinessChecker(
                 ReadinessCheckId.APP_SELECTION,
                 ReadinessSeverityDto.BLOCKING_FOR_NIUMI_EXPERIENCE,
                 passed = appSelectionCount in AppSelectionSummary.MIN_COUNT..AppSelectionSummary.MAX_COUNT,
-                action = ReadinessAction.OpenAppPicker,
+                action = ReadinessAction.OpenAppSelection,
             ),
         )
 

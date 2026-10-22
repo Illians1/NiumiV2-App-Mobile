@@ -196,15 +196,23 @@ L'utilisateur désigne les applications qui seront bloquées à chaque session. 
 
 | | iPhone | Android |
 | --- | --- | --- |
-| Liste | Celle du système (FamilyActivityPicker). Elle propose des catégories, des applications et des sites web | Une feuille du bas dessinée par Niumi |
-| Contenu de la feuille | Imposé par le système | Titre « Applications à bloquer », une croix, un champ « Rechercher », les icônes sur quatre colonnes avec une coche sur celles choisies, le compteur, le bouton « Valider » |
-| Règles | — | La croix ferme sans enregistrer les changements. « Valider » reste grisé tant qu'aucune application n'est cochée |
+| Liste | Celle du système (FamilyActivityPicker). Elle propose des catégories, des applications et des sites web | Une page entière dessinée par Niumi (feuille du bas sur la maquette 11, remplacée le 22 octobre 2026) |
+| Contenu de la liste | Imposé par le système | Titre « Applications à bloquer », une croix, un champ « Rechercher », les icônes sur quatre colonnes avec une coche sur celles choisies, le compteur, le bouton « Valider ». En tête, la section « Applications déjà choisies », puis « Toutes les applications ». Une croix vide le champ de recherche quand il contient du texte |
+| Règles | — | La croix et le retour ferment sans enregistrer les changements. « Valider » reste grisé tant qu'aucune application n'est cochée |
+
+Décisions du 22 octobre 2026 :
+
+- La carte montre la sélection enregistrée par « Valider », jamais les coches en cours dans la liste. Avec une seule application : « 1 application choisie ».
+- Six emplacements au plus sur la carte. Moins de six applications : seulement leurs icônes, centrées. Plus de six : cinq icônes puis un emplacement « +N ». Sur un écran trop étroit, moins d'emplacements, avec la même règle.
+- Liste Android : le compteur suit les coches en cours (« Aucune application choisie » sans coche). À 50 applications cochées, les autres sont grisées et ne se cochent plus, et le compteur devient « 50 applications choisies, c'est le maximum. ». Recherche sans résultat : « Aucune application ne correspond. » Aucune application proposable : « Aucune application à bloquer sur ce téléphone. » Pendant le chargement, un cercle animé tient la place de la carte, puis de la grille, sans texte (TalkBack dit « Chargement des applications ») ; il n'apparaît qu'après 300 ms.
+- Liste Android en pleine page, et non en feuille du bas : la feuille, à peine plus courte que l'écran, ne montrait que quatre rangées. La croix reste à droite du titre.
+- Section « Applications déjà choisies » en tête de la liste : les applications cochées à l'ouverture, pour les retrouver et les décocher sans parcourir toute la liste. Suit « Toutes les applications », sans elles. Une application cochée ou décochée pendant la visite reste à sa place ; la section se met à jour à l'ouverture suivante. Sans application choisie, la liste n'a pas de titre de section.
 
 Sur iPhone, Niumi ne reçoit que des valeurs opaques : il peut afficher l'icône et le nom de chaque choix et compter les choix, mais pas lire les noms.
 
 « Continuer » mène à l'accueil, dans l'état « Réveil désactivé ». Ce même écran sert ensuite depuis l'accueil pour modifier la sélection ; le retour vers l'accueil n'y est pas dessiné **(ouvert)**.
 
-Points à vérifier, détaillés dans `POINTS-OUVERTS.md` : limite de 50 applications sur iPhone, compteur quand une catégorie est choisie, autorisation de lister les applications sur Android.
+Points à vérifier, détaillés dans `POINTS-OUVERTS.md` : limite de 50 applications sur iPhone, compteur quand une catégorie est choisie. L'autorisation de lister les applications sur Android est résolue (T9).
 
 ## 9. Écran 6 · Accueil
 

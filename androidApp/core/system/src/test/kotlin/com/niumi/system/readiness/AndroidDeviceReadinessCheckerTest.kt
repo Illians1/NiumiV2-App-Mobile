@@ -121,7 +121,7 @@ class AndroidDeviceReadinessCheckerTest {
 
             val empty = report(sources)
             assertThat(empty.check(ReadinessCheckId.APP_SELECTION).outcome).isEqualTo(ReadinessOutcome.FAILED)
-            assertThat(empty.check(ReadinessCheckId.APP_SELECTION).action).isEqualTo(ReadinessAction.OpenAppPicker)
+            assertThat(empty.check(ReadinessCheckId.APP_SELECTION).action).isEqualTo(ReadinessAction.OpenAppSelection)
             assertThat(empty.appSelectionCount).isEqualTo(0)
 
             sources.appSelectionSource.count = 51
