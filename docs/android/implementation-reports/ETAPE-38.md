@@ -97,15 +97,19 @@ Laissés en l'état :
   Étendus ou réécrits : `HandleValidNfcUseCaseTest` (+2), `AlarmViewModelTest`,
   `AlarmScreenStateTest`, `AlarmNfcScanCoordinatorTest` (+2), `NiumiTimeFormatTest`,
   `NiumiComponentTextsTest`, `NiumiMarginsTest` (marge du bas). Supprimé avec son code : `ReleaseProgressTest`.
-- **Instrumentés**, derniers passages : app 13/14, database 90, designsystem 53, system 33,
+- **Instrumentés**, derniers passages : app 14/14 (après la correction ci-dessous), database 90, designsystem 53, system 33,
   ringing 14, session 3, setup 55.
   - Nouveaux : `AlarmScreenActionsTest` (9, remplace `AlarmScreenNoStopActionTest`, avec contrôles
     d'accessibilité automatiques), `NfcScanSheetTest` (8).
-  - **Échec de `:app`** : `BlockingGuardServiceInstrumentedTest.theGuardReachesTheForegroundWithItsNotificationThenStops`
-    (titre de la notification `null`). C'est l'échec du service de garde A8 déjà relevé aux étapes
-    34 et 35. Il échoue aujourd'hui à chaque passage (4 sur 4), et **aussi sur `HEAD` sans les
-    changements de l'étape**, rejoué dans une copie de travail à part : il ne vient pas de
-    l'étape 38. Non traité ici.
+  - **Échec de `:app`, corrigé après coup** :
+    `BlockingGuardServiceInstrumentedTest.theGuardReachesTheForegroundWithItsNotificationThenStops`
+    (titre de la notification `null`), déjà relevé aux étapes 34 et 35, échouait aussi sur `HEAD`.
+    Cause trouvée : le test dépendait de la permission des notifications. Sans elle, Android 13 et
+    plus fait tourner le service sans afficher sa notification ; c'était le cas chaque fois que la
+    suite partait d'une app réinstallée. Reproduit en retirant la permission (échec), puis en la
+    rendant (2 sur 2). Le test l'accorde désormais lui-même (`GrantPermissionRule`, même patron que
+    `RingingNotificationInstrumentedTest`) : 2 sur 2 en partant d'une permission retirée, puis
+    `:app` 14 sur 14.
   - HyperOS a refusé une installation (`INSTALL_FAILED_USER_RESTRICTED`) tant que la fenêtre
     « Installer via USB » restait sans réponse ; relancé une fois acceptée.
 - **ktlint, detekt, lint, assemblage** : verts. Aucune couleur en dur hors `NiumiPalettes.kt` ;

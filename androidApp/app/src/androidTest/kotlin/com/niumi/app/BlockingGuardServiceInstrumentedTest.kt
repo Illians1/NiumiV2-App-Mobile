@@ -1,11 +1,14 @@
 package com.niumi.app
 
+import android.Manifest
 import android.app.ActivityManager
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.rule.GrantPermissionRule
 import com.google.common.truth.Truth.assertThat
 import com.niumi.feature.session.blocking.guard.BlockingGuardService
 import com.niumi.system.blocking.guard.BlockingGuardCommand
@@ -21,6 +24,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -33,12 +37,25 @@ import javax.inject.Inject
  *
  * Placé dans `:app` : le service injecte la persistance, et seul ce module a un graphe Dagger
  * complet (même raison qu'`AlarmChainInstrumentedTest`). Nécessite un appareil ou un émulateur.
+ *
+ * La permission des notifications est accordée par le test lui-même (2026-10-22) : sans elle,
+ * Android 13 et plus fait tourner le service sans afficher sa notification, et le titre lu valait
+ * `null` dès que l'app venait d'être réinstallée par une suite précédente (échec relevé aux étapes
+ * 34, 35 et 38, reproduit en retirant la permission).
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class BlockingGuardServiceInstrumentedTest {
-    @get:Rule
+    @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val notificationPermission: TestRule =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            TestRule { base, _ -> base }
+        }
 
     @Inject
     lateinit var controller: BlockingGuardController
