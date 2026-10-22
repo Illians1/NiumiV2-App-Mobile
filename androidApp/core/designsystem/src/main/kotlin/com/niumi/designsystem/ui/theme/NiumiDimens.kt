@@ -79,6 +79,9 @@ object NiumiDimens {
     /** Trait d'un pixel : bord des cartes et des pastilles, séparateur, liseré de feuille, bouton au trait. */
     val hairline = 1.dp
 
+    /** Hauteur du fondu du bas d'une zone qui défile, quand du contenu y est caché (2026-10-22). */
+    val scrollFadeHeight = 32.dp
+
     /** Icône de barre : flèche de retour, réglages (maquettes 14, 37). */
     val icon = 24.dp
 
@@ -179,6 +182,12 @@ object NiumiDimens {
 
     /** Espace entre deux tuiles. */
     val permissionTileSpacing = 10.dp
+
+    /**
+     * Espace minimal entre la dernière tuile et « Continuer » (décision de Mehdi du 2026-10-22) :
+     * la maquette 03 n'en a pas, et la dernière tuile touchait le bouton quand l'écran était plein.
+     */
+    val permissionsButtonTop = 16.dp
 
     /** Marge intérieure d'une tuile, et espace entre sa ligne et son bouton « Autoriser ». */
     val permissionTilePadding = 14.dp

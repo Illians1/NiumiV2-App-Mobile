@@ -70,6 +70,9 @@ de consentement est désormais le seul chemin vers ces réglages depuis la mise 
 | 2026-10-22 | Consentement | Cinquième point « Sans cette autorisation, Niumi ne peut pas fonctionner. » ; chemin générique « Dans les réglages, trouve Niumi et active-le. » |
 | 2026-10-22 | Coche | Essai d'icônes ambre abandonné ; coche à l'encre dans une pastille ambre (exception écrite à D14, VALEURS §2) |
 | 2026-10-22 | DataStore | Montée en 1.3.0, changement à part de l'étape |
+| 2026-10-22 | Batterie | Relecture toutes les 500 ms, six fois au plus, après « Autoriser » : HyperOS reporte le choix après le retour |
+| 2026-10-22 | Écran 2 | 16 au moins entre la dernière tuile et « Continuer » (écart à la maquette 03) ; marge du bas déjà revue à l'étape 38 |
+| 2026-10-22 | Défilement | Fondu de 32 sur les tuiles cachées sous « Continuer » ; exception au « seul dégradé » écrite dans VALEURS §2 |
 
 ## Relecture indépendante
 
@@ -146,5 +149,7 @@ committer à part de l'étape 36, comme `314b2b9`.
 - **Libellés des réglages** d'accessibilité : non nommés à dessein (constructeurs).
 - **TalkBack** : pas de passage manuel (écran non listé « à risque ») ; revue complète à l'étape 55.
 - **Navigation par gestes** : non mesurée.
+- **Relecture de la batterie après ses réglages** (ajoutée le 2026-10-22, après l'étape) : tests JVM
+  verts, retour immédiat depuis la page HyperOS pas encore essayé sur appareil.
 
 **Rien n'est committé.**

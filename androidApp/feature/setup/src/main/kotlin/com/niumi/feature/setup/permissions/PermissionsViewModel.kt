@@ -23,6 +23,10 @@ import javax.inject.Inject
  * ne fait rien de particulier, la tuile reste simplement non cochée. Au retour d'un réglage les
  * déclencheurs se suivent ; la relance en cours est annulée et la dernière fait foi.
  *
+ * Deux cas se relisent en plus d'eux-mêmes, faute d'autre déclencheur : un service d'accessibilité
+ * pas encore jugeable, et la tuile « Batterie » juste après ses réglages, dont HyperOS reporte le
+ * choix après le retour dans Niumi ([BATTERY_SETTLE_RECHECK_MILLIS]).
+ *
  * « Autoriser » traite le premier manque de la tuile, un seul à la fois (§13). Aucun réglage n'est
  * modifié à la place de l'utilisateur (§12.3).
  */
@@ -39,6 +43,12 @@ class PermissionsViewModel
         private var statuses: List<PermissionStatus> = emptyList()
 
         private var refreshJob: Job? = null
+
+        /**
+         * Relectures restantes de la tuile « Batterie » : armées quand « Autoriser » ouvre ses
+         * réglages, consommées au retour, remises à zéro dès que la tuile est accordée.
+         */
+        private var batteryRereadsLeft = 0
 
         init {
             refresh()
@@ -64,8 +74,18 @@ class PermissionsViewModel
                         // Un contrôle pas encore jugeable (service d'accessibilité dans sa fenêtre
                         // de liaison) se relit de lui-même : aucun autre déclencheur ne viendrait.
                         val awaiting = read.any { it.isAwaitingJudgement }
-                        if (awaiting) delay(AWAITING_JUDGEMENT_RECHECK_MILLIS)
-                    } while (awaiting)
+                        // La tuile « Batterie » aussi, un temps, après ses réglages : HyperOS reporte
+                        // le choix sur la liste blanche après le retour dans Niumi.
+                        val battery = read.firstOrNull { it.permission == NiumiPermission.BATTERY }
+                        val batteryGranted = battery?.granted ?: true
+                        if (batteryGranted) batteryRereadsLeft = 0
+                        val settling = batteryRereadsLeft > 0
+                        if (settling) batteryRereadsLeft--
+                        when {
+                            settling -> delay(BATTERY_SETTLE_RECHECK_MILLIS)
+                            awaiting -> delay(AWAITING_JUDGEMENT_RECHECK_MILLIS)
+                        }
+                    } while (awaiting || settling)
                 }
         }
 
@@ -74,6 +94,8 @@ class PermissionsViewModel
             val action = pending?.action
             val dialog = action?.let(::dialogOf)
             if (dialog != null) state = state.copy(dialog = dialog)
+            // Le choix fait dans ces réglages arrive après le retour : relire un temps (`refresh`).
+            if (action == ReadinessAction.OpenBatterySettings) batteryRereadsLeft = BATTERY_SETTLE_REREADS
             return when {
                 dialog != null -> PermissionStep.None
 
@@ -117,6 +139,17 @@ class PermissionsViewModel
              * solliciter les sources plus de dix fois.
              */
             const val AWAITING_JUDGEMENT_RECHECK_MILLIS: Long = 3_000L
+
+            /**
+             * Relecture de la tuile « Batterie » après ses réglages. Mesuré le 2026-10-22 sur
+             * HyperOS : la page « Économiseur de batterie » de Xiaomi reporte le choix sur la liste
+             * blanche moins d'une seconde après sa fermeture, et aucune annonce publique ne le signale
+             * (`ACTION_POWER_SAVE_WHITELIST_CHANGED` est `@hide`). Au retour immédiat, `ON_RESUME` et
+             * le focus lisent encore `false`. Six relectures espacées de 500 ms couvrent trois fois la
+             * mesure, puis l'écran s'arrête : un refus laisse la tuile à faire.
+             */
+            const val BATTERY_SETTLE_RECHECK_MILLIS: Long = 500L
+            const val BATTERY_SETTLE_REREADS: Int = 6
 
             /** Divulgation §12.3 toujours avant les réglages d'accessibilité (Google Play). */
             private fun dialogOf(action: ReadinessAction): PermissionDialog? =

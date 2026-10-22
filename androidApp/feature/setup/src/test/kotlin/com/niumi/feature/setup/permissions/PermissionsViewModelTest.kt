@@ -347,6 +347,87 @@ class PermissionsViewModelTest {
         assertThat(reads).isEqualTo(1)
     }
 
+    /**
+     * Mesuré le 2026-10-22 sur HyperOS : la page « Économiseur de batterie » reporte le choix sur la
+     * liste blanche moins d'une seconde après sa fermeture. Au retour immédiat, `ON_RESUME` et le
+     * focus lisent encore `false` : l'écran relit de lui-même jusqu'à l'accord.
+     */
+    @Test
+    fun theBatteryTileIsReadAgainAfterItsSettingsUntilItIsGranted() {
+        statuses = withPending(NiumiPermission.BATTERY, ReadinessCheckId.BATTERY_OPTIMIZATION)
+        val viewModel = viewModel()
+        viewModel.authorize(NiumiPermission.BATTERY)
+        viewModel.refresh()
+        assertThat(viewModel.state.canContinue).isFalse()
+
+        statuses = allGranted()
+        dispatcher.scheduler.advanceTimeBy(PermissionsViewModel.BATTERY_SETTLE_RECHECK_MILLIS + 1)
+
+        assertThat(viewModel.state.canContinue).isTrue()
+    }
+
+    @Test
+    fun theBatteryRereadsStopOnceTheTileIsGranted() {
+        statuses = withPending(NiumiPermission.BATTERY, ReadinessCheckId.BATTERY_OPTIMIZATION)
+        var reads = 0
+        val viewModel =
+            viewModel {
+                reads++
+                statuses
+            }
+        viewModel.authorize(NiumiPermission.BATTERY)
+        viewModel.refresh()
+        statuses = allGranted()
+        dispatcher.scheduler.advanceTimeBy(PermissionsViewModel.BATTERY_SETTLE_RECHECK_MILLIS + 1)
+        val readsWhenGranted = reads
+
+        dispatcher.scheduler.advanceTimeBy(
+            PermissionsViewModel.BATTERY_SETTLE_RECHECK_MILLIS * PermissionsViewModel.BATTERY_SETTLE_REREADS * 2,
+        )
+
+        assertThat(reads).isEqualTo(readsWhenGranted)
+    }
+
+    @Test
+    fun theBatteryRereadsStopAfterTheirBudget() {
+        // Retour sans rien changer, ou refus : la tuile reste à faire et l'écran cesse de relire.
+        statuses = withPending(NiumiPermission.BATTERY, ReadinessCheckId.BATTERY_OPTIMIZATION)
+        var reads = 0
+        val viewModel =
+            viewModel {
+                reads++
+                statuses
+            }
+        viewModel.authorize(NiumiPermission.BATTERY)
+        val readsBeforeReturn = reads
+
+        viewModel.refresh()
+        dispatcher.scheduler.advanceTimeBy(
+            PermissionsViewModel.BATTERY_SETTLE_RECHECK_MILLIS * (PermissionsViewModel.BATTERY_SETTLE_REREADS + 3),
+        )
+
+        assertThat(reads).isEqualTo(readsBeforeReturn + 1 + PermissionsViewModel.BATTERY_SETTLE_REREADS)
+        assertThat(viewModel.state.canContinue).isFalse()
+    }
+
+    @Test
+    fun theBatteryIsNotReadAgainWithoutOpeningItsSettings() {
+        statuses = withPending(NiumiPermission.BATTERY, ReadinessCheckId.BATTERY_OPTIMIZATION)
+        var reads = 0
+        val viewModel =
+            viewModel {
+                reads++
+                statuses
+            }
+
+        viewModel.refresh()
+        dispatcher.scheduler.advanceTimeBy(
+            PermissionsViewModel.BATTERY_SETTLE_RECHECK_MILLIS * PermissionsViewModel.BATTERY_SETTLE_REREADS * 2,
+        )
+
+        assertThat(reads).isEqualTo(2)
+    }
+
     @Test
     fun authorizingAnAccessibilityServiceAwaitingJudgementStillShowsTheConsentWindow() {
         statuses = awaitingAccessibility()

@@ -19,6 +19,7 @@ import com.niumi.designsystem.component.NiumiAlertDialog
 import com.niumi.designsystem.component.NiumiPrimaryButton
 import com.niumi.designsystem.component.NiumiScreenScaffold
 import com.niumi.designsystem.component.NiumiTopBar
+import com.niumi.designsystem.component.niumiBottomScrollFade
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiTheme
@@ -31,7 +32,9 @@ import com.niumi.system.readiness.ReadinessMessages
 /**
  * Écran 2 · Autorisations (`SPECIFICATION.md` §5, maquette 03), sans état : flèche de retour, titre
  * en 28 (D19) qui compte les tuiles, texte, tuiles, puis « Continuer », inactif tant qu'une tuile
- * n'est pas accordée. Le contenu défile si l'écran est trop petit. Les tuiles « Batterie » et
+ * n'est pas accordée, toujours à 16 au moins de la dernière tuile (décision du 2026-10-22, écart à
+ * la maquette). Le contenu défile si l'écran est trop petit ; les tuiles cachées sous le bouton
+ * s'estompent alors dans le fond (`niumiBottomScrollFade`, décision du 2026-10-22). Les tuiles « Batterie » et
  * « Verrouiller Niumi » (Android, décisions des 2026-10-21 et 22) n'ont pas de maquette : elles
  * reprennent la tuile du design system. Les fenêtres (consentement, verrou, alarme exacte) sont
  * la fenêtre d'alerte de la maquette 57 dans la mise en page de Mehdi du 2026-10-22 (croix ronde,
@@ -44,9 +47,12 @@ fun PermissionsScreen(
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalNiumiPalette.current
+    val scrollState = rememberScrollState()
     NiumiScreenScaffold(
         modifier = modifier,
         bottom = {
+            // Hors de la colonne qui défile : l'écart reste visible quand les tuiles défilent.
+            Spacer(modifier = Modifier.height(NiumiDimens.permissionsButtonTop))
             NiumiPrimaryButton(
                 text = PermissionsTexts.CONTINUE,
                 onClick = actions.onContinue,
@@ -60,7 +66,9 @@ fun PermissionsScreen(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    // Des tuiles cachées sous « Continuer » s'estompent : il reste à faire défiler.
+                    .niumiBottomScrollFade(scrollState)
+                    .verticalScroll(scrollState),
         ) {
             Spacer(modifier = Modifier.height(NiumiDimens.permissionsTitleTop))
             // Le titre compte les tuiles affichées ; avant la première lecture, ce nombre n'est pas

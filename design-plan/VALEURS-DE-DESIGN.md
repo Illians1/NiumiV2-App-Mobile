@@ -37,7 +37,7 @@ Le passage au clair se fait au moment où la session se termine : écran de réu
 | Texte secondaire sur encre | `#A9A9AE` | Deuxième ligne de la carte « Réveil activé » |
 | Voile | noir à 45 % | Derrière une feuille ou une alerte |
 
-Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F` à 26 %, `#F8DDB0` à 58 % (la ligne d'horizon). C'est le seul dégradé des écrans clairs.
+Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F` à 26 %, `#F8DDB0` à 58 % (la ligne d'horizon). C'est le seul dégradé de couleur des écrans clairs. Une exception d'usage (décision de Mehdi du 22 octobre 2026) : quand du contenu est caché sous le bas d'une zone qui défile, ce bas s'estompe dans la couleur du fond, sur 32 points, pour montrer qu'il reste à faire défiler. Le fondu s'efface en arrivant au bout et n'existe pas quand tout tient à l'écran. Il est d'abord utilisé sur l'écran 2, au-dessus de « Continuer ».
 
 ### Thème sombre
 
