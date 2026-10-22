@@ -37,7 +37,8 @@ class NiumiLaunchThemeTest {
 
     /**
      * Un `InsetDrawable` étire son contenu aux bornes restantes : les insets doivent laisser
-     * exactement le rapport du logo (506,5 × 121), sinon il serait déformé. Et l'icône d'un écran
+     * exactement le rapport du logo (cadre du SVG source, 510 × 128 depuis le 2026-10-22), sinon il
+     * serait déformé. Et l'icône d'un écran
      * de démarrage sans fond est dessinée sur 288 dp puis coupée à un cercle de 192 dp (Android
      * Developers, « Splash screens ») : le logo doit tenir dans un cercle des deux tiers du carré.
      * Les marges sont en pourcentage : le système ne dessine pas l'icône à sa taille nominale, et
@@ -61,14 +62,23 @@ class NiumiLaunchThemeTest {
         assertThat(inset("Top")).isEqualTo(inset("Bottom"))
         val width = 1 - 2 * inset("Left")
         val height = 1 - 2 * inset("Top")
-        assertThat(width / height).isWithin(ASPECT_TOLERANCE).of(LOGO_WIDTH / LOGO_HEIGHT)
+        val (logoWidth, logoHeight) = logoViewBox()
+        assertThat(width / height).isWithin(ASPECT_TOLERANCE).of(logoWidth / logoHeight)
         assertThat(sqrt(width * width + height * height)).isAtMost(VISIBLE_CIRCLE_FRACTION)
+    }
+
+    /** Largeur et hauteur du cadre (`viewBox`) du logo source, lues dans le SVG. */
+    private fun logoViewBox(): Pair<Double, Double> {
+        val svg = File(DesignValues.rootDir, "design-plan/logo/niumi-logo-fond-sombre.svg").readText()
+        val box =
+            Regex("""viewBox="([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+)"""")
+                .find(svg)!!
+                .groupValues
+        return box[3].toDouble() to box[4].toDouble()
     }
 
     private companion object {
         const val PERCENT = 100.0
-        const val LOGO_WIDTH = 506.5
-        const val LOGO_HEIGHT = 121.0
         const val ASPECT_TOLERANCE = 0.01
 
         // 192 dp visibles sur 288 dp dessinés : un cercle des deux tiers du carré.

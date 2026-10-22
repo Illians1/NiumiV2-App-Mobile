@@ -2,17 +2,18 @@
 <!--
     Logo Niumi pour fond sombre, converti à la main depuis design-plan/logo/niumi-logo-fond-sombre.svg
     (fourni par Mehdi le 2026-10-19) : mêmes six traits de 16 à bouts plats et même point ambre,
-    viewBox SVG « 0 9 506.5 121 » reproduit par la translation du groupe. Couleurs mesurées dans
+    viewBox SVG « 0 2 510 128 » reproduit par la translation du groupe (point ambre agrandi
+    et cadre revu dans les sources le 2026-10-22). Couleurs mesurées dans
     le fichier du logo (VALEURS-DE-DESIGN.md §2, « Couleurs du logo ») : ce sont les seules
     valeurs de couleur du logo, qui n'est jamais teinté par la palette.
     Taille intrinsèque au quart du dessin ; le composant NiumiLogo (étape 34) la fixe.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="126.625dp"
-    android:height="30.25dp"
-    android:viewportWidth="506.5"
-    android:viewportHeight="121">
-    <group android:translateY="-9">
+    android:width="127.5dp"
+    android:height="32dp"
+    android:viewportWidth="510"
+    android:viewportHeight="128">
+    <group android:translateY="-2">
         <path
             android:pathData="M8,122 L8,84 A38,38 0,0 1,84 84 L84,122"
             android:strokeWidth="16"
@@ -44,7 +45,7 @@
             android:strokeColor="#FFFAFAF8"
             android:strokeLineCap="butt" />
         <path
-            android:pathData="M477.5,23.5 A14.5,14.5 0,1 0,506.5 23.5 A14.5,14.5 0,1 0,477.5 23.5 Z"
+            android:pathData="M474,20 A18,18 0,1 0,510 20 A18,18 0,1 0,474 20 Z"
             android:fillColor="#FFE9A23B" />
     </group>
 </vector>

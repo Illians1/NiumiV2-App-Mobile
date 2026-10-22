@@ -66,9 +66,14 @@ class NiumiBrandAssetsTest {
             assertWithMessage("$drawable : point ambre de la palette")
                 .that(Regex("""android:fillColor="#([0-9A-F]{8})"""").find(vector)?.groupValues?.get(1))
                 .isEqualTo(Integer.toHexString(NiumiPalettes.Light.amber.toArgb()).uppercase())
-            assertWithMessage("$drawable : viewBox « 0 9 506.5 121 »")
-                .that(vector)
-                .contains("""android:translateY="-9"""")
+            val box = Regex("""viewBox="([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+)"""").find(source)!!.groupValues
+            assertWithMessage("$drawable : viewBox du SVG").that(vector).contains("""android:translateY="-${box[2]}"""")
+            assertWithMessage(
+                "$drawable : largeur du cadre",
+            ).that(vector).contains("""android:viewportWidth="${box[3]}"""")
+            assertWithMessage(
+                "$drawable : hauteur du cadre",
+            ).that(vector).contains("""android:viewportHeight="${box[4]}"""")
         }
     }
 
