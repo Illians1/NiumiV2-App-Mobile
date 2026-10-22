@@ -87,7 +87,7 @@ Un seul écran présente les autorisations, une tuile par autorisation, avec une
 | --- | --- | --- | --- |
 | Alarme | Pour que ton réveil sonne à l'heure, même téléphone verrouillé. | Fenêtre du système | Rien à demander en principe pour une app de réveil |
 | Blocage des applications | Pour bloquer les applications que tu choisis, et seulement celles-là. | Fenêtre du système (Temps d'écran) | Service d'accessibilité à activer dans les réglages, après une fenêtre d'explication exigée par Google Play. Approche courante, à valider avec Google Play |
-| Batterie (Android seulement) | Pour que le téléphone n’arrête pas Niumi pendant la nuit. | — | Fenêtre du système (demande d'exemption, décision du 21 octobre 2026). À défaut, la liste des optimisations de batterie |
+| Batterie (Android seulement) | Retire les restrictions de batterie, pour que le téléphone n’arrête pas Niumi pendant la nuit. | — | Fenêtre du système (demande d'exemption, décision du 21 octobre 2026). À défaut, la liste des optimisations de batterie |
 | Verrouiller Niumi (Android seulement, téléphones qui ont ce verrou, comme HyperOS) | Pour que Niumi reste actif quand tu vides les applications récentes. | — | Fenêtre centrée qui explique le geste (appui long sur Niumi dans les applications récentes, puis cadenas), puis relecture |
 | Notifications | Pour pouvoir te tenir informé de tout ce qui est important. | Fenêtre du système | Fenêtre du système |
 

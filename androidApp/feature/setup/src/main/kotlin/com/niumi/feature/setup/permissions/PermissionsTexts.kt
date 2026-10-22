@@ -37,7 +37,8 @@ object PermissionsTexts {
 
     const val BATTERY_NAME = "Batterie"
 
-    const val BATTERY_PHRASE = "Pour que le téléphone n’arrête pas Niumi pendant la nuit."
+    const val BATTERY_PHRASE =
+        "Retire les restrictions de batterie, pour que le téléphone n’arrête pas Niumi pendant la nuit."
 
     const val RECENTS_LOCK_NAME = "Verrouiller Niumi"
 

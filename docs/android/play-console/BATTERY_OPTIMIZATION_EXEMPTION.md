@@ -34,8 +34,8 @@ l'utilisateur ne connaît pas ; un utilisateur qui s'y perd garde un blocage qui
 ## Ce que Niumi fait et ne fait pas
 
 - La demande n'est émise que depuis la tuile « Batterie » de l'écran des autorisations, après
-  un toucher sur « Autoriser » sous la phrase « Pour que le téléphone n’arrête pas Niumi pendant
-  la nuit. », et depuis le recours de l'écran de session quand l'exemption a été perdue.
+  un toucher sur « Autoriser » sous la phrase « Retire les restrictions de batterie, pour que le
+  téléphone n’arrête pas Niumi pendant la nuit. » (revue le 2026-10-22), et depuis le recours de l'écran de session quand l'exemption a été perdue.
 - Jamais au démarrage, jamais en boucle, jamais sans action de l'utilisateur.
 - Un refus ne déclenche rien : la tuile reste simplement à faire.
 - Niumi ne demande l'exemption que pour lui-même (`package:com.niumi.app`).

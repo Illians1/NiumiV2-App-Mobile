@@ -29,9 +29,9 @@ class PermissionsTextsTest {
         assertThat(PermissionsTexts.BLOCKING_PHRASE)
             .isEqualTo("Pour bloquer les applications que tu choisis, et seulement celles-là.")
         assertThat(PermissionsTexts.BATTERY_NAME).isEqualTo("Batterie")
-        assertThat(
-            PermissionsTexts.BATTERY_PHRASE,
-        ).isEqualTo("Pour que le téléphone n’arrête pas Niumi pendant la nuit.")
+        // Phrase revue par Mehdi le 2026-10-22 : sur HyperOS, la page de Xiaomi a quatre choix.
+        assertThat(PermissionsTexts.BATTERY_PHRASE)
+            .isEqualTo("Retire les restrictions de batterie, pour que le téléphone n’arrête pas Niumi pendant la nuit.")
         assertThat(PermissionsTexts.RECENTS_LOCK_NAME).isEqualTo("Verrouiller Niumi")
         assertThat(PermissionsTexts.RECENTS_LOCK_PHRASE)
             .isEqualTo("Pour que Niumi reste actif quand tu vides les applications récentes.")
