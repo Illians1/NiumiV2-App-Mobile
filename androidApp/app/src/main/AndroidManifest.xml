@@ -20,6 +20,12 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!--
+        Demande directe de l'exemption de batterie (SPEC_ANDROID §13, §14, décision du 2026-10-21) :
+        sans elle, HyperOS gèle Niumi et le blocage, fonction principale, cesse sans prévenir
+        (mesuré à l'étape 5). Usage à justifier à la revue Google Play (BATTERY_OPTIMIZATION_EXEMPTION.md).
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!--
         allowBackup=false : la base locale contient le hash du token du boîtier associé, et le

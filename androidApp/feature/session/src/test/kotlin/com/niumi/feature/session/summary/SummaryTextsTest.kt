@@ -2,7 +2,10 @@ package com.niumi.feature.session.summary
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.diagnostics.ActivationReasonCode
+import com.niumi.core.interop.ActivationReasonDto
 import com.niumi.feature.session.wake.WakeTimeTexts
+import com.niumi.system.readiness.ReadinessCheckId
+import com.niumi.system.readiness.ReadinessMessages
 import org.junit.Test
 
 /** Contenu imposé de l'écran 6 (SPEC_ANDROID §15) et tutoiement partout. */
@@ -94,11 +97,37 @@ class SummaryTextsTest {
     }
 
     @Test
-    fun theThreeJourneyCausesAreNamedAndDeviceChecksPointBackToTheDiagnosis() {
+    fun theThreeJourneyCausesAreNamed() {
         assertThat(SummaryTexts.blockingReason(ActivationReasonCode.TRIGGER_NOT_IN_FUTURE)).contains("heure")
         assertThat(SummaryTexts.blockingReason(ActivationReasonCode.NO_PAIRED_BOX)).contains("boîtier")
         assertThat(SummaryTexts.blockingReason(ActivationReasonCode.INVALID_APP_SELECTION)).contains("applications")
+    }
+
+    /**
+     * Étape 36 : le diagnostic de la mise en route n'existe plus. Un contrôle d'appareil qui refuse
+     * l'activation est nommé par son message de §13, qui dit aussi quoi faire ; le repli ne renvoie
+     * plus vers un écran disparu.
+     */
+    @Test
+    fun aDeviceCheckRefusalNamesTheCheckWithItsOwnMessage() {
+        val reason =
+            ActivationReasonDto(ActivationReasonCode.READINESS_BLOCKING_FOR_ALARM, ReadinessCheckId.ALARM_VOLUME.name)
+
+        assertThat(SummaryTexts.refusal(reason)).isEqualTo(ReadinessMessages.forCheck(ReadinessCheckId.ALARM_VOLUME))
+    }
+
+    @Test
+    fun aRefusalWithoutACheckKeepsItsCommonWording() {
+        val reason = ActivationReasonDto(ActivationReasonCode.NO_PAIRED_BOX, null)
+
+        assertThat(
+            SummaryTexts.refusal(reason),
+        ).isEqualTo(SummaryTexts.blockingReason(ActivationReasonCode.NO_PAIRED_BOX))
+    }
+
+    @Test
+    fun theGenericRefusalNoLongerPointsToTheRemovedDiagnosis() {
         assertThat(SummaryTexts.blockingReason(ActivationReasonCode.READINESS_BLOCKING_FOR_ALARM))
-            .contains("diagnostic")
+            .isEqualTo("Ton appareil n’est pas prêt.")
     }
 }

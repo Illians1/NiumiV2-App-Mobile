@@ -163,7 +163,7 @@ private fun SheetHeader(
         ) {
             val titleModifier = Modifier.weight(1f)
             if (title == null) Spacer(titleModifier) else SheetTitle(title, titleStyle, titleModifier)
-            CloseButton(label = closeLabel, onClick = onClose)
+            NiumiCloseButton(label = closeLabel, onClick = onClose)
         }
     } else if (title != null) {
         SheetTitle(title, titleStyle, Modifier.padding(top = NiumiDimens.sheetTitleTop))
@@ -189,30 +189,6 @@ private fun SheetTitle(
     modifier: Modifier,
 ) {
     Text(text = title, style = style, modifier = modifier.semantics { heading() })
-}
-
-@Composable
-private fun CloseButton(
-    label: String,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .offset(x = -NiumiDimens.closeButtonInset)
-                .minimumInteractiveComponentSize()
-                .size(NiumiDimens.minTouch)
-                .clickable(role = Role.Button, onClick = onClick)
-                .semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_close),
-            contentDescription = null,
-            tint = LocalNiumiPalette.current.ink,
-            modifier = Modifier.size(NiumiDimens.closeIcon),
-        )
-    }
 }
 
 @Preview(name = "Clair", widthDp = 390, heightDp = 844)

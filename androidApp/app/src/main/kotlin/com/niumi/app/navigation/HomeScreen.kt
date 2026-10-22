@@ -71,7 +71,7 @@ fun homeTitleFor(state: HomeUiState): String =
         else -> NO_SESSION_TITLE
     }
 
-/** Même règle pour le bouton principal : il mène au diagnostic, seul écran honnête à ce stade. */
+/** Même règle pour le bouton principal : il mène à la destination calculée par [homeDestinationFor]. */
 fun primaryLabelFor(state: HomeUiState): String =
     when {
         state.storageUnreadable -> STORAGE_UNREADABLE_BUTTON_LABEL

@@ -1,12 +1,15 @@
 package com.niumi.feature.session.summary
 
 import com.niumi.core.diagnostics.ActivationReasonCode
+import com.niumi.core.interop.ActivationReasonDto
 import com.niumi.feature.session.wake.WakeTimeTexts
+import com.niumi.system.readiness.ReadinessMessages
+import com.niumi.system.readiness.readinessCheckIdOf
 
 /**
- * Textes de l'écran 6 (SPEC_ANDROID §15, écran 6). Ne traduit que **cinq** codes de refus : les
- * quatorze messages détaillés du diagnostic restent la propriété de l'écran 2, seul endroit qui
- * porte l'action de remédiation correspondante (§13, une seule action principale à la fois).
+ * Textes de l'écran 6 (SPEC_ANDROID §15, écran 6). Ne traduit que **cinq** codes de refus communs ;
+ * un contrôle d'appareil est nommé par son message de §13 ([refusal]), depuis que le diagnostic de
+ * la mise en route a laissé place à l'écran 2 des autorisations (étape 36 de la refonte).
  */
 object SummaryTexts {
     const val TITLE = "Ton engagement"
@@ -60,8 +63,18 @@ object SummaryTexts {
         }
 
     /**
-     * Un refus de la politique commune. Les causes qui appartiennent à cet écran ou au précédent
-     * sont nommées ; les contrôles d'appareil renvoient au diagnostic, qui seul sait les corriger.
+     * Un refus de la politique commune. Un contrôle d'appareil (`checkId` renseigné) est nommé par
+     * son message de §13, qui dit aussi quoi régler : Ne pas déranger et le volume n'ont pas de
+     * tuile sur l'écran 2 (décision Q1 du 2026-10-20), cet écran est le seul à les nommer avant
+     * l'activation. Les autres causes gardent leur texte commun ([blockingReason]).
+     */
+    fun refusal(reason: ActivationReasonDto): String =
+        readinessCheckIdOf(reason)?.let(ReadinessMessages::forCheck) ?: blockingReason(reason.code)
+
+    /**
+     * Les causes qui appartiennent à cet écran ou au précédent sont nommées. Le repli ne renvoie
+     * plus au diagnostic, retiré du parcours à l'étape 36 : seul un refus inattendu, sans contrôle
+     * identifié, l'atteint.
      */
     fun blockingReason(code: String): String =
         when (code) {
@@ -84,7 +97,7 @@ object SummaryTexts {
             }
 
             else -> {
-                "Ton appareil n'est pas prêt. Reviens au diagnostic pour corriger ce qui bloque."
+                "Ton appareil n’est pas prêt."
             }
         }
 }

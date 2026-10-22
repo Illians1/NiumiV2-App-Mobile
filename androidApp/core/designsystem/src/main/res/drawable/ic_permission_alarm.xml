@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cloche de la tuile « Alarme » (maquette 03, écran 2) : icône de 32, trait de 1,6.
+    Tracé recopié de la source HTML de la maquette (viewBox 24 × 24, trait seul, bouts ronds).
+    Noir dans le fichier : la tuile teinte l'icône (encre en clair, VALEURS-DE-DESIGN.md §2 ;
+    essai ambre de l'étape 36 en attente de décision).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M6,16c0,-5 1.5,-9 6,-9s6,4 6,9l1.5,2h-15z"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M10,20a2,2 0,0 0,4 0"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

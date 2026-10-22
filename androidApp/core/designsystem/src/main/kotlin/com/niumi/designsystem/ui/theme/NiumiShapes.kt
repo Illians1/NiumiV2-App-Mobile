@@ -23,6 +23,9 @@ object NiumiShapes {
     /** Feuille du bas : coins de 28 en haut, bord à bord en bas. */
     val sheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
+    /** Fenêtre d'alerte (maquette 57) : coins de 24. */
+    val alert = RoundedCornerShape(24.dp)
+
     /** Emplacement d'icône d'application : coins de 7. */
     val appIcon = RoundedCornerShape(7.dp)
 }

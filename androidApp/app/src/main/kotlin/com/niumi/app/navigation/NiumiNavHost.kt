@@ -19,11 +19,10 @@ import com.niumi.feature.session.ringtone.RingtoneRoute
 import com.niumi.feature.session.summary.SummaryRoute
 import com.niumi.feature.session.wake.WakeTimeChoice
 import com.niumi.feature.session.wake.WakeTimeRoute
-import com.niumi.feature.setup.accessibility.AccessibilityConsentRoute
 import com.niumi.feature.setup.apps.AppPickerRoute
 import com.niumi.feature.setup.pairing.PairingRoute
+import com.niumi.feature.setup.permissions.PermissionsRoute
 import com.niumi.feature.setup.presentation.PresentationRoute
-import com.niumi.feature.setup.readiness.ReadinessRoute
 
 /**
  * Graphe de navigation de l'application. Toutes les destinations sont typées ([NiumiRoute]) : le
@@ -83,40 +82,42 @@ fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
 }
 
 /**
- * Destinations du parcours de préparation (écran 1 · Présentation, écrans 2, 3 et 4), extraites pour tenir sous
- * `LongMethod` de detekt quand l'écran 12 s'est ajouté au graphe (étape 16). Le choix de l'heure et
- * le récapitulatif restent dans [NiumiNavHost] : ils portent un argument de route.
+ * Destinations du parcours de préparation (écran 1 · Présentation, écran 2 · Autorisations, écrans 3
+ * et 4), extraites pour tenir sous `LongMethod` de detekt. Le choix de l'heure et le récapitulatif
+ * restent dans [NiumiNavHost] : ils portent un argument de route.
+ *
+ * **Navigation transitoire jusqu'à l'étape 45 de la refonte.** Le diagnostic qui servait de point
+ * de passage vers l'association, la sélection et l'heure a laissé place à l'écran 2 (étape 36) : le
+ * parcours s'enchaîne désormais Autorisations → Association → Applications → Heure → Récapitulatif.
  */
 private fun NavGraphBuilder.setupDestinations(navController: NavHostController) {
     composable<NiumiRoute.Presentation> {
         PresentationRoute(
             onConfigure = {
                 // La présentation n'est montrée qu'une fois : elle quitte la pile et l'accueil y
-                // reprend sa place, sous le diagnostic (navigation transitoire jusqu'à l'étape 45).
+                // reprend sa place, sous l'écran 2.
                 navController.navigate(NiumiRoute.Home) {
                     popUpTo(NiumiRoute.Presentation) { inclusive = true }
                 }
-                navController.navigate(NiumiRoute.Readiness)
+                navController.navigate(NiumiRoute.Permissions)
             },
         )
     }
-    composable<NiumiRoute.Readiness> {
-        ReadinessRoute(
-            onStartPairing = { navController.navigate(NiumiRoute.Pairing) },
-            onOpenAppPicker = { navController.navigate(NiumiRoute.AppPicker) },
-            onChooseWakeTime = { navController.navigate(NiumiRoute.WakeTime) },
+    composable<NiumiRoute.Permissions> {
+        PermissionsRoute(
+            onBack = { navController.popBackStack() },
+            onContinue = { navController.navigate(NiumiRoute.Pairing) },
         )
     }
-    composable<NiumiRoute.AccessibilityConsent> { AccessibilityConsentRoute() }
     composable<NiumiRoute.Pairing> {
         PairingRoute(
-            onContinue = { navController.popBackStack() },
+            onContinue = { navController.navigate(NiumiRoute.AppPicker) },
             onSessionInProgress = { navController.popBackStack() },
         )
     }
     composable<NiumiRoute.AppPicker> {
         AppPickerRoute(
-            onConfirmed = { navController.popBackStack() },
+            onConfirmed = { navController.navigate(NiumiRoute.WakeTime) },
             onSessionInProgress = { navController.popBackStack() },
         )
     }
@@ -205,13 +206,13 @@ private fun NavController.navigateToHome() {
 }
 
 /**
- * « Préparer un nouveau réveil » (écran 11) rejoint le diagnostic, entrée du parcours de
+ * « Préparer un nouveau réveil » (écran 11) rejoint l'écran 2, entrée du parcours de
  * préparation quand la présentation est acquittée — ce qu'il est nécessairement, une session ayant
  * déjà été armée (voir [homeDestinationFor]). L'écran 11 quitte la pile pour la même raison
  * qu'il y est entré.
  */
 private fun NavController.navigateToPreparation() {
-    navigate(NiumiRoute.Readiness) {
+    navigate(NiumiRoute.Permissions) {
         popUpTo(NiumiRoute.Home) { inclusive = false }
         launchSingleTop = true
     }

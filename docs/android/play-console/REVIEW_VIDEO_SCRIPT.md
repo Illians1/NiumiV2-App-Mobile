@@ -16,12 +16,12 @@ Le tournage lui-même reste une action humaine, sur appareil réel, et condition
 
 | # | Séquence | Ce qui doit être lisible à l'écran | Durée cible |
 | --- | --- | --- | --- |
-| 1 | Écran de consentement (§12.3) | Les cinq points affichés en entier, avant toute ouverture des réglages | 10 s |
+| 1 | Écran de consentement (§12.3) | Atteint par « Autoriser » sur la tuile « Blocage des applications » de l’écran 2 (depuis l’étape 36) ; les cinq points affichés en entier, avant toute ouverture des réglages | 10 s |
 | 2 | Activation du service | Ouverture réelle de `ACTION_ACCESSIBILITY_SETTINGS`, bascule manuelle du switch système par l'utilisateur (aucun clic simulé par l'app) | 10 s |
-| 3 | Retour dans Niumi | L'état repasse de « Service inactif » à « Service actif » sans reconstruire l'écran | 5 s |
+| 3 | Retour dans Niumi | La fenêtre de consentement se referme d’elle-même et la tuile « Blocage des applications » de l’écran 2 avance (depuis l’étape 36) | 5 s |
 | 4 | Association du boîtier | Scan NFC réel d'un tag, confirmation de l'association | 10 s |
 | 5 | Sélection des applications à bloquer | Le sélecteur, le choix d'au moins une application | 10 s |
-| 6 | Diagnostic avant activation | Le diagnostic passe au vert, y compris le contrôle de batterie optimisée (§13) | 10 s |
+| 6 | Écran 2 · Autorisations | Toutes les tuiles sont cochées, dont « Batterie » et « Verrouiller Niumi » (§13, depuis l’étape 36) | 10 s |
 | 7 | Activation d'une session | Confirmation, retour à l'accueil « session active » | 5 s |
 | 8 | Déclenchement de l'alarme | Écran verrouillé, sonnerie audible, notification sur l'écran de verrouillage, déverrouillage, tap sur la notification, écran de réveil | 15 s |
 | 9 | Tentative d'ouverture d'une application bloquée | Retour immédiat à l'accueil et overlay explicatif, texte lisible | 10 s |

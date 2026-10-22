@@ -159,4 +159,65 @@ object NiumiDimens {
 
     /** Espace entre l'indicateur de panneau et le bouton principal. */
     val pageIndicatorButtonGap = 18.dp
+
+    // Écran 2 · Autorisations (étape 36), relevées dans la source de la maquette 03.
+
+    /** Espace entre la rangée de la flèche et le titre. */
+    val permissionsTitleTop = 4.dp
+
+    /** Espace entre le titre et le texte d'introduction. */
+    val permissionsTitleBodyGap = 6.dp
+
+    /** Espace entre le texte d'introduction et la première tuile. */
+    val permissionsTilesTop = 18.dp
+
+    /** Espace entre deux tuiles. */
+    val permissionTileSpacing = 10.dp
+
+    /** Marge intérieure d'une tuile, et espace entre sa ligne et son bouton « Autoriser ». */
+    val permissionTilePadding = 14.dp
+    val permissionTileInnerGap = 12.dp
+
+    /** Icône d'une tuile (cloche, cadenas, bulle). */
+    val permissionTileIcon = 32.dp
+
+    /** Espace entre le nom d'une autorisation et sa phrase. */
+    val permissionTileTextGap = 2.dp
+
+    // Fenêtre d'alerte (maquette 57 ; VALEURS §4 « Ombre de la fenêtre d'alerte »), étape 36.
+
+    /** Marge de chaque côté de la fenêtre. */
+    val alertHorizontalMargin = 28.dp
+
+    /**
+     * Marges intérieures, maquette de Mehdi du 2026-10-22 : 24 sur les côtés, 32 en haut au-dessus
+     * de l'icône, 20 en bas.
+     */
+    val alertPadding = PaddingValues(start = 24.dp, top = 32.dp, end = 24.dp, bottom = 20.dp)
+
+    /** Rond gris de l'icône en tête de fenêtre, et l'espace qui le sépare du titre. */
+    val alertIconCircle = 64.dp
+    val alertIconTitleGap = 14.dp
+
+    /**
+     * Croix ronde au coin : rond de 36, croix de 18. La zone tactile de 48 est posée à 8 du coin,
+     * ce qui met le rond dessiné à 14 du bord, comme dans la maquette.
+     */
+    val alertCloseCircle = 36.dp
+    val alertCloseIcon = 18.dp
+    val alertCloseInset = 8.dp
+
+    /** Espace entre le titre et le corps, puis entre le corps et le bouton. */
+    val alertTitleBodyGap = 10.dp
+    val alertBodyButtonGap = 22.dp
+
+    /** Ombre « décalage 20, flou 50, noir à 25 % », approchée par une élévation. */
+    val alertElevation = 20.dp
+
+    /**
+     * Pastille ambre de la coche d'une tuile accordée (écran 2, décision de Mehdi du 2026-10-22,
+     * exception écrite à la règle de l'ambre, VALEURS §2) : rond de 28, coche de 16.
+     */
+    val grantedBadge = 28.dp
+    val grantedBadgeCheck = 16.dp
 }

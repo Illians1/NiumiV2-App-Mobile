@@ -156,14 +156,14 @@ class SummaryViewModel
                     preview.policy
                         ?.blockingReasons
                         ?.firstOrNull()
-                        ?.let { SummaryTexts.blockingReason(it.code) }
+                        ?.let(SummaryTexts::refusal)
                 }
             }
 
         private fun messageFor(failure: ActivationFailure): String =
             when (failure) {
                 is ActivationFailure.Blocked -> {
-                    failure.reasons.firstOrNull()?.let { SummaryTexts.blockingReason(it.code) }
+                    failure.reasons.firstOrNull()?.let(SummaryTexts::refusal)
                         ?: SummaryTexts.activationFailed(failureCode = null)
                 }
 

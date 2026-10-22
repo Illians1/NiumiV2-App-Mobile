@@ -3,8 +3,8 @@ package com.niumi.system.readiness
 import com.niumi.core.interop.ReadinessSeverityDto
 
 /**
- * Résultat d'un contrôle de disponibilité (SPEC_ANDROID §13). Ne porte aucun texte affiché :
- * `:core:system` reste sans interface, les messages vivent dans `:feature:setup`.
+ * Résultat d'un contrôle de disponibilité (SPEC_ANDROID §13). Ne porte aucun texte affiché : les
+ * messages vivent à part, dans `ReadinessMessages` (étape 36 de la refonte).
  */
 data class ReadinessCheck(
     val id: ReadinessCheckId,

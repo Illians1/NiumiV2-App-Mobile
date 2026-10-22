@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pile de la tuile « Batterie » (écran 2, Android, décision du 2026-10-21) : icône de 32, trait de 1,6.
+    Sans maquette : dessinée à l'étape 36 dans le style des trois icônes de la maquette 03
+    (viewBox 24 × 24, trait seul, bouts ronds), à remplacer si le design la dessine.
+    Noir dans le fichier : la tuile teinte l'icône (encre en clair, VALEURS-DE-DESIGN.md §2).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M5,8h12a2,2 0,0 1,2 2v4a2,2 0,0 1,-2 2h-12a2,2 0,0 1,-2 -2v-4a2,2 0,0 1,2 -2z"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M21,11v2"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -34,7 +34,7 @@ class HomeDestinationTest {
         listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED)
             .forEach { state ->
                 assertThat(homeDestinationFor(state, onboardingAcknowledged = true))
-                    .isEqualTo(NiumiRoute.Readiness)
+                    .isEqualTo(NiumiRoute.Permissions)
             }
     }
 
@@ -45,9 +45,9 @@ class HomeDestinationTest {
     }
 
     @Test
-    fun noSessionWithAnAcknowledgementLeadsStraightToTheDiagnostic() {
+    fun noSessionWithAnAcknowledgementLeadsStraightToThePermissions() {
         assertThat(homeDestinationFor(state = null, onboardingAcknowledged = true))
-            .isEqualTo(NiumiRoute.Readiness)
+            .isEqualTo(NiumiRoute.Permissions)
     }
 
     @Test

@@ -68,7 +68,7 @@ object NiumiType {
     /** 16/400 — texte courant, noms des pièces. Interligne 1,35. */
     val body16 = style(16, FontWeight.Normal, lineHeight = 21.6.sp)
 
-    /** 15/400 — pastilles de durée, lien « Annuler la session ». */
+    /** 15/400 — pastilles de durée, lien « Annuler la session », texte d’introduction de l’écran 2. */
     val chip15 = style(15, FontWeight.Normal)
 
     /** 15/500 — pastille de durée choisie, bouton « Autoriser ». */

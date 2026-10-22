@@ -59,6 +59,8 @@ Libellés d'accessibilité présents dans le fichier source :
 - Accordée
 - Voir comment faire
 
+Note du 21 octobre 2026 : la transcription ci-dessus est celle de l'image. Le texte d'introduction est devenu « Sans elles, Niumi ne peut pas fonctionner. », et le titre compte les tuiles sur Android, qui en a deux de plus (`SPECIFICATION.md` §5).
+
 ## 04 · Écran 2 · Guide ouvert par « ? », images à produire
 
 Fichier : `04_ecran-2-guide-ouvert-par-images-a-produire`

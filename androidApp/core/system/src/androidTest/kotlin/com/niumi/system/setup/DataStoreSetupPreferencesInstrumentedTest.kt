@@ -52,6 +52,24 @@ class DataStoreSetupPreferencesInstrumentedTest {
         }
 }
 
+/** Étape 36 : la fenêtre système des notifications a été proposée au moins une fois. */
+@RunWith(AndroidJUnit4::class)
+class NotificationPermissionRequestedPreferenceTest {
+    @Test
+    fun markingTheRequestIsReadBack() =
+        runTest {
+            val preferences =
+                DataStoreSetupPreferences(
+                    Provider { ApplicationProvider.getApplicationContext<Context>() },
+                    AlwaysUnlocked,
+                )
+
+            preferences.markNotificationPermissionRequested()
+
+            assertThat(preferences.isNotificationPermissionRequested()).isTrue()
+        }
+}
+
 /** Ces tests portent sur le `DataStore`, pas sur la garde de déverrouillage (étape 19). */
 private object AlwaysUnlocked : UnlockState {
     override val isUserUnlocked: Boolean = true

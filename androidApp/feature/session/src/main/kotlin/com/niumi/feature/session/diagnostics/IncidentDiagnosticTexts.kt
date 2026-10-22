@@ -10,8 +10,8 @@ import com.niumi.system.readiness.ReadinessOutcome
 /**
  * Textes de l'écran 12 — diagnostic d'incident (SPEC_ANDROID §15, §17, §18). Tutoiement (§15).
  *
- * Les contrôles y sont **nommés**, pas expliqués comme sur l'écran 2. Les messages de §13
- * (`ReadinessMessages`, `:feature:setup`) sont rédigés comme des consignes d'activation — « Active-le
+ * Les contrôles y sont **nommés**, pas expliqués. Les messages de §13
+ * (`ReadinessMessages`, `:core:system`) sont rédigés comme des consignes d'activation — « Active-le
  * avant de démarrer la session » — et seraient faux pendant une session déjà armée, qu'ils
  * inviteraient à préparer une seconde fois. L'écran 12 constate ; l'écran 7 porte le recours.
  */

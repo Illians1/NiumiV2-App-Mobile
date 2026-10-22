@@ -2,7 +2,7 @@ package com.niumi.feature.setup.presentation
 
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
-import com.niumi.feature.setup.readiness.fakes.FakeSetupPreferences
+import com.niumi.feature.setup.presentation.fakes.FakeSetupPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher

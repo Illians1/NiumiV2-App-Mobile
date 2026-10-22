@@ -75,9 +75,21 @@ La politique Play exige que la divulgation soit intégrée au parcours normal de
 (pas seulement dans la fiche Store), visible sans navigation particulière, et suivie d'une
 action affirmative explicite avant l'octroi du service.
 
-Écran concerné : `AccessibilityConsentScreen`
-([`androidApp/feature/setup/.../AccessibilityConsentScreen.kt`](../../../androidApp/feature/setup/src/main/kotlin/com/niumi/feature/setup/accessibility/AccessibilityConsentScreen.kt)),
-affiché avant toute ouverture des réglages d'accessibilité. Texte reproduit ci-dessous **mot
+Écran concerné : la fenêtre de consentement de l'écran 2
+([`androidApp/feature/setup/.../PermissionsScreen.kt`](../../../androidApp/feature/setup/src/main/kotlin/com/niumi/feature/setup/permissions/PermissionsScreen.kt)),
+affichée avant toute ouverture des réglages d'accessibilité.
+
+**Chemin dans l'application (depuis l'étape 36 de la refonte, 2026-10-21) :** écran 2
+« Autorisations », tuile « Blocage des applications », bouton « Autoriser » → fenêtre centrée de
+consentement sur l'écran 2 (titre, cinq points, croix) → bouton « Ouvrir les réglages
+d'accessibilité » → réglages Android. Aucun autre chemin de Niumi n'ouvre les réglages
+d'accessibilité depuis la mise en route. Avant cette étape, une page de consentement existait mais
+le diagnostic ouvrait les réglages directement : défaut corrigé, à ne pas reproduire dans la vidéo
+de revue (`REVIEW_VIDEO_SCRIPT.md`). L'écran 7, pendant une session, garde
+son recours « Ouvrir les réglages d'accessibilité » pour un service désactivé après coup : la
+divulgation a alors déjà été montrée et acceptée.
+
+Texte reproduit ci-dessous **mot
 pour mot** depuis
 [`AccessibilityConsentTexts.kt`](../../../androidApp/feature/setup/src/main/kotlin/com/niumi/feature/setup/accessibility/AccessibilityConsentTexts.kt)
 (source unique de vérité du texte affiché à l'écran — toute divergence entre ce document et le
@@ -86,13 +98,18 @@ code est un bug de documentation, pas une variante acceptable).
 **Titre :** « Autoriser le blocage des applications »
 
 **Les cinq points affichés :**
-1. « Niumi observe le nom de l'application affichée. »
-2. « Cette information sert uniquement à renvoyer les applications choisies vers l'accueil. »
+1. « Niumi observe le nom de l’application affichée. »
+2. « Cette information sert uniquement à renvoyer les applications choisies vers l’accueil. »
 3. « Niumi ne lit pas le contenu des écrans ou les saisies. »
 4. « Le service peut être désactivé dans les réglages Android. »
-5. « Une session ne peut pas être activée si le service est inactif. »
+5. « Sans cette autorisation, Niumi ne peut pas fonctionner. »
 
-**Bouton :** « Ouvrir les réglages d'accessibilité »
+**Puis le chemin :** « Dans les réglages, trouve Niumi et active-le. »
+
+**Bouton :** « Ouvrir les réglages d’accessibilité »
+
+L'application écrit l'apostrophe typographique (’) depuis le 2026-10-20 (décision D13 du
+design-plan) ; la description du service ci-dessous garde l'apostrophe droite de `strings.xml`.
 
 **Mécanisme de consentement :** le bouton ouvre `ACTION_ACCESSIBILITY_SETTINGS`. L'utilisateur
 active lui-même le service dans les réglages système Android — Niumi ne simule et ne peut pas

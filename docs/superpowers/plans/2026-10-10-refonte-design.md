@@ -54,7 +54,7 @@ Valeurs copiées des sources ; chaque étape les respecte implicitement.
 - **Niumi Points** (décision du 2026-10-19) : de un à dix, nommés d'après une pièce proposée (Salle de bain, Cuisine, Salon, Entrée) ou librement ; ajout, renommage et suppression possibles à tout moment, session et sonnerie comprises (écran 8) ; le scan de n'importe quel point enregistré **au moment du scan** termine ou annule la session ; il en reste toujours au moins un (`SPECIFICATION.md` §6, §13, §16).
 - Même fonctionnement iPhone/Android sauf différence écrite ; les différences Android voulues : feuille de scan dessinée par Niumi, écran 7 dessiné par Niumi, feuille d'applications dessinée par Niumi, pas de limite de 60 s au scan.
 - Modules Gradle inchangés (8, `ModuleListTest`) : l'accueil et les réglages vivent dans `:feature:session`, la mise en route dans `:feature:setup`, le design system dans `:core:designsystem`.
-- Règles techniques conservées : garde de déverrouillage sur tout dépôt (`Provider<Context>` jamais résolu avant `isUserUnlocked`, SPEC_ANDROID §7.3) ; aucune action d'arrêt dans le parcours de sonnerie (la sortie de secours n'en est pas une : elle est une libération prouvée, SPEC_CORE_KMP 1.5 §12) ; `setAlarmClock()` pour le réveil avec les dérogations §9.1 ; permissions du manifeste §14 sans ajout ; journal technique §17.
+- Règles techniques conservées : garde de déverrouillage sur tout dépôt (`Provider<Context>` jamais résolu avant `isUserUnlocked`, SPEC_ANDROID §7.3) ; aucune action d'arrêt dans le parcours de sonnerie (la sortie de secours n'en est pas une : elle est une libération prouvée, SPEC_CORE_KMP 1.5 §12) ; `setAlarmClock()` pour le réveil avec les dérogations §9.1 ; permissions du manifeste §14 sans ajout, hormis `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (étape 36, décision du 2026-10-21) ; journal technique §17.
 - **Ne rien recréer des Lots 8 et 9 du plan maître** : partir des noms listés au « Point de départ » ; chaque interface des « Interfaces transverses » est un delta sur eux.
 - Un écran obsolète est supprimé, avec son `Texts`, son `TextsTest` et sa route, **à l'étape qui le remplace** ; l'étape 53 balaie ce qui n'a pas de remplaçant.
 - **Accessibilité (décisions de Mehdi du 2026-10-20).** Chaque écran refait active les contrôles automatiques de l'Accessibility Test Framework dans son test instrumenté (`enableAccessibilityChecks()`, dépendance de test `compose-ui-test-junit4-accessibility` ajoutée au module à ce moment-là). Passage TalkBack manuel seulement sur les écrans à risque : écran 10 et feuille de scan (38), écran 7 (39), feuilles du bas (40, 46, 47, 49), cadran de l'accueil (45) ; revue complète à l'étape 55. Zone tactile de 48 dp réservée autour des éléments de 44 (`NiumiDimens.touchTarget`), dessin inchangé.
@@ -97,7 +97,7 @@ SPEC_ANDROID §15 adopte la numérotation du design-plan à l'étape 54, avec ce
 11. **Point ouvert T9 déjà résolu par le code** : SPEC_ANDROID §12.1 et §14 utilisent `<queries>` ciblé, pas `QUERY_ALL_PACKAGES`. À reporter dans `POINTS-OUVERTS.md` à l'étape 37.
 12. **`DeviceReadinessChecker`, `SessionReadinessMonitor` et la notification §13.1 ne sont jamais supprimés** : ils alimentent les trois tuiles, l'alerte et le bandeau.
 13. **Relecture NFC sur état stable** (étape 31 du plan maître) : les écrans 8 et 9 actuels font disparaître seul le faux « NFC désactivé » lu juste après un redémarrage, dès que l'adaptateur est prêt. Les étapes 38 et 46 refont ces écrans : le comportement est conservé et prouvé par `AlarmViewModelTest` et `CancelSessionViewModelTest`, y compris avec Q4 (Reader Mode seulement feuille ouverte).
-14. **`ReadinessMessages` vit dans `:feature:setup`**, pas dans `:core:system` : l'étape 36 le déplace vers `SYS/readiness/` avant de supprimer `SETUP/readiness/*`, parce que la notification §13.1 en dépend.
+14. **`ReadinessMessages` vivait dans `:feature:setup`** : l'étape 36 l'a déplacé vers `SYS/readiness/` avant de supprimer `SETUP/readiness/*`. *Corrigé le 2026-10-20 :* la notification §13.1 n'en dépendait pas (ses textes sont dans `SessionWarningNotificationSpecs`) ; c'est le récapitulatif (`:feature:session`), qui nomme désormais le contrôle refusant l'activation, et les feuilles de l'écran 2 qui le lisent.
 15. **Textes « boîtier » hors écrans** : les Lots 8 et 9 du plan maître ont écrit « boîtier » dans les notifications de sonnerie et d'attente de scan (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), dans `ReadinessMessages`, `LIMITES.md` et l'aide. L'étape 53 les balaie avec le grep « boîtier » ; les textes de remplacement sont fixés dans `SPECIFICATION.md` §14 : « Touche pour scanner ton Niumi Point et terminer la session. » et « Scanne ton Niumi Point pour terminer la session. »
 16. **`session_box` et `AndroidSessionExtras.boxes` disparaissent à l'étape 43** : jusque-là, `ArmSessionUseCase`, `HandleValidNfcUseCase`, `DiagnosticReport` et le récapitulatif lisent encore la liste figée ; aucune étape antérieure n'y touche.
 
@@ -126,9 +126,11 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28. **D14 précisé le 2026-10-20** (étape 34) : icônes de navigation sans ambre ; cadenas de la carte « Blocage en cours » et point du Niumi Point restent ambre |
 | 34 | — | Marges haut et bas sur Android : marge de la maquette ajoutée aux barres système, ou la plus grande des deux ? | **Tranché le 2026-10-20** : la plus grande des deux, de chaque côté (VALEURS §4, SPEC_ANDROID §15) |
 | 35 | D12 | Point final des titres de l'écran 1 ? | **Tranché le 2026-10-20** : sans point sur les deux panneaux. Même jour : les six limites de l'onboarding ne sont plus montrées avant la première activation, l'aide les porte seule (SPEC_ANDROID §3) |
-| 36 | Q1 | Batterie, verrou des récents (HyperOS), Ne pas déranger, volume : aucune place dans le design. Où ? | Batterie et récents = étapes 2 et 3 du guide « Blocage » (coche exigeant les trois contrôles) ; DND et volume restent dans la notification §13.1 et le rapport, sans écran |
-| 36 | Q2 | Garder la notification d'avertissement §13.1 pendant `ARMED` ? | Oui ; son tap ouvre l'écran 2 |
-| 36 | D10, D18, M1 | Pas de tuile NFC ; « ? » retiré sur tuile accordée ; images du guide à produire | D10 oui ; garder « ? » ; emplacement vide sans texte de substitution tant que les images manquent |
+| 36 | Q1 | Batterie, verrou des récents (HyperOS), Ne pas déranger, volume : aucune place dans le design. Où ? | **Tranché le 2026-10-20, révisé le 2026-10-21** : tuiles Android dédiées « Batterie » (demande directe d'exemption, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` déclarée, liste système en repli) et « Verrouiller Niumi » (feuille du geste, tuile masquée sans verrou), titre qui compte les tuiles, introduction « Sans elles, Niumi ne peut pas fonctionner. » ; Ne pas déranger et volume sans écran (refus nommé au récapitulatif, notification §13.1) |
+| 36 | Q2 | Garder la notification d'avertissement §13.1 pendant `ARMED` ? | **Tranché le 2026-10-20** : oui, et son tap reste sur le diagnostic d'incident jusqu'à l'étape 52 (le volume et Ne pas déranger n'ont pas de tuile ; écran 2 sombre non dessiné, M8) |
+| 36 | D10, D18, M1 | Pas de tuile NFC ; « ? » retiré sur tuile accordée ; images du guide à produire | **Tranché le 2026-10-20** : D10 oui ; guide reporté (M1) : ni « ? » ni route `PermissionGuide` tant que textes et images manquent, D18 sans objet |
+| 36 | — | Divulgation Google Play avant les réglages d'accessibilité | **Tranché le 2026-10-20, révisé le 2026-10-21** : fenêtre centrée sur l'écran 2 (`NiumiAlertDialog`, croix, toucher à côté), ouverte par « Autoriser » de la tuile « Blocage » ; même forme pour le verrou des récents et l'alarme exacte ; la page plein écran et sa route sont supprimées ; le guide facultatif ne peut pas porter la divulgation |
+| 36 | — | Icônes des tuiles en ambre | **Essai demandé le 2026-10-20, abandonné le 2026-10-22** : icônes à l'encre ; la coche d'une tuile accordée passe dans une pastille ambre (exception écrite à D14, VALEURS §2) |
 | 37 | Q3 | Compteur « N applications choisies » = sélection validée ; T9 clos par `<queries>` | Oui |
 | 38 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | Seulement feuille ouverte ; §10.4/§11.2 amendés |
 | 38 | Q5, E7 | Texte « Déverrouille ton téléphone… » (§4.4) ; deux textes « NFC coupé » | **Q5 tranché le 2026-10-18** : aucun texte « Déverrouille ton téléphone… », l'écran n'est jamais affiché verrouillé (Lot 9 du plan maître). E7 : chaque texte sur son écran |
@@ -225,8 +227,8 @@ fun scanFailureOf(outcome: ScanOutcome?, availability: NfcAvailability): ScanFai
 
 // :core:system — com.niumi.system.permissions (étapes 36, 52)
 enum class NiumiPermission { ALARM, APP_BLOCKING, NOTIFICATIONS }
-data class PermissionStatus(val permission: NiumiPermission, val granted: Boolean)
-interface PermissionStatusSource { fun status(): List<PermissionStatus> }   // agrège DeviceReadinessChecker ; NOT_APPLICABLE = accordé
+data class PermissionStatus(val permission: NiumiPermission, val granted: Boolean, val pending: ReadinessCheck?)   // livré à l'étape 36 : pending = premier contrôle en échec
+fun interface PermissionStatusSource { suspend fun status(): List<PermissionStatus> }   // agrège DeviceReadinessChecker (permissionStatusesOf) ; NOT_APPLICABLE = accordé
 object PermissionAlertPolicy { fun alertFor(statuses: List<PermissionStatus>): PermissionAlert? }
 data class PermissionAlert(val missing: List<NiumiPermission>)
 sealed interface HomeProblem { data object NfcDisabled; data object NoNiumiPoint }
@@ -270,7 +272,7 @@ interface PairedBoxStore {   // all() / add(credential, name) / rename(boxId, na
 // HandleValidNfcUseCase : facade.verifyBox(payload, pairedBoxStore.all().map { it.credential }, context) — ensemble courant, appareil déverrouillé (§4.4)
 
 // :app — routes finales (NiumiRoute, étapes 35 à 51)
-// Presentation, Permissions, PermissionGuide(permission: String), PointPairing(mode: String /* SETUP | ADD | ALARM */),
+// Presentation, Permissions, AccessibilityConsent (étape 36), PermissionGuide(permission: String) /* reporté avec M1 */, PointPairing(mode: String /* SETUP | ADD | ALARM */),
 // TimeToGetUp(mode: String /* SETUP | EDIT */), AppSelection, Home, Success, EmergencyExit(origin: String /* HOME | ALARM */),
 // Settings, NiumiPoints, Help, HelpTopic(id: String), About, Licenses
 ```
@@ -417,7 +419,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Lot ajouté le 2026-10-10.** Ces écrans n'attendent pas le contrat 1.5 ; ils valident le design system sur de vrais écrans et gardent l'app utilisable de bout en bout. **Navigation transitoire** : jusqu'à l'étape 45, le parcours reste Présentation → Autorisations → Association (ancienne) → Applications → ancien choix de l'heure (écran 5) → récapitulatif (6) → session active (7) ; l'étape 36 branche « Continuer » de l'écran 2 sur `Pairing`, et `HomeDestination` mène à `Permissions` quand la présentation est acquittée. Quatre décisions proposées :
 
-1. **L'écran 2 remplace `ReadinessScreen` et `AccessibilityConsentScreen`.** Les trois tuiles sont des agrégats des contrôles de §13 (`PermissionStatusSource`) ; le consentement §12.3 (obligation Google Play) est porté par le guide « ? » de la tuile « Blocage des applications » et par le texte de la tuile. Les contrôles sans tuile suivent la décision Q1.
+1. **L'écran 2 remplace `ReadinessScreen`.** Les trois tuiles sont des agrégats des contrôles de §13 (`PermissionStatusSource`). *Révisé les 2026-10-20 et 21 :* le consentement §12.3 (obligation Google Play) est une fenêtre centrée de l'écran 2 ouverte par « Autoriser » de la tuile « Blocage des applications », le guide facultatif ne pouvant pas porter une divulgation obligatoire ; `AccessibilityConsentScreen` est supprimé. Les contrôles sans tuile suivent la décision Q1.
 2. **Lecture NFC pilotée par la feuille « Prêt à scanner »** (décision Q4) ; `AlarmActivity` n'active le Reader Mode que feuille ouverte.
 3. **Écran 7 plein écran** : fin de l'overlay de 3 s ; un `ComposeView` touchable, retiré par « Fermer », « Ouvrir Niumi », la libération, `onInterrupt` ou `onUnbind`.
 4. **Durées de montée selon Q7** ; `VolumeRampDurations.sanitized(seconds)` ramène toute valeur hors liste à la plus proche, pour les préférences et les sessions déjà armées (jamais de sonnerie muette).
@@ -460,10 +462,10 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** un écran à trois tuiles, fidèle aux maquettes, qui reflète l'état réel des contrôles et rouvre depuis les réglages (étape 51).
 
-- [ ] **Écrire `PermissionStatusSourceTest`**, implémenter la source.
-- [ ] **Écrire `PermissionsTextsTest`, `PermissionsViewModelTest`**, implémenter écran, guide, routes ; supprimer diagnostic et consentement.
-- [ ] **Vérifier :** batterie standard ; `grep -rn "ReadinessScreen\|AccessibilityConsent" androidApp` vide.
-- [ ] **Valider sur appareil, rédiger `ETAPE-36.md`.** SPEC_ANDROID §12.3 (consentement porté par la tuile et le guide), §13 (présentation : trois tuiles, le reste selon Q1), §15.
+- [x] **Écrire `PermissionStatusSourceTest`**, implémenter la source. *(2026-10-20 : `PermissionStatusesTest`, fonction pure `permissionStatusesOf`.)*
+- [x] **Écrire `PermissionsTextsTest`, `PermissionsViewModelTest`**, implémenter écran, guide, routes ; supprimer diagnostic et consentement. *(2026-10-20 : guide reporté (M1) ; consentement gardé et refait en page plein écran, ouvert par la tuile « Blocage » ; `ReadinessMessages` déplacé ; récapitulatif qui nomme le contrôle en cause.)*
+- [x] **Vérifier :** batterie standard ; `grep -rn "ReadinessScreen\|AccessibilityConsent" androidApp` vide. *(`AccessibilityConsent` reste, par décision : seul `ReadinessScreen` doit disparaître.)*
+- [x] **Valider sur appareil, rédiger `ETAPE-36.md`.** SPEC_ANDROID §12.3 (consentement : fenêtre centrée ouverte par « Autoriser » de la tuile « Blocage », révisé le 2026-10-21), §13 (présentation : trois tuiles, le reste selon Q1), §15. *(2026-10-22 : onze essais conformes sur Xiaomi / Android 16 / HyperOS ; 231 tests instrumentés ; coche dans une pastille ambre le 2026-10-22 ; voir `ETAPE-36.md`.)*
 
 **Tests manuels :** refuser les notifications → tuile non cochée, « Continuer » grisé ; activer le service d'accessibilité depuis le guide → coche au retour ; retirer une autorisation après coup → l'app la détecte au retour (l'alerte n'arrive qu'à l'étape 52).
 

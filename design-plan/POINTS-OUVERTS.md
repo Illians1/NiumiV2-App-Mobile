@@ -23,15 +23,15 @@ Cinq listes :
 | D7 | Sonnerie | Quels sont les vrais sons et leurs noms ? Ceux des maquettes sont des exemples |
 | D8 | Sortie de secours | Quels autres textes à recopier ? Un seul est validé, et le texte doit changer à chaque sortie |
 | D9 | ~~Bouton inactif en clair~~ | **Tranché le 19 octobre 2026** : fond `#E8E8E4` et texte `#5C5C60` (style de l'écran 2), partout. Le style de l'écran 4 (`#C6C6C2`, texte blanc) n'est pas repris |
-| D10 | Écran 2 | Le NFC n'a pas de tuile sur l'écran des autorisations, alors que l'ancien tableau le listait. Confirmer qu'il est géré seulement au moment du scan et par le bandeau |
+| D10 | ~~Écran 2, NFC~~ | **Tranché le 20 octobre 2026** : pas de tuile NFC. Le NFC est signalé à l'association, au moment du scan et par le bandeau de l'accueil |
 | D11 | Écran 3, choix de la pièce | « Continuer » est-il grisé tant qu'aucune pièce n'est choisie ? Rien n'est dit |
 | D12 | ~~Ponctuation des titres~~ | **Tranché le 20 octobre 2026** : les deux titres de l'écran 1 s'écrivent sans point final, comme les autres titres de l'app (`SPECIFICATION.md` §4) |
 | D13 | ~~Apostrophes~~ | **Tranché le 19 octobre 2026** : apostrophe typographique (’) dans les textes de l'app. À la recopie depuis la spécification, l'apostrophe droite devient ’ |
-| D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » **Précisé le 20 octobre 2026** : « pas d'ambre dans les icônes » vise les icônes de navigation et d'action ; le cadenas ambre de la carte « Blocage en cours » et le point ambre de l'icône du Niumi Point restent tels quels (`VALEURS-DE-DESIGN.md` §2) |
+| D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » **Précisé le 20 octobre 2026** : « pas d'ambre dans les icônes » vise les icônes de navigation et d'action ; le cadenas ambre de la carte « Blocage en cours » et le point ambre de l'icône du Niumi Point restent tels quels (`VALEURS-DE-DESIGN.md` §2) **Exception ajoutée le 22 octobre 2026** : coche à l'encre dans une pastille ambre sur les autorisations accordées de l'écran 2 (`VALEURS-DE-DESIGN.md` §2) |
 | D15 | Écran 11 | Le soleil en dégradé est gardé « pour l'instant ». L'écran peut encore changer |
 | D16 | Règles communes | Dans la liste de ce qui est exclu de l'app, que vise exactement le mot « confirmation » ? L'app a depuis des confirmations (écran 8, suppression d'un Niumi Point) |
 | D17 | Accueil | Que se passe-t-il quand plus aucun jour n'est coché ? L'ancien écran 5 affichait « Choisis au moins un jour. », mais cet écran est supprimé et rien n'est dit pour l'accueil |
-| D18 | Écran 2 | Sur une tuile accordée, la maquette retire le bouton « ? » en même temps que « Autoriser ». Le guide doit-il rester accessible ? |
+| D18 | Écran 2 | Sur une tuile accordée, la maquette retire le bouton « ? » en même temps que « Autoriser ». Le guide doit-il rester accessible ? **Sans objet pour l'instant** (20 octobre 2026) : le guide est reporté avec M1, aucune tuile n'a de « ? » sur Android, et une tuile accordée montre la coche seule |
 | D19 | ~~Écran 2, taille du titre~~ | **Tranché le 19 octobre 2026** : 28, comme tous les titres d'écran |
 | D20 | Sortie de secours, iPhone | Que fait l'alarme pendant la recopie sur iPhone ? Le journal ne le dit que pour Android : la sonnerie baisse tant que la saisie avance et remonte si elle s'arrête |
 | D21 | ~~Niumi Points : libellés de l'option d'ajout sur l'écran 8, du refus « déjà enregistré » et de la limite de dix~~ | **Tranché le 19 octobre 2026** : troisième bouton au trait « Ajouter un Niumi Point » sous « Recopier le texte » (écran 8, pendant l'alarme seulement) ; « Ce Niumi Point est déjà enregistré. » avec « Réessayer » ; à dix, la ligne « Ajouter un Niumi Point » grisée avec « Tu as déjà dix Niumi Points. » Reporté dans `SPECIFICATION.md` §6, §13, §16 |
@@ -98,14 +98,14 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 
 | N° | Quoi | Remarque |
 | --- | --- | --- |
-| M1 | Les images du guide des autorisations, pour iPhone et pour Android, et les textes de chaque étape | Seule la mise en page est validée, avec un exemple |
+| M1 | Les images du guide des autorisations, pour iPhone et pour Android, et les textes de chaque étape | Seule la mise en page est validée, avec un exemple. **Guide reporté sur Android le 20 octobre 2026** (étape 36) : l'écran 2 est livré sans « ? » jusqu'à ce que les textes et les images existent. L'exemple de l'alarme ne vaut pas pour Android, où l'alarme ne demande rien |
 | M2 | Les rubriques d'aide « Niumi Point perdu » et « Sortie de secours » | Non écrites |
 | M3 | La page « Licences » | Elle doit porter « Copyright IBM Corp. » et le texte de la licence de la police |
 | M4 | Le contenu de « Mentions légales » et de « Politique de confidentialité » | Non écrit |
 | M5 | Le message « temps écoulé » à l'annulation (sombre) et à l'association ou à l'ajout d'un Niumi Point (clair, avec le lien « Annuler ») | Seule la version du matin est dessinée. Les textes sont décidés |
 | M6 | L'affichage des échecs du scan en dehors de l'écran 10 : association, ajout, annulation | Les textes existent pour l'association. La forme n'est pas dessinée |
 | M7 | La feuille de sonnerie pendant une session | Version sombre non dessinée |
-| M8 | L'écran 2 ouvert depuis les réglages pendant une session, et son guide | Versions sombres non dessinées |
+| M8 | L'écran 2 ouvert depuis les réglages pendant une session, et son guide | Versions sombres non dessinées. En attendant, le tap des avertissements de session reste sur le diagnostic d'incident (décision du 20 octobre 2026, revue à l'étape 52 du plan Android) |
 | M9 | La roue de « Temps gagné » et le parcours d'ajout d'un Niumi Point pendant une session | Versions sombres non dessinées |
 | M10 | Le message « Modifiable après avoir scanné ton Niumi Point. » | Le texte existe, sa forme n'est pas dessinée |
 | M11 | L'écran 4 ouvert depuis l'accueil pour modifier la sélection | Même écran. Le retour vers l'accueil n'est pas dessiné |
@@ -127,7 +127,7 @@ Le journal des décisions (`annexes/journal-des-decisions.md`) contient des pass
 | E3 | Message après une annulation | Deux formulations : « … sont débloquées et ton réveil est désactivé. » et « … sont débloquées. Ton réveil est désactivé. » | La première, validée le 8 octobre et présente dans la maquette |
 | E4 | Écran 6 | Deux tableaux décrivent une ancienne disposition en liste et un état « Pas de réveil prévu » | La maquette validée : cadran, carte, pastilles, deux lignes ; état « Réveil désactivé » |
 | E5 | Écran 5 | Un tableau décrit l'écran « Premier planning » | L'écran est supprimé |
-| E6 | Écran 2 | Le tableau liste quatre autorisations, dont le NFC | Trois tuiles, comme la maquette. Voir D10 |
+| E6 | Écran 2 | Le tableau liste quatre autorisations, dont le NFC | Trois tuiles, comme la maquette. Voir D10. Sur Android, deux tuiles de plus depuis le 21 octobre 2026 (« Batterie », « Verrouiller Niumi ») : `SPECIFICATION.md` §5 |
 | E7 | Écran 3, NFC coupé | « Le NFC est coupé sur ton téléphone. » à l'écran 3 ; « Le NFC est coupé. Active-le pour scanner ton Niumi Point. » à l'écran 10 | Les deux sont gardés tels quels, chacun sur son écran. À harmoniser si Mehdi le souhaite |
 | E8 | Sonnerie | Plusieurs paragraphes parlent d'un curseur de volume réglable | Pas de curseur : une ligne « Volume du téléphone » et sa valeur (9 octobre) |
 | E9 | Palette | Le début de la section dit qu'aucune palette n'est choisie | Clair hors session, sombre pendant la session (8 et 9 octobre) |

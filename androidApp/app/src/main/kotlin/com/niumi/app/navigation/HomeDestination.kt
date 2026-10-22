@@ -29,6 +29,6 @@ fun homeDestinationFor(
     when {
         storageUnreadable -> NiumiRoute.IncidentDiagnostic
         state.isSessionInProgress() -> NiumiRoute.ActiveSession
-        onboardingAcknowledged -> NiumiRoute.Readiness
+        onboardingAcknowledged -> NiumiRoute.Permissions
         else -> NiumiRoute.Presentation
     }

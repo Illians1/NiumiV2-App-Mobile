@@ -79,28 +79,31 @@ Un seul écran présente les autorisations, une tuile par autorisation, avec une
 
 | Élément | Contenu |
 | --- | --- |
-| Titre | Trois autorisations |
-| Texte | Niumi en a besoin pour fonctionner. Sans elles, tu ne peux pas continuer. |
+| Titre | Trois autorisations sur iPhone. Sur Android, le titre compte les tuiles affichées : « Cinq autorisations », ou « Quatre autorisations » sur un téléphone sans verrou des applications récentes (décision du 21 octobre 2026) |
+| Texte | Sans elles, Niumi ne peut pas fonctionner. (décision du 21 octobre 2026 ; l'image `03_ecran-2-les-trois-autorisations` montre encore l'ancien texte, c'est ce texte qui fait foi) |
 | Bouton du bas | Continuer |
 
 | Tuile | Phrase | iPhone | Android |
 | --- | --- | --- | --- |
 | Alarme | Pour que ton réveil sonne à l'heure, même téléphone verrouillé. | Fenêtre du système | Rien à demander en principe pour une app de réveil |
-| Blocage des applications | Pour bloquer les applications que tu choisis, et seulement celles-là. | Fenêtre du système (Temps d'écran) | Service d'accessibilité à activer dans les réglages, avec guidage. Approche courante, à valider avec Google Play |
+| Blocage des applications | Pour bloquer les applications que tu choisis, et seulement celles-là. | Fenêtre du système (Temps d'écran) | Service d'accessibilité à activer dans les réglages, après une fenêtre d'explication exigée par Google Play. Approche courante, à valider avec Google Play |
+| Batterie (Android seulement) | Pour que le téléphone n’arrête pas Niumi pendant la nuit. | — | Fenêtre du système (demande d'exemption, décision du 21 octobre 2026). À défaut, la liste des optimisations de batterie |
+| Verrouiller Niumi (Android seulement, téléphones qui ont ce verrou, comme HyperOS) | Pour que Niumi reste actif quand tu vides les applications récentes. | — | Fenêtre centrée qui explique le geste (appui long sur Niumi dans les applications récentes, puis cadenas), puis relecture |
 | Notifications | Pour pouvoir te tenir informé de tout ce qui est important. | Fenêtre du système | Fenêtre du système |
 
 Comportement :
 
 - Chaque tuile a une icône, son nom, sa phrase, un bouton « Autoriser » et un petit bouton « ? ».
-- Une fois l'autorisation donnée, la tuile affiche une coche. Dans la maquette, la coche remplace à la fois « Autoriser » et « ? » : le guide n'est donc plus accessible depuis une tuile accordée **(ouvert : à confirmer)**.
-- « Continuer » reste grisé tant qu'il en manque une. Les trois sont obligatoires, notifications comprises.
+- Une fois l'autorisation donnée, la tuile affiche une coche, à l'encre dans une pastille ambre (décision du 22 octobre 2026). Dans la maquette, la coche remplace à la fois « Autoriser » et « ? » : le guide n'est donc plus accessible depuis une tuile accordée **(ouvert : à confirmer)**.
+- « Continuer » reste grisé tant qu'il en manque une. Toutes sont obligatoires, notifications comprises.
+- **Différence Android (décision du 21 octobre 2026).** Deux tuiles de plus, entre « Blocage des applications » et « Notifications » : « Batterie » et « Verrouiller Niumi ». Sans elles, le téléphone arrête Niumi pendant la nuit et le blocage cesse sans prévenir (mesures sur HyperOS). La tuile « Verrouiller Niumi » n'apparaît que sur les téléphones qui ont ce verrou. Ces tuiles et leurs icônes ne sont pas dessinées. Sur Android, les explications qui précèdent un réglage (consentement du blocage, verrou) s'ouvrent dans une fenêtre centrée de la forme de l'alerte d'autorisations (image 57), fermée par une croix ou par un toucher à côté (décision du 21 octobre 2026). Mise en page fixée le 22 octobre 2026 : croix ronde au coin, icône de la tuile dans un rond gris, titre centré, texte aligné à gauche, bouton. La tuile du verrou s'appelle « Verrouiller Niumi » depuis le même jour.
 - En cas de refus, il ne se passe rien de particulier : la tuile n'est simplement pas affichée comme accordée.
 - Si une autorisation est retirée plus tard, c'est l'alerte d'autorisations qui prévient l'utilisateur (section 17).
 - Cet écran se rouvre depuis Réglages, ligne « Autorisations », pour revoir ou réparer les autorisations.
 
-Le NFC n'a pas de tuile. Sur iPhone il n'y a rien à demander. Sur Android, s'il est coupé, l'utilisateur est prévenu au moment du scan et par le bandeau de l'accueil **(ouvert : à confirmer)**.
+Le NFC n'a pas de tuile. Sur iPhone il n'y a rien à demander. Sur Android, s'il est coupé, l'utilisateur est prévenu au moment du scan et par le bandeau de l'accueil (D10, tranché le 20 octobre 2026).
 
-**Le guide ouvert par « ? »** (image 04) : une croix pour fermer, le titre (« Autoriser l'alarme »), une grande image, « Étape 1 sur 2 », une phrase (« Une fenêtre du téléphone s'ouvre. Touche « Autoriser ». »), des points de progression et le bouton « Suivant ». La mise en page est validée. Les images restent à produire, pour iPhone et pour Android, et les textes des étapes ne sont écrits que pour cet exemple **(ouvert)**.
+**Le guide ouvert par « ? »** (image 04) : une croix pour fermer, le titre (« Autoriser l'alarme »), une grande image, « Étape 1 sur 2 », une phrase (« Une fenêtre du téléphone s'ouvre. Touche « Autoriser ». »), des points de progression et le bouton « Suivant ». La mise en page est validée. Les images restent à produire, pour iPhone et pour Android, et les textes des étapes ne sont écrits que pour cet exemple **(ouvert)**. Sur Android, l'écran 2 est livré sans « ? » jusque-là (décision du 20 octobre 2026).
 
 ## 6. Écran 3 · Association du Niumi Point
 

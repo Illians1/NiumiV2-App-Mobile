@@ -27,6 +27,7 @@ import com.niumi.system.common.UuidIdGenerator
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck
 import com.niumi.system.readiness.ReadinessCheckId
+import com.niumi.system.readiness.ReadinessMessages
 import com.niumi.system.readiness.ReadinessOutcome
 import com.niumi.system.readiness.ReadinessReport
 import com.niumi.system.session.DispatchResult
@@ -210,7 +211,7 @@ class SummaryViewModelTest {
         val viewModel = loadedViewModel()
 
         assertThat(viewModel.state.canActivate).isFalse()
-        assertThat(viewModel.state.message).isEqualTo(SummaryTexts.blockingReason("READINESS_BLOCKING_FOR_ALARM"))
+        assertThat(viewModel.state.message).isEqualTo(ReadinessMessages.forCheck(ReadinessCheckId.ALARM_VOLUME))
     }
 
     @Test

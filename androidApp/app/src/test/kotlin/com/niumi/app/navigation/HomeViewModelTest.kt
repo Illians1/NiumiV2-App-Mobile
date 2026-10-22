@@ -40,6 +40,10 @@ private class FakeSetupPreferences(
     override suspend fun lastBlockingStartTimeIso(): String? = null
 
     override suspend fun setLastBlockingStartTimeIso(value: String?) = Unit
+
+    override suspend fun isNotificationPermissionRequested(): Boolean = false
+
+    override suspend fun markNotificationPermissionRequested() = Unit
 }
 
 /**
@@ -159,7 +163,7 @@ class HomeViewModelTest {
 
             assertThat(state.pendingAlarmScreen).isFalse()
             assertThat(state.hasActiveSession).isFalse()
-            assertThat(state.destination).isEqualTo(NiumiRoute.Readiness)
+            assertThat(state.destination).isEqualTo(NiumiRoute.Permissions)
         }
 
     /**

@@ -21,11 +21,12 @@ sealed interface NiumiRoute {
     @Serializable
     data object Presentation : NiumiRoute
 
+    /**
+     * Écran 2 · Autorisations (étape 36 de la refonte), remplace le diagnostic à quatorze lignes
+     * dans le parcours de mise en route.
+     */
     @Serializable
-    data object Readiness : NiumiRoute
-
-    @Serializable
-    data object AccessibilityConsent : NiumiRoute
+    data object Permissions : NiumiRoute
 
     /** Étape 13. */
     @Serializable

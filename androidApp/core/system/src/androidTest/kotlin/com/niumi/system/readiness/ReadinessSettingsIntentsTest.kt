@@ -1,5 +1,6 @@
 package com.niumi.system.readiness
 
+import android.net.Uri
 import android.provider.Settings
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -9,8 +10,8 @@ import org.junit.runner.RunWith
 /**
  * Garde de SPEC_ANDROID §13 et §14 : Niumi déclare `USE_EXACT_ALARM` et ne doit **jamais** rediriger
  * vers « Alarmes et rappels ». Le test énumère toutes les actions et vérifie qu'aucune ne produit
- * cette redirection, ni aucune demande d'exemption d'énergie directe — celle-ci exigerait la
- * permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, restreinte par Google Play et non déclarée.
+ * cette redirection. Depuis le 2026-10-21, l'exemption d'énergie est demandée directement
+ * (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, déclarée), par le seul recours de batterie.
  *
  * Déplacé de `:feature:setup` à l'étape 16 avec `settingsIntentFor` : l'écran 7 consomme désormais
  * la même traduction (§15, remédiation des incidents). La partie « explication » du test reste
@@ -42,11 +43,34 @@ class ReadinessSettingsIntentsTest {
         }
     }
 
+    /**
+     * Décision de Mehdi du 2026-10-21 : la liste des optimisations demande trois touchers sur
+     * Android 16 (liste, fiche de l'app, « Sans restriction »). La demande directe n'en demande
+     * qu'un, et ne vise que Niumi.
+     */
     @Test
-    fun noActionEverRequestsTheRestrictedBatteryExemptionDirectly() {
-        allActions.forEach { action ->
+    fun theBatteryRecourseRequestsTheExemptionForNiumiDirectly() {
+        val intent = settingsIntentFor(ReadinessAction.OpenBatterySettings, PACKAGE)
+
+        assertThat(intent?.action).isEqualTo(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+        assertThat(intent?.data).isEqualTo(Uri.fromParts("package", PACKAGE, null))
+    }
+
+    @Test
+    fun onlyTheBatteryRecourseRequestsAnExemption() {
+        allActions.filter { it != ReadinessAction.OpenBatterySettings }.forEach { action ->
             assertThat(settingsIntentFor(action, PACKAGE)?.action)
                 .isNotEqualTo(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+        }
+    }
+
+    /** Un constructeur qui retire la fenêtre de demande garde la liste système : le recours tient. */
+    @Test
+    fun theBatteryRecourseFallsBackToTheSystemList() {
+        assertThat(fallbackSettingsIntentFor(ReadinessAction.OpenBatterySettings)?.action)
+            .isEqualTo(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        allActions.filter { it != ReadinessAction.OpenBatterySettings }.forEach { action ->
+            assertThat(fallbackSettingsIntentFor(action)).isNull()
         }
     }
 

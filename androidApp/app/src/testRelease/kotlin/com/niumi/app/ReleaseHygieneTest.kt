@@ -63,7 +63,7 @@ class ReleaseHygieneTest {
      * le Lot 9 : `USE_FULL_SCREEN_INTENT` est retirée avec le plein écran (§4.1).
      */
     @Test
-    fun theReleaseManifestDeclaresExactlyTheEightPermissionsOfTheSpec() {
+    fun theReleaseManifestDeclaresExactlyThePermissionsOfTheSpec() {
         val declared = usesPermissions().filterNot { it == GENERATED_RECEIVER_PERMISSION }
 
         assertThat(declared).containsExactlyElementsIn(SPEC_PERMISSIONS)
@@ -239,6 +239,9 @@ class ReleaseHygieneTest {
                 "android.permission.RECEIVE_BOOT_COMPLETED",
                 "android.permission.WAKE_LOCK",
                 "android.permission.VIBRATE",
+                // Demande directe de l'exemption de batterie, tuile « Batterie » de l'écran 2
+                // (SPEC_ANDROID §13, §14, décision de Mehdi du 2026-10-21).
+                "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
             )
 
         val ALARM_APIS =

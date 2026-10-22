@@ -1,6 +1,7 @@
 package com.niumi.designsystem.component
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -13,7 +14,10 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -22,6 +26,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.niumi.designsystem.drawing.LockedPhoneDrawing
@@ -80,6 +85,92 @@ class NiumiComponentsSemanticsTest {
             .performClick()
 
         assertThat(clicks).isEqualTo(1)
+    }
+
+    /**
+     * « Autoriser » d'une tuile (écran 2, étape 36) : dessin de 46, zone tactile de 48 réservée
+     * (décision du 2026-10-20). Deux boutons collés sont le cas qui fait échouer les contrôles
+     * d'accessibilité quand la zone n'est pas réservée (pastilles de durée, étape 35).
+     */
+    @Test
+    fun twoStackedAuthorizeButtonsKeepTheirFullTouchHeight() {
+        show {
+            Column {
+                NiumiPrimaryButton(text = "Autoriser A", onClick = {}, size = NiumiButtonSize.Authorize)
+                NiumiPrimaryButton(text = "Autoriser B", onClick = {}, size = NiumiButtonSize.Authorize)
+            }
+        }
+
+        composeRule
+            .onNodeWithText(
+                "Autoriser A",
+            ).assertRole(Role.Button)
+            .assertTouchHeightIsEqualTo(NiumiDimens.touchTarget)
+        composeRule.onNodeWithText("Autoriser B").assertTouchHeightIsEqualTo(NiumiDimens.touchTarget)
+    }
+
+    /**
+     * Fenêtre centrée (maquette 57, étape 36) : titre annoncé comme intertitre, croix nommée,
+     * bouton plein. La croix et le toucher à côté ferment (décision du 2026-10-21).
+     */
+    @Test
+    fun theAlertDialogShowsTitleBodyCrossAndButton() {
+        var primary = 0
+        var dismissed = 0
+        show {
+            NiumiAlertDialog(
+                onDismiss = { dismissed++ },
+                title = "Verrouiller Niumi",
+                closeLabel = "Fermer",
+                primary = "J’ai verrouillé Niumi",
+                onPrimary = { primary++ },
+            ) { Text("Corps") }
+        }
+
+        composeRule
+            .onNodeWithText(
+                "Verrouiller Niumi",
+            ).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+        composeRule.onNodeWithText("Corps").assertExists()
+        composeRule
+            .onNodeWithText(
+                "J’ai verrouillé Niumi",
+            ).assertRole(Role.Button)
+            .assertHeightIsAtLeast(NiumiDimens.sheetButton)
+            .performClick()
+        // Croix dessinée en 36 (maquette du 2026-10-22), zone tactile de 48 réservée.
+        composeRule
+            .onNodeWithContentDescription("Fermer")
+            .assertTouchHeightIsEqualTo(NiumiDimens.touchTarget)
+            .assertTouchWidthIsEqualTo(NiumiDimens.touchTarget)
+            .performClick()
+
+        assertThat(primary).isEqualTo(1)
+        assertThat(dismissed).isEqualTo(1)
+    }
+
+    /**
+     * Défaut vu sur appareil le 2026-10-21 : un titre sur deux lignes était coupé par la rangée de
+     * 48 qu'il partageait avec la croix. Il doit s'afficher en entier, sur autant de lignes qu'il
+     * en faut (maquette de Mehdi du 2026-10-22 : titre centré sous l'icône, croix au coin).
+     */
+    @Test
+    fun aLongTitleWrapsOnTwoLinesWithoutBeingCut() {
+        show {
+            NiumiAlertDialog(onDismiss = {}, title = "Autoriser le blocage des applications", closeLabel = "Fermer") {
+                Text("Corps")
+            }
+        }
+
+        // 22/600, interligne 26,4 : deux lignes font au moins 52.
+        composeRule.onNodeWithText("Autoriser le blocage des applications").assertHeightIsAtLeast(52.dp)
+    }
+
+    @Test
+    fun theAlertDialogWithoutPrimaryHasOnlyTheCross() {
+        show { NiumiAlertDialog(onDismiss = {}, title = "Alarme", closeLabel = "Fermer") { Text("Explication") } }
+
+        assertThat(composeRule.onAllNodes(hasClickAction()).fetchSemanticsNodes().size).isEqualTo(1)
     }
 
     @Test

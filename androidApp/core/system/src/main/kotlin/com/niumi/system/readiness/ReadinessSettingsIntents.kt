@@ -1,6 +1,9 @@
 package com.niumi.system.readiness
 
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 
@@ -12,8 +15,8 @@ import android.provider.Settings
  * besoin pour la remédiation des incidents (§15), et `:feature:session` ne peut pas dépendre de
  * `:feature:setup` (§6 n'autorise que `feature:* → core:*`). La règle de §13 est inchangée sur le
  * fond : **`DeviceReadinessChecker` ne construit aucun `Intent`**, il ne fait que décrire le
- * recours — c'est cette fonction, appelée par un écran, qui le traduit. Les **textes** affichés,
- * eux, restent dans les modules `feature` (`ReadinessMessages`, `explanationFor`).
+ * recours — c'est cette fonction, appelée par un écran, qui le traduit. Les **textes** affichés
+ * sont dans `ReadinessMessages`, à côté, depuis l'étape 36 de la refonte.
  *
  * `null` signifie « pas de réglage à ouvrir » : l'association et le sélecteur sont des
  * destinations internes, la permission de notification passe par un lanceur de permission, et
@@ -54,12 +57,13 @@ fun settingsIntentFor(
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         }
 
-        // Exemption d'énergie sans demander REQUEST_IGNORE_BATTERY_OPTIMIZATIONS : cette
-        // permission est restreinte par Google Play, et §13 n'en a pas besoin. La liste système
-        // suffit : « Sans restriction » y inscrit Niumi dans la liste blanche, qui empêche le gel
-        // même sur HyperOS, et le diagnostic la relit au retour (mesuré le 2026-09-28).
+        // Exemption d'énergie demandée directement (décision de Mehdi du 2026-10-21) : une fenêtre
+        // système, un toucher. La liste système en demandait trois sur Android 16 (liste, fiche de
+        // l'app, « Sans restriction »). Les deux inscrivent Niumi dans la même liste blanche, celle
+        // qui empêche le gel sur HyperOS et que le diagnostic relit au retour (mesuré le
+        // 2026-09-28). Exige `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, déclarée (§14).
         ReadinessAction.OpenBatterySettings -> {
-            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.fromParts("package", packageName, null))
         }
 
         ReadinessAction.StartPairing,
@@ -71,5 +75,31 @@ fun settingsIntentFor(
         ReadinessAction.Unsupported,
         -> {
             null
+        }
+    }
+
+/**
+ * Recours de repli quand l'`Intent` de [settingsIntentFor] n'a pas d'activité pour le recevoir :
+ * un constructeur peut retirer la fenêtre de demande d'exemption. La liste système des
+ * optimisations reste alors le chemin, plus long mais existant partout.
+ */
+fun fallbackSettingsIntentFor(action: ReadinessAction): Intent? =
+    when (action) {
+        ReadinessAction.OpenBatterySettings -> Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        else -> null
+    }
+
+/**
+ * Ouvre le recours de [action], puis son repli si le premier n'a pas d'activité. Rend `false`
+ * quand rien n'a pu s'ouvrir : l'écran ne promet alors rien de plus (SPEC_ANDROID §15). Appelé
+ * depuis une activité ; aucun réglage n'est modifié à la place de l'utilisateur (§12.3).
+ */
+fun Context.openRecourse(action: ReadinessAction): Boolean =
+    listOfNotNull(settingsIntentFor(action, packageName), fallbackSettingsIntentFor(action)).any { intent ->
+        try {
+            startActivity(intent)
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
         }
     }

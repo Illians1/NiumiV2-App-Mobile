@@ -39,7 +39,7 @@ class LauncherDestinationTest {
     @Test
     fun withoutASessionTheSetupJourneyIsUnchanged() {
         assertThat(launcherDestinationFor(state = null, onboardingAcknowledged = true))
-            .isEqualTo(LauncherDestination.InApp(NiumiRoute.Readiness))
+            .isEqualTo(LauncherDestination.InApp(NiumiRoute.Permissions))
         assertThat(launcherDestinationFor(state = null, onboardingAcknowledged = false))
             .isEqualTo(LauncherDestination.InApp(NiumiRoute.Presentation))
     }
@@ -49,7 +49,7 @@ class LauncherDestinationTest {
         listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED)
             .forEach { state ->
                 assertThat(launcherDestinationFor(state, onboardingAcknowledged = true))
-                    .isEqualTo(LauncherDestination.InApp(NiumiRoute.Readiness))
+                    .isEqualTo(LauncherDestination.InApp(NiumiRoute.Permissions))
             }
     }
 

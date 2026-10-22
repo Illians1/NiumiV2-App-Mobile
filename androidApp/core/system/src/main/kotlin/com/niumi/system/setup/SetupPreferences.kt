@@ -15,7 +15,7 @@ import java.io.IOException
 import javax.inject.Provider
 
 /**
- * Trois préférences de la mise en route, persistées hors Room (SPEC_ANDROID §4.5, §15) :
+ * Quatre préférences de la mise en route, persistées hors Room (SPEC_ANDROID §4.5, §15) :
  *
  * - `onboardingAcknowledged` : l'utilisateur a lu l'écran 1 · Présentation jusqu'à « Configurer
  *   Niumi » (étape 35 de la refonte). La clé `onboarding_acknowledged` date de l'ancien onboarding
@@ -27,7 +27,11 @@ import javax.inject.Provider
  * - `lastBlockingStartTimeIso` (étape 24, Lot 6) : dernière heure de début de blocage confirmée,
  *   mémorisée comme l'heure de réveil (SPEC_ANDROID §15, écran 5). `null` signifie « Maintenant »,
  *   qui reste le défaut tant qu'aucun début différé n'a été confirmé — d'où une écriture nulle qui
- *   **retire** la clé plutôt que d'y poser une chaîne vide.
+ *   **retire** la clé plutôt que d'y poser une chaîne vide ;
+ * - `notificationPermissionRequested` (étape 36 de la refonte) : la fenêtre système des
+ *   notifications a été proposée au moins une fois. Android ne dit pas si elle peut encore
+ *   s'ouvrir ; ce souvenir, joint à `shouldShowRequestPermissionRationale`, décide entre la fenêtre
+ *   et les réglages de notification avant de toucher « Autoriser » (SPEC_ANDROID §13).
  *
  * La confirmation de l'exemption d'énergie (`battery_exemption_confirmed`) a été retirée à
  * l'étape 25 : le diagnostic détecte désormais l'exemption (§13). La clé déjà écrite chez un
@@ -45,6 +49,10 @@ interface SetupPreferences {
     suspend fun lastBlockingStartTimeIso(): String?
 
     suspend fun setLastBlockingStartTimeIso(value: String?)
+
+    suspend fun isNotificationPermissionRequested(): Boolean
+
+    suspend fun markNotificationPermissionRequested()
 }
 
 private val Context.setupDataStore: DataStore<Preferences> by preferencesDataStore(name = "niumi_setup")
@@ -82,6 +90,10 @@ class DataStoreSetupPreferences(
 
     override suspend fun setLastBlockingStartTimeIso(value: String?) = write(LAST_BLOCKING_START_TIME_ISO, value)
 
+    override suspend fun isNotificationPermissionRequested(): Boolean = read(NOTIFICATION_PERMISSION_REQUESTED)
+
+    override suspend fun markNotificationPermissionRequested() = write(NOTIFICATION_PERMISSION_REQUESTED, value = true)
+
     private suspend fun read(key: Preferences.Key<Boolean>): Boolean = preferences()?.get(key) ?: false
 
     /** `null` avant déverrouillage : le `DataStore` n'est même pas résolu. */
@@ -115,5 +127,6 @@ class DataStoreSetupPreferences(
         val ONBOARDING_ACKNOWLEDGED = booleanPreferencesKey("onboarding_acknowledged")
         val LAST_WAKE_TIME_ISO = stringPreferencesKey("last_wake_time_iso")
         val LAST_BLOCKING_START_TIME_ISO = stringPreferencesKey("last_blocking_start_time_iso")
+        val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
     }
 }

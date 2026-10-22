@@ -42,6 +42,10 @@ class FakeSetupPreferences(
     override suspend fun setLastBlockingStartTimeIso(value: String?) {
         lastBlockingStartTimeIsoValue = value
     }
+
+    override suspend fun isNotificationPermissionRequested(): Boolean = false
+
+    override suspend fun markNotificationPermissionRequested() = Unit
 }
 
 class FakeAlarmSoundPreferences(

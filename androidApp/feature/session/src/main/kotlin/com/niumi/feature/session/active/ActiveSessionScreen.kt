@@ -32,7 +32,7 @@ import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.feature.session.ui.AlarmSoundRow
 import com.niumi.system.nfc.nfcAdapterSettledChanges
-import com.niumi.system.readiness.settingsIntentFor
+import com.niumi.system.readiness.openRecourse
 
 /**
  * Écran de session active (écran 7, SPEC_ANDROID §15), complet depuis l'étape 15. La seule action
@@ -287,13 +287,9 @@ fun ActiveSessionRoute(
                 onOpenRingtone = onOpenRingtone,
                 // §13 : les `Intent` de réglages sont construits par l'écran, jamais par le
                 // ViewModel ni par `DeviceReadinessChecker`. Un recours sans `Intent` n'a de toute
-                // façon pas de bouton (`IncidentPresentation`), d'où le `?.let` plutôt qu'un repli
-                // silencieux.
-                onRemediate = { incident ->
-                    incident.action
-                        ?.let { settingsIntentFor(it, context.packageName) }
-                        ?.let(context::startActivity)
-                },
+                // façon pas de bouton (`IncidentPresentation`). `openRecourse` ouvre le même
+                // chemin que l'écran 2, repli compris (demande directe d'exemption, 2026-10-21).
+                onRemediate = { incident -> incident.action?.let(context::openRecourse) },
             ),
     )
 }

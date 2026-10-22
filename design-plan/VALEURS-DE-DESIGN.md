@@ -31,7 +31,7 @@ Le passage au clair se fait au moment où la session se termine : écran de réu
 | Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé », dont le bord des jours non cochés (maquette 13) ; poignée des feuilles du bas ; traits inactifs de l'indicateur de panneau (le bouton inactif de l'écran 4 de la maquette n'est pas repris, D9) |
 | Tuile grise | `#EFEFEB` | Tuiles d'autorisation, rond de l'icône de scan |
 | Case grisée | `#F1F1EE` | Emplacements des icônes d'applications quand l'accueil est grisé (« Réveil désactivé ») |
-| Ambre | `#E9A23B` | Interrupteur activé, poignée du réveil sur le cadran, point des Niumi Points, pastille du cadenas (écran 1), soleil (écran 11) |
+| Ambre | `#E9A23B` | Interrupteur activé, poignée du réveil sur le cadran, point des Niumi Points, pastille du cadenas (écran 1), pastille de la coche d'une autorisation accordée (écran 2), soleil (écran 11) |
 | Teinte ambre | `#FCF1DF` | Fond de la phrase « Bravo ! » (écran 11) |
 | Texte sur encre | `#FFFFFF` sur le bouton principal, `#FAFAF8` sur la carte noire | L'écart entre les deux ne se voit pas à l'œil |
 | Texte secondaire sur encre | `#A9A9AE` | Deuxième ligne de la carte « Réveil activé » |
@@ -65,6 +65,7 @@ Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F`
 - Un détail ambre par dessin : pastille du cadenas (écran 1, panneau 1), point du Niumi Point (tous les dessins), soleil (écran 11).
 - Les icônes de navigation et d'action (chevron, flèche de retour, croix, réglages, coche, trois points, cadenas des rangées) restent noires en clair et blanc cassé en sombre, sans ambre.
 - Deux icônes du design font exception, et elles restent telles quelles (décision de Mehdi du 20 octobre 2026) : le cadenas de la carte « Blocage en cours », ambre au trait épais sur fond sombre (§5, images 15 et 18 à 27), et le point ambre de l'icône du Niumi Point (image 47), qui est le détail ambre de ce dessin. Aucune autre icône ne prend l'ambre sans décision écrite ici.
+- Troisième exception (décision de Mehdi du 22 octobre 2026) : sur l'écran 2, la coche d'une autorisation accordée est à l'encre dans une pastille ambre de 28 (coche de 16). L'ambre y est posé sous l'encre, comme le cadenas de l'écran 1 ; la coche garde un contraste de 8,9:1. Les icônes des tuiles restent à l'encre (l'essai ambre du 20 octobre est abandonné le même jour).
 
 ### Couleurs du logo
 
