@@ -14,6 +14,7 @@ import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
+import com.niumi.system.notification.NiumiNotificationIds
 import com.niumi.system.notification.RingingNotificationAction
 import com.niumi.system.notification.RingingNotificationFactory
 import com.niumi.system.notification.RingingNotificationWatch
@@ -248,7 +249,11 @@ class AlarmRingingService : Service() {
     }
 
     private companion object {
-        const val NOTIFICATION_ID = 1
+        /**
+         * Partagé avec le service de garde, qui tient la même notification pendant la sonnerie
+         * (SPEC_ANDROID §12.5, 2026-10-22) : une seule reste affichée.
+         */
+        const val NOTIFICATION_ID = NiumiNotificationIds.RINGING
         const val WAKE_LOCK_RENEWAL_INTERVAL_MS = 8 * 60 * 1000L
     }
 }

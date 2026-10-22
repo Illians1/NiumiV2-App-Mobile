@@ -2,6 +2,7 @@ package com.niumi.app
 
 import android.Manifest
 import android.app.ActivityManager
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,7 @@ import com.niumi.system.blocking.guard.BlockingGuardCommand
 import com.niumi.system.blocking.guard.BlockingGuardController
 import com.niumi.system.blocking.guard.BlockingGuardPhase
 import com.niumi.system.common.OperationResult
+import com.niumi.system.notification.NiumiNotificationIds
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionPersistenceGateway
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -32,8 +34,8 @@ import javax.inject.Inject
 
 /**
  * Service de garde du blocage (SPEC_ANDROID §12.5) : il atteint réellement le premier plan avec sa
- * notification, s'arrête sur demande, et s'arrête seul quand il est relancé sans commande alors
- * qu'aucune session n'existe.
+ * notification, reprend celle de l'alarme, de l'alarme au scan (2026-10-22), s'arrête sur demande,
+ * et s'arrête seul quand il est relancé sans commande alors qu'aucune session n'existe.
  *
  * Placé dans `:app` : le service injecte la persistance, et seul ce module a un graphe Dagger
  * complet (même raison qu'`AlarmChainInstrumentedTest`). Nécessite un appareil ou un émulateur.
@@ -78,12 +80,40 @@ class BlockingGuardServiceInstrumentedTest {
 
         assertThat(awaitGuard { it?.foreground == true }).isTrue()
         val title = awaitNotificationTitle()
-        assertThat(title).startsWith("Blocage en cours jusqu'à ")
+        assertThat(title).startsWith("Réveil prévu à ")
         assertThat(title).endsWith("7:00")
 
         assertThat(controller.release()).isEqualTo(OperationResult.Success)
         assertThat(awaitGuard { it == null }).isTrue()
         assertThat(controller.release()).isEqualTo(OperationResult.AlreadySatisfied)
+    }
+
+    /**
+     * De l'alarme au scan, la garde reprend la notification de l'alarme sous son identifiant, et
+     * la sienne disparaît (§12.5, décisions du 2026-10-22) : une seule notification reste.
+     */
+    @Test
+    fun fromTheAlarmTheGuardTakesOverTheAlarmNotification() {
+        assertThat(controller.keep(COMMAND)).isEqualTo(OperationResult.Success)
+        assertThat(awaitGuard { it?.foreground == true }).isTrue()
+        assertThat(awaitNotificationTitle()).startsWith("Réveil prévu à ")
+
+        assertThat(keepIn(BlockingGuardPhase.RINGING)).isEqualTo(OperationResult.Success)
+        assertThat(awaitNotificationTitle(NiumiNotificationIds.RINGING)).isEqualTo("Alarme Niumi en cours")
+        assertThat(awaitAbsent(BlockingGuardService.NOTIFICATION_ID)).isTrue()
+
+        assertThat(keepIn(BlockingGuardPhase.AWAITING_SCAN)).isEqualTo(OperationResult.Success)
+        assertThat(awaitNotificationTitle(NiumiNotificationIds.SCAN_REQUEST)).isEqualTo("Ton réveil Niumi est passé")
+        assertThat(awaitAbsent(NiumiNotificationIds.RINGING)).isTrue()
+
+        // Après le scan, rien ne change jusqu'à l'arrêt : pas de texte furtif.
+        assertThat(keepIn(BlockingGuardPhase.RELEASING)).isEqualTo(OperationResult.Success)
+        Thread.sleep(SETTLE_MS)
+        assertThat(niumiNotificationIds()).containsExactly(NiumiNotificationIds.SCAN_REQUEST)
+
+        assertThat(controller.release()).isEqualTo(OperationResult.Success)
+        assertThat(awaitGuard { it == null }).isTrue()
+        assertThat(awaitAbsent(NiumiNotificationIds.SCAN_REQUEST)).isTrue()
     }
 
     /**
@@ -112,11 +142,27 @@ class BlockingGuardServiceInstrumentedTest {
         return false
     }
 
-    private fun awaitNotificationTitle(): String? {
+    private fun keepIn(phase: BlockingGuardPhase): OperationResult = controller.keep(COMMAND.copy(phase = phase))
+
+    private fun niumiNotificationIds(): List<Int> =
+        notificationManager.activeNotifications
+            .filter { (it.notification.flags and Notification.FLAG_GROUP_SUMMARY) == 0 }
+            .map { it.id }
+
+    private fun awaitAbsent(id: Int): Boolean {
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            if (id !in niumiNotificationIds()) return true
+            Thread.sleep(POLL_INTERVAL_MS)
+        }
+        return false
+    }
+
+    private fun awaitNotificationTitle(id: Int = BlockingGuardService.NOTIFICATION_ID): String? {
         val deadline = System.currentTimeMillis() + TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
             notificationManager.activeNotifications
-                .firstOrNull { it.id == BlockingGuardService.NOTIFICATION_ID }
+                .firstOrNull { it.id == id }
                 ?.let {
                     return it.notification.extras
                         .getCharSequence("android.title")

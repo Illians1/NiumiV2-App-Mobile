@@ -5,7 +5,7 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * SPEC_ANDROID §12.5 : deux textes exacts selon la phase, notification d'état silencieuse et
+ * SPEC_ANDROID §12.5 : textes exacts de la garde avant l'alarme, notification d'état silencieuse et
  * permanente, **aucune action** — rien n'arrête une session hors du scan.
  */
 class BlockingGuardNotificationSpecsTest {
@@ -23,19 +23,20 @@ class BlockingGuardNotificationSpecsTest {
             .isEqualTo("Tes applications choisies seront bloquées au coucher.")
     }
 
+    /** Décision du 2026-10-22 : la notification parle du réveil, et le blocage dure jusqu'au scan. */
     @Test
     fun duringTheBlockingTheTitleCarriesTheWakeTime() {
         val spec = BlockingGuardNotificationSpecs.blocking("07:00")
 
-        assertThat(spec.title).isEqualTo("Blocage en cours jusqu'à 07:00")
-        assertThat(spec.text).isEqualTo("Tes applications choisies restent bloquées jusqu'au réveil.")
+        assertThat(spec.title).isEqualTo("Réveil prévu à 07:00")
+        assertThat(spec.text).isEqualTo("Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Point.")
     }
 
     /** Service relancé par le système avant d'avoir relu la session : pas d'heure inventée. */
     @Test
     fun withoutAWakeTimeTheTitlesSayOnlyThePhase() {
         assertThat(BlockingGuardNotificationSpecs.beforeBlocking(null, null).title).isEqualTo("Réveil programmé")
-        assertThat(BlockingGuardNotificationSpecs.blocking(null).title).isEqualTo("Blocage en cours")
+        assertThat(BlockingGuardNotificationSpecs.blocking(null).title).isEqualTo("Réveil prévu")
     }
 
     /** Relance sans commande : rien qui serait faux avant comme pendant le blocage. */

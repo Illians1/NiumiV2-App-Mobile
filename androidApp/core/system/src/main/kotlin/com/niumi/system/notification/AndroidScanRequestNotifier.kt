@@ -1,12 +1,9 @@
 package com.niumi.system.notification
 
-import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import com.niumi.system.common.OperationResult
 import com.niumi.system.intent.AndroidPendingIntentFactory
-
-private const val SCAN_REQUEST_NOTIFICATION_ID = 2
 
 /**
  * Publie/retire la notification d'attente de scan (SPEC_ANDROID §10.5). N'utilise que
@@ -17,38 +14,27 @@ private const val SCAN_REQUEST_NOTIFICATION_ID = 2
 class AndroidScanRequestNotifier(
     private val context: Context,
     private val pendingIntentFactory: AndroidPendingIntentFactory,
-    private val iconResolver: NotificationIconResolver,
+    iconResolver: NotificationIconResolver,
 ) : ScanRequestNotifier {
     private val notificationManager: NotificationManager
         get() = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+    private val notificationFactory = ScanRequestNotificationFactory(context, iconResolver)
+
     override fun present(sessionId: String): OperationResult {
-        val spec = ScanRequestNotificationSpecs.awaitingScan()
         val tapPendingIntent = pendingIntentFactory.create(ScanRequestPendingIntentSpecs.tap(sessionId))
-        val notification =
-            Notification
-                .Builder(context, spec.channelId)
-                // Obligatoire : sans petite icône, la publication échoue silencieusement sur
-                // certaines versions (même raison que `RingingNotificationFactory`).
-                .setSmallIcon(iconResolver.smallIconResId())
-                .setCategory(spec.category)
-                .setContentTitle(spec.title)
-                .setContentText(spec.text)
-                .setOngoing(spec.ongoing)
-                // `SessionReconciler` republie cette notification à chaque passe sur une session
-                // en attente de scan (§10.5, étape 18) : sans cela, un canal d'importance haute
-                // reproduirait une bannière à chaque réconciliation, alors que la notification
-                // n'a jamais disparu. `notify()` avec le même identifiant remplace en place.
-                .setOnlyAlertOnce(true)
-                .setContentIntent(tapPendingIntent)
-                .build()
-        notificationManager.notify(SCAN_REQUEST_NOTIFICATION_ID, notification)
+        notificationManager.notify(NiumiNotificationIds.SCAN_REQUEST, notificationFactory.create(tapPendingIntent))
         return OperationResult.Success
     }
 
+    /**
+     * Pendant que la garde tient cette notification au premier plan (§12.5), Android refuse de la
+     * retirer à la demande de l'app (`cancelNotificationWithTag`, `FLAG_FOREGROUND_SERVICE`) : elle
+     * disparaît avec la garde, à l'état final, moins d'une seconde après le scan.
+     */
     override fun clear(sessionId: String): OperationResult {
-        val wasShowing = notificationManager.activeNotifications.any { it.id == SCAN_REQUEST_NOTIFICATION_ID }
-        notificationManager.cancel(SCAN_REQUEST_NOTIFICATION_ID)
+        val wasShowing = notificationManager.activeNotifications.any { it.id == NiumiNotificationIds.SCAN_REQUEST }
+        notificationManager.cancel(NiumiNotificationIds.SCAN_REQUEST)
         return if (wasShowing) OperationResult.Success else OperationResult.AlreadySatisfied
     }
 }

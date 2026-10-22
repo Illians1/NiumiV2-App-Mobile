@@ -4,8 +4,9 @@ import android.app.Notification
 
 /**
  * Notification du service de garde de session (SPEC_ANDROID §12.5 ; décisions de Mehdi du
- * 2026-10-19 : notification pendant toute la session, un texte avant le blocage et un pendant,
- * jamais ramenée une fois écartée).
+ * 2026-10-19 : notification pendant toute la session ; du 2026-10-22 : elle parle du réveil,
+ * avec un texte avant le blocage et un pendant). De l'alarme au scan, la garde n'a plus de texte
+ * propre : elle reprend la notification de l'alarme (`NiumiNotificationIds`).
  *
  * Une notification d'état, pas une alarme : `CATEGORY_STATUS`, canal d'importance basse, aucune
  * action. `actions` reste vide comme partout dans Niumi : rien n'arrête une session hors du scan.
@@ -28,11 +29,11 @@ object BlockingGuardNotificationSpecs {
                     ?: "Tes applications choisies seront bloquées au coucher.",
         )
 
-    /** Blocage en vigueur, du coucher jusqu'au scan. */
+    /** Blocage en vigueur, du coucher jusqu'à l'alarme. */
     fun blocking(wakeTimeLabel: String?): NotificationSpec =
         spec(
-            title = wakeTimeLabel?.let { "Blocage en cours jusqu'à $it" } ?: "Blocage en cours",
-            text = "Tes applications choisies restent bloquées jusqu'au réveil.",
+            title = wakeTimeLabel?.let { "Réveil prévu à $it" } ?: "Réveil prévu",
+            text = "Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Point.",
         )
 
     /**

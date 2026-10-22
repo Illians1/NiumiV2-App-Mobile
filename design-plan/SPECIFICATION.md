@@ -532,12 +532,18 @@ Elle part 30 minutes avant chaque coucher et ne porte aucun bouton. La toucher o
 
 ### Notification de session (Android)
 
-Ajoutée le 20 octobre 2026 (décisions du 19 octobre, correctif A8). Pendant toute la session, de l'activation au scan, une notification Niumi discrète reste affichée : sans son, sans vibration, sans bannière, sans bouton. La toucher ouvre Niumi. L'utilisateur peut l'écarter ; elle ne revient pas, sauf au moment du coucher, où son texte change. Elle tient Niumi en vie : sur certains téléphones (Xiaomi), retirer Niumi des applications récentes sans elle arrêtait le blocage.
+Ajoutée le 20 octobre 2026 (décisions du 19 octobre, correctif A8). Pendant toute la session, de l'activation au scan, une notification Niumi reste affichée. Elle tient Niumi en vie : sur certains téléphones (Xiaomi), retirer Niumi des applications récentes sans elle arrêtait le blocage.
+
+Avant l'alarme, c'est une notification discrète : sans son, sans vibration, sans bannière, sans bouton. La toucher ouvre Niumi. L'utilisateur peut l'écarter ; elle ne revient pas, sauf au coucher, où son texte change.
 
 | Moment | Titre | Texte |
 | --- | --- | --- |
 | Avant le coucher | Réveil programmé à 07:00 | Tes applications choisies seront bloquées à partir de 22:30. |
-| Après le coucher | Blocage en cours jusqu'à 07:00 | Tes applications choisies restent bloquées jusqu'au réveil. |
+| Après le coucher | Réveil prévu à 07:00 | Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Point. |
+
+À l'alarme, elle laisse la place à la notification de l'alarme : « Alarme Niumi en cours » pendant la sonnerie, ou « Ton réveil Niumi est passé » si l'alarme n'a pas sonné. Une seule notification Niumi est alors visible. Elle revient une dizaine de secondes après avoir été écartée, jusqu'au scan.
+
+Revu le 22 octobre 2026 : la notification parle du réveil, le blocage est dit dans le texte, et une seule notification reste affichée de l'alarme au scan.
 
 Elle n'est pas dessinée : c'est une notification standard d'Android, avec l'icône de Niumi.
 

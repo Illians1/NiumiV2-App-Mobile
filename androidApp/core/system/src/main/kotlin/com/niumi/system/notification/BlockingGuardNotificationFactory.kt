@@ -3,6 +3,7 @@ package com.niumi.system.notification
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
+import android.os.Build
 
 /**
  * Traduit une spec de [BlockingGuardNotificationSpecs] en `Notification` réelle (SPEC_ANDROID §12.5).
@@ -31,9 +32,13 @@ class BlockingGuardNotificationFactory(
                 .setContentText(spec.text)
                 .setOngoing(spec.ongoing)
                 .setOnlyAlertOnce(spec.alertOnlyOnce)
-                // Android 12+ peut retarder jusqu'à 10 s l'affichage d'une notification de service
-                // de premier plan ; elle doit apparaître dès l'entrée en vigueur du blocage.
-                .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+        // Android 12+ peut retarder jusqu'à 10 s l'affichage d'une notification de service de
+        // premier plan ; elle doit apparaître dès l'entrée en vigueur du blocage. L'appel n'existe
+        // qu'à partir de l'API 31 : sans cette garde, le service plantait sur Android 10 et 11
+        // (erreur de lint `NewApi`, corrigée le 2026-10-22).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+        }
         if (spec.visibilityPublic) builder.setVisibility(Notification.VISIBILITY_PUBLIC)
         if (openAppPendingIntent != null) builder.setContentIntent(openAppPendingIntent)
         return builder.build()

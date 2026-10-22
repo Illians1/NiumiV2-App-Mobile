@@ -31,14 +31,38 @@ class BlockingGuardPolicyTest {
         }
     }
 
-    /** Le texte suit le blocage : « Réveil programmé » avant, « Blocage en cours » pendant. */
+    /**
+     * La notification suit la session (décisions du 2026-10-22) : « Réveil programmé » avant le
+     * blocage, « Réveil prévu » pendant, puis celle de l'alarme, partagée, jusqu'au scan.
+     */
     @Test
-    fun thePhaseFollowsTheBlockingInForce() {
+    fun thePhaseFollowsTheBlockingThenTheAlarm() {
         allSnapshots().forEach { snapshot ->
             val decision = BlockingGuardPolicy.decide(snapshot) as? BlockingGuardDecision.Keep ?: return@forEach
             val expected =
-                if (snapshot.isBlockingInForce()) BlockingGuardPhase.BLOCKING else BlockingGuardPhase.BEFORE_BLOCKING
+                when {
+                    !snapshot.isBlockingInForce() -> BlockingGuardPhase.BEFORE_BLOCKING
+                    snapshot.state == SessionStateDto.ARMED -> BlockingGuardPhase.BLOCKING
+                    snapshot.state == SessionStateDto.RINGING -> BlockingGuardPhase.RINGING
+                    snapshot.state == SessionStateDto.RELEASING -> BlockingGuardPhase.RELEASING
+                    else -> BlockingGuardPhase.AWAITING_SCAN
+                }
             assertWithMessage(snapshot.state.name).that(decision.command.phase).isEqualTo(expected)
+        }
+    }
+
+    @Test
+    fun fromTheAlarmToTheScanThePhaseNamesWhatTheAlarmShows() {
+        mapOf(
+            SessionStateDto.RINGING to BlockingGuardPhase.RINGING,
+            SessionStateDto.AWAITING_NFC to BlockingGuardPhase.AWAITING_SCAN,
+            SessionStateDto.TRIGGERED_AWAITING_NFC to BlockingGuardPhase.AWAITING_SCAN,
+            SessionStateDto.RELEASING to BlockingGuardPhase.RELEASING,
+        ).forEach { (state, expected) ->
+            val snapshot = SessionDtoFixtures.snapshotInState(state)
+            val decision = BlockingGuardPolicy.decide(snapshot) as BlockingGuardDecision.Keep
+
+            assertWithMessage(state.name).that(decision.command.phase).isEqualTo(expected)
         }
     }
 
@@ -80,9 +104,10 @@ class BlockingGuardPolicyTest {
     fun afterARestartDuringTheSessionTheGuardIsKept() {
         val ringing = SessionDtoFixtures.snapshotInState(SessionStateDto.RINGING)
 
-        assertThat(
-            BlockingGuardPolicy.afterRestart(present(ringing)),
-        ).isInstanceOf(BlockingGuardDecision.Keep::class.java)
+        val decision = BlockingGuardPolicy.afterRestart(present(ringing))
+
+        assertThat(decision).isInstanceOf(BlockingGuardDecision.Keep::class.java)
+        assertThat((decision as BlockingGuardDecision.Keep).command.phase).isEqualTo(BlockingGuardPhase.RINGING)
     }
 
     @Test
@@ -114,6 +139,10 @@ class BlockingGuardPolicyTest {
             .isEqualTo(BlockingGuardCommand("s", BlockingGuardPhase.BEFORE_BLOCKING, 1L, 2L, "Europe/Paris"))
         assertThat(BlockingGuardCommand.fromExtras("s", "BLOCKING", 1L, null, "Europe/Paris"))
             .isEqualTo(BlockingGuardCommand("s", BlockingGuardPhase.BLOCKING, 1L, null, "Europe/Paris"))
+        BlockingGuardPhase.entries.forEach { phase ->
+            assertThat(BlockingGuardCommand.fromExtras("s", phase.name, 1L, null, "Europe/Paris"))
+                .isEqualTo(BlockingGuardCommand("s", phase, 1L, null, "Europe/Paris"))
+        }
     }
 
     private fun allSnapshots(): List<SessionSnapshotDto> =

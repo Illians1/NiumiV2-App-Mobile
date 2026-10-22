@@ -7,25 +7,28 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import android.text.format.DateFormat
-import com.niumi.feature.session.ui.WakeScheduleFormatter
-import com.niumi.system.alarm.AlarmPendingIntentSpecs
 import com.niumi.system.blocking.guard.BlockingGuardCommand
 import com.niumi.system.blocking.guard.BlockingGuardDecision
+import com.niumi.system.blocking.guard.BlockingGuardNotificationWatch
 import com.niumi.system.blocking.guard.BlockingGuardPhase
 import com.niumi.system.blocking.guard.BlockingGuardPolicy
 import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
 import com.niumi.system.notification.BlockingGuardNotificationFactory
-import com.niumi.system.notification.BlockingGuardNotificationSpecs
-import com.niumi.system.notification.NotificationSpec
+import com.niumi.system.notification.NiumiNotificationIds
+import com.niumi.system.notification.RingingNotificationAction
+import com.niumi.system.notification.RingingNotificationFactory
+import com.niumi.system.notification.ScanRequestNotificationFactory
 import com.niumi.system.session.SessionPersistenceGateway
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,10 +46,19 @@ import javax.inject.Inject
  * (`BlockingGuardPolicy.afterRestart`) : la réconciliation ne publie rien quand aucune session
  * n'existe plus, l'observateur ne pourrait donc pas l'arrêter.
  *
- * **Une notification écartée n'est jamais ramenée** (décision de Mehdi du 2026-10-19) : depuis
- * Android 14, l'utilisateur peut l'écarter sans arrêter le service, et c'est le service qui
- * protège, pas la notification (mesuré le même jour). Elle ne réapparaît qu'avec une nouvelle
- * commande — passage au coucher, heure changée —, que `startForeground` poste à nouveau.
+ * **De l'alarme au scan, il reprend la notification de l'alarme** (décisions de Mehdi du
+ * 2026-10-22) : `startForeground` avec le même identifiant et le même contenu que la sonnerie
+ * ([NiumiNotificationIds.RINGING]) ou que la demande de scan ([NiumiNotificationIds.SCAN_REQUEST]).
+ * Android garde une notification tant qu'un service de premier plan du paquet l'utilise : une
+ * seule reste affichée (mesuré le 2026-10-22 sur Xiaomi 25080RABDG / Android 16 et sur émulateur).
+ * En `RELEASING`, moins d'une seconde après le scan, il garde la notification qu'il tient.
+ *
+ * **Une notification écartée n'est ramenée qu'en attente de scan** ([BlockingGuardNotificationWatch]).
+ * Avant l'alarme, elle ne fait qu'informer : depuis Android 14, l'utilisateur peut l'écarter sans
+ * arrêter le service, et c'est le service qui protège, pas la notification (mesuré le 2026-10-19).
+ * Elle ne réapparaît alors qu'avec une nouvelle commande — passage au coucher ou à l'alarme, heure
+ * changée —, que `startForeground` poste à nouveau. Pendant la sonnerie, c'est
+ * `AlarmRingingService` qui ramène la notification partagée.
  */
 @AndroidEntryPoint
 class BlockingGuardService : Service() {
@@ -62,6 +74,12 @@ class BlockingGuardService : Service() {
     @Inject
     lateinit var gateway: SessionPersistenceGateway
 
+    @Inject
+    lateinit var ringingNotificationFactory: RingingNotificationFactory
+
+    @Inject
+    lateinit var scanRequestNotificationFactory: ScanRequestNotificationFactory
+
     @DefaultDispatcher
     @Inject
     lateinit var defaultDispatcher: CoroutineDispatcher
@@ -71,6 +89,21 @@ class BlockingGuardService : Service() {
     private val serviceJob = SupervisorJob()
     private val serviceScope by lazy { CoroutineScope(defaultDispatcher + serviceJob) }
     private val notificationManager by lazy { getSystemService(NotificationManager::class.java) }
+    private val notifications by lazy {
+        BlockingGuardNotifications(
+            context = this,
+            guardFactory = notificationFactory,
+            ringingFactory = ringingNotificationFactory,
+            scanRequestFactory = scanRequestNotificationFactory,
+            pendingIntentFactory = pendingIntentFactory,
+        )
+    }
+
+    // `onStartCommand` tourne sur le fil principal, `recover` dans [serviceScope] : les deux
+    // passent par [present], sous [lock].
+    private val lock = Any()
+    private var foregroundId: Int? = null
+    private var watchJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -82,7 +115,7 @@ class BlockingGuardService : Service() {
         // Poster sur un canal inconnu ferait rejeter la notification et tomber le service.
         notificationChannelRegistrar.registerAll()
         val command = intent?.let(::commandOf)
-        goForeground(notificationFor(command))
+        present(command)
         if (command == null) serviceScope.launch { recover(startId) }
         return START_STICKY
     }
@@ -90,7 +123,7 @@ class BlockingGuardService : Service() {
     private suspend fun recover(startId: Int) {
         when (val decision = BlockingGuardPolicy.afterRestart(gateway.load())) {
             is BlockingGuardDecision.Keep -> {
-                notificationManager.notify(NOTIFICATION_ID, notificationFor(decision.command))
+                present(decision.command)
             }
 
             // `stopSelf(startId)` : une commande plus récente de l'observateur garde le service.
@@ -104,47 +137,54 @@ class BlockingGuardService : Service() {
         }
     }
 
-    private fun goForeground(notification: Notification) {
+    /**
+     * Passe au premier plan avec la notification de la phase. En `RELEASING`, un service déjà au
+     * premier plan ne reposte rien : repasser à sa propre notification ferait apparaître un texte
+     * une fraction de seconde après le scan.
+     */
+    private fun present(command: BlockingGuardCommand?) {
+        synchronized(lock) {
+            if (command?.phase == BlockingGuardPhase.RELEASING && foregroundId != null) return
+            val id = notifications.idFor(command)
+            goForeground(id, notifications.foregroundNotificationFor(command))
+            foregroundId = id
+            watch(command)
+        }
+    }
+
+    /** Appelé sous [lock]. Ne surveille qu'en attente de scan ([BlockingGuardNotificationWatch]). */
+    private fun watch(command: BlockingGuardCommand?) {
+        watchJob?.cancel()
+        watchJob = null
+        if (command == null || !BlockingGuardNotificationWatch.isWatched(command.phase)) return
+        watchJob =
+            serviceScope.launch {
+                while (isActive) {
+                    delay(BlockingGuardNotificationWatch.CHECK_INTERVAL_MS)
+                    republishIfDismissed(command)
+                }
+            }
+    }
+
+    private fun republishIfDismissed(command: BlockingGuardCommand) {
+        val id = notifications.idFor(command)
+        val isPosted = notificationManager.activeNotifications.any { it.id == id }
+        if (BlockingGuardNotificationWatch.decide(command.phase, isPosted) == RingingNotificationAction.REPUBLISH) {
+            notificationManager.notify(id, notifications.foregroundNotificationFor(command))
+        }
+    }
+
+    private fun goForeground(
+        id: Int,
+        notification: Notification,
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(id, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             // Le type `specialUse` n'existe qu'à partir d'Android 14 ; avant, le type du manifeste fait foi.
-            startForeground(NOTIFICATION_ID, notification)
+            startForeground(id, notification)
         }
     }
-
-    private fun notificationFor(command: BlockingGuardCommand?): Notification =
-        notificationFactory.create(
-            spec = specFor(command),
-            openAppPendingIntent =
-                command?.let {
-                    pendingIntentFactory.create(
-                        AlarmPendingIntentSpecs.show(it.sessionId),
-                    )
-                },
-        )
-
-    private fun specFor(command: BlockingGuardCommand?): NotificationSpec {
-        if (command == null) return BlockingGuardNotificationSpecs.unknownPhase()
-        val wakeTime = timeLabel(command.wakeAtEpochMillis, command.zoneId)
-        return when (command.phase) {
-            BlockingGuardPhase.BEFORE_BLOCKING -> {
-                BlockingGuardNotificationSpecs.beforeBlocking(
-                    wakeTimeLabel = wakeTime,
-                    blockingTimeLabel = command.blockingStartsAtEpochMillis?.let { timeLabel(it, command.zoneId) },
-                )
-            }
-
-            BlockingGuardPhase.BLOCKING -> {
-                BlockingGuardNotificationSpecs.blocking(wakeTime)
-            }
-        }
-    }
-
-    private fun timeLabel(
-        epochMillis: Long,
-        zoneId: String,
-    ): String? = WakeScheduleFormatter.formatTime(epochMillis, zoneId, DateFormat.is24HourFormat(this))
 
     private fun commandOf(intent: Intent): BlockingGuardCommand? =
         BlockingGuardCommand.fromExtras(
@@ -163,11 +203,8 @@ class BlockingGuardService : Service() {
     }
 
     companion object {
-        /**
-         * Premier identifiant libre : 1 sonnerie, 2 attente de scan, 3 et 5 à 9 avertissements,
-         * 4 retiré et jamais réattribué.
-         */
-        const val NOTIFICATION_ID = 10
+        /** Notification propre de la garde, avant l'alarme ([NiumiNotificationIds]). */
+        const val NOTIFICATION_ID = NiumiNotificationIds.BLOCKING_GUARD
         const val EXTRA_SESSION_ID = "sessionId"
         const val EXTRA_PHASE = "phase"
         const val EXTRA_WAKE_AT = "wakeAtEpochMillis"

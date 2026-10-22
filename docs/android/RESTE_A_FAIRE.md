@@ -192,9 +192,11 @@ processus survit** et le service d'accessibilité reste lié (17:46:29, `doSwapU
 **Décidé avec Mehdi le 2026-10-19 et implémenté** (SPEC_ANDROID §12.5, `A8-RECENTS.md`) :
 
 - **service de garde de session** (`BlockingGuardService`, type `specialUse`) pendant toute la
-  session, de l'armement au scan, avec une notification silencieuse à deux textes (« Réveil
-  programmé à 07:00 » avant le coucher, « Blocage en cours jusqu'à 07:00 » après) ; une
-  notification écartée n'est jamais ramenée ;
+  session, de l'armement au scan. Avant l'alarme, notification silencieuse dont le texte suit la
+  phase (« Réveil programmé à 07:00 » avant le coucher, « Réveil prévu à 07:00 » après), jamais
+  ramenée une fois écartée. De l'alarme au scan, la garde reprend la notification de la sonnerie
+  ou de la demande de scan, qui revient en 10 s si elle est écartée (revu et mesuré sur le
+  Xiaomi le 2026-10-22, `QA_MATRIX.md` ; autres marques non testées) ;
 - **carte de Niumi rendue aux récents** : `RecentsCard` retiré ;
 - **verrou HyperOS toujours exigé** : mesuré le 2026-10-19 à 18:49, « Tout effacer » tue Niumi
   malgré le service de garde quand le verrou est retiré.

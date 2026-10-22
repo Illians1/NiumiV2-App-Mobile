@@ -43,16 +43,21 @@ class BlockingGuardWatcherTest {
             publish(pending)
             publish(applied)
             publish(applied.copy(state = SessionStateDto.RINGING, revision = 3))
-            publish(applied.copy(state = SessionStateDto.COMPLETED, revision = 4))
+            publish(applied.copy(state = SessionStateDto.RELEASING, revision = 4))
+            publish(applied.copy(state = SessionStateDto.COMPLETED, revision = 5))
 
-            // Armement, puis coucher (la notification change de texte), puis fin de session. La
-            // sonnerie ne change ni la phase ni les heures : aucun appel.
-            assertThat(controller.calls).containsExactly("keep", "keep", "release").inOrder()
+            // Armement, coucher, alarme, scan (chaque phase change la notification ou la laisse en
+            // place, décisions du 2026-10-22), puis fin de session.
+            assertThat(controller.calls).containsExactly("keep", "keep", "keep", "keep", "release").inOrder()
             assertThat(controller.phases)
-                .containsExactly(BlockingGuardPhase.BEFORE_BLOCKING, BlockingGuardPhase.BLOCKING)
-                .inOrder()
-            // Un seul démarrage journalisé : le passage au coucher remplace la notification d'un
-            // service déjà actif.
+                .containsExactly(
+                    BlockingGuardPhase.BEFORE_BLOCKING,
+                    BlockingGuardPhase.BLOCKING,
+                    BlockingGuardPhase.RINGING,
+                    BlockingGuardPhase.RELEASING,
+                ).inOrder()
+            // Un seul démarrage journalisé : chaque phase remplace la notification d'un service
+            // déjà actif.
             assertThat(log.logged)
                 .containsExactly(TechnicalEventType.BLOCKING_GUARD_STARTED, TechnicalEventType.BLOCKING_GUARD_STOPPED)
                 .inOrder()

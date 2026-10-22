@@ -1,23 +1,41 @@
 package com.niumi.system.blocking.guard
 
 import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.SessionStateDto
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.isBlockingInForce
 import com.niumi.system.session.isSessionInProgress
 
-/** Phase de la session, pour le texte de la notification (SPEC_ANDROID §12.5). */
+/**
+ * Phase de la session, qui choisit la notification de la garde (SPEC_ANDROID §12.5). Avant
+ * l'alarme, la garde a sa propre notification ; de l'alarme au scan, elle reprend celle de l'alarme
+ * (décisions de Mehdi du 2026-10-22).
+ */
 enum class BlockingGuardPhase {
     /** Session armée, blocage différé pas encore appliqué. */
     BEFORE_BLOCKING,
 
-    /** Blocage en vigueur, du coucher jusqu'à la fin de la session. */
+    /** Blocage en vigueur, du coucher jusqu'à l'alarme. */
     BLOCKING,
+
+    /** `RINGING` : la garde partage la notification de sonnerie. */
+    RINGING,
+
+    /**
+     * `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` (alarme manquée, par exemple) : la garde partage
+     * la notification de demande de scan, et la ramène si elle est écartée.
+     */
+    AWAITING_SCAN,
+
+    /** `RELEASING`, moins d'une seconde après le scan : la garde garde la notification qu'elle tient. */
+    RELEASING,
 }
 
 /**
  * Ce dont le service de garde a besoin pour sa notification (SPEC_ANDROID §12.5) : la session, la
  * phase, l'instant du réveil et celui du blocage, avec le fuseau de l'activation, pour écrire
- * « Réveil programmé à 7:00 » ou « Blocage en cours jusqu'à 7:00 » comme l'écran de session.
+ * « Réveil programmé à 7:00 » ou « Réveil prévu à 7:00 » comme l'écran de session, et
+ * l'identifiant de session des intents de la sonnerie et du scan.
  */
 data class BlockingGuardCommand(
     val sessionId: String,
@@ -106,5 +124,11 @@ object BlockingGuardPolicy {
         )
 
     private fun phaseOf(snapshot: SessionSnapshotDto): BlockingGuardPhase =
-        if (snapshot.isBlockingInForce()) BlockingGuardPhase.BLOCKING else BlockingGuardPhase.BEFORE_BLOCKING
+        when {
+            !snapshot.isBlockingInForce() -> BlockingGuardPhase.BEFORE_BLOCKING
+            snapshot.state == SessionStateDto.ARMED -> BlockingGuardPhase.BLOCKING
+            snapshot.state == SessionStateDto.RINGING -> BlockingGuardPhase.RINGING
+            snapshot.state == SessionStateDto.RELEASING -> BlockingGuardPhase.RELEASING
+            else -> BlockingGuardPhase.AWAITING_SCAN
+        }
 }

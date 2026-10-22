@@ -7,6 +7,7 @@ import com.niumi.system.notification.AndroidNotificationAvailability
 import com.niumi.system.notification.AndroidScanRequestNotifier
 import com.niumi.system.notification.NotificationAvailability
 import com.niumi.system.notification.NotificationIconResolver
+import com.niumi.system.notification.ScanRequestNotificationFactory
 import com.niumi.system.notification.ScanRequestNotifier
 import dagger.Module
 import dagger.Provides
@@ -31,6 +32,18 @@ object ScanRequestModule {
         pendingIntentFactory: AndroidPendingIntentFactory,
         iconResolver: NotificationIconResolver,
     ): ScanRequestNotifier = AndroidScanRequestNotifier(context, pendingIntentFactory, iconResolver)
+
+    /**
+     * Pour le service de garde, qui tient la même notification au premier plan en attente de scan
+     * (SPEC_ANDROID §12.5) : même contexte protégé par appareil, la garde pouvant passer au premier
+     * plan avant le premier déverrouillage.
+     */
+    @Provides
+    @Singleton
+    fun provideScanRequestNotificationFactory(
+        @DeviceProtected context: Context,
+        iconResolver: NotificationIconResolver,
+    ): ScanRequestNotificationFactory = ScanRequestNotificationFactory(context, iconResolver)
 
     @Provides
     @Singleton
