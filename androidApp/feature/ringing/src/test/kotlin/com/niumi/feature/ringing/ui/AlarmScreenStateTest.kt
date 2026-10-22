@@ -3,135 +3,89 @@ package com.niumi.feature.ringing.ui
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.system.nfc.NfcAvailability
-import com.niumi.system.nfc.ScanOutcome
+import com.niumi.system.nfc.ScanFailureReason
+import com.niumi.system.nfc.ScanSheetState
 import org.junit.Test
 
 /**
- * Textes de l'écran de réveil (SPEC_ANDROID §10.4, §11.2) et ordre de priorité entre eux. Depuis
- * l'étape 17, l'état vient du moteur (`SessionStateDto`) et non plus d'un enum local.
+ * État d'affichage de l'écran 10 (étape 38) : une seule consigne pour les trois états d'attente
+ * (décision du 2026-10-22), le chargement seul pendant `RELEASING`, et une lecture NFC demandée
+ * seulement feuille « Prêt à scanner » ouverte (Q4).
  */
 class AlarmScreenStateTest {
     private fun stateFor(
         sessionState: SessionStateDto = SessionStateDto.RINGING,
         nfcAvailability: NfcAvailability = NfcAvailability.ENABLED,
-        lastScanOutcome: ScanOutcome? = null,
-        releaseSteps: List<ReleaseStep> = emptyList(),
-    ) = AlarmScreenState.from(sessionState, nfcAvailability, lastScanOutcome, releaseSteps)
+        sheet: ScanSheetState = ScanSheetState.Hidden,
+    ) = AlarmScreenState.from(sessionState, nfcAvailability, sheet)
 
     @Test
-    fun ringingAsksForTheScanToStopTheAlarm() {
-        assertThat(stateFor(SessionStateDto.RINGING).instructionText)
-            .isEqualTo("Scanne ton boîtier Niumi pour arrêter l'alarme.")
-    }
-
-    /** §10.4 : le texte ne doit pas affirmer que le son n'a jamais sonné. */
-    @Test
-    fun aMissedTriggerAsksForTheScanToUnblockApplications() {
-        assertThat(stateFor(SessionStateDto.TRIGGERED_AWAITING_NFC).instructionText)
-            .isEqualTo(
-                "L'heure de ton réveil est passée. " +
-                    "Scanne ton boîtier Niumi pour débloquer tes applications.",
-            )
-    }
-
-    @Test
-    fun aStoppedSoundStillAsksForTheScanToEndTheSession() {
-        assertThat(stateFor(SessionStateDto.AWAITING_NFC).instructionText)
-            .isEqualTo(
-                "Le son est arrêté, mais tes applications restent bloquées. " +
-                    "Scanne ton boîtier Niumi pour terminer la session.",
-            )
-    }
-
-    @Test
-    fun releasingAnnouncesTheCleanupInsteadOfAScan() {
-        assertThat(stateFor(SessionStateDto.RELEASING).instructionText)
-            .isEqualTo("Ton scan est validé. Niumi termine la session.")
-    }
-
-    /** Le scan a déjà eu lieu : l'état du NFC ne décrit plus rien. */
-    @Test
-    fun releasingOutranksTheNfcMessages() {
-        val state =
-            stateFor(
-                sessionState = SessionStateDto.RELEASING,
-                nfcAvailability = NfcAvailability.DISABLED,
-                lastScanOutcome = ScanOutcome.UnknownBox,
-            )
-
-        assertThat(state.instructionText).isEqualTo("Ton scan est validé. Niumi termine la session.")
-        assertThat(state.showsNfcSettingsShortcut).isFalse()
-    }
-
-    @Test
-    fun releasingCarriesItsCleanupSteps() {
-        val steps = ReleaseProgress.from(replayableEffects = emptyList())
-
-        val state = stateFor(SessionStateDto.RELEASING, releaseSteps = steps)
-
-        assertThat(state.releaseSteps).isEqualTo(steps)
-    }
-
-    /**
-     * Lot 9 : l'écran n'est jamais affiché verrouillé, il s'ouvre par la notification ou l'icône
-     * une fois le téléphone déverrouillé. Aucun texte de déverrouillage n'existe donc plus : un
-     * texte qu'aucune situation ne peut afficher serait un faux comportement.
-     */
-    @Test
-    fun theInstructionNeverAsksToUnlock() {
-        val texts =
-            SessionStateDto.entries.flatMap { session ->
-                (listOf<ScanOutcome?>(null) + ScanOutcome.Unreadable + ScanOutcome.UnknownBox).flatMap { outcome ->
-                    NfcAvailability.entries.map { stateFor(session, it, outcome).instructionText }
-                }
-            }
-
-        assertThat(texts.filter { "errouill" in it }).isEmpty()
-    }
-
-    @Test
-    fun missingNfcHardwareOutranksEverythingAndOffersNoShortcut() {
-        val state =
-            stateFor(
-                nfcAvailability = NfcAvailability.ABSENT,
-                lastScanOutcome = ScanOutcome.UnknownBox,
-            )
-
-        assertThat(state.instructionText).isEqualTo("Cet appareil ne prend pas en charge le NFC.")
-        assertThat(state.showsNfcSettingsShortcut).isFalse()
-    }
-
-    @Test
-    fun disabledNfcOutranksAScanOutcomeAndOffersTheShortcut() {
-        val state = stateFor(nfcAvailability = NfcAvailability.DISABLED, lastScanOutcome = ScanOutcome.Unreadable)
-
-        assertThat(state.instructionText)
-            .isEqualTo("Le NFC est désactivé. Active-le pour scanner ton boîtier.")
-        assertThat(state.showsNfcSettingsShortcut).isTrue()
-    }
-
-    @Test
-    fun anUnreadableTagAsksToRetry() {
-        assertThat(stateFor(lastScanOutcome = ScanOutcome.Unreadable).instructionText)
-            .isEqualTo("Boîtier non reconnu. Réessaie.")
-    }
-
-    @Test
-    fun anUnknownBoxSaysItIsNotTheSessionBox() {
-        assertThat(stateFor(lastScanOutcome = ScanOutcome.UnknownBox).instructionText)
-            .isEqualTo("Ce boîtier n'est pas celui de ta session.")
-    }
-
-    /** Les quatre états affichables portent tous une instruction : aucun écran muet. */
-    @Test
-    fun everyDisplayableStateHasAnInstruction() {
-        listOf(
-            SessionStateDto.RINGING,
-            SessionStateDto.AWAITING_NFC,
-            SessionStateDto.TRIGGERED_AWAITING_NFC,
-            SessionStateDto.RELEASING,
-        ).forEach { state ->
-            assertThat(stateFor(state).instructionText).isNotEmpty()
+    fun theThreeWaitingStatesShowTheSameInstructionAndTheScanButton() {
+        WAITING_STATES.forEach { session ->
+            val state = stateFor(session)
+            assertThat(state.instructionText).isEqualTo(AlarmTexts.INSTRUCTION)
+            assertThat(state.showsScanButton).isTrue()
+            assertThat(state.showsReleaseLoader).isFalse()
         }
+    }
+
+    /** Décision du 2026-10-22 : après le scan, la date, l'heure et le chargement seuls. */
+    @Test
+    fun releasingShowsOnlyTheLoader() {
+        val state = stateFor(SessionStateDto.RELEASING)
+
+        assertThat(state.showsReleaseLoader).isTrue()
+        assertThat(state.instructionText).isNull()
+        assertThat(state.showsScanButton).isFalse()
+    }
+
+    /** Le scan a eu lieu : la feuille se ferme, quoi qu'elle montrait, et plus rien n'écoute. */
+    @Test
+    fun releasingClosesTheSheet() {
+        listOf(ScanSheetState.Ready, ScanSheetState.Failed(ScanFailureReason.UNREADABLE)).forEach { sheet ->
+            val state = stateFor(SessionStateDto.RELEASING, sheet = sheet)
+            assertThat(state.sheet).isEqualTo(ScanSheetState.Hidden)
+            assertThat(state.readerModeRequested).isFalse()
+        }
+    }
+
+    @Test
+    fun missingNfcHardwareReplacesTheInstructionAndHidesTheButton() {
+        val state = stateFor(nfcAvailability = NfcAvailability.ABSENT, sheet = ScanSheetState.Ready)
+
+        assertThat(state.instructionText).isEqualTo(AlarmTexts.NFC_ABSENT)
+        assertThat(state.showsScanButton).isFalse()
+        assertThat(state.sheet).isEqualTo(ScanSheetState.Hidden)
+        assertThat(state.readerModeRequested).isFalse()
+    }
+
+    /** Q4 : la lecture n'est demandée que feuille « Prêt à scanner » ouverte et NFC allumé. */
+    @Test
+    fun theReaderIsRequestedOnlyWhileTheReadySheetIsOpen() {
+        assertThat(stateFor(sheet = ScanSheetState.Hidden).readerModeRequested).isFalse()
+        assertThat(stateFor(sheet = ScanSheetState.Ready).readerModeRequested).isTrue()
+        assertThat(stateFor(sheet = ScanSheetState.Failed(ScanFailureReason.NOT_REGISTERED)).readerModeRequested)
+            .isFalse()
+        assertThat(
+            stateFor(nfcAvailability = NfcAvailability.DISABLED, sheet = ScanSheetState.Ready).readerModeRequested,
+        ).isFalse()
+    }
+
+    /** L'instruction ne bouge pas avec le NFC ni la feuille : les échecs se disent dans la feuille. */
+    @Test
+    fun theInstructionDoesNotChangeWithTheNfcOrTheSheet() {
+        val state =
+            stateFor(
+                nfcAvailability = NfcAvailability.DISABLED,
+                sheet = ScanSheetState.Failed(ScanFailureReason.NFC_DISABLED),
+            )
+
+        assertThat(state.instructionText).isEqualTo(AlarmTexts.INSTRUCTION)
+        assertThat(state.showsScanButton).isTrue()
+    }
+
+    private companion object {
+        val WAITING_STATES =
+            listOf(SessionStateDto.RINGING, SessionStateDto.AWAITING_NFC, SessionStateDto.TRIGGERED_AWAITING_NFC)
     }
 }

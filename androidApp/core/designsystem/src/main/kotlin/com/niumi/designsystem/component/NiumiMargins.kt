@@ -11,13 +11,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.max
+import com.niumi.designsystem.ui.theme.NiumiDimens
 
 /**
- * Marges des maquettes posées sur les barres système (décision de Mehdi du 2026-10-20,
- * VALEURS-DE-DESIGN.md §4) : de chaque côté, la plus grande de la marge de la maquette et de la
- * zone système, jamais leur somme. Sur la maquette iPhone, les 56 du haut couvrent déjà la barre
- * d'état et les 34 du bas la barre d'accueil ; les additionner aux barres d'Android laissait
- * jusqu'à 80 dp de vide sous le bouton principal. Vérifié par `NiumiMarginsTest`.
+ * Marges des maquettes posées sur les barres système (VALEURS-DE-DESIGN.md §4), vérifiées par
+ * `NiumiMarginsTest` :
+ * - côtés et haut : la plus grande de la marge de la maquette et de la zone système, jamais leur
+ *   somme (décision de Mehdi du 2026-10-20). Les 56 du haut de la maquette iPhone couvrent déjà la
+ *   barre d'état ;
+ * - bas : la zone système plus [NiumiDimens.systemBarGap], sans descendre sous la marge de la
+ *   maquette (décision de Mehdi du 2026-10-22, étape 38). Avec la règle précédente, la barre à
+ *   trois boutons (48) remplaçait les 34 de la maquette, et le bouton du bas la touchait ; la somme
+ *   entière laissait jusqu'à 80 dp de vide.
  */
 internal fun marginsOverSystemBars(
     system: PaddingValues,
@@ -28,7 +33,7 @@ internal fun marginsOverSystemBars(
         start = max(margins.calculateStartPadding(layoutDirection), system.calculateStartPadding(layoutDirection)),
         top = max(margins.calculateTopPadding(), system.calculateTopPadding()),
         end = max(margins.calculateEndPadding(layoutDirection), system.calculateEndPadding(layoutDirection)),
-        bottom = max(margins.calculateBottomPadding(), system.calculateBottomPadding()),
+        bottom = max(margins.calculateBottomPadding(), system.calculateBottomPadding() + NiumiDimens.systemBarGap),
     )
 
 /** [marginsOverSystemBars] appliqué à un élément bord à bord, d'après les retraits [insets] de la fenêtre. */

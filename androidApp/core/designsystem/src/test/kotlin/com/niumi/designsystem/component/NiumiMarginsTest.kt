@@ -10,10 +10,11 @@ import com.niumi.designsystem.ui.theme.NiumiDimens
 import org.junit.Test
 
 /**
- * Marges d'écran sur Android (décision de Mehdi du 2026-10-20, VALEURS-DE-DESIGN.md §4) : de
- * chaque côté, la plus grande de la marge de la maquette et de la zone système (barre d'état,
- * barre de navigation, encoche, clavier), jamais leur somme. Les 34 du bas et les 56 du haut des
- * maquettes iPhone couvrent déjà la barre d'accueil et la barre d'état.
+ * Marges d'écran sur Android (VALEURS-DE-DESIGN.md §4). Côtés et haut : la plus grande de la marge
+ * de la maquette et de la zone système (décision de Mehdi du 2026-10-20) ; les 56 du haut couvrent
+ * la barre d'état. Bas, depuis le 2026-10-22 (décision de Mehdi, étape 38) : la barre de navigation
+ * plus un espace de [NiumiDimens.systemBarGap], sans descendre sous les 34 de la maquette ; le
+ * bouton ne touche plus la barre à trois boutons.
  */
 class NiumiMarginsTest {
     private val screen = NiumiDimens.screenMargins
@@ -29,14 +30,17 @@ class NiumiMarginsTest {
         marginsOverSystemBars(PaddingValues(top = systemTop.dp), LayoutDirection.Ltr, screen).calculateTopPadding()
 
     @Test
-    fun aThinNavigationBarLeavesTheMarginOfTheDesign() {
+    fun aThinOrAbsentNavigationBarLeavesTheMarginOfTheDesign() {
         assertThat(bottom(systemBottom = 16)).isEqualTo(34.dp)
         assertThat(bottom(systemBottom = 0)).isEqualTo(34.dp)
     }
 
+    /** Trois boutons (48) : 16 d'espace au-dessus ; gestes (24) : 40, un peu plus que la maquette. */
     @Test
-    fun aTallNavigationBarReplacesTheMarginInsteadOfAddingToIt() {
-        assertThat(bottom(systemBottom = 48)).isEqualTo(48.dp)
+    fun aNavigationBarKeepsAGapAboveIt() {
+        assertThat(NiumiDimens.systemBarGap).isEqualTo(16.dp)
+        assertThat(bottom(systemBottom = 48)).isEqualTo(64.dp)
+        assertThat(bottom(systemBottom = 24)).isEqualTo(40.dp)
     }
 
     @Test

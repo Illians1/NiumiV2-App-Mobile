@@ -33,6 +33,7 @@ class FakeNfcReader(
         activity: Activity,
         onUri: (String) -> Unit,
         onUnreadable: () -> Unit,
+        onForeignTag: () -> Unit,
     ): OperationResult = OperationResult.Success
 
     override fun stop(activity: Activity) = Unit

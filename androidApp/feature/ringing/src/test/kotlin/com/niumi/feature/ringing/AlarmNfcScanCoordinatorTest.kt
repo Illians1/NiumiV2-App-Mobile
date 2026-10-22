@@ -121,4 +121,27 @@ class AlarmNfcScanCoordinatorTest {
         assertThat(technicalEventLog.loggedTypes).containsExactly(TechnicalEventType.NFC_SCAN_INVALID)
         assertThat(vibrationController.errorCallCount).isEqualTo(0)
     }
+
+    /** Étape 38 : un tag lu puis refusé comme étranger vibre comme un Niumi Point non enregistré. */
+    @Test
+    fun aForeignUriLogsInvalidScanAndVibrates() =
+        runTest {
+            val handler = NfcScanHandler { ScanOutcome.NotANiumiPoint }
+
+            val outcome = coordinator.handleUri(handler, uri = "https://example.com")
+
+            assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiPoint)
+            assertThat(technicalEventLog.loggedTypes).containsExactly(TechnicalEventType.NFC_SCAN_INVALID)
+            assertThat(vibrationController.errorCallCount).isEqualTo(1)
+        }
+
+    /** Étape 38 : un tag sans NDEF ni URI n'est pas un Niumi Point. */
+    @Test
+    fun handleForeignTagLogsInvalidScanAndVibrates() {
+        val outcome = coordinator.handleForeignTag()
+
+        assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiPoint)
+        assertThat(technicalEventLog.loggedTypes).containsExactly(TechnicalEventType.NFC_SCAN_INVALID)
+        assertThat(vibrationController.errorCallCount).isEqualTo(1)
+    }
 }

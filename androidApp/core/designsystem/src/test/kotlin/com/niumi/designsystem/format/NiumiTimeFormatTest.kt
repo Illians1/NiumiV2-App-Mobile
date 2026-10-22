@@ -3,6 +3,7 @@ package com.niumi.designsystem.format
 import com.google.common.truth.Truth.assertThat
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalTime
 
 /**
@@ -53,5 +54,13 @@ class NiumiTimeFormatTest {
     fun aNegativeDurationIsRefused() {
         assertThrows(IllegalArgumentException::class.java) { NiumiTimeFormat.duration(-1) }
         assertThrows(IllegalArgumentException::class.java) { NiumiTimeFormat.sleep(-1) }
+    }
+
+    /** Date de l’écran de réveil (maquette 28) : jour en capitale, sans année, « 1er » le premier du mois. */
+    @Test
+    fun dayAndDateWritesTheWeekdayCapitalisedThenTheDayAndMonth() {
+        assertThat(NiumiTimeFormat.dayAndDate(LocalDate.of(2026, 10, 2))).isEqualTo("Vendredi 2 octobre")
+        assertThat(NiumiTimeFormat.dayAndDate(LocalDate.of(2026, 8, 17))).isEqualTo("Lundi 17 août")
+        assertThat(NiumiTimeFormat.dayAndDate(LocalDate.of(2027, 1, 1))).isEqualTo("Vendredi 1er janvier")
     }
 }

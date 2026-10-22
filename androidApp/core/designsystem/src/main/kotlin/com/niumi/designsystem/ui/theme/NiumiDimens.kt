@@ -12,8 +12,14 @@ object NiumiDimens {
     /** Marges de l'écran : 24 à gauche et à droite. */
     val screenHorizontal = 24.dp
 
-    /** Marge du bas de l'écran. */
+    /** Marge du bas de l'écran ; sur Android, jamais moins que la barre de navigation plus [systemBarGap]. */
     val screenBottom = 34.dp
+
+    /**
+     * Espace gardé entre le contenu et la barre de navigation d'Android (décision de Mehdi du
+     * 2026-10-22, VALEURS §4) : 64 au-dessus de la barre à trois boutons, 40 au-dessus des gestes.
+     */
+    val systemBarGap = 16.dp
 
     /**
      * Marge du haut de l'écran. Sur Android, elle couvre la barre d'état : la plus grande des
@@ -288,4 +294,46 @@ object NiumiDimens {
      */
     val loadingIndicator = 32.dp
     val loadingIndicatorStroke = 3.dp
+
+    // Écran 10 · Réveil et feuille de scan (étape 38), relevées dans les sources des maquettes 28 à 33.
+
+    /**
+     * Espace au-dessus de la date, sous la marge du haut : 24 au lieu des 60 de la maquette
+     * (décision de Mehdi du 2026-10-22, la date plus haut) ; puis 8 entre la date et l'heure.
+     */
+    val alarmDateTop = 24.dp
+    val alarmDateClockGap = 8.dp
+
+    /** Dessin de l'écran 10 : 264 × 170, et l'espace qui le sépare de la consigne. */
+    val alarmDrawingWidth = 264.dp
+    val alarmDrawingHeight = 170.dp
+    val alarmDrawingGap = 14.dp
+
+    /** Largeur maximale de la consigne, centrée. */
+    val alarmInstructionMaxWidth = 300.dp
+
+    /** Espace entre le bouton principal et le lien discret, en bas de l'écran comme dans la feuille d'échec. */
+    val alarmButtonLinkGap = 6.dp
+
+    /**
+     * Place du lien « Je n'ai pas accès à mon Niumi Point » sous le bouton de l'écran 10 : l'écart
+     * de 6 et la zone de 44 du lien. Réservée avant l'arrivée du lien (étape 49, décision du
+     * 2026-10-22) pour que l'écran tombe où la maquette le dessine.
+     */
+    val alarmEmergencyLinkSpace = alarmButtonLinkGap + minTouch
+
+    /** Feuille de scan, sans poignée : 28 au-dessus du contenu. */
+    val scanSheetTop = 28.dp
+
+    /** « Prêt à scanner » : 18 entre le titre, le rond, la phrase et « Annuler ». */
+    val scanSheetGap = 18.dp
+
+    /** Rond gris de l'icône de scan, 112, et son icône, 60. */
+    val scanSheetCircle = 112.dp
+    val scanSheetIcon = 60.dp
+
+    /** Feuille d'échec : 12 entre le titre et l'aide, 6 de plus au-dessus du bouton ; texte de 310 au plus. */
+    val scanFailureGap = 12.dp
+    val scanFailureButtonTop = 6.dp
+    val scanFailureTextMaxWidth = 310.dp
 }

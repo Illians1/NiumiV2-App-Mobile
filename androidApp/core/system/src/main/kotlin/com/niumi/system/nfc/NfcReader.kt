@@ -13,12 +13,17 @@ import com.niumi.system.common.OperationResult
  * (« Boîtier non reconnu. Réessaie. ») pour un tag physiquement illisible (pas de NDEF,
  * `IOException`, `FormatException`) — un cas qu'aucune URI ne peut représenter. Consigné dans
  * ETAPE-04.md et répercuté sur le plan MVP.
+ *
+ * Étape 38 de la refonte : `onForeignTag` sépare le tag qui ne porte pas de Niumi Point (ni NDEF ni
+ * URI, « Ce n'est pas un Niumi Point. ») de la lecture ratée (`IOException`, `FormatException`,
+ * « Ton Niumi Point n'a pas pu être lu. »). Par défaut il rejoint `onUnreadable`, comme avant.
  */
 public interface NfcReader {
     public fun start(
         activity: Activity,
         onUri: (String) -> Unit,
         onUnreadable: () -> Unit,
+        onForeignTag: () -> Unit = onUnreadable,
     ): OperationResult
 
     public fun stop(activity: Activity)

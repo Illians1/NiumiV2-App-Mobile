@@ -307,11 +307,40 @@ class HandleValidNfcUseCaseTest {
 
             val outcome = harness.useCase().onUriRead(NfcScanFixtures.MALFORMED_URI)
 
-            assertThat(outcome).isEqualTo(ScanOutcome.Unreadable)
+            assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiPoint)
             assertThat(harness.journal.calls.drop(before)).isEmpty()
             val present = harness.gateway.load() as LoadResult.Present
             assertThat(present.snapshot.state).isEqualTo(SessionStateDto.RINGING)
             assertThat(present.snapshot.revision).isEqualTo(3)
+        }
+
+    /** Étape 38 : l'URI d'un autre tag (une adresse web) devient « Ce n'est pas un Niumi Point. ». */
+    @Test
+    fun aForeignUriIsNotANiumiPoint() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
+
+            val outcome = harness.useCase().onUriRead("https://example.com/menu")
+
+            assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiPoint)
+            assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
+        }
+
+    /**
+     * Étape 38 : un Niumi Point d'une version que l'app ne lit pas encore est bien un Niumi Point,
+     * mais il n'a pas pu être enregistré : « Ce Niumi Point n'est pas enregistré. ».
+     */
+    @Test
+    fun anUnsupportedVersionIsAnUnregisteredNiumiPoint() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
+
+            val outcome = harness.useCase().onUriRead(NfcScanFixtures.SESSION_BOX_URI.replace("/v1/", "/v2/"))
+
+            assertThat(outcome).isEqualTo(ScanOutcome.UnknownBox)
+            assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
         }
 
     // --- 4. Événement construit (§11.3 point 4) ------------------------------------------------

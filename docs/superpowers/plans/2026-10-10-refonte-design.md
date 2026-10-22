@@ -124,7 +124,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 33 | D9 | Bouton inactif en clair : `#E8E8E4`/`#5C5C60` (écran 2) ou `#C6C6C2`/blanc (écran 4) ? | **Tranché le 2026-10-19** : le premier, partout |
 | 33 | D13 | Apostrophe typographique (’) dans l'app ? | **Tranché le 2026-10-19** : oui, portée par les `Texts` et testée (dès l'étape 35) |
 | 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28. **D14 précisé le 2026-10-20** (étape 34) : icônes de navigation sans ambre ; cadenas de la carte « Blocage en cours » et point du Niumi Point restent ambre |
-| 34 | — | Marges haut et bas sur Android : marge de la maquette ajoutée aux barres système, ou la plus grande des deux ? | **Tranché le 2026-10-20** : la plus grande des deux, de chaque côté (VALEURS §4, SPEC_ANDROID §15) |
+| 34 | — | Marges haut et bas sur Android : marge de la maquette ajoutée aux barres système, ou la plus grande des deux ? | **Tranché le 2026-10-20** : la plus grande des deux, de chaque côté (VALEURS §4, SPEC_ANDROID §15). **Révisé le 2026-10-22 pour le bas** (étape 38) : barre de navigation plus 16 dp, jamais moins que 34 ; le haut et les côtés ne changent pas |
 | 35 | D12 | Point final des titres de l'écran 1 ? | **Tranché le 2026-10-20** : sans point sur les deux panneaux. Même jour : les six limites de l'onboarding ne sont plus montrées avant la première activation, l'aide les porte seule (SPEC_ANDROID §3) |
 | 36 | Q1 | Batterie, verrou des récents (HyperOS), Ne pas déranger, volume : aucune place dans le design. Où ? | **Tranché le 2026-10-20, révisé le 2026-10-21** : tuiles Android dédiées « Batterie » (demande directe d'exemption, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` déclarée, liste système en repli) et « Verrouiller Niumi » (feuille du geste, tuile masquée sans verrou), titre qui compte les tuiles, introduction « Sans elles, Niumi ne peut pas fonctionner. » ; Ne pas déranger et volume sans écran (refus nommé au récapitulatif, notification §13.1) |
 | 36 | Q2 | Garder la notification d'avertissement §13.1 pendant `ARMED` ? | **Tranché le 2026-10-20** : oui, et son tap reste sur le diagnostic d'incident jusqu'à l'étape 52 (le volume et Ne pas déranger n'ont pas de tuile ; écran 2 sombre non dessiné, M8) |
@@ -132,7 +132,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 36 | — | Divulgation Google Play avant les réglages d'accessibilité | **Tranché le 2026-10-20, révisé le 2026-10-21** : fenêtre centrée sur l'écran 2 (`NiumiAlertDialog`, croix, toucher à côté), ouverte par « Autoriser » de la tuile « Blocage » ; même forme pour le verrou des récents et l'alarme exacte ; la page plein écran et sa route sont supprimées ; le guide facultatif ne peut pas porter la divulgation |
 | 36 | — | Icônes des tuiles en ambre | **Essai demandé le 2026-10-20, abandonné le 2026-10-22** : icônes à l'encre ; la coche d'une tuile accordée passe dans une pastille ambre (exception écrite à D14, VALEURS §2) |
 | 37 | Q3 | Compteur « N applications choisies » = sélection validée ; T9 clos par `<queries>` | **Tranché le 2026-10-22** : oui. Même jour : limite de 50 par grisé et phrase, « +N » sur la carte, liste en pleine page au lieu de la feuille, section « Applications déjà choisies », indicateur de chargement, croix d'effacement de la recherche |
-| 38 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | Seulement feuille ouverte ; §10.4/§11.2 amendés |
+| 38 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | **Tranché le 2026-10-22** : seulement feuille « Prêt à scanner » ouverte ; §10.4/§11.2 amendés. Même jour, pendant les essais : consigne « Rejoins ton Niumi Point » (remplace « Scanne ton Niumi Point », §14) pour les trois états d'attente ; après le scan, date, heure et chargement seuls ; date à 24 dp sous la marge du haut (60 dans la maquette) ; place du lien de secours réservée ; « Prêt à scanner » à l'encre |
 | 38 | Q5, E7 | Texte « Déverrouille ton téléphone… » (§4.4) ; deux textes « NFC coupé » | **Q5 tranché le 2026-10-18** : aucun texte « Déverrouille ton téléphone… », l'écran n'est jamais affiché verrouillé (Lot 9 du plan maître). E7 : chaque texte sur son écran |
 | 39 | Q6, T10 | Écran 7 affiché jusqu'à « Fermer » ; déclaration Play à refaire | Oui, dans la même étape |
 | 40 | Q7 | Durées : design Non/1/2/5/10 ou mesure de l'étape 28 (2/5/10/15, 1 min jugée trop rapide) ? | Suivre le design (Non/1/2/5/10) sauf avis contraire ; la rangée accepte cinq pastilles |
@@ -207,8 +207,12 @@ object NiumiComponentTexts { const val LOCKED = "Verrouillé"; const val LOGO = 
 @Composable fun NiumiScreenScaffold(modifier: Modifier = Modifier, bottom: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit)
 @Composable fun NiumiLogo(modifier: Modifier = Modifier, height: Dp = NiumiDimens.logoHeight)                           // logo clair/sombre selon la palette
 @Composable fun NiumiPageIndicator(count: Int, current: Int, label: String, modifier: Modifier = Modifier)               // label = « Panneau 1 sur 2 »
-@Composable fun NfcScanSheet(state: ScanSheetState, phrase: String, onCancel: () -> Unit, onRetry: () -> Unit,
-                             onOpenNfcSettings: () -> Unit, onEmergencyExit: (() -> Unit)?)             // étape 38
+// Livré à l'étape 38 (2026-10-22), écart à la signature prévue : :core:designsystem ne dépend pas de :core:system, la
+// feuille reçoit un contenu présentationnel ; l'écran traduit ScanSheetState en textes (AlarmTexts.failure).
+sealed interface NfcScanSheetContent { data object Ready; data class Failure(val title: String, val help: String, val actionLabel: String) }
+@Composable fun NfcScanSheet(content: NfcScanSheetContent, onDismiss: () -> Unit, onFailureAction: () -> Unit, failurePaneTitle: String,
+                             modifier: Modifier = Modifier, emergencyLinkText: String? = null, onEmergencyExit: (() -> Unit)? = null)
+// Textes de « Prêt à scanner » : NiumiComponentTexts.SCAN_SHEET_TITLE / _PHRASE / _CANCEL (les mêmes aux écrans 3, 10 et à l'annulation)
 @Composable fun NiumiDial(state: DialState, onBedtimeChanged: ((LocalTime) -> Unit)?, onWakeTimeChanged: ((LocalTime) -> Unit)?) // étape 45
 sealed interface DialState { data class Scheduled(...); data class Disabled(...); data class InSession(...) } // bedtime, wake, now
 @Composable fun NiumiProblemBanner(text: String, linkText: String, onLink: () -> Unit)                   // étape 52
@@ -224,6 +228,7 @@ fun SessionSnapshotDto?.isSessionDark(): Boolean   // voir « Contraintes global
 sealed interface ScanSheetState { data object Hidden; data object Ready; data class Failed(val reason: ScanFailureReason) }
 enum class ScanFailureReason { NOT_A_NIUMI_POINT, NOT_REGISTERED, UNREADABLE, NFC_DISABLED }
 fun scanFailureOf(outcome: ScanOutcome?, availability: NfcAvailability): ScanFailureReason?
+// Livré à l'étape 38 : ScanOutcome + NotANiumiPoint ; NfcReader.start(activity, onUri, onUnreadable, onForeignTag = onUnreadable)
 
 // :core:system — com.niumi.system.permissions (étapes 36, 52)
 enum class NiumiPermission { ALARM, APP_BLOCKING, NOTIFICATIONS }
@@ -506,10 +511,10 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** l'écran 10 et sa feuille, les quatre échecs, sans aucune action d'arrêt.
 
-- [ ] **Écrire `ScanOutcomeMappingTest`, `AlarmTextsTest`, `AlarmViewModelTest`**, implémenter états, feuille, écran, activité.
-- [ ] **Écrire `AlarmScreenActionsTest`**, supprimer `AlarmScreenNoStopActionTest`.
-- [ ] **Vérifier :** batterie standard ; `./gradlew :feature:ringing:connectedDebugAndroidTest`.
-- [ ] **Valider sur appareil, rédiger `ETAPE-38.md`.** SPEC_ANDROID §10.4 (bouton et feuille ; Reader Mode selon Q4), §11.2 (tableau des échecs réécrit avec les textes du design), §19.1 (nouveau garde-fou), §15.
+- [x] **Écrire `ScanOutcomeMappingTest`, `AlarmTextsTest`, `AlarmViewModelTest`**, implémenter états, feuille, écran, activité. *(2026-10-22 : `ScanOutcome.NotANiumiPoint` et `onForeignTag` pour séparer « pas un Niumi Point » de « lecture ratée » ; `NfcScanSheet` reçoit un contenu présentationnel ; variante du dessin pour la maquette 28 ; voir `ETAPE-38.md`.)*
+- [x] **Écrire `AlarmScreenActionsTest`**, supprimer `AlarmScreenNoStopActionTest`.
+- [x] **Vérifier :** batterie standard ; `./gradlew :feature:ringing:connectedDebugAndroidTest`. *(1 532 JVM ; instrumentés tous verts sauf l'échec A8 de `:app`, reproduit sur `HEAD`.)*
+- [x] **Valider sur appareil, rédiger `ETAPE-38.md`.** SPEC_ANDROID §10.4 (bouton et feuille ; Reader Mode selon Q4), §11.2 (tableau des échecs réécrit avec les textes du design), §19.1 (nouveau garde-fou), §15. *(2026-10-22 : douze essais conformes sur Xiaomi / Android 16 / HyperOS ; consigne « Rejoins ton Niumi Point », après-scan en chargement seul, date à 24 dp, « Prêt à scanner » à l'encre, décidés pendant les essais.)*
 
 **Tests manuels :** alarme à l'heure → écran 10 sombre ; « Scanner » → feuille ; tag quelconque → « Ce n'est pas un Niumi Point. » ; tag inconnu → « Ce Niumi Point n'est pas enregistré. » ; NFC coupé → « Le NFC est coupé. » + « Ouvrir les réglages » ; le bon tag → `RELEASING`, feuille fermée ; écran verrouillé : la notification de sonnerie mène à l'écran 10 après déverrouillage (Q5 tranché).
 

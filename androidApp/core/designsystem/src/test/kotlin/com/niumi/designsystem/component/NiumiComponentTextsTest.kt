@@ -20,4 +20,15 @@ class NiumiComponentTextsTest {
     fun theLogoIsAnnouncedWithTheAltTextOfTheMockups() {
         assertThat(NiumiComponentTexts.LOGO).isEqualTo("niumi")
     }
+
+    /**
+     * Feuille « Prêt à scanner », la même aux écrans 3, 10 et à l'annulation (`SPECIFICATION.md` §6
+     * et §14, maquettes 06, 20, 29) ; phrase de la colonne Android.
+     */
+    @Test
+    fun theScanSheetIsQuotedWordForWord() {
+        assertThat(NiumiComponentTexts.SCAN_SHEET_TITLE).isEqualTo("Prêt à scanner")
+        assertThat(NiumiComponentTexts.SCAN_SHEET_PHRASE).isEqualTo("Approche ton téléphone du Niumi Point")
+        assertThat(NiumiComponentTexts.SCAN_SHEET_CANCEL).isEqualTo("Annuler")
+    }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.unit.Dp
 import com.niumi.designsystem.ui.theme.NiumiDimens
 
 /**
@@ -29,19 +30,24 @@ import com.niumi.designsystem.ui.theme.NiumiDimens
  * [draw] dessine dans le repère du `viewBox` de la maquette (342 × 240) : [IllustrationScope]
  * convertit chaque coordonnée et chaque épaisseur à la taille réelle. Les nombres des dessins sont
  * donc des coordonnées de la maquette, pas des dimensions de l'écran.
+ *
+ * [maxWidth] et [maxHeight] : taille affichée au plus, 342 × 240 par défaut ; l'écran 10 montre
+ * son dessin en 264 × 170 (maquette 28, `viewBox` 342 × 220). La largeur du `viewBox` reste 342.
  */
 @Composable
 internal fun NiumiIllustration(
     contentDescription: String,
     modifier: Modifier = Modifier,
+    maxWidth: Dp = NiumiDimens.illustrationWidth,
+    maxHeight: Dp = NiumiDimens.illustrationHeight,
     draw: IllustrationScope.() -> Unit,
 ) {
     Canvas(
         modifier =
             modifier
-                .widthIn(max = NiumiDimens.illustrationWidth)
+                .widthIn(max = maxWidth)
                 .fillMaxWidth()
-                .aspectRatio(NiumiDimens.illustrationWidth / NiumiDimens.illustrationHeight)
+                .aspectRatio(maxWidth / maxHeight)
                 .clearAndSetSemantics {
                     this.contentDescription = contentDescription
                     role = Role.Image

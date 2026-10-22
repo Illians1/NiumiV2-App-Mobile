@@ -59,7 +59,7 @@ class HandleValidNfcUseCase
 
             val parsed = facade.parseBoxPayload(uri)
             val payload = parsed.payload
-            if (parsed.status != BoxPayloadStatus.VALID || payload == null) return ScanOutcome.Unreadable
+            if (parsed.status != BoxPayloadStatus.VALID || payload == null) return refusalFor(parsed.status)
 
             // §11.3 point 2 : un `ARMED` dont l'heure contractuelle est atteinte doit passer par
             // `TRIGGER_ELAPSED` avant le scan, sinon le moteur le refuse
@@ -118,6 +118,13 @@ class HandleValidNfcUseCase
                 tokenSha256Hex = tokenSha256Hex,
             )
 
+        /**
+         * Étape 38 : une URI que le parseur refuse n'est pas un Niumi Point, sauf une version
+         * inconnue — c'est un Niumi Point, que cette version de l'app n'a pas pu enregistrer.
+         */
+        private fun refusalFor(status: BoxPayloadStatus): ScanOutcome =
+            if (status == BoxPayloadStatus.UNSUPPORTED_VERSION) ScanOutcome.UnknownBox else ScanOutcome.NotANiumiPoint
+
         private fun refusalFor(status: BoxVerificationStatus): ScanOutcome =
             when (status) {
                 // §11.2 : « tag Niumi hors de la liste figée → vibration courte d'erreur, alarme
@@ -125,8 +132,8 @@ class HandleValidNfcUseCase
                 BoxVerificationStatus.NO_PAIRED_BOX_MATCH -> ScanOutcome.UnknownBox
 
                 // Inatteignable derrière un payload `VALID` : `BoxPayloadParser` rejette déjà les
-                // versions non prises en charge (§11.2). Traité en tag inutilisable par défense.
-                BoxVerificationStatus.UNSUPPORTED_VERSION -> ScanOutcome.Unreadable
+                // versions non prises en charge (§11.2). Même réponse que le parseur, par défense.
+                BoxVerificationStatus.UNSUPPORTED_VERSION -> ScanOutcome.UnknownBox
 
                 // `MATCH` sans preuve : impossible, un contexte est toujours fourni ci-dessus.
                 BoxVerificationStatus.MATCH -> ScanOutcome.Ignored

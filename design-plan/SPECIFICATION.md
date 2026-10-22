@@ -125,7 +125,7 @@ Le lien ouvre la page web du produit, pour l'acheter.
 
 | Élément | iPhone | Android |
 | --- | --- | --- |
-| Qui dessine la feuille | Le système. Niumi n'y choisit que la phrase | Niumi, à l'identique |
+| Qui dessine la feuille | Le système. Niumi n'y choisit que la phrase | Niumi, à l'identique, sauf le titre à l'encre plutôt qu'en gris (décision du 22 octobre 2026) |
 | Titre | Prêt à scanner | Prêt à scanner |
 | Phrase | Approche ton iPhone du Niumi Point | Approche ton téléphone du Niumi Point |
 | Bouton | Annuler | Annuler |
@@ -379,9 +379,11 @@ L'écran ne dit qu'une chose : va scanner ton Niumi Point. Il n'a aucun bouton d
 | Date | Vendredi 2 octobre |
 | Heure | L'heure actuelle, en très grand |
 | Dessin | Le téléphone approché du Niumi Point |
-| Consigne | Scanne ton Niumi Point |
+| Consigne | Rejoins ton Niumi Point |
 | Bouton | Scanner le Niumi Point |
 | Lien discret | Je n'ai pas accès à mon Niumi Point |
+
+La consigne était « Scanne ton Niumi Point » dans les maquettes. Elle est remplacée le 22 octobre 2026 (décision de Mehdi) : le téléphone ne lit le Niumi Point qu'après « Scanner le Niumi Point », et la consigne ne doit pas laisser croire qu'on peut scanner tout de suite. Elle parle donc du déplacement. La règle vaut pour l'iPhone et pour Android.
 
 L'écran n'indique pas la pièce, car plusieurs Niumi Points peuvent être enregistrés. Le lien ouvre la sortie de secours.
 
@@ -437,6 +439,15 @@ Risque à tester sur un iPhone : la relance dépend de l'avertissement que le sy
 ### Android
 
 L'écran est dessiné en entier par Niumi et la sonnerie continue jusqu'au scan.
+
+Décisions du 22 octobre 2026 (étape 38 du plan Android) :
+
+- **Le téléphone ne lit le Niumi Point que feuille « Prêt à scanner » ouverte**, comme sur iPhone. Approcher le téléphone sans avoir touché « Scanner le Niumi Point » ne fait rien. Une feuille d'échec ne lit pas non plus : « Réessayer » rouvre « Prêt à scanner ».
+- **Une seule consigne**, « Rejoins ton Niumi Point », que l'alarme sonne encore ou que l'heure du réveil soit passée sans sonnerie.
+- **Après le scan**, le temps que Niumi termine la session, la feuille se ferme et seules restent la date, l'heure et un cercle de chargement, sans texte ; le lecteur d'écran dit « Fin de la session ». Le cercle n'apparaît que si l'attente dépasse 300 ms. Ce moment n'est pas dessiné.
+- La feuille d'échec se ferme en touchant l'écran assombri, en la glissant vers le bas ou par le retour : sa maquette n'a pas de croix.
+- **Mise en page** : la date commence 24 points sous la marge du haut, au lieu des 60 de la maquette. Tant que le lien « Je n'ai pas accès à mon Niumi Point » n'est pas livré, sa place reste réservée sous le bouton, pour que l'écran ne bouge pas à son arrivée.
+- **« Prêt à scanner »** s'écrit à l'encre (blanc sur la feuille sombre, noir sur la feuille claire), pas en gris : la maquette copie la fenêtre de l'iPhone, et le titre gris se lisait mal. Vaut pour toutes les feuilles de scan d'Android (écran 3, écran 10, annulation).
 
 Quand l'alarme sonne, Niumi affiche une notification « Alarme Niumi en cours », visible sur l'écran de verrouillage. L'utilisateur déverrouille son téléphone comme d'habitude, touche la notification, et l'écran 10 s'ouvre. Le scan ne marche pas tant que le téléphone est verrouillé : c'est pour cela que l'écran n'est pas imposé (décision du 18 octobre 2026). Son texte : « Touche pour scanner ton Niumi Point et terminer la session. » Quand la session attend encore le scan sans que la sonnerie joue, la notification d'attente dit « Scanne ton Niumi Point pour terminer la session. » (textes du 19 octobre 2026 ; ils remplacent les versions qui disaient « boîtier »).
 

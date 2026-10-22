@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Icône de la feuille « Prêt à scanner » (maquettes 06, 20, 29) : un téléphone et deux ondes,
+    trait de 2,4. Tracé recopié de la source HTML de la maquette 29 (viewBox 48 × 48, trait seul,
+    bouts et angles ronds). Noir dans le fichier : la feuille teinte l'icône à l'encre. Jamais
+    ambre (VALEURS-DE-DESIGN.md §2).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:pathData="M13,6h10a5,5 0,0 1,5 5v26a5,5 0,0 1,-5 5h-10a5,5 0,0 1,-5 -5v-26a5,5 0,0 1,5 -5z"
+        android:strokeWidth="2.4"
+        android:strokeColor="#FF000000"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M32,19q4,5 0,10"
+        android:strokeWidth="2.4"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M37,15q7,9 0,18"
+        android:strokeWidth="2.4"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

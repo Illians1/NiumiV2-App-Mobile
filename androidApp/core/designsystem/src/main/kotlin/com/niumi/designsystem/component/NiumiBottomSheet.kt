@@ -64,6 +64,9 @@ import kotlinx.coroutines.launch
  *   48, 8 sous la poignée ; titre 22/600 par défaut (feuille « Sonnerie ») ;
  * - sans croix : titre 24/600 à 22 sous la poignée (« Annuler la session ? »).
  *
+ * [showHandle] à `false` : sans poignée, pour la feuille de scan, que ses maquettes (06, 20, 29 à 33)
+ * dessinent sans elle ; le contenu pose alors sa propre marge du haut.
+ *
  * La croix range la feuille puis appelle [onDismiss] ; [content] reçoit la même action
  * (`requestClose`) pour ses propres boutons (« Rester dans la session »). Les icônes des barres système suivent
  * `contentColor` (l'encre du thème), jamais le réglage du téléphone.
@@ -77,6 +80,7 @@ fun NiumiBottomSheet(
     modifier: Modifier = Modifier,
     closeLabel: String? = null,
     titleStyle: TextStyle = if (closeLabel != null) NiumiType.alertTitle22 else NiumiType.sheetTitle24,
+    showHandle: Boolean = true,
     content: @Composable ColumnScope.(requestClose: () -> Unit) -> Unit,
 ) {
     val palette = LocalNiumiPalette.current
@@ -101,7 +105,8 @@ fun NiumiBottomSheet(
     // Poignée, liseré et marges sont dessinés dans le contenu, qui couvre toute la surface : un
     // `border` sur le `modifier` de `ModalBottomSheet` encadrait une autre zone que la feuille
     // visible (constaté sur appareil, étape 34). La surface passe sous la barre de navigation ;
-    // la marge du bas la couvre, la plus grande des deux s'applique (décision du 2026-10-20).
+    // le contenu s'arrête au-dessus d'elle avec un espace, comme les écrans (`marginsOverSystemBars`,
+    // décision du 2026-10-22).
     ModalBottomSheet(
         onDismissRequest = dismissOnce,
         modifier = modifier,
@@ -124,7 +129,7 @@ fun NiumiBottomSheet(
                         NiumiDimens.sheetMargins,
                     ),
         ) {
-            SheetHandle(Modifier.align(Alignment.CenterHorizontally))
+            if (showHandle) SheetHandle(Modifier.align(Alignment.CenterHorizontally))
             SheetHeader(title = title, titleStyle = titleStyle, closeLabel = closeLabel, onClose = close)
             content(close)
         }

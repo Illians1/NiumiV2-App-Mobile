@@ -21,8 +21,9 @@ import com.niumi.designsystem.ui.theme.NiumiType
 /**
  * Cadre d'un écran Niumi, bord à bord (SPEC_ANDROID §15) : fond du thème sous les barres système,
  * marges des maquettes (VALEURS-DE-DESIGN.md §4 : 24 sur les côtés, 56 en haut, 34 en bas) posées
- * sur les barres, l'encoche et le clavier (`safeDrawing`) : de chaque côté, la plus grande des
- * deux, pas leur somme (décision du 2026-10-20).
+ * sur les barres, l'encoche et le clavier (`safeDrawing`) : sur les côtés et en haut, la plus
+ * grande des deux (décision du 2026-10-20) ; en bas, la barre plus un espace, jamais moins que la
+ * maquette (décision du 2026-10-22, `marginsOverSystemBars`).
  * [bottom] reçoit le bouton principal, collé au bas ; [content] prend la place restante et gère
  * lui-même son défilement (une liste paresseuse ne peut pas vivre dans une colonne défilante).
  */

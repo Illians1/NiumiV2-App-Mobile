@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -20,8 +21,10 @@ import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.designsystem.ui.theme.applyNiumiWindowTheme
 import com.niumi.feature.ringing.ui.AlarmExitDestination
 import com.niumi.feature.ringing.ui.AlarmScreen
+import com.niumi.feature.ringing.ui.AlarmScreenActions
 import com.niumi.feature.ringing.ui.AlarmScreenState
 import com.niumi.feature.ringing.ui.AlarmUiState
+import com.niumi.feature.ringing.ui.rememberCurrentMinute
 import com.niumi.system.audio.VibrationController
 import com.niumi.system.intent.NiumiComponent
 import com.niumi.system.intent.NiumiComponentResolver
@@ -29,20 +32,12 @@ import com.niumi.system.intent.NiumiDeepLink
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.nfc.NfcScanHandler
-import com.niumi.system.nfc.ScanOutcome
 import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.ForegroundReadinessTrigger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Locale
 import javax.inject.Inject
-
-// SPEC_ANDROID §11.2 : un résultat de scan transitoire (illisible, boîtier inconnu) ne doit
-// pas rester affiché indéfiniment une fois qu'il n'est plus pertinent.
-private const val TRANSIENT_OUTCOME_DISPLAY_MS = 3_000L
 
 /**
  * Écran de réveil (SPEC_ANDROID §10.4). Ne touche jamais au service, ni dans
@@ -62,6 +57,11 @@ private const val TRANSIENT_OUTCOME_DISPLAY_MS = 3_000L
  * allumage de l'écran : le scan ne fonctionne pas tant que le téléphone est verrouillé (§4.4), et
  * l'écran forcé gênait le déverrouillage. Il s'ouvre par le tap de la notification de sonnerie ou par l'icône de Niumi,
  * une fois le téléphone déverrouillé ; d'où l'absence de tout texte ou receveur de déverrouillage.
+ *
+ * **Lecture NFC seulement feuille « Prêt à scanner » ouverte (étape 38, décision Q4 du
+ * 2026-10-22).** Le Reader Mode suit [AlarmViewModel.readerModeRequested] tant que l'activité est
+ * au premier plan, et s'arrête toujours à `onPause` ; feuille fermée ou feuille d'échec, rien
+ * n'écoute.
  */
 @AndroidEntryPoint
 class AlarmActivity : ComponentActivity() {
@@ -121,7 +121,16 @@ class AlarmActivity : ComponentActivity() {
         // de toute façon au retour. Le volet rapide ne met pas l'activité en pause.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                nfcAdapterSettledChanges().collect { onAdapterSettled() }
+                launch { nfcAdapterSettledChanges().collect { onAdapterSettled() } }
+                // Relue une fois le receveur inscrit (le `launch` ci-dessus l'inscrit sans attendre,
+                // sur `Main.immediate`) : un `STATE_ON` survenu entre `onResume` et l'inscription
+                // laisserait sinon « Le NFC est coupé. » affiché (relecture de l'étape 38).
+                onAdapterSettled()
+                // Q4 : la lecture suit la feuille. Relu à chaque retour au premier plan, `onPause`
+                // l'ayant arrêtée.
+                snapshotFlow { viewModel.readerModeRequested }.collect { requested ->
+                    if (requested) startReader() else nfcReader.stop(this@AlarmActivity)
+                }
             }
         }
 
@@ -149,16 +158,16 @@ class AlarmActivity : ComponentActivity() {
      */
     @Composable
     private fun AlarmContent(screen: AlarmScreenState) {
-        LaunchedEffect(screen.lastScanOutcome) {
-            if (screen.lastScanOutcome != null) {
-                delay(TRANSIENT_OUTCOME_DISPLAY_MS)
-                viewModel.onScanOutcome(null)
-            }
-        }
         AlarmScreen(
             state = screen,
-            currentTimeText = currentTimeText(),
-            onOpenNfcSettings = { openNfcSettings() },
+            now = rememberCurrentMinute(),
+            actions =
+                AlarmScreenActions(
+                    openScanSheet = viewModel::openScanSheet,
+                    cancelScan = viewModel::cancelScan,
+                    retryScan = viewModel::retryScan,
+                    openNfcSettings = { openNfcSettings() },
+                ),
         )
     }
 
@@ -169,27 +178,28 @@ class AlarmActivity : ComponentActivity() {
         if (nfcReader.availability == NfcAvailability.DISABLED) {
             technicalEventLog.log(TechnicalEventType.NFC_DISABLED)
         }
-        startReader()
     }
 
     /**
      * Relecture sur un état stable de l'adaptateur (SPEC_ANDROID §11.2, étape 31). Mesuré à
      * l'étape 30 (essai manuel 2) : après un redémarrage, la pile NFC revient environ 13 s après le
      * déverrouillage, et l'écran lu une seule fois au `ON_RESUME` gardait « Le NFC est désactivé… »
-     * jusqu'à un nouvel essai de l'utilisateur. Le lecteur est relancé avec la disponibilité : un
-     * message effacé sur un écran qui n'écoute pas serait un faux état pire que le message. Aucun
-     * journal ici, ni fenêtre de grâce : un NFC réellement coupé reste affiché coupé.
+     * jusqu'à un nouvel essai de l'utilisateur. Depuis l'étape 38, l'échec « Le NFC est coupé. »
+     * redevient « Prêt à scanner » et la lecture reprend avec lui : un message effacé sur un écran
+     * qui n'écoute pas serait un faux état pire que le message. Une lecture déjà demandée est
+     * réinscrite, l'adaptateur ayant pu redémarrer sans qu'on le voie coupé. Aucun journal ici, ni
+     * fenêtre de grâce : un NFC réellement coupé reste affiché coupé.
      */
     private fun onAdapterSettled() {
         viewModel.onNfcAvailabilityChanged(nfcReader.availability)
-        if (nfcReader.availability == NfcAvailability.ENABLED) startReader()
+        if (viewModel.readerModeRequested) startReader()
     }
 
     /**
-     * Appelé à chaque `onResume` et à chaque état stable « activé ». Android tient une seule
-     * inscription Reader Mode par activité : un second appel la remplace au lieu d'en empiler une
-     * autre, d'où l'absence de garde depuis [onAdapterSettled] (à confirmer sur appareil, ligne §20
-     * de l'étape 31).
+     * Appelé quand la feuille « Prêt à scanner » demande la lecture et à chaque état stable
+     * « activé » où elle la demande toujours. Android tient une seule inscription Reader Mode par
+     * activité : un second appel la remplace au lieu d'en empiler une autre, d'où l'absence de garde
+     * (à confirmer sur appareil, ligne §20 de l'étape 31).
      */
     private fun startReader() {
         // Invoqués sur le thread binder du Reader Mode (voir ReaderModeNfcReader) : toute
@@ -198,18 +208,19 @@ class AlarmActivity : ComponentActivity() {
             activity = this,
             onUri = { uri ->
                 lifecycleScope.launch(Dispatchers.Main.immediate) {
-                    when (val outcome = scanCoordinator.handleUri(scanHandler, uri)) {
-                        // Un scan accepté fait avancer la session : l'écran suit le snapshot
-                        // publié (RELEASING puis état final) au lieu de se fermer lui-même.
-                        ScanOutcome.Accepted, null -> Unit
-
-                        else -> viewModel.onScanOutcome(outcome)
-                    }
+                    // `null` : un scan déjà en cours. Un scan accepté fait avancer la session :
+                    // l'écran suit le snapshot publié (RELEASING puis état final).
+                    scanCoordinator.handleUri(scanHandler, uri)?.let(viewModel::onScanOutcome)
                 }
             },
             onUnreadable = {
                 lifecycleScope.launch(Dispatchers.Main.immediate) {
                     viewModel.onScanOutcome(scanCoordinator.handleUnreadable())
+                }
+            },
+            onForeignTag = {
+                lifecycleScope.launch(Dispatchers.Main.immediate) {
+                    viewModel.onScanOutcome(scanCoordinator.handleForeignTag())
                 }
             },
         )
@@ -253,13 +264,10 @@ class AlarmActivity : ComponentActivity() {
 }
 
 // Hors de la classe, déjà au plafond `TooManyFunctions` de detekt (11) depuis la relecture NFC de
-// l'étape 31 : ni l'une ni l'autre ne lit l'état de l'activité.
+// l'étape 31 : elle ne lit pas l'état de l'activité.
 
 // Pas une action d'arrêt : la sonnerie et le service ne sont pas touchés, seul un accès
 // aux réglages système est ouvert (SPEC_ANDROID §11.2).
 private fun Activity.openNfcSettings() {
     startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
 }
-
-private fun currentTimeText(): String =
-    SimpleDateFormat("HH:mm", Locale.getDefault()).format(System.currentTimeMillis())

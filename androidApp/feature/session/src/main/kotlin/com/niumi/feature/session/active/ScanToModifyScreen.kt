@@ -80,7 +80,7 @@ fun ScanToModifyScreen(
 private fun outcomeMessage(outcome: ScanOutcome?): String? =
     when (outcome) {
         ScanOutcome.UnknownBox -> ScanToModifyTexts.UNKNOWN_BOX
-        ScanOutcome.Unreadable -> ScanToModifyTexts.UNREADABLE
+        ScanOutcome.NotANiumiPoint, ScanOutcome.Unreadable -> ScanToModifyTexts.UNREADABLE
         ScanOutcome.Accepted, ScanOutcome.Ignored, null -> null
     }
 

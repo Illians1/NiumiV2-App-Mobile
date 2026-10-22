@@ -1,11 +1,17 @@
 package com.niumi.designsystem.format
 
+import java.time.LocalDate
 import java.time.LocalTime
 
 /**
  * Écriture des heures et des durées dans l'app (`design-plan/SPECIFICATION.md` §2) : « 22:30 »,
  * « 7:00 » sans zéro devant l'heure, « 9 h 26 », « 56 min », « 8 h 30 de sommeil ». Une durée de
- * moins d'une heure s'écrit en minutes, jamais « 0 h 56 ». Vérifié par `NiumiTimeFormatTest`.
+ * moins d'une heure s'écrit en minutes, jamais « 0 h 56 ». Date de l'écran de réveil :
+ * « Vendredi 2 octobre » (maquette 28). Vérifié par `NiumiTimeFormatTest`.
+ *
+ * Les noms de jours et de mois sont écrits ici plutôt que lus dans les données de langue du
+ * téléphone : l'app n'existe qu'en français, et ces données varient d'une version d'Android à
+ * l'autre (capitale, abréviations).
  */
 object NiumiTimeFormat {
     private const val MINUTES_PER_HOUR = 60
@@ -22,6 +28,30 @@ object NiumiTimeFormat {
 
     /** Durée de sommeil : « 8 h 30 de sommeil ». */
     fun sleep(minutes: Int): String = "${duration(minutes)} de sommeil"
+
+    /** Date sans année : « Vendredi 2 octobre », « Vendredi 1er janvier ». */
+    fun dayAndDate(date: LocalDate): String {
+        val day = if (date.dayOfMonth == 1) "1er" else date.dayOfMonth.toString()
+        return "${WEEKDAYS[date.dayOfWeek.value - 1]} $day ${MONTHS[date.monthValue - 1]}"
+    }
+
+    private val WEEKDAYS = listOf("Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche")
+
+    private val MONTHS =
+        listOf(
+            "janvier",
+            "février",
+            "mars",
+            "avril",
+            "mai",
+            "juin",
+            "juillet",
+            "août",
+            "septembre",
+            "octobre",
+            "novembre",
+            "décembre",
+        )
 
     private fun twoDigits(value: Int): String = value.toString().padStart(2, '0')
 }

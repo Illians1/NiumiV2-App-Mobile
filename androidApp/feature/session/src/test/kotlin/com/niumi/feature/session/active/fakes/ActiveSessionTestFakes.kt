@@ -110,6 +110,7 @@ class FakeNfcReader(
         activity: Activity,
         onUri: (String) -> Unit,
         onUnreadable: () -> Unit,
+        onForeignTag: () -> Unit,
     ): OperationResult = error("READER_MODE_NOT_TESTABLE_IN_JVM")
 
     override fun stop(activity: Activity) = error("READER_MODE_NOT_TESTABLE_IN_JVM")

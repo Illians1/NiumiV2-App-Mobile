@@ -1,15 +1,16 @@
 package com.niumi.feature.ringing
 
 import com.google.common.truth.Truth.assertThat
-import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.feature.ringing.fakes.FakeSessionPersistenceGateway
-import com.niumi.feature.ringing.fakes.pendingEffect
 import com.niumi.feature.ringing.fakes.presentSession
 import com.niumi.feature.ringing.fakes.snapshotInState
 import com.niumi.feature.ringing.ui.AlarmExitDestination
 import com.niumi.feature.ringing.ui.AlarmUiState
 import com.niumi.system.nfc.NfcAvailability
+import com.niumi.system.nfc.ScanFailureReason
+import com.niumi.system.nfc.ScanOutcome
+import com.niumi.system.nfc.ScanSheetState
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionSnapshotPublisher
 import kotlinx.coroutines.Dispatchers
@@ -86,20 +87,11 @@ class AlarmViewModelTest {
         }
 
     @Test
-    fun releasingCarriesTheProgressReadFromTheOutbox() =
+    fun releasingShowsTheLoader() =
         runTest {
-            gateway.result =
-                presentSession(
-                    SessionStateDto.RELEASING,
-                    pendingEffects = listOf(pendingEffect(SessionEffectKindDto.REMOVE_BLOCKING)),
-                )
+            gateway.result = presentSession(SessionStateDto.RELEASING)
 
-            val screen = (viewModel().state as AlarmUiState.Visible).screen
-
-            assertThat(screen.releaseSteps.single { it.kind == SessionEffectKindDto.REMOVE_BLOCKING }.done)
-                .isFalse()
-            assertThat(screen.releaseSteps.single { it.kind == SessionEffectKindDto.CANCEL_ALARM }.done)
-                .isTrue()
+            assertThat((viewModel().state as AlarmUiState.Visible).screen.showsReleaseLoader).isTrue()
         }
 
     @Test
@@ -112,38 +104,179 @@ class AlarmViewModelTest {
             assertThat(viewModel().state).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.CANCELLED))
         }
 
+    private val AlarmViewModel.screen get() = (state as AlarmUiState.Visible).screen
+
+    private fun ringingViewModel(): AlarmViewModel {
+        gateway.result = presentSession(SessionStateDto.RINGING)
+        return viewModel()
+    }
+
+    /** Q4 (2026-10-22) : à l'arrivée, aucune feuille et aucune lecture NFC. */
     @Test
-    fun theDeviceInputsAreMergedIntoTheDisplayedState() =
+    fun theScreenOpensWithoutASheetAndWithoutReading() =
         runTest {
-            gateway.result = presentSession(SessionStateDto.RINGING)
-            val viewModel = viewModel()
+            val viewModel = ringingViewModel()
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Hidden)
+            assertThat(viewModel.readerModeRequested).isFalse()
+        }
+
+    @Test
+    fun scanOpensTheReadySheetAndRequestsTheReader() =
+        runTest {
+            val viewModel = ringingViewModel()
+
+            viewModel.openScanSheet()
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Ready)
+            assertThat(viewModel.readerModeRequested).isTrue()
+        }
+
+    @Test
+    fun cancelClosesTheSheetAndStopsReading() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.openScanSheet()
+
+            viewModel.cancelScan()
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Hidden)
+            assertThat(viewModel.readerModeRequested).isFalse()
+        }
+
+    @Test
+    fun scanWithNfcOffOpensTheNfcFailureWithoutReading() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.onNfcAvailabilityChanged(NfcAvailability.DISABLED)
+
+            viewModel.openScanSheet()
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Failed(ScanFailureReason.NFC_DISABLED))
+            assertThat(viewModel.readerModeRequested).isFalse()
+        }
+
+    @Test
+    fun aRefusedScanShowsItsFailureAndStopsReading() =
+        runTest {
+            val cases =
+                mapOf(
+                    ScanOutcome.NotANiumiPoint to ScanFailureReason.NOT_A_NIUMI_POINT,
+                    ScanOutcome.UnknownBox to ScanFailureReason.NOT_REGISTERED,
+                    ScanOutcome.Unreadable to ScanFailureReason.UNREADABLE,
+                )
+            cases.forEach { (outcome, reason) ->
+                val viewModel = ringingViewModel()
+                viewModel.openScanSheet()
+
+                viewModel.onScanOutcome(outcome)
+
+                assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Failed(reason))
+                assertThat(viewModel.readerModeRequested).isFalse()
+            }
+        }
+
+    @Test
+    fun retryReopensTheReadySheet() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.openScanSheet()
+            viewModel.onScanOutcome(ScanOutcome.Unreadable)
+
+            viewModel.retryScan()
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Ready)
+            assertThat(viewModel.readerModeRequested).isTrue()
+        }
+
+    /** Un scan accepté ou ignoré ne change pas la feuille : c'est le snapshot qui la fermera. */
+    @Test
+    fun anAcceptedOrIgnoredScanKeepsTheReadySheet() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.openScanSheet()
+
+            viewModel.onScanOutcome(ScanOutcome.Accepted)
+            viewModel.onScanOutcome(ScanOutcome.Ignored)
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Ready)
+        }
+
+    /** Un résultat arrivé après « Annuler » (lecture déjà partie) n'ouvre pas de feuille. */
+    @Test
+    fun anOutcomeArrivingWithTheSheetClosedIsIgnored() =
+        runTest {
+            val viewModel = ringingViewModel()
+
+            viewModel.onScanOutcome(ScanOutcome.UnknownBox)
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Hidden)
+        }
+
+    @Test
+    fun nfcTurnedOffWhileReadyShowsTheNfcFailure() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.openScanSheet()
 
             viewModel.onNfcAvailabilityChanged(NfcAvailability.DISABLED)
-            assertThat((viewModel.state as AlarmUiState.Visible).screen.instructionText)
-                .isEqualTo("Le NFC est désactivé. Active-le pour scanner ton boîtier.")
-            assertThat((viewModel.state as AlarmUiState.Visible).screen.showsNfcSettingsShortcut)
-                .isTrue()
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Failed(ScanFailureReason.NFC_DISABLED))
+            assertThat(viewModel.readerModeRequested).isFalse()
         }
 
     /**
-     * SPEC_ANDROID §11.2 (étape 30, essai manuel 2) : juste après un démarrage, le NFC se lit
-     * désactivé puis revient. L'écran relit sur l'état stable annoncé par Android ; ce test verrouille
-     * que la relecture « activé » efface **et** le message **et** le raccourci, sans relancer l'écran.
+     * SPEC_ANDROID §11.2 (étape 31, vigilance 13) : juste après un démarrage, le NFC se lit coupé
+     * puis revient. L'état stable « activé » remplace seul l'échec par « Prêt à scanner » et la
+     * lecture reprend : effacer le message sans écouter inviterait à scanner un écran sourd.
      */
     @Test
-    fun anAdapterThatSettlesOnClearsTheDisabledMessageAndShortcut() =
+    fun anAdapterThatSettlesOnTurnsTheNfcFailureBackIntoReading() =
         runTest {
-            gateway.result = presentSession(SessionStateDto.RINGING)
-            val viewModel = viewModel()
+            val viewModel = ringingViewModel()
             viewModel.onNfcAvailabilityChanged(NfcAvailability.DISABLED)
-            val disabledText = (viewModel.state as AlarmUiState.Visible).screen.instructionText
+            viewModel.openScanSheet()
 
             viewModel.onNfcAvailabilityChanged(NfcAvailability.ENABLED)
 
-            val screen = (viewModel.state as AlarmUiState.Visible).screen
-            assertThat(screen.showsNfcSettingsShortcut).isFalse()
-            assertThat(screen.instructionText).isNotEqualTo(disabledText)
-            assertThat(screen.nfcAvailability).isEqualTo(NfcAvailability.ENABLED)
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Ready)
+            assertThat(viewModel.readerModeRequested).isTrue()
+        }
+
+    /** Un autre échec n'est pas effacé par le retour du NFC : il attend « Réessayer ». */
+    @Test
+    fun anAdapterThatSettlesOnKeepsAnotherFailure() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.openScanSheet()
+            viewModel.onScanOutcome(ScanOutcome.UnknownBox)
+
+            viewModel.onNfcAvailabilityChanged(NfcAvailability.ENABLED)
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Failed(ScanFailureReason.NOT_REGISTERED))
+        }
+
+    @Test
+    fun releasingClosesTheSheetAndStopsReading() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.openScanSheet()
+
+            publisher.publish(snapshotInState(SessionStateDto.RELEASING))
+
+            assertThat(viewModel.screen.sheet).isEqualTo(ScanSheetState.Hidden)
+            assertThat(viewModel.readerModeRequested).isFalse()
+        }
+
+    @Test
+    fun aFinalStateStopsReading() =
+        runTest {
+            val viewModel = ringingViewModel()
+            viewModel.openScanSheet()
+
+            publisher.publish(snapshotInState(SessionStateDto.COMPLETED))
+
+            assertThat(viewModel.readerModeRequested).isFalse()
         }
 
     /**
@@ -156,8 +289,12 @@ class AlarmViewModelTest {
             gateway.result = presentSession(SessionStateDto.RINGING)
             val viewModel = viewModel()
 
-            publisher.publish(snapshotInState(SessionStateDto.RELEASING))
+            viewModel.openScanSheet()
+            viewModel.onScanOutcome(ScanOutcome.UnknownBox)
+            viewModel.retryScan()
             viewModel.onNfcAvailabilityChanged(NfcAvailability.DISABLED)
+            viewModel.cancelScan()
+            publisher.publish(snapshotInState(SessionStateDto.RELEASING))
 
             assertThat(viewModel.state).isInstanceOf(AlarmUiState.Visible::class.java)
         }

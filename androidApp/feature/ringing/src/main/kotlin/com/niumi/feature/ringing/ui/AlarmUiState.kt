@@ -2,7 +2,7 @@ package com.niumi.feature.ringing.ui
 
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.system.nfc.NfcAvailability
-import com.niumi.system.nfc.ScanOutcome
+import com.niumi.system.nfc.ScanSheetState
 
 /** Où l'écran de réveil renvoie l'utilisateur quand la session atteint un état final. */
 enum class AlarmExitDestination {
@@ -47,8 +47,7 @@ sealed interface AlarmUiState {
         fun forSession(
             sessionState: SessionStateDto,
             nfcAvailability: NfcAvailability = NfcAvailability.ENABLED,
-            lastScanOutcome: ScanOutcome? = null,
-            releaseSteps: List<ReleaseStep> = emptyList(),
+            sheet: ScanSheetState = ScanSheetState.Hidden,
         ): AlarmUiState =
             when (sessionState) {
                 SessionStateDto.RINGING,
@@ -60,8 +59,7 @@ sealed interface AlarmUiState {
                         AlarmScreenState.from(
                             sessionState = sessionState,
                             nfcAvailability = nfcAvailability,
-                            lastScanOutcome = lastScanOutcome,
-                            releaseSteps = releaseSteps,
+                            sheet = sheet,
                         ),
                     )
                 }
