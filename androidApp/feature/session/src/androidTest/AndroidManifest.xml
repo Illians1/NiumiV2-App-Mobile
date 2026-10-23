@@ -15,9 +15,16 @@
     </queries>
 
     <application>
+        <!--
+            Portrait imposé à l'activité hôte des tests seulement (jamais à l'app, SPEC_ANDROID §15 :
+            « ne pas verrouiller l'orientation ») : les tests d'écran mesurent la mise en page des
+            maquettes, dessinées en portrait. Téléphone posé en paysage avec la rotation automatique,
+            la barre de navigation passe sur le côté et ces mesures échouaient (constaté le 2026-10-23).
+        -->
         <activity
             android:name="androidx.activity.ComponentActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Niumi.Dark" />
     </application>
 

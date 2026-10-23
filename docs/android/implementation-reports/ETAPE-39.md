@@ -85,12 +85,26 @@ de départ : `a21ac70`.
 - **Instrumentés** : session 14/14 (nouveaux : `BlockScreenContentTest` 4 avec contrôles
   d'accessibilité, `BlockOverlayControllerTest` 7, dont le changement de nom sans seconde fenêtre), system 33/33, ringing 14/14, database 90/90,
   app 15 (voir ci-dessous), designsystem 53/54, setup 52/55.
-  - **Échecs antérieurs à l'étape, reproduits sur `HEAD` sans les changements** :
+  - **Quatre échecs reproduits sur `HEAD`, résolus après l'étape (2026-10-23)** :
     `NiumiComponentsSemanticsTest.aLongTitleWrapsOnTwoLinesWithoutBeingCut` (titre de la fenêtre
     d'alerte mesuré sur une ligne, 28,6 dp au lieu de 52) ; `AppSelectionScreenTest`
     `theChosenSectionComesFirst`, `beyondSixTheLastSlotCountsTheOthers`,
     `onANarrowScreenTheCardShowsFewerSlots` (« Toutes les applications », « +10 », « +11 »
-    introuvables). Non traités ici.
+    introuvables). Cause : le téléphone était en paysage (rotation automatique) ; la barre de
+    navigation sur le côté rétrécit l'écran 4 (cinq cases, « +11 »), la grille courte ne compose pas
+    la seconde section, l'alerte plus large tient sur une ligne. Les quatre échecs reviennent à
+    l'identique en paysage forcé (`wm user-rotation lock 1`) ; l'app, elle, défile correctement.
+    Correctif : activité hôte des tests fixée en portrait dans les quatre manifestes de test
+    (SPEC_ANDROID §19.2) ; en paysage forcé, setup 19/19 et designsystem 26/26. Suite complète
+    ensuite, écran tenu allumé : **275/275** (app 15, database 90, designsystem 54, system 33,
+    ringing 14, session 14, setup 55).
+  - **Instabilité non comprise** : deux fois, le contrôle d'accessibilité a mesuré une zone de
+    toucher de 47 dp au lieu de 48, vue décalée de 2 à 4 px (`theSwitchIsASwitchOfFullTouchSize`
+    en portrait, `aDayChipIsACheckboxNamedAfterItsDay` et `aGreyedDayChipCanStillBeToggled` en
+    paysage). Non reproduite en dix passages (cinq avec animations, cinq sans) ni dans la suite
+    complète. Laissée ouverte.
+  - Un passage a échoué téléphone en veille et verrouillé : 15 « No compose hierarchies found »
+    et installations annulées. Effet d'environnement, d'où `svc power stayon usb` pendant la suite.
   - `BlockingGuardServiceInstrumentedTest.fromTheAlarmTheGuardTakesOverTheAlarmNotification` a
     échoué une fois dans la suite complète (notification 8, avertissement d'accessibilité, en plus) ;
     rejoué seul : 3/3 deux fois avec l'étape 39, 3/3 sur `HEAD`. Instabilité A8 connue.
