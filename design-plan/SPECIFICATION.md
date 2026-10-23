@@ -450,7 +450,7 @@ Décisions du 22 octobre 2026 (étape 38 du plan Android) :
 - **Mise en page** : la date commence 24 points sous la marge du haut, au lieu des 60 de la maquette. Tant que le lien « Je n'ai pas accès à mon Niumi Point » n'est pas livré, sa place reste réservée sous le bouton, pour que l'écran ne bouge pas à son arrivée.
 - **« Prêt à scanner »** s'écrit à l'encre (blanc sur la feuille sombre, noir sur la feuille claire), pas en gris : la maquette copie la fenêtre de l'iPhone, et le titre gris se lisait mal. Vaut pour toutes les feuilles de scan d'Android (écran 3, écran 10, annulation).
 
-Quand l'alarme sonne, Niumi affiche une notification « Alarme Niumi en cours », visible sur l'écran de verrouillage. L'utilisateur déverrouille son téléphone comme d'habitude, touche la notification, et l'écran 10 s'ouvre. Le scan ne marche pas tant que le téléphone est verrouillé : c'est pour cela que l'écran n'est pas imposé (décision du 18 octobre 2026). Son texte : « Touche pour scanner ton Niumi Point et terminer la session. » Quand la session attend encore le scan sans que la sonnerie joue, la notification d'attente dit « Scanne ton Niumi Point pour terminer la session. » (textes du 19 octobre 2026 ; ils remplacent les versions qui disaient « boîtier »).
+Quand l'alarme sonne, Niumi affiche une notification « Ton réveil Niumi sonne », visible sur l'écran de verrouillage. L'utilisateur déverrouille son téléphone comme d'habitude, touche la notification, et l'écran 10 s'ouvre. Le scan ne marche pas tant que le téléphone est verrouillé : c'est pour cela que l'écran n'est pas imposé (décision du 18 octobre 2026). Son texte : « Scanne ton Niumi Point pour l'arrêter et retrouver tes applis. » Quand la session attend encore le scan sans que la sonnerie joue, la notification d'attente dit « Ton réveil Niumi est passé », « Scanne ton Niumi Point pour retrouver tes applis. » (textes du 23 octobre 2026, sans le mot « session » ; ils remplacent ceux du 19 octobre, qui remplaçaient les versions disant « boîtier »).
 
 ## 15. Écran 11 · Réussite
 
@@ -541,7 +541,7 @@ Avant l'alarme, c'est une notification discrète : sans son, sans vibration, san
 | Avant le coucher | Réveil programmé à 07:00 | Tes applications choisies seront bloquées à partir de 22:30. |
 | Après le coucher | Réveil prévu à 07:00 | Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Point. |
 
-À l'alarme, elle laisse la place à la notification de l'alarme : « Alarme Niumi en cours » pendant la sonnerie, ou « Ton réveil Niumi est passé » si l'alarme n'a pas sonné. Une seule notification Niumi est alors visible. Elle revient une dizaine de secondes après avoir été écartée, jusqu'au scan.
+À l'alarme, elle laisse la place à la notification de l'alarme : « Ton réveil Niumi sonne » pendant la sonnerie, ou « Ton réveil Niumi est passé » si l'alarme n'a pas sonné. Une seule notification Niumi est alors visible. Elle revient une dizaine de secondes après avoir été écartée, jusqu'au scan.
 
 Revu le 22 octobre 2026 : la notification parle du réveil, le blocage est dit dans le texte, et une seule notification reste affichée de l'alarme au scan.
 

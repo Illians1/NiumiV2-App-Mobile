@@ -778,8 +778,8 @@ Créer un canal `niumi_alarm_ringing`:
 
 La notification elle-même:
 
-- titre: "Alarme Niumi en cours";
-- texte: "Touche pour scanner ton boîtier et terminer la session." (Lot 9 : la notification est désormais le chemin vers le scan, le texte dit le geste);
+- titre: "Ton réveil Niumi sonne" (décision de Mehdi du 2026-10-23 ; était "Alarme Niumi en cours");
+- texte: "Scanne ton Niumi Point pour l'arrêter et retrouver tes applis." (décision du 2026-10-23 : le texte dit ce que le scan rapporte, sans le mot « session » ; depuis le Lot 9 la notification est le chemin vers le scan);
 - `setOngoing(true)`;
 - `setContentIntent(alarmScreenPendingIntent)`, qui ouvre `AlarmActivity`;
 - `setOnlyAlertOnce(true)` : une notification déjà affichée n'est pas re-présentée quand le service la republie (décision du 2026-10-18, mesure de l'étape 32, ci-dessous);
@@ -833,7 +833,7 @@ Créer un canal `niumi_session_awaiting_scan`:
 - aucun son, aucune vibration;
 - aucun `setFullScreenIntent()`: cette notification ne doit jamais rallumer l'écran ni simuler une alarme active, en cohérence avec la fenêtre de 15 minutes qui empêche justement une sonnerie tardive;
 - titre: "Ton réveil Niumi est passé";
-- texte: "Scanne ton boîtier pour débloquer tes applications.";
+- texte: "Scanne ton Niumi Point pour retrouver tes applis." (décision du 2026-10-23 ; était "Scanne ton boîtier pour débloquer tes applications.");
 - `setOngoing(true)`;
 - `setOnlyAlertOnce(true)`: la notification est republiée à chaque réconciliation (voir ci-dessous), et sans cet attribut un canal d'importance haute reproduirait une bannière alors qu'elle n'a jamais disparu;
 - `setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE)` à partir de l'API 31, le service de garde la tenant au premier plan (voir la fin de cette section);

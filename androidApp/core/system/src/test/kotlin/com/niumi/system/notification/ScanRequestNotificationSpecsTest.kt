@@ -18,7 +18,7 @@ class ScanRequestNotificationSpecsTest {
         assertThat(spec.channelId).isEqualTo(NiumiNotificationChannels.sessionAwaitingScan.id)
         assertThat(spec.category).isEqualTo(Notification.CATEGORY_ALARM)
         assertThat(spec.title).isEqualTo("Ton réveil Niumi est passé")
-        assertThat(spec.text).isEqualTo("Scanne ton boîtier pour débloquer tes applications.")
+        assertThat(spec.text).isEqualTo("Scanne ton Niumi Point pour retrouver tes applis.")
         assertThat(spec.ongoing).isTrue()
     }
 

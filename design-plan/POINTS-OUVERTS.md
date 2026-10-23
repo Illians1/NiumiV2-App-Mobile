@@ -58,7 +58,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | Écran 4, liste Android | Valider |
 | Sonnerie | Il se règle dans les réglages de ton téléphone. |
 | Accueil en session | Modifiable après avoir scanné ton Niumi Point. |
-| Notifications Android de sonnerie et d'attente de scan | ~~Disaient « boîtier »~~ **Tranché le 19 octobre 2026** : « Touche pour scanner ton Niumi Point et terminer la session. » et « Scanne ton Niumi Point pour terminer la session. » (`SPECIFICATION.md` §14, partie Android) |
+| Notifications Android de sonnerie et d'attente de scan | ~~Disaient « boîtier »~~ ~~Tranché le 19 octobre 2026 : « Touche pour scanner ton Niumi Point et terminer la session. » et « Scanne ton Niumi Point pour terminer la session. »~~ **Retranché le 23 octobre 2026, sans le mot « session »** : « Ton réveil Niumi sonne », « Scanne ton Niumi Point pour l'arrêter et retrouver tes applis. » et « Scanne ton Niumi Point pour retrouver tes applis. » (`SPECIFICATION.md` §14, partie Android ; appliqué le même jour) |
 | Annulation, Android | Approche ton téléphone du Niumi Point pour annuler la session |
 | Niumi Points | N'importe lequel de tes Niumi Points arrête l'alarme. |
 | Niumi Points | Pour l'utiliser de nouveau, il faudra le scanner et l'ajouter. |

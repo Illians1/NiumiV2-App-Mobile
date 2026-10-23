@@ -114,7 +114,7 @@ object HelpTexts {
                 items =
                     listOf(
                         "Quand ça sonne, Niumi n'ouvre aucun écran de lui-même et n'allume pas l'écran : la " +
-                            "notification « Alarme Niumi en cours » est visible sur l'écran de verrouillage et " +
+                            "notification « Ton réveil Niumi sonne » est visible sur l'écran de verrouillage et " +
                             "dans le volet, et revient en quelques secondes si tu la balaies. Si tu utilises ton " +
                             "téléphone à ce moment-là, sa bannière disparaît au bout de quelques secondes ; le son " +
                             "continue.",

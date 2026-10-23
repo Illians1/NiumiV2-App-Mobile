@@ -99,7 +99,7 @@ class BlockingGuardServiceInstrumentedTest {
         assertThat(awaitNotificationTitle()).startsWith("Réveil prévu à ")
 
         assertThat(keepIn(BlockingGuardPhase.RINGING)).isEqualTo(OperationResult.Success)
-        assertThat(awaitNotificationTitle(NiumiNotificationIds.RINGING)).isEqualTo("Alarme Niumi en cours")
+        assertThat(awaitNotificationTitle(NiumiNotificationIds.RINGING)).isEqualTo("Ton réveil Niumi sonne")
         assertThat(awaitAbsent(BlockingGuardService.NOTIFICATION_ID)).isTrue()
 
         assertThat(keepIn(BlockingGuardPhase.AWAITING_SCAN)).isEqualTo(OperationResult.Success)

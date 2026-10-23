@@ -20,8 +20,8 @@ object RingingNotificationSpecs {
         NotificationSpec(
             channelId = NiumiNotificationChannels.alarmRinging.id,
             category = Notification.CATEGORY_ALARM,
-            title = "Alarme Niumi en cours",
-            text = "Touche pour scanner ton boîtier et terminer la session.",
+            title = "Ton réveil Niumi sonne",
+            text = "Scanne ton Niumi Point pour l'arrêter et retrouver tes applis.",
             ongoing = true,
             visibilityPublic = true,
             alertOnlyOnce = true,
