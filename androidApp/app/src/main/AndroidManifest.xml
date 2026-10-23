@@ -43,11 +43,18 @@
         android:theme="@style/Theme.Niumi"
         tools:ignore="DataExtractionRules,UnusedAttribute">
 
+        <!--
+            Portrait seul (SPEC_ANDROID §15, décision du 2026-10-23) : l'app n'est pas conçue pour le
+            paysage ni pour les tablettes. Android 16 ignore ce verrou dès 600 dp de largeur, accepté
+            sans dérogation (LockedOrientationActivity, DiscouragedApi).
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.Niumi.Launch">
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Niumi.Launch"
+            tools:ignore="LockedOrientationActivity,DiscouragedApi">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

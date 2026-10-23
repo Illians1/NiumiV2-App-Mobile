@@ -948,7 +948,8 @@ Aucune télémétrie distante n'est requise dans le MVP. Si elle est ajoutée, l
 - les textes utilisent le tutoiement de façon constante;
 - les animations respectent `Reduce Motion`;
 - le scanner reste compréhensible sans retour haptique;
-- aucun écran ne masque la limite du contrôle Stop d'iOS.
+- aucun écran ne masque la limite du contrôle Stop d'iOS;
+- l'app ne s'utilise qu'en portrait sur iPhone (`UISupportedInterfaceOrientations` limité au portrait, décision de Mehdi du 2026-10-23, règle commune avec `SPEC_ANDROID.md` §15) ; l'iPad n'est pas visé.
 
 ## 21. Sécurité et anti-contournement raisonnable
 

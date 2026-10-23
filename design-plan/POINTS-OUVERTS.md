@@ -115,7 +115,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 
 Pour les versions sombres manquantes, la règle est connue : mêmes mises en page et mêmes textes, avec les couleurs du thème sombre de `VALEURS-DE-DESIGN.md`.
 
-Sujets qui n'ont pas été abordés du tout pendant la conception : les autres tailles d'écran et le mode paysage, les tailles de texte agrandies et le lecteur d'écran, les langues autres que le français.
+Sujets qui n'ont pas été abordés du tout pendant la conception : les autres tailles d'écran, les tailles de texte agrandies et le lecteur d'écran, les langues autres que le français. Le mode paysage, lui, est **tranché le 23 octobre 2026** : l'app ne s'utilise qu'en portrait, sur Android comme sur iPhone, et les tablettes ne sont pas visées (`SPEC_ANDROID.md` §15, `SPEC_IOS.md` §20).
 
 ## 5. Écarts relevés entre l'ancien document et les maquettes
 
