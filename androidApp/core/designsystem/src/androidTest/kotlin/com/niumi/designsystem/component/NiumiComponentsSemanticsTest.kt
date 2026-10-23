@@ -216,6 +216,21 @@ class NiumiComponentsSemanticsTest {
         assertThat(clicks).isEqualTo(1)
     }
 
+    /** Étape 39 : « Ouvrir Niumi » de l'écran 7, bouton texte sans soulignement. */
+    @Test
+    fun theTextButtonIsAButtonOfFullTouchHeight() {
+        var clicks = 0
+        show { NiumiTextButton(text = "Ouvrir Niumi", onClick = { clicks++ }) }
+
+        composeRule
+            .onNodeWithText("Ouvrir Niumi")
+            .assertRole(Role.Button)
+            .assertTouchTarget()
+            .performClick()
+
+        assertThat(clicks).isEqualTo(1)
+    }
+
     @Test
     fun aDurationPillIsARadioButtonThatSaysWhetherItIsChosen() {
         var clicks = 0

@@ -6,6 +6,7 @@ import com.niumi.database.blocking.BlockedPackagesState
 sealed interface BlockAction {
     data object None : BlockAction
 
+    /** [displayName] : libellé figé à l'activation, affiché par l'écran 7 (« L’application YouTube est bloquée »). */
     data class GoHome(
         val packageName: String,
         val displayName: String,
@@ -15,8 +16,9 @@ sealed interface BlockAction {
 /**
  * Algorithme pur de SPEC_ANDROID §12.2 : « à chaque changement de fenêtre, lire le package au
  * premier plan […] si le package est bloqué : exécuter `GLOBAL_ACTION_HOME`, afficher
- * l'overlay ». Ne connaît ni `AccessibilityEvent`, ni `Context`, ni `WindowManager` — le
- * service ne fait que traduire cette décision en appels Android.
+ * l'écran 7 » (étape 39 de la refonte). Ne connaît ni
+ * `AccessibilityEvent`, ni `Context`, ni `WindowManager` — le service ne fait que traduire cette
+ * décision en appels Android.
  */
 object BlockingDecision {
     fun decide(

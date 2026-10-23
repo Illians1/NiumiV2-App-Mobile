@@ -10,9 +10,13 @@
 # leur substitut : il déroule le protocole sur un appareil réel et vérifie chaque essai par
 # `dumpsys`, plutôt que de s'en remettre à l'œil de l'opérateur.
 #
-# Ce qu'il ne vérifie PAS, faute d'accès au contenu de la fenêtre : le texte exact de l'overlay
-# imposé par §12.2. Il constate la présence d'une fenêtre `TYPE_ACCESSIBILITY_OVERLAY`, pas ce
+# Ce qu'il ne vérifie PAS, faute d'accès au contenu de la fenêtre : le contenu de l'écran 7
+# (§12.2, maquette 22). Il constate la présence d'une fenêtre `TYPE_ACCESSIBILITY_OVERLAY`, pas ce
 # qu'elle affiche. Ce contrôle-là reste visuel.
+#
+# Depuis l'étape 39 de la refonte, l'écran 7 reste affiché jusqu'à « Fermer » ou « Ouvrir Niumi »
+# (Q6) : le script demande à l'opérateur de toucher le bouton voulu quand un essai en dépend, et
+# éteint lui-même l'écran pour l'essai d'extinction.
 #
 # Préconditions, à préparer avant de lancer (le script les vérifie et s'arrête sinon) :
 #   1. un seul appareil branché, débogage USB activé ;
@@ -48,7 +52,9 @@ set -u
 readonly NIUMI_PACKAGE="com.niumi.app"
 readonly SERVICE_COMPONENT="${NIUMI_PACKAGE}/com.niumi.feature.session.blocking.NiumiBlockingAccessibilityService"
 readonly BLOCK_TIMEOUT_S=5
-readonly OVERLAY_TIMEOUT_S=4
+# L'écran 7 n'a plus de minuterie (Q6) : il doit encore être là après ce délai, plus long que les
+# 3 s de l'ancien bandeau.
+readonly OVERLAY_PERSIST_S=4
 readonly BLOCKING_START_TAG="${NIUMI_PACKAGE}/com.niumi.system.blocking.BlockingStartReceiver"
 # Marge minimale restante à l'issue des préconditions : en deçà, l'essai n'a pas le temps de se
 # préparer avant l'instant de début.
@@ -88,8 +94,20 @@ top_package() {
         tr -d '\r'
 }
 
+# Fenêtres de l'écran 7, reconnues à leur titre (`WINDOW_TITLE`, OverlayWindowHost.kt) : TalkBack ou
+# un service du constructeur peuvent tenir d'autres fenêtres `TYPE_ACCESSIBILITY_OVERLAY`.
 overlay_window_count() {
-    adb shell dumpsys window windows 2>/dev/null | grep -ci 'ty=ACCESSIBILITY_OVERLAY'
+    adb shell dumpsys window windows 2>/dev/null | grep -c '^ *Window #.*NiumiBlockScreen'
+}
+
+# Fait toucher un bouton de l'écran 7 par l'opérateur. Rien n'est demandé si l'écran n'est pas
+# affiché. Les essais qui ont besoin d'un écran sans écran 7 l'appellent avec « Fermer ».
+ask_block_screen_button() {
+    local button="$1"
+    [ "$(overlay_window_count)" -ge 1 ] || return 0
+    printf '       Toucher « %s » sur l'"'"'écran 7, puis appuyer sur Entrée... ' "$button"
+    read -r _
+    sleep 1
 }
 
 # Le processus de l'application existe-t-il ? C'est la preuve que le lancement a bien eu lieu,
@@ -333,9 +351,9 @@ test_deferred_start() {
     fi
     log_pass "application au premier plan avant l'instant de début, aucun retour à l'accueil"
     if [ "$(overlay_window_count)" -eq 0 ]; then
-        log_pass "aucun overlay avant l'instant de début"
+        log_pass "aucun écran 7 avant l'instant de début"
     else
-        log_fail "overlay affiché AVANT l'instant de début — §12.4 interdit tout blocage avant l'heure"
+        log_fail "écran 7 affiché AVANT l'instant de début — §12.4 interdit tout blocage avant l'heure"
     fi
 
     changed_ms=$(wait_home_return_ms "$BLOCKED_PACKAGE" $((starts_at_ms + DEFERRED_GRACE_S * 1000)))
@@ -352,10 +370,11 @@ test_deferred_start() {
     fi
 
     if [ "$(overlay_window_count)" -ge 1 ]; then
-        log_pass "fenêtre TYPE_ACCESSIBILITY_OVERLAY présente"
+        log_pass "écran 7 présent (fenêtre TYPE_ACCESSIBILITY_OVERLAY)"
     else
-        log_info "overlay non observé : son minuteur de 3 s a pu l'avoir déjà retiré (§12.2)."
+        log_fail "aucun écran 7 après le retour à l'accueil"
     fi
+    ask_block_screen_button "Fermer"
 
     log_info "À reporter dans QA_MATRIX.md : instant ${starts_at_ms}, observé ${changed_ms}, retard ${delay_ms} ms."
     log_info "Précision bornée par le coût d'un dumpsys activity (~150-300 ms) : le sondage ne peut pas mieux."
@@ -394,11 +413,9 @@ test_explicit_intent() {
     assert_blocked_after_launch "$BLOCKED_PACKAGE" launch_component
 }
 
-# §12.2 : l'overlay est affiché au moment du blocage, puis retiré par le minuteur de 3 s. La
-# clause « dès que le package bloqué n'est plus au premier plan » ne s'applique pas, Niumi
-# venant lui-même de renvoyer à l'accueil (voir ETAPE-05.md).
-test_overlay() {
-    log_step "Essai 4 — overlay affiché puis retiré"
+# Lance l'application bloquée pour faire paraître l'écran 7, depuis un écran sans écran 7.
+show_block_screen() {
+    ask_block_screen_button "Fermer"
     adb shell am force-stop "$BLOCKED_PACKAGE" >/dev/null 2>&1
     adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
     sleep 2
@@ -406,40 +423,98 @@ test_overlay() {
     sleep 1
     if ! process_exists "$BLOCKED_PACKAGE"; then
         log_fail "l'application n'a pas démarré — essai non concluant"
-        return
+        return 1
     fi
     if [ "$(overlay_window_count)" -ge 1 ]; then
-        log_pass "fenêtre TYPE_ACCESSIBILITY_OVERLAY présente"
-        log_info "Contrôle visuel attendu : « <Nom de l'application> reste bloquée jusqu'au scan du boîtier. »"
+        log_pass "écran 7 présent (fenêtre TYPE_ACCESSIBILITY_OVERLAY)"
+        return 0
+    fi
+    log_fail "aucune fenêtre TYPE_ACCESSIBILITY_OVERLAY pendant le blocage"
+    return 1
+}
+
+# §12.2 depuis l'étape 39 : l'écran 7 reste affiché jusqu'à « Fermer », sans minuterie. La clause
+# « dès que le package bloqué n'est plus au premier plan » ne s'applique pas, Niumi venant lui-même
+# de renvoyer à l'accueil (voir ETAPE-05.md).
+test_overlay() {
+    log_step "Essai 4 — écran 7 affiché jusqu'à « Fermer »"
+    show_block_screen || return
+    log_info "Contrôle visuel attendu : maquette 22, « Cette application est bloquée »."
+
+    sleep "$OVERLAY_PERSIST_S"
+    if [ "$(overlay_window_count)" -ge 1 ]; then
+        log_pass "écran 7 toujours affiché après ${OVERLAY_PERSIST_S} s (aucune minuterie)"
     else
-        log_fail "aucune fenêtre TYPE_ACCESSIBILITY_OVERLAY pendant le blocage"
+        log_fail "écran 7 retiré seul en moins de ${OVERLAY_PERSIST_S} s — Q6 exige un bouton"
     fi
 
-    sleep "$OVERLAY_TIMEOUT_S"
+    ask_block_screen_button "Fermer"
     if [ "$(overlay_window_count)" -eq 0 ]; then
-        log_pass "overlay retiré après ${OVERLAY_TIMEOUT_S} s"
+        log_pass "écran 7 retiré par « Fermer »"
     else
-        log_fail "overlay toujours affiché après ${OVERLAY_TIMEOUT_S} s"
+        log_fail "écran 7 toujours affiché après « Fermer »"
     fi
 }
 
-# §12.2 : une application hors de la liste de blocage ne doit subir aucun effet.
+# « Ouvrir Niumi » retire l'écran 7 et ouvre Niumi, comme son icône du lanceur.
+test_open_niumi() {
+    log_step "Essai 4b — « Ouvrir Niumi »"
+    show_block_screen || return
+    ask_block_screen_button "Ouvrir Niumi"
+    sleep 1
+    if [ "$(overlay_window_count)" -eq 0 ]; then
+        log_pass "écran 7 retiré par « Ouvrir Niumi »"
+    else
+        log_fail "écran 7 toujours affiché après « Ouvrir Niumi »"
+    fi
+    if [ "$(top_package)" = "$NIUMI_PACKAGE" ]; then
+        log_pass "Niumi au premier plan"
+    else
+        log_fail "Niumi n'est pas au premier plan (top = $(top_package))"
+    fi
+    adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
+}
+
+# Décision du 2026-10-22 : l'écran 7 part à l'extinction de l'écran, sans quoi il reviendrait
+# par-dessus l'écran de verrouillage au rallumage.
+test_screen_off() {
+    log_step "Essai 4c — écran 7 retiré à l'extinction de l'écran"
+    show_block_screen || return
+    adb shell input keyevent KEYCODE_SLEEP >/dev/null 2>&1
+    sleep 2
+    if [ "$(overlay_window_count)" -eq 0 ]; then
+        log_pass "écran 7 retiré à l'extinction"
+    else
+        log_fail "écran 7 toujours là après l'extinction de l'écran"
+    fi
+    adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1
+    printf '       Déverrouiller le téléphone, puis appuyer sur Entrée... '
+    read -r _
+}
+
+# §12.2 : une application hors de la liste de blocage ne doit subir aucun effet ; ouverte pendant
+# que l'écran 7 est affiché, elle le retire (décision du 2026-10-22, appel entrant).
 test_allowed_application() {
     [ -n "$ALLOWED_PACKAGE" ] || return 0
-    log_step "Essai 5 — application non bloquée"
+    log_step "Essai 5 — application non bloquée, écran 7 retiré"
     if ! adb shell pm list packages 2>/dev/null | grep -qx "package:${ALLOWED_PACKAGE}"; then
         log_info "${ALLOWED_PACKAGE} n'est pas installé, essai ignoré."
         return 0
     fi
+    show_block_screen || return
     adb shell am force-stop "$ALLOWED_PACKAGE" >/dev/null 2>&1
-    adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
-    sleep 2
     launch_from_launcher "$ALLOWED_PACKAGE"
     sleep 3
     if [ "$(top_package)" = "$ALLOWED_PACKAGE" ]; then
         log_pass "l'application reste au premier plan"
     else
         log_fail "l'application a été renvoyée à l'accueil alors qu'elle n'est pas bloquée"
+    fi
+    if [ "$(overlay_window_count)" -eq 0 ]; then
+        log_pass "écran 7 retiré par l'application non bloquée"
+    else
+        log_fail "écran 7 toujours affiché par-dessus l'application non bloquée"
+        ask_block_screen_button "Fermer"
     fi
 }
 
@@ -454,6 +529,7 @@ test_after_delay() {
     sleep "$delay_s"
     assert_blocked_after_launch "$BLOCKED_PACKAGE" launch_from_launcher
     log_info "En cas d'échec ici alors que l'essai 1 passait : suspecter l'exemption d'énergie (§13)."
+    ask_block_screen_button "Fermer"
 }
 
 main() {
@@ -474,6 +550,8 @@ main() {
     test_existing_task
     test_explicit_intent
     test_overlay
+    test_open_niumi
+    test_screen_off
     test_allowed_application
     test_after_delay
 
@@ -482,9 +560,8 @@ main() {
     [ "$stayon_set" -eq 1 ] && adb shell svc power stayon false >/dev/null 2>&1
     if [ "$failures" -eq 0 ]; then
         printf '  Tous les essais automatisables sont passés.\n'
-        printf '  Restent à vérifier à l'"'"'œil : le texte exact de l'"'"'overlay (§12.2) et le fait\n'
-        printf '  qu'"'"'il ne rende pas le téléphone inutilisable.\n'
-        printf '  Penser à terminer la session par un scan du boîtier (§3 : aucune autre sortie).\n'
+        printf '  Restent à vérifier à l'"'"'œil : le contenu de l'"'"'écran 7 (maquette 22) et son\n'
+        printf '  retrait au scan, qui termine la session (§3 : aucune autre sortie).\n'
         exit 0
     fi
     printf '  \033[31m%s essai(s) en échec.\033[0m\n' "$failures"

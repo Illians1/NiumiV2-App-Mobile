@@ -17,3 +17,16 @@ import com.niumi.database.blocking.BlockedPackagesState
 fun interface BlockingActivationListener {
     fun onBlockingActivated(state: BlockedPackagesState.Active)
 }
+
+/**
+ * Prévenu quand la projection cesse de bloquer quoi que ce soit (étape 39 de la refonte) : l'écran 7
+ * (SPEC_ANDROID §12.2) reste affiché jusqu'à « Fermer », et doit donc partir de lui-même quand le
+ * scan a libéré la session. « Plus rien de bloqué » couvre `Inactive` comme une libération dont
+ * `REMOVE_BLOCKING` a réussi (`Releasing` sans paquet effectif), qui précède l'état final.
+ *
+ * Appelé **une seule fois** par transition, et jamais sur une persistance illisible, qui ne lève pas
+ * le blocage (§13).
+ */
+fun interface BlockingDeactivationListener {
+    fun onBlockingDeactivated()
+}

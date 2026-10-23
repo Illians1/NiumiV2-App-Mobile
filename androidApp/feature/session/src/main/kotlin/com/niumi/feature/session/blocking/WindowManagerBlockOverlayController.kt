@@ -1,118 +1,84 @@
 package com.niumi.feature.session.blocking
 
+import android.accessibilityservice.AccessibilityService
 import android.content.Context
-import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
-import android.os.Handler
-import android.os.Looper
-import android.view.Gravity
-import android.view.WindowManager
-import android.widget.TextView
-import androidx.compose.ui.graphics.toArgb
-import com.niumi.designsystem.ui.theme.NiumiPalettes
-import com.niumi.feature.session.R
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.system.common.OperationResult
 
-private const val OVERLAY_DISPLAY_DURATION_MS = 3_000L
-private const val CORNER_RADIUS_DP = 12f
-private const val HORIZONTAL_PADDING_DP = 20
-private const val VERTICAL_PADDING_DP = 14
-private const val TOP_MARGIN_DP = 48
-
 /**
- * `TYPE_ACCESSIBILITY_OVERLAY` non focusable et non touchable (SPEC_ANDROID §12.2) : un
- * bandeau en haut d'écran, jamais plein écran, pour que « le téléphone reste utilisable »
- * pendant son affichage. Retrait automatique après 3 s, ou plus tôt sur [hide] explicite dès
- * que le package bloqué n'est plus au premier plan. Couleurs du
- * thème sombre (`NiumiPalettes.Dark` : surface, texte principal), le blocage n'ayant lieu que
- * pendant une session ; aucune couleur d'alerte : le blocage est le fonctionnement attendu. Remplacé
- * par l'écran 7 du design-plan à l'étape 39.
+ * Écran 7 dans une fenêtre du service d'accessibilité (SPEC_ANDROID §12.2, étape 39 de la refonte) :
+ * un `ComposeView` plein écran, sombre, touchable, **sans minuterie** — il reste jusqu'à « Fermer »
+ * ou « Ouvrir Niumi », ou jusqu'à ce que le service appelle [hide] (fin du blocage, extinction de
+ * l'écran, interruption, déliaison). Remplace le bandeau non touchable de 3 s des Lots 1 à 9.
  *
- * [context] **doit être le `AccessibilityService` lui-même**, jamais l'`@ApplicationContext` :
- * seul le service porte le token de fenêtre autorisant `TYPE_ACCESSIBILITY_OVERLAY`. Avec le
- * contexte d'application, `addView` lève `BadTokenException` (« token null is not valid »),
- * ce qui faisait planter l'application et désactiver le service (voir ETAPE-05.md).
+ * Chaque affichage a son [OverlayViewTreeOwner], détruit au retrait : rien ne survit d'un affichage
+ * à l'autre. Appelé sur le thread principal uniquement.
  */
-class WindowManagerBlockOverlayController(
+class WindowManagerBlockOverlayController internal constructor(
     private val context: Context,
+    private val host: OverlayWindowHost,
+    private val onOpenNiumi: () -> Unit,
 ) : BlockOverlayController {
-    private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val hideRunnable = Runnable { removeView() }
-    private var overlayView: TextView? = null
+    /** [service] : le service d'accessibilité lui-même, seul porteur du jeton de fenêtre. */
+    constructor(service: AccessibilityService, onOpenNiumi: () -> Unit) :
+        this(service, WindowManagerOverlayWindowHost(service), onOpenNiumi)
+
+    private class Shown(
+        val view: ComposeView,
+        val owner: OverlayViewTreeOwner,
+    )
+
+    private var shown: Shown? = null
+
+    /** Nom affiché ; un état Compose, pour qu'une autre application bloquée le remplace en place. */
+    private val appName = mutableStateOf<String?>(null)
 
     override val isShowing: Boolean
-        get() = overlayView != null
+        get() = shown != null
 
-    override fun show(displayName: String): OperationResult {
-        mainHandler.removeCallbacks(hideRunnable)
-        val existing = overlayView
-        if (existing != null) {
-            existing.text = context.getString(R.string.niumi_block_overlay_text, displayName)
-            mainHandler.postDelayed(hideRunnable, OVERLAY_DISPLAY_DURATION_MS)
-            return OperationResult.AlreadySatisfied
+    override fun show(appName: String?): OperationResult {
+        this.appName.value = appName
+        if (shown != null) return OperationResult.AlreadySatisfied
+        val owner = OverlayViewTreeOwner().apply { start() }
+        val view =
+            ComposeView(context).apply {
+                setViewTreeLifecycleOwner(owner)
+                setViewTreeSavedStateRegistryOwner(owner)
+                setViewTreeViewModelStoreOwner(owner)
+                setContent {
+                    NiumiTheme(dark = true) {
+                        BlockScreenContent(
+                            title = BlockScreenTexts.title(this@WindowManagerBlockOverlayController.appName.value),
+                            onClose = ::hide,
+                            onOpenNiumi = ::openNiumi,
+                        )
+                    }
+                }
+            }
+        val result = host.add(view)
+        if (result is OperationResult.Failure) {
+            owner.destroy()
+        } else {
+            shown = Shown(view, owner)
         }
-        val view = createOverlayView()
-        view.text = context.getString(R.string.niumi_block_overlay_text, displayName)
-        return try {
-            windowManager.addView(view, layoutParams())
-            overlayView = view
-            mainHandler.postDelayed(hideRunnable, OVERLAY_DISPLAY_DURATION_MS)
-            OperationResult.Success
-        } catch (error: WindowManager.BadTokenException) {
-            // Le système refuse la fenêtre (token invalide, politique OEM). Ne jamais laisser
-            // remonter : une exception ici tue l'application et fait désactiver le service.
-            OperationResult.Failure("ANDROID_OVERLAY_REJECTED", error)
-        }
+        return result
     }
 
     override fun hide() {
-        mainHandler.removeCallbacks(hideRunnable)
-        removeView()
+        val current = shown ?: return
+        shown = null
+        host.remove(current.view)
+        current.view.disposeComposition()
+        current.owner.destroy()
     }
 
-    private fun removeView() {
-        val view = overlayView ?: return
-        overlayView = null
-        try {
-            windowManager.removeView(view)
-        } catch (_: IllegalArgumentException) {
-            // Fenêtre déjà retirée par le système (service débranché, écran détruit) : rien à
-            // faire, et surtout pas propager — même raison que dans show().
-        }
-    }
-
-    private fun createOverlayView(): TextView {
-        val density = context.resources.displayMetrics.density
-        return TextView(context).apply {
-            setTextColor(NiumiPalettes.Dark.ink.toArgb())
-            setPadding(
-                (HORIZONTAL_PADDING_DP * density).toInt(),
-                (VERTICAL_PADDING_DP * density).toInt(),
-                (HORIZONTAL_PADDING_DP * density).toInt(),
-                (VERTICAL_PADDING_DP * density).toInt(),
-            )
-            background =
-                GradientDrawable().apply {
-                    setColor(NiumiPalettes.Dark.surface.toArgb())
-                    cornerRadius = CORNER_RADIUS_DP * density
-                }
-        }
-    }
-
-    private fun layoutParams(): WindowManager.LayoutParams {
-        val density = context.resources.displayMetrics.density
-        val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        val params =
-            WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                flags,
-                PixelFormat.TRANSLUCENT,
-            )
-        params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-        params.y = (TOP_MARGIN_DP * density).toInt()
-        return params
+    private fun openNiumi() {
+        hide()
+        onOpenNiumi()
     }
 }

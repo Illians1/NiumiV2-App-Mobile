@@ -41,6 +41,9 @@ class PersistedBlockedPackagesProjection
         @Volatile
         private var activationListener: BlockingActivationListener? = null
 
+        @Volatile
+        private var deactivationListener: BlockingDeactivationListener? = null
+
         override fun current(): BlockedPackagesState = state
 
         /**
@@ -53,6 +56,11 @@ class PersistedBlockedPackagesProjection
          */
         fun observeActivation(listener: BlockingActivationListener?) {
             activationListener = listener
+        }
+
+        /** Observateur de la transition « quelque chose de bloqué → plus rien » (étape 39, écran 7). */
+        fun observeDeactivation(listener: BlockingDeactivationListener?) {
+            deactivationListener = listener
         }
 
         /** Renvoie l'état retenu, qui reste le précédent si la persistance est illisible. */
@@ -77,7 +85,8 @@ class PersistedBlockedPackagesProjection
         /**
          * Seul écrivain de [state]. Notifie l'observateur quand, et seulement quand, la projection
          * devient active en partant d'inactive : `Active → Active` (changement de liste) et
-         * `Releasing → …` ne sont pas des débuts de blocage.
+         * `Releasing → …` ne sont pas des débuts de blocage. Notifie la fin du blocage quand la
+         * projection cesse de bloquer quoi que ce soit (étape 39).
          */
         private fun moveTo(next: BlockedPackagesState) {
             val previous = state
@@ -85,7 +94,17 @@ class PersistedBlockedPackagesProjection
             if (previous == BlockedPackagesState.Inactive && next is BlockedPackagesState.Active) {
                 activationListener?.onBlockingActivated(next)
             }
+            if (previous.blocksAnything() && !next.blocksAnything()) {
+                deactivationListener?.onBlockingDeactivated()
+            }
         }
+
+        private fun BlockedPackagesState.blocksAnything(): Boolean =
+            when (this) {
+                BlockedPackagesState.Inactive -> false
+                is BlockedPackagesState.Active -> packages.isNotEmpty()
+                is BlockedPackagesState.Releasing -> effectivePackages.isNotEmpty()
+            }
 
         fun remove(sessionId: String): OperationResult {
             val current = state

@@ -1,12 +1,21 @@
 package com.niumi.feature.session.blocking
 
 import android.accessibilityservice.AccessibilityService
+import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.PowerManager
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.content.ContextCompat
 import com.niumi.database.blocking.BlockedPackagesState
 import com.niumi.database.logging.TechnicalEventDetails
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.system.apps.PackageQuery
 import com.niumi.system.blocking.BlockAction
+import com.niumi.system.blocking.BlockScreenDismissal
 import com.niumi.system.blocking.BlockedPackagesProjection
 import com.niumi.system.blocking.BlockingDecision
 import com.niumi.system.blocking.BlockingProjectionRefresher
@@ -36,10 +45,14 @@ import javax.inject.Inject
  * d'abonnement vit dans [com.niumi.system.blocking.BlockingProjectionRefresher], prouvable en JVM
  * — un `AccessibilityService` ne s'instancie pas en test unitaire.
  *
- * L'overlay est construit ici, avec le service comme `Context`, et non injecté : seul le
+ * L'écran 7 est construit ici, avec le service comme `Context`, et non injecté : seul le
  * service porte le token de fenêtre autorisant `TYPE_ACCESSIBILITY_OVERLAY`
- * (voir [WindowManagerBlockOverlayController]). Même motif que `AlarmNfcScanCoordinator`,
+ * (voir [WindowManagerOverlayWindowHost]). Même motif que `AlarmNfcScanCoordinator`,
  * instancié à la main par `AlarmActivity` faute d'un contexte injectable pertinent.
+ *
+ * Depuis l'étape 39 de la refonte, l'écran 7 reste affiché jusqu'à « Fermer » ou « Ouvrir Niumi »
+ * (Q6) ; le service le retire aussi à la fin du blocage, à l'extinction de l'écran (sinon il
+ * reviendrait par-dessus l'écran de verrouillage), dans [onInterrupt] et dans [onUnbind].
  *
  * Le service annonce lui-même sa liaison au diagnostic (SPEC_ANDROID §13.1, 2026-10-15) par
  * [binding] : relié à [onServiceConnected], délié à [onUnbind] et [onDestroy]. Un réglage système
@@ -60,6 +73,9 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
     @Inject
     lateinit var binding: InMemoryAccessibilityServiceBinding
 
+    @Inject
+    lateinit var packageQuery: PackageQuery
+
     /**
      * `Dispatchers.Main.immediate` : le cache de la projection est lu par
      * `onAccessibilityEvent` sur le thread principal, l'y écrire aussi évite toute question de
@@ -69,6 +85,24 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
     private var overlayController: BlockOverlayController? = null
     private var lastBlockedPackage: String? = null
     private var lastBlockAtElapsedMillis: Long = 0L
+    private var screenOffReceiverRegistered = false
+
+    /**
+     * Lanceurs lus quand l'écran 7 paraît, pour [BlockScreenDismissal] : `null` si la lecture a
+     * échoué, auquel cas aucune application ne retire l'écran (le lanceur l'effacerait aussitôt).
+     */
+    private var homePackagesWhileShown: Set<String>? = null
+
+    /** Extinction de l'écran : l'écran 7 ne doit pas attendre le rallumage par-dessus le verrouillage. */
+    private val screenOffReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?,
+            ) {
+                overlayController?.hide()
+            }
+        }
 
     /**
      * Dernier package reçu, bloqué ou non — distinct de [lastBlockedPackage], qui ne retient que les
@@ -86,12 +120,22 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
         // Peut être rappelé à chaque reconnexion : ne recrée ni l'overlay ni l'abonnement si
         // l'un et l'autre tiennent déjà.
         if (overlayController == null) {
-            overlayController = WindowManagerBlockOverlayController(this)
+            overlayController = WindowManagerBlockOverlayController(this, onOpenNiumi = ::openNiumi)
+        }
+        if (!screenOffReceiverRegistered) {
+            // Diffusion système protégée : reçue malgré `RECEIVER_NOT_EXPORTED`.
+            ContextCompat.registerReceiver(
+                this,
+                screenOffReceiver,
+                IntentFilter(Intent.ACTION_SCREEN_OFF),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            screenOffReceiverRegistered = true
         }
         if (refreshScope == null) {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
             refreshScope = scope
-            scope.launch { refresher.observeDecisions(::onBlockingActivated) }
+            scope.launch { refresher.observeDecisions(::onBlockingActivated, ::onBlockingDeactivated) }
         }
     }
 
@@ -112,7 +156,7 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
      * Play (§12.3). `NiumiBlockingAccessibilityServiceSourceTest` l'interdit jusque dans ce
      * commentaire — les jetons proscrits y sont cherchés littéralement, texte compris.
      *
-     * Appelé depuis la coroutine du coordinateur, pas depuis le thread principal : l'overlay passe par
+     * Appelé depuis la coroutine du coordinateur, pas depuis le thread principal : l'écran 7 passe par
      * `WindowManager`, qui exige le thread principal. Le travail est donc reposté sur [refreshScope],
      * dont le dispatcher est `Main.immediate`.
      */
@@ -130,6 +174,14 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
         }
     }
 
+    /**
+     * Fin du blocage (étape 39) : le scan a libéré la session, l'écran 7 n'a plus rien à expliquer.
+     * Même repost sur le thread principal que [onBlockingActivated], et pour la même raison.
+     */
+    private fun onBlockingDeactivated() {
+        refreshScope?.launch { overlayController?.hide() }
+    }
+
     private fun applyDecisionFor(packageName: String) {
         when (
             val action =
@@ -140,18 +192,23 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
                 )
         ) {
             BlockAction.None -> {
-                // Volontairement sans `hide()`. SPEC_ANDROID §12.2 prévoit un retrait « dès que
-                // le package bloqué n'est plus au premier plan », mais Niumi renvoie lui-même à
-                // l'accueil : GLOBAL_ACTION_HOME provoque immédiatement un événement pour le
-                // launcher, non bloqué, qui effacerait l'overlay avant qu'il soit visible. Le
-                // retrait est donc porté par le minuteur de 3 s, la seconde règle de §12.2.
-                // Contradiction de spec signalée et tranchée dans ETAPE-05.md.
+                // Le lanceur, l'interface système et Niumi gardent l'écran 7 : GLOBAL_ACTION_HOME
+                // provoque aussitôt un événement du lanceur, qui l'effacerait avant qu'il soit lu
+                // (ETAPE-05.md). Toute autre application non bloquée le retire, un appel entrant
+                // en premier lieu (décision de Mehdi du 2026-10-22, étape 39 de la refonte).
+                val home = homePackagesWhileShown
+                if (overlayController?.isShowing == true &&
+                    home != null &&
+                    BlockScreenDismissal.dismisses(packageName, applicationContext.packageName, home)
+                ) {
+                    overlayController?.hide()
+                }
             }
 
             is BlockAction.GoHome -> {
                 if (shouldBlockNow(action.packageName)) {
                     performGlobalAction(GLOBAL_ACTION_HOME)
-                    showOverlay(action.displayName)
+                    showBlockScreen(action.displayName)
                     technicalEventLog.log(
                         TechnicalEventType.BLOCK_APPLIED,
                         detailsJson = TechnicalEventDetails.packageName(action.packageName),
@@ -179,13 +236,43 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Le retour à l'accueil a déjà eu lieu quand l'overlay échoue : le blocage reste effectif,
+     * Le retour à l'accueil a déjà eu lieu quand l'écran 7 échoue : le blocage reste effectif,
      * seule l'explication manque. On journalise plutôt que de laisser remonter (SPEC_ANDROID
      * §17 : `OEM_RESTRICTION_SUSPECTED` couvre un refus de la couche système).
+     *
+     * Écran éteint, rien n'est posé : un blocage peut être décidé ainsi (début différé rejoué sur
+     * le dernier paquet vu, §12.4), et l'extinction, déjà passée, ne retirerait plus l'écran 7, qui
+     * paraîtrait par-dessus l'écran de verrouillage au rallumage. Le retour à l'accueil suffit.
      */
-    private fun showOverlay(displayName: String) {
-        val result = overlayController?.show(displayName) ?: return
+    private fun showBlockScreen(appName: String) {
+        val power = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (power?.isInteractive == false) return
+        val result = overlayController?.show(appName) ?: return
         if (result is OperationResult.Failure) {
+            technicalEventLog.log(TechnicalEventType.OEM_RESTRICTION_SUSPECTED)
+        } else if (result == OperationResult.Success) {
+            homePackagesWhileShown = runCatching { packageQuery.homePackages() }.getOrNull()
+        }
+    }
+
+    /**
+     * « Ouvrir Niumi » de l'écran 7 : ouvre Niumi comme son icône du lanceur, sur un toucher de
+     * l'utilisateur (SPEC_ANDROID §12.2). Ce n'est pas un moyen de bloquer : le retour à l'accueil a
+     * déjà eu lieu. Un service d'accessibilité relié est exempté des restrictions de lancement en
+     * arrière-plan ; un refus du système est journalisé, jamais propagé.
+     */
+    private fun openNiumi() {
+        val launch = packageManager.getLaunchIntentForPackage(packageName)
+        if (launch == null) {
+            technicalEventLog.log(TechnicalEventType.OEM_RESTRICTION_SUSPECTED)
+            return
+        }
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        try {
+            startActivity(launch)
+        } catch (_: ActivityNotFoundException) {
+            technicalEventLog.log(TechnicalEventType.OEM_RESTRICTION_SUSPECTED)
+        } catch (_: SecurityException) {
             technicalEventLog.log(TechnicalEventType.OEM_RESTRICTION_SUSPECTED)
         }
     }
@@ -194,10 +281,18 @@ class NiumiBlockingAccessibilityService : AccessibilityService() {
         overlayController?.hide()
     }
 
-    override fun onUnbind(intent: android.content.Intent?): Boolean {
+    override fun onUnbind(intent: Intent?): Boolean {
         binding.markDisconnected()
         overlayController?.hide()
         overlayController = null
+        if (screenOffReceiverRegistered) {
+            try {
+                unregisterReceiver(screenOffReceiver)
+            } catch (_: IllegalArgumentException) {
+                // Déjà désenregistré par le système : rien à faire.
+            }
+            screenOffReceiverRegistered = false
+        }
         refreshScope?.cancel()
         refreshScope = null
         return super.onUnbind(intent)

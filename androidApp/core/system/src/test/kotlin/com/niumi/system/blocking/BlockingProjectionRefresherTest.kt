@@ -153,6 +153,21 @@ class BlockingProjectionRefresherTest {
             job.cancel()
         }
 
+    /** Étape 39 : la fin du blocage retire l'écran 7, par le même abonnement que l'activation. */
+    @Test
+    fun theDeactivationListenerIsCalledWhenAPublishedDecisionEndsTheBlocking() =
+        runTest(UnconfinedTestDispatcher()) {
+            var deactivations = 0
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Active(SESSION_ID, packages))
+            val job = launch { refresher.observeDecisions(deactivationListener = { deactivations++ }) }
+
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Inactive)
+            publisher.publish(SessionDtoFixtures.snapshotInState(SessionStateDto.COMPLETED, SESSION_ID, revision = 3))
+
+            assertThat(deactivations).isEqualTo(1)
+            job.cancel()
+        }
+
     private fun TestScope.launchObservation(listener: BlockingActivationListener? = null): Job =
         launch { refresher.observeDecisions(listener) }
 }

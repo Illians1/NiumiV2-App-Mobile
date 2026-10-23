@@ -148,6 +148,7 @@ Dans les maquettes, les carrés gris qui tiennent la place des icônes d'applica
 | Principal | Fond `#0E0E10`, texte `#FFFFFF` | Fond `#FAFAF8`, texte `#0E0E10` |
 | Secondaire au trait | Bord `#0E0E10` d'un pixel, texte encre | Bord `#FAFAF8` d'un pixel, texte blanc cassé |
 | Lien discret | Texte souligné `#5C5C60`, taille 14 | Texte souligné `#A9A9AE`, taille 14 |
+| Bouton texte (« Ouvrir Niumi », écran 7) | Texte `#0E0E10`, taille 16, sans soulignement | Texte `#FAFAF8`, taille 16, sans soulignement |
 | « Annuler » de la feuille de scan | Fond `#E8E8E4` | Fond `#34343A` |
 | Inactif | Fond `#E8E8E4`, texte `#5C5C60` (voir la remarque ci-dessous) | Fond `#2A2A2F`, texte `#74747B` |
 

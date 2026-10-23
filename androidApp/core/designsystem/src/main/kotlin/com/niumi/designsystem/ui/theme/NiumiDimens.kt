@@ -345,4 +345,22 @@ object NiumiDimens {
     val scanFailureGap = 12.dp
     val scanFailureButtonTop = 6.dp
     val scanFailureTextMaxWidth = 310.dp
+
+    // Écran 7 · Écran de blocage (étape 39), relevées dans la source de la maquette 22.
+
+    /**
+     * Logo de 54 de haut, puis 88 jusqu'au titre : 32 dans la maquette (marge de 20 sous le logo et
+     * écart de 12), texte descendu et logo remonté sur décision de Mehdi du 2026-10-23.
+     * [blockLogoTopOffset], ajouté au-dessus du bloc centré, règle la hauteur du logo.
+     */
+    val blockLogoTitleGap = 88.dp
+    val blockLogoTopOffset = 16.dp
+
+    /** 12 entre le titre et le texte ; titre de 300 au plus, texte de 290 au plus, centrés. */
+    val blockTitleBodyGap = 12.dp
+    val blockTitleMaxWidth = 300.dp
+    val blockBodyMaxWidth = 290.dp
+
+    /** 6 entre « Fermer » et « Ouvrir Niumi ». */
+    val blockButtonGap = 6.dp
 }

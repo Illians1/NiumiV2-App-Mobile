@@ -84,13 +84,14 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | T6 | Bloquer plus de 50 applications | Des développeurs signalent qu'au-delà de 50, plus aucune n'est bloquée. Apple ne l'a pas confirmé |
 | T7 | Le nombre d'applications quand une catégorie est choisie | Il ne peut pas toujours être calculé. Ce nombre apparaît à trois endroits : « 6 applications choisies » (écran 4), le « 6 » de la ligne « Applications bloquées » (accueil) et « 6 applications seront bloquées » (notification du soir). Sa formulation sur iPhone sera décidée après ce test |
 | T8 | La taille du logo dans l'emplacement d'icône de l'écran de blocage | L'emplacement est imposé par le système |
+| T13 | Le nom de l'application dans le titre de l'écran de blocage | Android affiche « L’application YouTube est bloquée » depuis le 23 octobre 2026 (`SPECIFICATION.md` §12). L'extension qui configure l'écran de blocage reçoit l'application ; il faut vérifier qu'elle en donne bien le nom affiché, faute de quoi l'iPhone garde « Cette application est bloquée » |
 
 ### Android
 
 | N° | Quoi | Pourquoi |
 | --- | --- | --- |
 | T9 | ~~Lister les applications installées~~ | **Résolu le 22 octobre 2026** (étape 37 du plan Android) : la liste vient d'une requête ciblée (`<queries>` sur les activités de lancement, SPEC_ANDROID §12.1) ; `QUERY_ALL_PACKAGES` n'est pas demandée |
-| T10 | Bloquer les applications par un service d'accessibilité | Approche courante, à valider avec les règles de Google Play |
+| T10 | Bloquer les applications par un service d'accessibilité | Approche courante, à valider avec les règles de Google Play. **22 octobre 2026** (étape 39 du plan Android) : la déclaration Play et le script de la vidéo décrivent l'écran 7, affiché jusqu'à « Fermer » ; l'acceptation par Google Play reste à obtenir |
 | T12 | ~~Garder Niumi en vie quand on le retire des applications récentes~~ | **Tranché le 19 octobre 2026** : sur Xiaomi, retirer Niumi des récents arrêtait le blocage. Une notification discrète reste affichée pendant toute la session, avec deux textes (avant et après le coucher) ; elle peut être écartée et ne revient pas. Niumi n'est plus caché des récents. « Tout effacer » demande toujours de verrouiller Niumi (`SPECIFICATION.md` §17, SPEC_ANDROID §12.5) |
 | T11 | ~~L'affichage plein écran de l'alarme~~ | **Tranché le 18 octobre 2026, sans objet** : Niumi n'utilise plus l'affichage plein écran. L'alarme sonne et une notification visible sur l'écran de verrouillage ouvre l'écran 10 |
 

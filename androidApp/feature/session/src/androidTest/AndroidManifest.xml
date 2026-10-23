@@ -3,7 +3,8 @@
     Manifeste de l'APK de test instrumenté uniquement (jamais fusionné dans l'application),
     même motif que :feature:ringing. `<queries>` permet à `startActivity` de résoudre
     `ACTION_SETTINGS` sur les appareils dont le manifeste cible restreint la visibilité des
-    packages (Android 11+).
+    packages (Android 11+). `ComponentActivity` : activité hôte des tests Compose de l'écran 7
+    (étape 39), comme dans :feature:ringing.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -12,5 +13,12 @@
             <action android:name="android.settings.SETTINGS" />
         </intent>
     </queries>
+
+    <application>
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Niumi.Dark" />
+    </application>
 
 </manifest>

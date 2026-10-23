@@ -24,7 +24,7 @@ Le tournage lui-même reste une action humaine, sur appareil réel, et condition
 | 6 | Écran 2 · Autorisations | Toutes les tuiles sont cochées, dont « Batterie » et « Verrouiller Niumi » (§13, depuis l’étape 36) | 10 s |
 | 7 | Activation d'une session | Confirmation, retour à l'accueil « session active » | 5 s |
 | 8 | Déclenchement de l'alarme | Écran verrouillé, sonnerie audible, notification sur l'écran de verrouillage, déverrouillage, tap sur la notification, écran de réveil | 15 s |
-| 9 | Tentative d'ouverture d'une application bloquée | Retour immédiat à l'accueil et overlay explicatif, texte lisible | 10 s |
+| 9 | Tentative d'ouverture d'une application bloquée | Retour immédiat à l'accueil et écran de blocage « L’application {Application} est bloquée » (depuis l'étape 39), texte lisible, puis toucher « Fermer » : retour à l'accueil du téléphone | 10 s |
 | 10 | Scan du boîtier associé | Alarme et blocage s'arrêtent en moins d'une seconde | 5 s |
 | 11 | Session terminée | Écran de fin de session | 5 s |
 

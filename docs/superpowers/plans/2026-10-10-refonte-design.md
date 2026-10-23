@@ -134,7 +134,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 37 | Q3 | Compteur « N applications choisies » = sélection validée ; T9 clos par `<queries>` | **Tranché le 2026-10-22** : oui. Même jour : limite de 50 par grisé et phrase, « +N » sur la carte, liste en pleine page au lieu de la feuille, section « Applications déjà choisies », indicateur de chargement, croix d'effacement de la recherche |
 | 38 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | **Tranché le 2026-10-22** : seulement feuille « Prêt à scanner » ouverte ; §10.4/§11.2 amendés. Même jour, pendant les essais : consigne « Rejoins ton Niumi Point » (remplace « Scanne ton Niumi Point », §14) pour les trois états d'attente ; après le scan, date, heure et chargement seuls ; date à 24 dp sous la marge du haut (60 dans la maquette) ; place du lien de secours réservée ; « Prêt à scanner » à l'encre |
 | 38 | Q5, E7 | Texte « Déverrouille ton téléphone… » (§4.4) ; deux textes « NFC coupé » | **Q5 tranché le 2026-10-18** : aucun texte « Déverrouille ton téléphone… », l'écran n'est jamais affiché verrouillé (Lot 9 du plan maître). E7 : chaque texte sur son écran |
-| 39 | Q6, T10 | Écran 7 affiché jusqu'à « Fermer » ; déclaration Play à refaire | Oui, dans la même étape |
+| 39 | Q6, T10 | Écran 7 affiché jusqu'à « Fermer » ; déclaration Play à refaire | **Tranché le 2026-10-22** : oui, sans minuterie ; retiré aussi à la fin du blocage, à l'extinction de l'écran (ajout, pour ne pas reparaître sur l'écran de verrouillage), quand une application non bloquée autre que le lanceur, l'interface système et Niumi passe devant (ajout après relecture : appel entrant), à l'interruption et à la déliaison ; déclaration et script refaits, T10 reste ouvert (acceptation Play) |
 | 40 | Q7 | Durées : design Non/1/2/5/10 ou mesure de l'étape 28 (2/5/10/15, 1 min jugée trop rapide) ? | Suivre le design (Non/1/2/5/10) sauf avis contraire ; la rangée accepte cinq pastilles |
 | 40 | D7 | Cinq sons dans la maquette, quatre dans l'APK | Les quatre existants ; cinquième ligne absente jusqu'à décision |
 | 40 | D5, D6 | Ligne accueil et mention « Volume max en… » quand « Non » | Nom du son seul ; mention masquée |
@@ -241,6 +241,10 @@ object ProblemBannerPolicy { fun bannerFor(nfc: NfcAvailability, pointCount: Int
 
 // :feature:session — com.niumi.feature.session.blocking (étape 39)
 interface BlockOverlayController { val isShowing: Boolean; fun show(): OperationResult; fun hide() }  // ComposeView, FLAG_NOT_FOCUSABLE seul, sans minuterie
+// Livré à l'étape 39 (2026-10-22), écarts : couture interne OverlayWindowHost { add(view); remove(view) } (le test instrumenté
+// ne peut pas obtenir le jeton du service, SPEC_ANDROID §19.2) ; WindowManagerBlockOverlayController(service, onOpenNiumi) ;
+// BlockingDeactivationListener + PersistedBlockedPackagesProjection.observeDeactivation ; titre « L’application {App} est bloquée » (displayName rendu à BlockAction.GoHome, décision du 2026-10-23) ;
+// NiumiTextButton (:core:designsystem) pour « Ouvrir Niumi »
 
 // :core:system — com.niumi.system.plan (étapes 43, 44, 52)
 data class WakePlan(val enabled: Boolean, val enabledIsoDays: Set<Int>, val wakeTimeIso: String, val bedtimeIso: String) {
@@ -533,10 +537,10 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** l'écran 7 sombre, touchable, qui reste affiché jusqu'à « Fermer » ou « Ouvrir Niumi ».
 
-- [ ] **Écrire `BlockScreenTextsTest`**, étendre le test du service, implémenter le contrôleur et le contenu.
-- [ ] **Mettre à jour la déclaration Play et le script vidéo.**
-- [ ] **Vérifier :** batterie standard ; `./gradlew :feature:session:connectedDebugAndroidTest`.
-- [ ] **Valider sur appareil, rédiger `ETAPE-39.md`.** SPEC_ANDROID §12.2, §12.3, §15.
+- [x] **Écrire `BlockScreenTextsTest`**, étendre le test du service, implémenter le contrôleur et le contenu. *(2026-10-22 : `BlockOverlayInstrumentedTest` remplacé par `BlockOverlayControllerTest` derrière `OverlayWindowHost` ; retrait à l'extinction de l'écran ajouté ; voir `ETAPE-39.md`.)*
+- [x] **Mettre à jour la déclaration Play et le script vidéo.**
+- [x] **Vérifier :** batterie standard ; `./gradlew :feature:session:connectedDebugAndroidTest`. *(1 562 JVM ; session 14/14 ; échecs designsystem et setup reproduits sur `HEAD`, voir le rapport.)*
+- [x] **Valider sur appareil, rédiger `ETAPE-39.md`.** SPEC_ANDROID §12.2, §12.3, §15. *(2026-10-23 : treize essais conformes sur Xiaomi / Android 16 / HyperOS ; retrait sur autre application ajouté après relecture ; écart logo-texte porté à 88 dp pendant les essais.)*
 
 **Tests manuels :** session en cours, ouvrir une application bloquée → retour à l'accueil du téléphone puis écran 7 ; « Fermer » → disparaît ; rouvrir → « Ouvrir Niumi » → accueil Niumi ; scanner → l'écran 7 ne réapparaît plus ; désactiver le service pendant l'affichage → l'écran disparaît.
 

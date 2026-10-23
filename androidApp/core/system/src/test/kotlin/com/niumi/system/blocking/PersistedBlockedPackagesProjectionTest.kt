@@ -136,4 +136,65 @@ class PersistedBlockedPackagesProjectionTest {
 
             assertThat(projection.refresh()).isEqualTo(BlockedPackagesState.Inactive)
         }
+
+    // Fin de blocage (étape 39 de la refonte) : l'écran 7 est retiré dès que plus rien n'est
+    // bloqué, que la projection y arrive par `remove`, par une libération rafraîchie ou par un état
+    // final. Une seule notification par transition, aucune sur une persistance illisible.
+
+    @Test
+    fun removingTheActiveSessionNotifiesTheDeactivationOnce() {
+        var deactivations = 0
+        projection.observeDeactivation { deactivations++ }
+        projection.apply(SESSION_ID, packages)
+
+        projection.remove(SESSION_ID)
+        projection.remove(SESSION_ID)
+
+        assertThat(deactivations).isEqualTo(1)
+    }
+
+    @Test
+    fun aReleaseThatLeavesNothingBlockedNotifiesTheDeactivation() =
+        runTest {
+            var deactivations = 0
+            projection.observeDeactivation { deactivations++ }
+            projection.apply(SESSION_ID, packages)
+
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Releasing(SESSION_ID, packages))
+            projection.refresh()
+            assertThat(deactivations).isEqualTo(0)
+
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Releasing(SESSION_ID, emptySet()))
+            projection.refresh()
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Inactive)
+            projection.refresh()
+
+            assertThat(deactivations).isEqualTo(1)
+        }
+
+    @Test
+    fun anUnreadablePersistenceNeverNotifiesTheDeactivation() =
+        runTest {
+            var deactivations = 0
+            projection.observeDeactivation { deactivations++ }
+            projection.apply(SESSION_ID, packages)
+
+            source.next = BlockedPackagesRead.Unreadable("json")
+            projection.refresh()
+
+            assertThat(deactivations).isEqualTo(0)
+        }
+
+    @Test
+    fun stayingInactiveNeverNotifiesTheDeactivation() =
+        runTest {
+            var deactivations = 0
+            projection.observeDeactivation { deactivations++ }
+
+            source.next = BlockedPackagesRead.Resolved(BlockedPackagesState.Inactive)
+            projection.refresh()
+            projection.remove(SESSION_ID)
+
+            assertThat(deactivations).isEqualTo(0)
+        }
 }

@@ -52,10 +52,24 @@ pas lire le contenu de fenêtre même s'il essayait.
 ## 4. Ce que le service fait de cette information
 
 En cas de correspondance avec la liste d'applications bloquées de la session active :
-`GLOBAL_ACTION_HOME`, puis affichage bref (3 secondes maximum) d'un overlay explicatif portant
-le texte imposé par la spec produit :
+`GLOBAL_ACTION_HOME`, puis affichage d'un écran explicatif (`TYPE_ACCESSIBILITY_OVERLAY`, plein
+écran, dessiné par Niumi) qui porte les textes de la spec produit :
 
-> {Nom de l'application} reste bloquée jusqu'au scan du boîtier.
+> L’application YouTube est bloquée
+>
+> Tu pourras l’ouvrir après avoir scanné ton Niumi Point.
+
+(le titre nomme l'application bloquée, d'après le libellé relevé quand l'utilisateur l'a choisie ;
+ce libellé ne quitte jamais l'appareil)
+
+et deux boutons, « Fermer » et « Ouvrir Niumi ». Depuis le 22 octobre 2026 (étape 39 de la refonte,
+qui remplace le bandeau de 3 secondes), cet écran reste affiché jusqu'à ce que l'utilisateur
+touche l'un des deux boutons : « Fermer » le retire et laisse l'utilisateur sur l'accueil du
+téléphone, « Ouvrir Niumi » le retire et ouvre Niumi. Il disparaît aussi de lui-même à la fin du
+blocage, à l'extinction de l'écran, quand une autre application non bloquée passe au premier plan
+(un appel entrant par exemple) et quand le service est désactivé. Il ne lit rien et ne
+transmet rien : c'est une fenêtre d'affichage, sans lecture de l'écran de dessous. Le téléphone
+reste utilisable : un toucher sur « Fermer » suffit.
 
 Le nom de package est journalisé localement dans l'événement technique `BLOCK_APPLIED`, seul
 événement du journal (200 entrées maximum, purement local) autorisé à porter un nom de package

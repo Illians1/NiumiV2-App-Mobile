@@ -12,11 +12,20 @@
         visibilité totale des paquets reste interdite (§14) : elle déclencherait une justification
         auprès de Google Play. Son nom n'est volontairement pas écrit ici, pour qu'un `grep` sur le
         manifeste fusionné reste une vérification fiable (critère de fin de l'étape 13).
+
+        Seconde requête, les lanceurs (étape 39 de la refonte) : l'écran de blocage reste affiché
+        quand le lanceur passe au premier plan et part pour toute autre application non bloquée
+        (§12.2). La liste des lanceurs (`homePackages()`) ne doit donc pas dépendre de ce qu'Android
+        laisse voir sans déclaration.
     -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
         </intent>
     </queries>
 

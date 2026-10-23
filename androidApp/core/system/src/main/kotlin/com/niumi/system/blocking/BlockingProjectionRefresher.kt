@@ -36,10 +36,15 @@ class BlockingProjectionRefresher
          * est posé sur la projection elle-même, seul point de passage de tout changement d'état :
          * la transition d'un début différé peut venir du rafraîchissement déclenché par la
          * publication du snapshot **ou** de l'exécution d'`APPLY_BLOCKING`, et les deux arrivent dans
-         * la même décision.
+         * la même décision. [deactivationListener] est prévenu quand plus rien n'est bloqué, pour
+         * retirer l'écran 7 (étape 39 de la refonte), par le même point de passage.
          */
-        suspend fun observeDecisions(activationListener: BlockingActivationListener? = null): Nothing {
+        suspend fun observeDecisions(
+            activationListener: BlockingActivationListener? = null,
+            deactivationListener: BlockingDeactivationListener? = null,
+        ): Nothing {
             projection.observeActivation(activationListener)
+            projection.observeDeactivation(deactivationListener)
             publisher.snapshot.collect { projection.refresh() }
         }
     }
