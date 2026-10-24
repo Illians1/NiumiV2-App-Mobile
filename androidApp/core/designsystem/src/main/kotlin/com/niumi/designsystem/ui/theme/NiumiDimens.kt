@@ -340,7 +340,7 @@ object NiumiDimens {
     val alarmButtonLinkGap = 6.dp
 
     /**
-     * Place du lien « Je n'ai pas accès à mon Niumi Point » sous le bouton de l'écran 10 : l'écart
+     * Place du lien « Je n'ai pas accès à mon Niumi Spot » sous le bouton de l'écran 10 : l'écart
      * de 6 et la zone de 44 du lien. Réservée avant l'arrivée du lien (étape 49, décision du
      * 2026-10-22) pour que l'écran tombe où la maquette le dessine.
      */

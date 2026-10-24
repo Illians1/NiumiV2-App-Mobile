@@ -28,10 +28,10 @@ Le passage au clair se fait au moment où la session se termine : écran de réu
 | Bordure | `#85858A` | Cartes au trait, cases de pièce, jours non cochés, pastilles de durée non choisies |
 | Séparateur | `#DCDCD8` | Lignes entre les rangées des listes |
 | Piste | `#E8E8E4` | Piste du cadran, bouton « Annuler » de la feuille de scan, bouton inactif (tous les écrans, D9) |
-| Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé », dont le bord des jours non cochés (maquette 13) ; poignée des feuilles du bas ; traits inactifs de l'indicateur de panneau (le bouton inactif de l'écran 4 de la maquette n'est pas repris, D9) |
+| Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé », dont le bord des jours non cochés (maquette 15) ; poignée des feuilles du bas ; traits inactifs de l'indicateur de panneau (le bouton inactif de l'écran 4 de la maquette n'est pas repris, D9) |
 | Tuile grise | `#EFEFEB` | Tuiles d'autorisation, rond de l'icône de scan, fond de la barre segmentée (23 octobre 2026) |
 | Case grisée | `#F1F1EE` | Emplacements des icônes d'applications quand l'accueil est grisé (« Réveil désactivé ») |
-| Ambre | `#E9A23B` | Interrupteur activé, poignée du réveil sur le cadran, point des Niumi Points, pastille du cadenas (écran 1), pastille de la coche d'une autorisation accordée (écran 2), soleil (écran 11) |
+| Ambre | `#E9A23B` | Interrupteur activé, poignée du réveil sur le cadran, point des Niumi Spots, pastille du cadenas (écran 1), pastille de la coche d'une autorisation accordée (écran 2), soleil (écran 11) |
 | Teinte ambre | `#FCF1DF` | Fond de la phrase « Bravo ! » (écran 11) |
 | Texte sur encre | `#FFFFFF` sur le bouton principal, `#FAFAF8` sur la carte noire | L'écart entre les deux ne se voit pas à l'œil |
 | Texte secondaire sur encre | `#A9A9AE` | Deuxième ligne de la carte « Réveil activé » |
@@ -51,9 +51,9 @@ Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F`
 | Bordure, texte désactivé | `#74747B` | Bord d'un pixel des cartes et des cases, libellés grisés pendant la session |
 | Piste | `#2A2A2F` | Piste du cadran, fond du bouton inactif, rond de l'icône de scan |
 | Fond désactivé | `#4A4A50` | Jours grisés pendant la session, poignée des feuilles du bas |
-| Bord de menu | `#3A3A40` | Menu « trois points », bord des jours non cochés grisés pendant la session (maquette 15) |
+| Bord de menu | `#3A3A40` | Menu « trois points », bord des jours non cochés grisés pendant la session (maquette 17) |
 | Bouton gris | `#34343A` | Bouton « Annuler » de la feuille de scan |
-| Ambre | `#E9A23B` | Partie parcourue du cadran, cadenas, point des Niumi Points, soulignement du mot signalé |
+| Ambre | `#E9A23B` | Partie parcourue du cadran, cadenas, point des Niumi Spots, soulignement du mot signalé |
 | Teinte du mot signalé | `#3D2C0E` | Fond du mot fautif dans la recopie |
 | Texte sur bouton principal | `#0E0E10` | Texte noir sur le bouton blanc cassé |
 | Voile | noir à 60 % | Derrière une feuille |
@@ -62,9 +62,9 @@ Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F`
 
 - Sur fond clair, l'ambre seul a un contraste d'environ 2:1. Il ne porte donc jamais de texte, et il est toujours posé sur l'encre ou réservé à un dessin. Règle validée par Mehdi le 19 octobre 2026 (`POINTS-OUVERTS.md`, D14).
 - Sur fond sombre, l'ambre atteint 8:1 à 9:1.
-- Un détail ambre par dessin : pastille du cadenas (écran 1, panneau 1), point du Niumi Point (tous les dessins), soleil (écran 11).
+- Un détail ambre par dessin : pastille du cadenas (écran 1, panneau 1), point du Niumi Spot (tous les dessins), soleil (écran 11).
 - Les icônes de navigation et d'action (chevron, flèche de retour, croix, réglages, coche, trois points, cadenas des rangées) restent noires en clair et blanc cassé en sombre, sans ambre.
-- Deux icônes du design font exception, et elles restent telles quelles (décision de Mehdi du 20 octobre 2026) : le cadenas de la carte « Blocage en cours », ambre au trait épais sur fond sombre (§5, images 15 et 18 à 27), et le point ambre de l'icône du Niumi Point (image 47), qui est le détail ambre de ce dessin. Aucune autre icône ne prend l'ambre sans décision écrite ici.
+- Deux icônes du design font exception, et elles restent telles quelles (décision de Mehdi du 20 octobre 2026) : le cadenas de la carte « Blocage en cours », ambre au trait épais sur fond sombre (§5, images 15 et 18 à 27), et le point ambre de l'icône du Niumi Spot (image 47), qui est le détail ambre de ce dessin. Aucune autre icône ne prend l'ambre sans décision écrite ici.
 - Troisième exception (décision de Mehdi du 22 octobre 2026) : sur l'écran 2, la coche d'une autorisation accordée est à l'encre dans une pastille ambre de 28 (coche de 16). L'ambre y est posé sous l'encre, comme le cadenas de l'écran 1 ; la coche garde un contraste de 8,9:1. Les icônes des tuiles restent à l'encre (l'essai ambre du 20 octobre est abandonné le même jour).
 
 ### Couleurs du logo
@@ -88,7 +88,7 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | 112 | 500 | Heure de l'écran de réveil. Interligne 1, interlettrage −4 |
 | 42 | 500 | Chiffres au centre du cadran (« 9 h 26 »). Interlettrage −1 |
 | 40 | 600 | Titre de l'écran 11 (« Debout à 7:04. »), valeur du milieu de la roue (« 15 min »). Interlettrage −1 |
-| 30 | 600 | Consigne de l'écran de réveil (« Scanne ton Niumi Point », « Ton alarme va reprendre. ») |
+| 30 | 600 | Consigne de l'écran de réveil (« Scanne ton Niumi Spot », « Ton alarme va reprendre. ») |
 | 30 | 500 | « Désactivé » au centre du cadran |
 | 28 | 600 | Titres d'écran : écrans 1, 3 bis et 4, « Réglages », « Aide », titres des pages d'aide. Valeur de la carte « Temps gagné » |
 | 26 | 600 | Titre de l'écran 2 (« Trois autorisations ») dans la maquette. Tranché le 19 octobre 2026 (D19) : l'app l'affiche en 28, comme les autres titres d'écran |

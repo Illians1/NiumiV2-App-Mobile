@@ -28,7 +28,7 @@ class NiumiComponentTextsTest {
     @Test
     fun theScanSheetIsQuotedWordForWord() {
         assertThat(NiumiComponentTexts.SCAN_SHEET_TITLE).isEqualTo("Prêt à scanner")
-        assertThat(NiumiComponentTexts.SCAN_SHEET_PHRASE).isEqualTo("Approche ton téléphone du Niumi Point")
+        assertThat(NiumiComponentTexts.SCAN_SHEET_PHRASE).isEqualTo("Approche ton téléphone du Niumi Spot")
         assertThat(NiumiComponentTexts.SCAN_SHEET_CANCEL).isEqualTo("Annuler")
     }
 }

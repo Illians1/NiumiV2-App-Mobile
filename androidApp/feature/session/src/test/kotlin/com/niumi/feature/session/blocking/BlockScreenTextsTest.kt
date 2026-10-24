@@ -26,7 +26,7 @@ class BlockScreenTextsTest {
 
     @Test
     fun theRestOfTheScreenIsQuotedWordForWord() {
-        assertThat(BlockScreenTexts.BODY).isEqualTo("Tu pourras l’ouvrir après avoir scanné ton Niumi Point.")
+        assertThat(BlockScreenTexts.BODY).isEqualTo("Tu pourras l’ouvrir après avoir scanné ton Niumi Spot.")
         assertThat(BlockScreenTexts.CLOSE).isEqualTo("Fermer")
         assertThat(BlockScreenTexts.OPEN_NIUMI).isEqualTo("Ouvrir Niumi")
     }

@@ -9,7 +9,7 @@ Vue d'ensemble : la page « Écrans validés » du canevas [Niumi · maquettes s
 
 ## Règles communes
 
-Ces règles viennent de tes réponses et valent pour les 12 écrans. Exemple utilisé partout : réveil à 7:00, coucher à 22:30, 6 applications, Niumi Point dans la salle de bain.
+Ces règles viennent de tes réponses et valent pour les 12 écrans. Exemple utilisé partout : réveil à 7:00, coucher à 22:30, 6 applications, Niumi Spot dans la salle de bain.
 
 | Sujet | Règle |
 | --- | --- |
@@ -18,24 +18,24 @@ Ces règles viennent de tes réponses et valent pour les 12 écrans. Exemple uti
 | Rappel | Notification 30 minutes avant le coucher, sans bouton |
 | Avant le coucher | Tout se modifie. Un réveil s'annule en décochant le jour. Un interrupteur général désactive tout le planning |
 | Du coucher au scan | Heures, jours et applications verrouillés. Le reste se modifie. Un scan avant l'alarme permet d'annuler la session |
-| Fin normale | Scan le matin d'un Niumi Point enregistré, n'importe lequel |
+| Fin normale | Scan le matin d'un Niumi Spot enregistré, n'importe lequel |
 | Sortie de secours | Long texte à recopier. Accents, majuscules, ponctuation et espaces en double ignorés. Elle compte comme un scan |
 | Exclu | Lancement anticipé, confirmation, essai à blanc, historique, compte |
 
 Les textes proposés tutoient l'utilisateur.
 
-Règle ajoutée le 8 octobre 2026 : le fonctionnement reste le même sur iPhone et sur Android, autant que possible. Exemple : la feuille de scan de l'iPhone ne peut pas contenir de lien, donc le lien « Je n'ai pas accès à mon Niumi Point » est placé avant le scan sur les deux.
+Règle ajoutée le 8 octobre 2026 : le fonctionnement reste le même sur iPhone et sur Android, autant que possible. Exemple : la feuille de scan de l'iPhone ne peut pas contenir de lien, donc le lien « Je n'ai pas accès à mon Niumi Spot » est placé avant le scan sur les deux.
 
 ## Écran 1 · Présentation du principe
 
 Deux panneaux expliquent la règle avant toute configuration. C'est le seul endroit où l'utilisateur apprend qu'une session démarre sans lui, donc on ne peut pas le passer.
 
-Maquette gardée pour le moment : « C » dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 1 · Présentation », choisie le 6 octobre 2026. Le logo niumi est en haut des deux panneaux. Le panneau 1 montre un téléphone dont les applications sont verrouillées. Le panneau 2 montre le téléphone approché du Niumi Point, le même dessin que sur l'écran 10. Un repère indique le panneau en cours.
+Maquette gardée pour le moment : « C » dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 1 · Présentation », choisie le 6 octobre 2026. Le logo niumi est en haut des deux panneaux. Le panneau 1 montre un téléphone dont les applications sont verrouillées. Le panneau 2 montre le téléphone approché du Niumi Spot, le même dessin que sur l'écran 10. Un repère indique le panneau en cours.
 
 | Panneau | Titre | Texte |
 | --- | --- | --- |
 | 1 | À l'heure de te coucher, tes distractions sont bloquées | À l'heure que tu choisis, Niumi bloque les applications que tu as désignées. |
-| 2 | Le matin, Niumi t'aide à te lever. | Ton alarme sonne jusqu'à ce que tu scannes le Niumi Point situé dans la pièce de ton choix. |
+| 2 | Le matin, Niumi t'aide à te lever. | Ton alarme sonne jusqu'à ce que tu scannes le Niumi Spot situé dans la pièce de ton choix. |
 
 Boutons : « Continuer » sur le panneau 1, « Configurer Niumi » sur le panneau 2. Un retour en arrière est possible entre les panneaux.
 
@@ -50,7 +50,7 @@ Maquette gardée pour le moment : « B4a » dans le canevas [Niumi · maquettes 
 | Alarme | Pour que ton réveil sonne à l'heure, même téléphone verrouillé. | Fenêtre du système | Rien à demander en principe pour une app de réveil. L'affichage plein écran peut être retiré par l'utilisateur |
 | Blocage des applications | Pour bloquer les applications que tu choisis, et seulement celles-là. | Fenêtre du système (Temps d'écran) | Service d'accessibilité à activer dans les réglages, avec guidage. Approche courante, à valider avec Google Play |
 | Notifications | Pour pouvoir te tenir informé de tout ce qui est important. | Fenêtre du système | Fenêtre du système |
-| NFC | Pour pouvoir scanner ton Niumi Point. | Rien à demander | À activer dans les réglages s'il est coupé |
+| NFC | Pour pouvoir scanner ton Niumi Spot. | Rien à demander | À activer dans les réglages s'il est coupé |
 
 Chaque tuile porte un bouton « Autoriser » et un petit bouton « ? », qui ouvre un guide en images pour cette autorisation. Une fois l'autorisation donnée, la tuile affiche une coche. Le bouton « Continuer », en bas de l'écran, reste grisé tant qu'il en manque une. En cas de refus, il ne se passe rien de particulier : la tuile n'est simplement pas affichée comme accordée (décision du 8 octobre 2026).
 
@@ -58,28 +58,28 @@ Quatre versions d'un état « refusée » avaient été proposées le 8 octobre 
 
 Les notifications ne peuvent pas être refusées sans bloquer la suite.
 
-## Écran 3 · Association du Niumi Point
+## Écran 3 · Association du Niumi Spot
 
-L'utilisateur scanne son Niumi Point une première fois, puis nomme la pièce où il le pose. Ce scan vérifie aussi que le NFC fonctionne et apprend le geste du matin.
+L'utilisateur scanne son Niumi Spot une première fois, puis nomme la pièce où il le pose. Ce scan vérifie aussi que le NFC fonctionne et apprend le geste du matin.
 
-Maquette gardée pour le premier temps, la consigne : « A3 » dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 3 · Association du Niumi Point », choisie le 6 octobre 2026. Le logo est en haut, le Niumi Point est dessiné seul et en grand, puis viennent la consigne, le bouton et le lien discret. Pour le deuxième temps, le scan, la maquette gardée est « Scan 3 », sur la même page, choisie le 7 octobre 2026. L'écran de la consigne s'assombrit et une feuille monte du bas sur toute la largeur du téléphone : « Prêt à scanner », une icône, « Approche ton iPhone du Niumi Point » et le bouton « Annuler ». Sur iPhone, cette feuille est dessinée par le système. Niumi n'y choisit que la phrase, donc sa largeur réelle sera celle que le système lui donne, à regarder sur un appareil. Sur Android, Niumi dessine lui-même la même feuille (décision du 7 octobre 2026), avec la phrase « Approche ton téléphone du Niumi Point ». Pour le troisième temps, le choix de la pièce, la maquette gardée est « Pièce 4b », sur la même page, choisie le 7 octobre 2026. Après le scan, une feuille monte du bas sur toute la largeur, par-dessus l'écran de la consigne assombri : « Où est ton Niumi Point ? », quatre grandes cases avec une icône (Salle de bain, Cuisine, Salon, Entrée), une case « Une autre pièce » sur toute la largeur, puis le bouton « Continuer ». « Une autre pièce » ouvre la saisie d'un nom libre dans la même feuille : la case devient un champ « Nom de la pièce », le clavier s'ouvre et la feuille remonte au-dessus de lui (décision du 7 octobre 2026, maquette « Pièce 4b · Une autre pièce » sur la même page). Il n'y a pas de temps de confirmation : « Continuer » mène directement à l'écran 3 bis (décision du 7 octobre 2026).
+Maquette gardée pour le premier temps, la consigne : « A3 » dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 3 · Association du Niumi Spot », choisie le 6 octobre 2026. Le logo est en haut, le Niumi Spot est dessiné seul et en grand, puis viennent la consigne, le bouton et le lien discret. Pour le deuxième temps, le scan, la maquette gardée est « Scan 3 », sur la même page, choisie le 7 octobre 2026. L'écran de la consigne s'assombrit et une feuille monte du bas sur toute la largeur du téléphone : « Prêt à scanner », une icône, « Approche ton iPhone du Niumi Spot » et le bouton « Annuler ». Sur iPhone, cette feuille est dessinée par le système. Niumi n'y choisit que la phrase, donc sa largeur réelle sera celle que le système lui donne, à regarder sur un appareil. Sur Android, Niumi dessine lui-même la même feuille (décision du 7 octobre 2026), avec la phrase « Approche ton téléphone du Niumi Spot ». Pour le troisième temps, le choix de la pièce, la maquette gardée est « Pièce 4b », sur la même page, choisie le 7 octobre 2026. Après le scan, une feuille monte du bas sur toute la largeur, par-dessus l'écran de la consigne assombri : « Où est ton Niumi Spot ? », quatre grandes cases avec une icône (Salle de bain, Cuisine, Salon, Entrée), une case « Une autre pièce » sur toute la largeur, puis le bouton « Continuer ». « Une autre pièce » ouvre la saisie d'un nom libre dans la même feuille : la case devient un champ « Nom de la pièce », le clavier s'ouvre et la feuille remonte au-dessus de lui (décision du 7 octobre 2026, maquette « Pièce 4b · Une autre pièce » sur la même page). Il n'y a pas de temps de confirmation : « Continuer » mène directement à l'écran 3 bis (décision du 7 octobre 2026).
 
-1. Consigne : « Pose ton Niumi Point là où tu veux te rendre en premier le matin, hors de ta chambre. » Bouton « Scanner le Niumi Point ».
-2. Scan. Sur iPhone, une fenêtre du système s'ouvre, avec le message « Approche ton iPhone du Niumi Point ». Sur Android, Niumi affiche la même feuille, avec « Approche ton téléphone du Niumi Point ».
-3. Nom de la pièce : « Où est ton Niumi Point ? » Choix proposés : Salle de bain, Cuisine, Salon, Entrée, ou « Une autre pièce » pour saisir un nom libre dans la même feuille. Bouton « Continuer », qui mène à l'écran 3 bis.
+1. Consigne : « Pose ton Niumi Spot là où tu veux te rendre en premier le matin, hors de ta chambre. » Bouton « Scanner le Niumi Spot ».
+2. Scan. Sur iPhone, une fenêtre du système s'ouvre, avec le message « Approche ton iPhone du Niumi Spot ». Sur Android, Niumi affiche la même feuille, avec « Approche ton téléphone du Niumi Spot ».
+3. Nom de la pièce : « Où est ton Niumi Spot ? » Choix proposés : Salle de bain, Cuisine, Salon, Entrée, ou « Une autre pièce » pour saisir un nom libre dans la même feuille. Bouton « Continuer », qui mène à l'écran 3 bis.
 
 | Cas d'échec | Texte | Action |
 | --- | --- | --- |
-| Pas un Niumi Point | Ce n'est pas un Niumi Point. | Réessayer |
-| Lecture ratée | Ton Niumi Point n'a pas pu être lu. Rapproche ton téléphone et réessaie. | Réessayer |
+| Pas un Niumi Spot | Ce n'est pas un Niumi Spot. | Réessayer |
+| Lecture ratée | Ton Niumi Spot n'a pas pu être lu. Rapproche ton téléphone et réessaie. | Réessayer |
 | NFC coupé (Android) | Le NFC est coupé sur ton téléphone. | Ouvrir les réglages |
-| Pas de Niumi Point | Lien discret : « Je n'ai pas encore de Niumi Point » | Ouvre la page web du produit, pour l'acheter |
+| Pas de Niumi Spot | Lien discret : « Je n'ai pas encore de Niumi Spot » | Ouvre la page web du produit, pour l'acheter |
 
-Plusieurs Niumi Points peuvent être enregistrés. Ce parcours sert aussi à en ajouter un depuis les réglages.
+Plusieurs Niumi Spots peuvent être enregistrés. Ce parcours sert aussi à en ajouter un depuis les réglages.
 
 ## Écran 3 bis · Temps pour sortir du lit
 
-Ajouté le 6 octobre 2026, juste après l'association du premier Niumi Point. Niumi demande à l'utilisateur combien de temps il met aujourd'hui pour sortir du lit. La réponse est un nombre de minutes, gardé sur le téléphone, sans compte.
+Ajouté le 6 octobre 2026, juste après l'association du premier Niumi Spot. Niumi demande à l'utilisateur combien de temps il met aujourd'hui pour sortir du lit. La réponse est un nombre de minutes, gardé sur le téléphone, sans compte.
 
 Elle sert à l'écran 11. Quand l'utilisateur se lève plus vite que ce qu'il avait déclaré, l'écran affiche un message du type « Bravo ! C'est 11 minutes de moins qu'avant Niumi. »
 
@@ -99,7 +99,7 @@ L'utilisateur désigne les applications qui seront bloquées chaque soir de sess
 | Élément | Contenu |
 | --- | --- |
 | Titre | Quelles applications veux-tu bloquer ? |
-| Texte | Elles seront inaccessibles de l'heure du coucher jusqu'au scan de ton Niumi Point. |
+| Texte | Elles seront inaccessibles de l'heure du coucher jusqu'au scan de ton Niumi Spot. |
 | Liste | Sur iPhone, la liste du système. Sur Android, les applications installées en grille d'icônes, avec une recherche et une coche sur celles choisies |
 | Compteur | 6 applications choisies |
 | Bouton | Continuer |
@@ -160,7 +160,7 @@ Maquette gardée pour le moment, pour l'état « Réveil prévu » : « Retenue 
 Les deux autres états sont gardés aussi, dans le même canevas :
 
 - « Réveil désactivé » : l'interrupteur est éteint et la carte indique « Réveil désactivé, aucun réveil ni blocage prévu ». Tout le reste est grisé, et le centre du cadran affiche « Réveil désactivé ». C'est aussi l'état d'arrivée à la fin de l'onboarding, juste après l'écran 4 (décision du 7 octobre 2026) : les valeurs par défaut sont affichées, tout reste modifiable, et aucun message d'aide n'est ajouté.
-- « Session 3 », pour la session en cours : le cadran n'a plus de poignées et affiche « Réveil dans 7 h 50 ». Une carte noire indique « Blocage en cours » et « Applications bloquées jusqu'au scan de ton Niumi Point », avec le lien « Annuler la session » (texte changé le 8 octobre 2026). Heures, jours et applications sont grisés, avec un cadenas. La sonnerie reste active.
+- « Session 3 », pour la session en cours : le cadran n'a plus de poignées et affiche « Réveil dans 7 h 50 ». Une carte noire indique « Blocage en cours » et « Applications bloquées jusqu'au scan de ton Niumi Spot », avec le lien « Annuler la session » (texte changé le 8 octobre 2026). Heures, jours et applications sont grisés, avec un cadenas. La sonnerie reste active.
 
 Le tableau ci-dessous décrit encore l'ancienne disposition en liste. Il reste à aligner sur cette maquette.
 
@@ -187,11 +187,11 @@ En dessous en retrait : Dans... | Ouvre le sélecteur d'heure |
 | Pas de réveil prévu | Sans réveil prévu | Tout est modifiable. |
 | Session en cours | De l'heure du coucher au scan | Heures, jours et applications grisés. Lien « Annuler la session » |
 
-Dans l'état « Session en cours », un champ grisé affiche au toucher : « Modifiable après avoir scanné ton Niumi Point. »
+Dans l'état « Session en cours », un champ grisé affiche au toucher : « Modifiable après avoir scanné ton Niumi Spot. »
 
-Décision du 8 octobre 2026 : la carte noire ne propose plus qu'une action, « Annuler la session ». Elle ouvre la feuille de scan, et le scan d'un Niumi Point annule la session. Il n'est plus possible de modifier une session en cours. La sortie de secours remplace le scan si aucun Niumi Point n'est à portée.
+Décision du 8 octobre 2026 : la carte noire ne propose plus qu'une action, « Annuler la session ». Elle ouvre la feuille de scan, et le scan d'un Niumi Spot annule la session. Il n'est plus possible de modifier une session en cours. La sortie de secours remplace le scan si aucun Niumi Spot n'est à portée.
 
-Le parcours gardé est dessiné dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Annuler la session », rangée du bas : l'accueil en session avec le lien « Annuler la session », la feuille de scan « Approche ton iPhone du Niumi Point pour annuler la session », puis l'accueil, revenu à l'état « Réveil désactivé », avec le message « Session annulée. Tes applications sont débloquées et ton réveil est désactivé. » (validé le 8 octobre 2026). Avant le scan, une étape identique sur iPhone et sur Android propose « Scanner le Niumi Point » ou le lien « Je n'ai pas accès à mon Niumi Point » (décision du 8 octobre 2026, parce que la feuille de scan de l'iPhone n'accepte pas de lien). On garde la version « A » de cette étape (8 octobre 2026) : une feuille du bas « Annuler la session ? », avec la phrase « Scanne ton Niumi Point pour annuler. Tes applications seront débloquées et ton réveil désactivé. », le bouton « Scanner le Niumi Point » et le lien de secours. Les deux maquettes qui séparaient iPhone et Android ne sont pas retenues. Quatre versions d'un choix « Annuler ou modifier » avaient été proposées le même jour ; aucune n'est gardée.
+Le parcours gardé est dessiné dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Annuler la session », rangée du bas : l'accueil en session avec le lien « Annuler la session », la feuille de scan « Approche ton iPhone du Niumi Spot pour annuler la session », puis l'accueil, revenu à l'état « Réveil désactivé », avec le message « Session annulée. Tes applications sont débloquées et ton réveil est désactivé. » (validé le 8 octobre 2026). Avant le scan, une étape identique sur iPhone et sur Android propose « Scanner le Niumi Spot » ou le lien « Je n'ai pas accès à mon Niumi Spot » (décision du 8 octobre 2026, parce que la feuille de scan de l'iPhone n'accepte pas de lien). On garde la version « A » de cette étape (8 octobre 2026) : une feuille du bas « Annuler la session ? », avec la phrase « Scanne ton Niumi Spot pour annuler. Tes applications seront débloquées et ton réveil désactivé. », le bouton « Scanner le Niumi Spot » et le lien de secours. Les deux maquettes qui séparaient iPhone et Android ne sont pas retenues. Quatre versions d'un choix « Annuler ou modifier » avaient été proposées le même jour ; aucune n'est gardée.
 
 « Annuler la session » lève le blocage et éteint l'interrupteur « Réveil activé » : plus aucune alarme ni blocage n'est prévu tant qu'on ne le rallume pas (décision du 8 octobre 2026). L'ancienne action « Modifier », qui débloquait les champs avant de reprendre la session, est abandonnée (8 octobre 2026).
 
@@ -222,7 +222,7 @@ Maquette gardée pour le moment : « B » dans le canevas [Niumi · maquettes si
 | Élément | Contenu |
 | --- | --- |
 | Titre | Cette application est bloquée |
-| Texte | Elle reviendra après avoir scanné ton Niumi Point |
+| Texte | Elle reviendra après avoir scanné ton Niumi Spot |
 | Bouton principal | Fermer |
 | Bouton secondaire | Ouvrir Niumi |
 
@@ -232,7 +232,7 @@ Le bouton « Ouvrir Niumi » mène à l'accueil. Vérifié le 6 octobre 2026 : s
 
 ## Écrans 8 et 9 · Sortie de secours
 
-La sortie de secours remplace le scan d'un Niumi Point, au prix d'un long texte à recopier. Elle compte comme un scan et a le même effet. Elle s'ouvre depuis l'accueil en session et depuis l'écran de réveil.
+La sortie de secours remplace le scan d'un Niumi Spot, au prix d'un long texte à recopier. Elle compte comme un scan et a le même effet. Elle s'ouvre depuis l'accueil en session et depuis l'écran de réveil.
 
 Maquettes gardées le 7 octobre 2026, dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écrans 8 et 9 · Sortie de secours ». Pour l'écran 8, « 8B » : la confirmation est une feuille qui monte du bas, par-dessus l'accueil en session le soir et par-dessus l'écran de réveil le matin. Pour l'écran 9, « 9A » : « Annuler » et le compteur en haut, la consigne, le texte modèle dans un encadré gris, le champ de saisie dessous, puis « Sortir de la session » au-dessus du clavier. En cas d'erreur, le premier mot qui diffère est surligné dans le modèle et souligné dans la saisie, avec le message « Un mot ne correspond pas. Il est signalé dans le texte. » (texte validé le 7 octobre 2026). Quand le texte est complet, le bouton devient noir.
 
@@ -240,8 +240,8 @@ Maquettes gardées le 7 octobre 2026, dans le canevas [Niumi · maquettes simple
 
 | Élément | Contenu |
 | --- | --- |
-| Titre | Sortir de la session sans scanner ton Niumi Point ? |
-| Texte, le soir ou la nuit | Recopier un long texte remplace le scan de ton Niumi Point. |
+| Titre | Sortir de la session sans scanner ton Niumi Spot ? |
+| Texte, le soir ou la nuit | Recopier un long texte remplace le scan de ton Niumi Spot. |
 | Texte, pendant l'alarme | L'alarme s'arrêtera et tes applications seront débloquées. Pour sortir, tu devras recopier un long texte. |
 | Bouton principal | Rester dans la session |
 | Bouton secondaire | Recopier le texte |
@@ -270,7 +270,7 @@ Le texte change à chaque sortie, pour qu'un raccourci clavier ne suffise pas. E
 
 Décision du 7 octobre 2026 : un seul texte sert dans tous les cas, le soir comme le matin. L'exemple ci-dessus ne convient donc plus, car il parle de « ce soir » et de « demain à 7:00 ». Texte validé le 7 octobre 2026, 197 caractères :
 
-> J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Point. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
+> J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
 
 Le texte change toujours à chaque sortie (règle confirmée le 7 octobre 2026). Quelques autres textes neutres de ce genre seront choisis plus tard.
 
@@ -280,39 +280,39 @@ Sur Android, le matin, la sonnerie baisse tant que la saisie avance et remonte s
 
 ## Écran 10 · Réveil
 
-L'écran ne dit qu'une chose : va scanner ton Niumi Point. Il n'a aucun bouton d'arrêt ni de report.
+L'écran ne dit qu'une chose : va scanner ton Niumi Spot. Il n'a aucun bouton d'arrêt ni de report.
 
-Maquette gardée pour le moment : « D2c » dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 10 · Réveil », choisie le 2 octobre 2026. De haut en bas : la date, l'heure en grand, un dessin du téléphone approché du Niumi Point, « Scanne ton Niumi Point » en gros, le bouton et le lien discret. L'écran n'indique pas la pièce, car plusieurs Niumi Points peuvent être enregistrés.
+Maquette gardée pour le moment : « D2c » dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 10 · Réveil », choisie le 2 octobre 2026. De haut en bas : la date, l'heure en grand, un dessin du téléphone approché du Niumi Spot, « Scanne ton Niumi Spot » en gros, le bouton et le lien discret. L'écran n'indique pas la pièce, car plusieurs Niumi Spots peuvent être enregistrés.
 
 | Élément | Contenu |
 | --- | --- |
 | Heure | L'heure actuelle, en grand, avec la date au-dessus |
-| Consigne | Scanne ton Niumi Point |
-| Bouton | « Scanner le Niumi Point », sur iPhone comme sur Android (décision du 8 octobre 2026). Il ouvre la feuille « Prêt à scanner » |
-| Lien discret | « Je n'ai pas accès à mon Niumi Point ». Il ouvre la sortie de secours |
+| Consigne | Scanne ton Niumi Spot |
+| Bouton | « Scanner le Niumi Spot », sur iPhone comme sur Android (décision du 8 octobre 2026). Il ouvre la feuille « Prêt à scanner » |
+| Lien discret | « Je n'ai pas accès à mon Niumi Spot ». Il ouvre la sortie de secours |
 
 | Cas d'échec | Texte |
 | --- | --- |
-| Pas un Niumi Point | Ce n'est pas un Niumi Point. |
-| Niumi Point non enregistré | Ce Niumi Point n'est pas enregistré. |
-| Lecture ratée | Ton Niumi Point n'a pas pu être lu. Rapproche ton téléphone et réessaie. |
-| NFC coupé (Android) | Le NFC est coupé. Active-le pour scanner ton Niumi Point. |
+| Pas un Niumi Spot | Ce n'est pas un Niumi Spot. |
+| Niumi Spot non enregistré | Ce Niumi Spot n'est pas enregistré. |
+| Lecture ratée | Ton Niumi Spot n'a pas pu être lu. Rapproche ton téléphone et réessaie. |
+| NFC coupé (Android) | Le NFC est coupé. Active-le pour scanner ton Niumi Spot. |
 
 Aucun de ces cas n'arrête l'alarme ni ne débloque les applications.
 
-Affichage d'un échec, maquettes en cours : quatre versions (A à D) dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 10 · Réveil », rangée du bas, proposées le 8 octobre 2026 avec le cas « Ce n'est pas un Niumi Point. » On garde « B4 » (8 octobre 2026) : une feuille du bas affiche le message, une phrase d'aide, le bouton « Réessayer » et le lien « Je n'ai pas accès à mon Niumi Point ». Elle est appliquée aux quatre cas du tableau ; pour le NFC coupé, le bouton est « Ouvrir les réglages ». Phrases d'aide validées le 8 octobre 2026, sans « Ton alarme continue. » devant : « Scanne un Niumi Point que tu as enregistré. », « Rapproche ton téléphone et réessaie. » et « Active-le pour scanner ton Niumi Point. » L'état iPhone « Ton alarme va reprendre. » est validé le 8 octobre 2026, pour l'iPhone seulement, et dessiné sur la même rangée. Vérifié le même jour dans la documentation d'Apple : sur iPhone, la feuille de scan est celle du système. Niumi peut en changer le texte pendant que le scan continue, ou la fermer en affichant un message d'erreur, mais ne peut pas y ajouter de bouton. B1 et B2 sont donc faisables dans la feuille du système ; B3 et B4 demandent sur iPhone une feuille dessinée par Niumi, affichée après la fermeture de celle du système.
+Affichage d'un échec, maquettes en cours : quatre versions (A à D) dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 10 · Réveil », rangée du bas, proposées le 8 octobre 2026 avec le cas « Ce n'est pas un Niumi Spot. » On garde « B4 » (8 octobre 2026) : une feuille du bas affiche le message, une phrase d'aide, le bouton « Réessayer » et le lien « Je n'ai pas accès à mon Niumi Spot ». Elle est appliquée aux quatre cas du tableau ; pour le NFC coupé, le bouton est « Ouvrir les réglages ». Phrases d'aide validées le 8 octobre 2026, sans « Ton alarme continue. » devant : « Scanne un Niumi Spot que tu as enregistré. », « Rapproche ton téléphone et réessaie. » et « Active-le pour scanner ton Niumi Spot. » L'état iPhone « Ton alarme va reprendre. » est validé le 8 octobre 2026, pour l'iPhone seulement, et dessiné sur la même rangée. Vérifié le même jour dans la documentation d'Apple : sur iPhone, la feuille de scan est celle du système. Niumi peut en changer le texte pendant que le scan continue, ou la fermer en affichant un message d'erreur, mais ne peut pas y ajouter de bouton. B1 et B2 sont donc faisables dans la feuille du système ; B3 et B4 demandent sur iPhone une feuille dessinée par Niumi, affichée après la fermeture de celle du système.
 
-Feuille de scan du matin : quatre versions dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 10 · Réveil », dernière rangée, proposées le 9 octobre 2026. La feuille « Prêt à scanner » monte par-dessus l'écran de réveil assombri, en sombre. Sur iPhone elle est dessinée par le système et Niumi n'y choisit que la phrase, donc les quatre versions ne diffèrent que par la phrase : 1, celle de l'écran 3, « Approche ton iPhone du Niumi Point » ; 2, avec le but, « Approche ton iPhone du Niumi Point pour arrêter l'alarme » ; 3, avec la pièce, « Approche ton iPhone du Niumi Point « Cuisine » » ; 4, la phrase de l'écran 3 puis, après 20 secondes sans lecture, un conseil, « Pose le haut de ton iPhone sur le Niumi Point ». Ces phrases et le délai de 20 secondes sont proposés par Claude. Sur Android, « ton iPhone » devient « ton téléphone », et l'endroit à poser dépend du modèle.
+Feuille de scan du matin : quatre versions dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 10 · Réveil », dernière rangée, proposées le 9 octobre 2026. La feuille « Prêt à scanner » monte par-dessus l'écran de réveil assombri, en sombre. Sur iPhone elle est dessinée par le système et Niumi n'y choisit que la phrase, donc les quatre versions ne diffèrent que par la phrase : 1, celle de l'écran 3, « Approche ton iPhone du Niumi Spot » ; 2, avec le but, « Approche ton iPhone du Niumi Spot pour arrêter l'alarme » ; 3, avec la pièce, « Approche ton iPhone du Niumi Spot « Cuisine » » ; 4, la phrase de l'écran 3 puis, après 20 secondes sans lecture, un conseil, « Pose le haut de ton iPhone sur le Niumi Spot ». Ces phrases et le délai de 20 secondes sont proposés par Claude. Sur Android, « ton iPhone » devient « ton téléphone », et l'endroit à poser dépend du modèle.
 
-Limite vérifiée le 9 octobre 2026 : sur iPhone, une lecture NFC dure 60 secondes au plus, après quoi il faut en lancer une nouvelle, et l'application doit rester visible au premier plan (présentation d'Apple « Introducing Core NFC », WWDC 2017). La durée n'est pas écrite dans les pages de documentation lues ce jour-là, qui mentionnent seulement une erreur « The reader session timed out ». Conséquence : si l'utilisateur touche « Scanner le Niumi Point » depuis son lit et met plus d'une minute à atteindre son Niumi Point, la feuille se ferme d'elle-même. Ce qui se passe alors est décidé au paragraphe suivant. À vérifier sur un iPhone : si Niumi peut rouvrir la feuille sans nouveau geste de l'utilisateur.
+Limite vérifiée le 9 octobre 2026 : sur iPhone, une lecture NFC dure 60 secondes au plus, après quoi il faut en lancer une nouvelle, et l'application doit rester visible au premier plan (présentation d'Apple « Introducing Core NFC », WWDC 2017). La durée n'est pas écrite dans les pages de documentation lues ce jour-là, qui mentionnent seulement une erreur « The reader session timed out ». Conséquence : si l'utilisateur touche « Scanner le Niumi Spot » depuis son lit et met plus d'une minute à atteindre son Niumi Spot, la feuille se ferme d'elle-même. Ce qui se passe alors est décidé au paragraphe suivant. À vérifier sur un iPhone : si Niumi peut rouvrir la feuille sans nouveau geste de l'utilisateur.
 
-Décisions du 9 octobre 2026. Phrase gardée pour la feuille de scan du matin : la 1, « Approche ton iPhone du Niumi Point », comme à l'écran 3 (« ton téléphone » sur Android). La maquette est ajoutée à la page « Écrans validés », après « Le réveil sonne ». Sur iPhone, quand la feuille se ferme toute seule après 60 secondes, Niumi affiche un message dédié, dans la feuille d'échec déjà gardée, avec « Réessayer » et le lien de secours. Sur Android, il n'y a pas de limite : la feuille reste ouverte jusqu'au scan ou jusqu'à « Annuler ». C'est une différence voulue entre les deux.
+Décisions du 9 octobre 2026. Phrase gardée pour la feuille de scan du matin : la 1, « Approche ton iPhone du Niumi Spot », comme à l'écran 3 (« ton téléphone » sur Android). La maquette est ajoutée à la page « Écrans validés », après « Le réveil sonne ». Sur iPhone, quand la feuille se ferme toute seule après 60 secondes, Niumi affiche un message dédié, dans la feuille d'échec déjà gardée, avec « Réessayer » et le lien de secours. Sur Android, il n'y a pas de limite : la feuille reste ouverte jusqu'au scan ou jusqu'à « Annuler ». C'est une différence voulue entre les deux.
 
-Texte du message dédié, en cours : quatre propositions de Claude sur la page « Écran 10 · Réveil », dernière rangée. 1, « Le temps de scan est écoulé. » puis « Relance le scan une fois devant ton Niumi Point. » ; 2, « Le scan s'est arrêté. » puis « Il dure une minute au plus. Relance-le devant ton Niumi Point. » ; 3, « Aucun Niumi Point détecté. » puis « Va jusqu'à ton Niumi Point, puis réessaie. » ; 4, « Pas de Niumi Point à portée. » puis « Le scan s'arrête après une minute. Réessaie quand tu y es. » Le choix est au paragraphe suivant.
+Texte du message dédié, en cours : quatre propositions de Claude sur la page « Écran 10 · Réveil », dernière rangée. 1, « Le temps de scan est écoulé. » puis « Relance le scan une fois devant ton Niumi Spot. » ; 2, « Le scan s'est arrêté. » puis « Il dure une minute au plus. Relance-le devant ton Niumi Spot. » ; 3, « Aucun Niumi Spot détecté. » puis « Va jusqu'à ton Niumi Spot, puis réessaie. » ; 4, « Pas de Niumi Spot à portée. » puis « Le scan s'arrête après une minute. Réessaie quand tu y es. » Le choix est au paragraphe suivant.
 
-Décidé le 9 octobre 2026 : on garde le texte 1, « Le temps de scan est écoulé. » puis « Relance le scan une fois devant ton Niumi Point. », avec le bouton « Réessayer » et le lien « Je n'ai pas accès à mon Niumi Point ». La maquette est ajoutée à la page « Écrans validés », rangée « Écran 10 ». Ce message sert pour tous les scans de l'iPhone qui dépassent 60 secondes : le matin, à l'annulation d'une session, à l'association et à l'ajout d'un Niumi Point. Seule la version du matin est dessinée. Hors session, la feuille sera claire, comme les autres ; cette version et celle de l'annulation restent à dessiner. À l'association et à l'ajout d'un Niumi Point, le lien de secours est remplacé par un lien « Annuler », qui referme la feuille sans relancer le scan (décision du 9 octobre 2026).
+Décidé le 9 octobre 2026 : on garde le texte 1, « Le temps de scan est écoulé. » puis « Relance le scan une fois devant ton Niumi Spot. », avec le bouton « Réessayer » et le lien « Je n'ai pas accès à mon Niumi Spot ». La maquette est ajoutée à la page « Écrans validés », rangée « Écran 10 ». Ce message sert pour tous les scans de l'iPhone qui dépassent 60 secondes : le matin, à l'annulation d'une session, à l'association et à l'ajout d'un Niumi Spot. Seule la version du matin est dessinée. Hors session, la feuille sera claire, comme les autres ; cette version et celle de l'annulation restent à dessiner. À l'association et à l'ajout d'un Niumi Spot, le lien de secours est remplacé par un lien « Annuler », qui referme la feuille sans relancer le scan (décision du 9 octobre 2026).
 
-Sur iPhone, l'alarme qui sonne est d'abord présentée par le système, avec une commande d'arrêt et un bouton qui ouvre Niumi. Cette commande ne peut pas être retirée, et les boutons physiques arrêtent aussi la sonnerie en cours. Niumi relance donc l'alarme tant que le scan n'a pas eu lieu. L'arrêt ne termine pas la session et les applications restent bloquées. L'écran affiche alors : « Ton alarme va reprendre. Scanne ton Niumi Point pour l'arrêter. »
+Sur iPhone, l'alarme qui sonne est d'abord présentée par le système, avec une commande d'arrêt et un bouton qui ouvre Niumi. Cette commande ne peut pas être retirée, et les boutons physiques arrêtent aussi la sonnerie en cours. Niumi relance donc l'alarme tant que le scan n'a pas eu lieu. L'arrêt ne termine pas la session et les applications restent bloquées. L'écran affiche alors : « Ton alarme va reprendre. Scanne ton Niumi Spot pour l'arrêter. »
 
 Relu le 8 octobre 2026. Un ingénieur d'Apple confirme sur le [forum des développeurs](https://developer.apple.com/forums/thread/797158) que tout bouton physique arrête l'alarme en cours, et que l'application est prévenue de l'arrêt. La [documentation d'AlarmKit](https://developer.apple.com/documentation/alarmkit/scheduling-an-alarm-with-alarmkit.md) indique que le système gère lui-même la commande d'arrêt de l'alerte. Risque à tester sur un iPhone : dans un [autre fil du forum](https://developer.apple.com/forums/thread/815064), un développeur signale sous iOS 26.2.1 que l'application n'est pas prévenue quand l'alarme est écartée d'un geste sur l'écran déverrouillé ou sur la bannière ; Apple n'a pas encore répondu sur le fond. La relance de l'alarme par Niumi dépend de cet avertissement.
 
@@ -344,21 +344,21 @@ Décidé le 9 octobre 2026 : on garde le dégradé 4 pour l'instant, validé tel
 
 Les réglages regroupent ce qu'on configure une fois. Tout ce qui décrit la prochaine nuit reste sur l'accueil.
 
-Maquettes gardées le 7 octobre 2026, dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 12 · Réglages », rangée du bas. Les réglages sont la liste simple « A » : une flèche de retour, le titre « Réglages » et quatre lignes, Niumi Points, Autorisations, Aide, À propos. Le temps pour sortir du lit avant Niumi n'y figure pas. Il se trouve dans l'aide (variante « A3 ») : l'écran « Aide » a une rubrique « Temps gagné », dont la page explique le calcul, affiche la valeur et propose « Modifier ». Il n'y a pas de lien depuis l'écran de réussite.
+Maquettes gardées le 7 octobre 2026, dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Écran 12 · Réglages », rangée du bas. Les réglages sont la liste simple « A » : une flèche de retour, le titre « Réglages » et quatre lignes, Niumi Spots, Autorisations, Aide, À propos. Le temps pour sortir du lit avant Niumi n'y figure pas. Il se trouve dans l'aide (variante « A3 ») : l'écran « Aide » a une rubrique « Temps gagné », dont la page explique le calcul, affiche la valeur et propose « Modifier ». Il n'y a pas de lien depuis l'écran de réussite.
 
 | Ligne | Contenu | Pendant une session |
 | --- | --- | --- |
-| Niumi Points | Liste des Niumi Points enregistrés, chacun avec sa pièce. « Ajouter un Niumi Point », « Renommer la pièce », « Supprimer » | Ajout et suppression possibles. Il doit toujours en rester au moins un |
+| Niumi Spots | Liste des Niumi Spots enregistrés, chacun avec sa pièce. « Ajouter un Niumi Spot », « Renommer la pièce », « Supprimer » | Ajout et suppression possibles. Il doit toujours en rester au moins un |
 | Autorisations | L'état des autorisations de l'écran 2. La toucher ouvre l'écran 2 pour les revoir ou les réparer. Ligne ajoutée le 7 octobre 2026 | Consultable |
 | Temps pour sortir du lit | N'est plus une ligne des réglages (décision du 7 octobre 2026). La durée déclarée à l'écran 3 bis se modifie dans Aide, rubrique « Temps gagné » | Modifiable (décision du 7 octobre 2026) |
-| Aide | Fonctionnement, Niumi Point perdu, sortie de secours, temps gagné. La rubrique « Temps gagné » explique le calcul, affiche le temps pour sortir du lit avant Niumi et propose « Modifier », qui ouvre la roue | Consultable |
+| Aide | Fonctionnement, Niumi Spot perdu, sortie de secours, temps gagné. La rubrique « Temps gagné » explique le calcul, affiche le temps pour sortir du lit avant Niumi et propose « Modifier », qui ouvre la roue | Consultable |
 | À propos | Version, mentions légales | Consultable |
 
-Plusieurs Niumi Points peuvent être enregistrés, et n'importe lequel termine une session. L'ajout et la suppression restent possibles pendant une session, mais il doit toujours rester au moins un Niumi Point. Supprimer le dernier est refusé avec « Tu dois garder au moins un Niumi Point. » La sonnerie et le volume sont sur l'accueil.
+Plusieurs Niumi Spots peuvent être enregistrés, et n'importe lequel termine une session. L'ajout et la suppression restent possibles pendant une session, mais il doit toujours rester au moins un Niumi Spot. Supprimer le dernier est refusé avec « Tu dois garder au moins un Niumi Spot. » La sonnerie et le volume sont sur l'accueil.
 
-Liste des Niumi Points, maquette gardée le 8 octobre 2026 : « B », dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Réglages · Niumi Points ». Chaque ligne montre le Niumi Point et sa pièce, avec un bouton « trois points » qui ouvre un menu « Renommer la pièce » et « Supprimer ». « Ajouter un Niumi Point » est la dernière ligne. Décisions du même jour : « Supprimer » demande une confirmation dans une feuille du bas, « Supprimer le Niumi Point « Cuisine » ? », avec « Supprimer » et « Annuler » ; « Renommer la pièce » rouvre la feuille des pièces de l'écran 3, la pièce actuelle sélectionnée, avec le bouton « Enregistrer ». Quand il ne reste qu'un Niumi Point, « Supprimer » est grisé dans le menu, avec « Tu dois garder au moins un Niumi Point. » Textes à valider : « N'importe lequel de tes Niumi Points arrête l'alarme. », « Pour l'utiliser de nouveau, il faudra le scanner et l'ajouter. » et « Enregistrer ».
+Liste des Niumi Spots, maquette gardée le 8 octobre 2026 : « B », dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Réglages · Niumi Spots ». Chaque ligne montre le Niumi Spot et sa pièce, avec un bouton « trois points » qui ouvre un menu « Renommer la pièce » et « Supprimer ». « Ajouter un Niumi Spot » est la dernière ligne. Décisions du même jour : « Supprimer » demande une confirmation dans une feuille du bas, « Supprimer le Niumi Spot « Cuisine » ? », avec « Supprimer » et « Annuler » ; « Renommer la pièce » rouvre la feuille des pièces de l'écran 3, la pièce actuelle sélectionnée, avec le bouton « Enregistrer ». Quand il ne reste qu'un Niumi Spot, « Supprimer » est grisé dans le menu, avec « Tu dois garder au moins un Niumi Spot. » Textes à valider : « N'importe lequel de tes Niumi Spots arrête l'alarme. », « Pour l'utiliser de nouveau, il faudra le scanner et l'ajouter. » et « Enregistrer ».
 
-Aide et À propos, maquettes gardées le 8 octobre 2026, dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Aide et À propos ». Pour une page de rubrique d'aide, « A » : une flèche de retour, le titre de la rubrique et des paragraphes de texte avec un intertitre chacun. La page « Fonctionnement », prise en exemple, reprend les phrases déjà validées des écrans 1 et 11 sous les intertitres « Le soir », « Le matin » et « Après le scan ». Pour « À propos », « B » : le logo en grand et la version au centre, puis deux liens en bas, « Mentions légales » et « Politique de confidentialité ». Ce second lien a été ajouté parce que les règles de l'App Store demandent un lien vers cette politique dans l'application elle-même. L'éditeur et le contact ne sont pas affichés. Reste à écrire : le contenu des rubriques « Niumi Point perdu » et « Sortie de secours ».
+Aide et À propos, maquettes gardées le 8 octobre 2026, dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Aide et À propos ». Pour une page de rubrique d'aide, « A » : une flèche de retour, le titre de la rubrique et des paragraphes de texte avec un intertitre chacun. La page « Fonctionnement », prise en exemple, reprend les phrases déjà validées des écrans 1 et 11 sous les intertitres « Le soir », « Le matin » et « Après le scan ». Pour « À propos », « B » : le logo en grand et la version au centre, puis deux liens en bas, « Mentions légales » et « Politique de confidentialité ». Ce second lien a été ajouté parce que les règles de l'App Store demandent un lien vers cette politique dans l'application elle-même. L'éditeur et le contact ne sont pas affichés. Reste à écrire : le contenu des rubriques « Niumi Spot perdu » et « Sortie de secours ».
 
 Ajouté le 9 octobre 2026 sur « À propos », en clair et en sombre : un troisième lien « Licences », sous les deux autres. Il ouvrira une page qui porte la mention de droit d'auteur et le texte de la licence de la police (voir « Police »). Le mot « Licences » et sa place sont validés le 9 octobre 2026. La page que le lien ouvre sera dessinée plus tard (décision du même jour).
 
@@ -379,16 +379,16 @@ Elle part 30 minutes avant chaque coucher et ne porte aucun bouton. La toucher o
 
 Il s'affiche en haut de l'accueil tant que le problème existe. Un seul bandeau à la fois, le plus grave d'abord.
 
-Depuis le 8 octobre 2026, le bandeau ne sert plus pour l'alarme, le blocage et les notifications : l'alerte d'autorisations le remplace (voir plus bas). Il reste prévu pour « NFC coupé » et « Aucun Niumi Point ». Les trois lignes concernées du tableau ne servent plus que pour leurs phrases, reprises dans l'alerte.
+Depuis le 8 octobre 2026, le bandeau ne sert plus pour l'alarme, le blocage et les notifications : l'alerte d'autorisations le remplace (voir plus bas). Il reste prévu pour « NFC coupé » et « Aucun Niumi Spot ». Les trois lignes concernées du tableau ne servent plus que pour leurs phrases, reprises dans l'alerte.
 
-Maquette gardée le 8 octobre 2026 : « A », dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Accueil · Bandeau de problème ». C'est un bandeau noir tout en haut de l'accueil, avec un symbole d'avertissement, la phrase du tableau et son lien souligné. Le cadran et l'icône des réglages descendent d'autant. Les deux cas sont dessinés : « NFC coupé », sur Android seulement, et « Aucun Niumi Point ». Ce second cas ne devrait pas arriver, puisque l'association est obligatoire au départ et que supprimer le dernier Niumi Point est refusé ; il est gardé par précaution.
+Maquette gardée le 8 octobre 2026 : « A », dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), page « Accueil · Bandeau de problème ». C'est un bandeau noir tout en haut de l'accueil, avec un symbole d'avertissement, la phrase du tableau et son lien souligné. Le cadran et l'icône des réglages descendent d'autant. Les deux cas sont dessinés : « NFC coupé », sur Android seulement, et « Aucun Niumi Spot ». Ce second cas ne devrait pas arriver, puisque l'association est obligatoire au départ et que supprimer le dernier Niumi Spot est refusé ; il est gardé par précaution.
 
 | Problème | Texte | Bouton |
 | --- | --- | --- |
 | Blocage non autorisé | Tes applications ne seront pas bloquées : l'autorisation a été retirée. | Rétablir |
 | Alarme non autorisée | Ton réveil ne pourra pas sonner. | Autoriser |
-| NFC coupé (Android) | Le scan du Niumi Point ne fonctionnera pas : le NFC est coupé. | Activer le NFC |
-| Aucun Niumi Point | Aucun Niumi Point n'est associé. | Associer un Niumi Point |
+| NFC coupé (Android) | Le scan du Niumi Spot ne fonctionnera pas : le NFC est coupé. | Activer le NFC |
+| Aucun Niumi Spot | Aucun Niumi Spot n'est associé. | Associer un Niumi Spot |
 | Notifications coupées | On risque de ne pas pouvoir te transmettre les informations nécessaires. | Activer |
 
 ### Alerte d'autorisations
@@ -407,15 +407,15 @@ Le même jour, Encre et Nuit sont retenues pour être creusées, sans préféren
 
 Piste du 8 octobre 2026, à confirmer : la palette suit l'état de l'accueil, et non le réglage clair ou sombre du téléphone. Avant l'heure du coucher, l'écran est clair (Encre 3) : la carte du réveil est noire avec un interrupteur ambre quand le réveil est activé, blanche quand il est désactivé. Une fois l'heure du coucher passée avec le réveil activé, l'écran passe en sombre (Nuit 3 bis). Les trois états sont dessinés sur la page « Palette de couleurs », rangée du bas. Pour le troisième, les couleurs de Nuit 3 bis sont appliquées à l'écran « Session en cours », qui n'a ni interrupteur ni poignées : l'ambre y est porté par le point qui avance sur le cadran, petit et sans contour, et par le cadenas de la carte, au trait épais (demandé le 8 octobre 2026). À noter : ce point ambre sans contour, posé sur le cadran clair, a un contraste de 2,1:1, sous le repère de 3:1. Décidé le même jour : la règle vaut pour tous les écrans, sombres tant qu'une session est en cours, clairs sinon. L'écran de réveil (écran 10) est donc sombre ; pendant que l'alarme sonne, c'est lui qui s'affiche, pas l'accueil. Reste à faire : appliquer la règle aux autres écrans, et choisir la couleur du bouton principal sur fond sombre.
 
-Bouton principal, décidé le 8 octobre 2026 : sur fond sombre, il est blanc cassé avec un texte noir ; sur fond clair, noir avec un texte blanc. Quatre paires avaient été dessinées sur l'écran de réveil, page « Palette de couleurs », deux dernières rangées ; c'est la paire 2 qui est gardée. Décidé le même jour : le point du Niumi Point est ambre dans tous les dessins de l'application, en clair comme en sombre.
+Bouton principal, décidé le 8 octobre 2026 : sur fond sombre, il est blanc cassé avec un texte noir ; sur fond clair, noir avec un texte blanc. Quatre paires avaient été dessinées sur l'écran de réveil, page « Palette de couleurs », deux dernières rangées ; c'est la paire 2 qui est gardée. Décidé le même jour : le point du Niumi Spot est ambre dans tous les dessins de l'application, en clair comme en sombre.
 
 Écrans de la session en sombre : 17 maquettes dessinées le 8 octobre 2026 dans le canevas [Niumi · maquettes simples](https://claude.ai/artifact/6AkcFF2m36f9qFkiURpqC5), aujourd'hui sur la page « Écrans validés ». Elles couvrent l'accueil pendant la session, l'annulation, l'écran de blocage, la sortie de secours, le réveil et ses échecs. Deux écrans y sont clairs parce que la session est finie : l'accueil après une annulation et l'écran de réussite. Couleurs validées le 9 octobre 2026 : les feuilles du bas sont en gris très sombre (#1B1B1F) avec un liseré (#2E2E33) ; dans la recopie, le mot signalé a un fond brun ambré (#3D2C0E), souligné d'ambre ; le bouton inactif a un fond gris sombre (#2A2A2F) et un texte gris (#74747B) ; le bouton « Annuler » de la feuille de scan est gris (#34343A) ; les jours grisés pendant la session ont un fond #4A4A50. Le logo sur fond noir a été ajouté au canevas pour l'écran de blocage.
 
-Réglages pendant une session, en sombre : neuf maquettes dessinées et validées le 9 octobre 2026, ajoutées à la page « Écrans validés » sous leurs versions claires. Ce sont les réglages, l'aide, une rubrique d'aide, « Temps gagné », « À propos » et les quatre états de la liste des Niumi Points. Les mises en page et les textes sont ceux des versions claires ; les couleurs sont celles des écrans sombres. Le menu « trois points » est en gris très sombre (#1B1B1F) avec un bord #3A3A40. Dans la feuille « Renommer la pièce », la case choisie est blanc cassé avec un texte noir.
+Réglages pendant une session, en sombre : neuf maquettes dessinées et validées le 9 octobre 2026, ajoutées à la page « Écrans validés » sous leurs versions claires. Ce sont les réglages, l'aide, une rubrique d'aide, « Temps gagné », « À propos » et les quatre états de la liste des Niumi Spots. Les mises en page et les textes sont ceux des versions claires ; les couleurs sont celles des écrans sombres. Le menu « trois points » est en gris très sombre (#1B1B1F) avec un bord #3A3A40. Dans la feuille « Renommer la pièce », la case choisie est blanc cassé avec un texte noir.
 
-Écrans hors session en clair : 28 maquettes dessinées le 8 octobre 2026, aujourd'hui sur la page « Écrans validés » du même canevas. Elles couvrent la mise en route (écrans 1 à 4), l'accueil avant le coucher, la sonnerie, le bandeau, l'alerte d'autorisations, les réglages, l'aide, À propos et les Niumi Points. Couleurs : fond blanc cassé (#FAFAF8), feuilles et cartes blanches, noir du logo (#0E0E10), ambre (#E9A23B). Les gris des maquettes noir et blanc sont repris presque tels quels, légèrement réchauffés. Un logo à fond transparent a été ajouté au canevas, parce que l'ancien avait un fond blanc qui se serait vu sur le blanc cassé. Sur ces écrans, l'ambre n'apparaît que là où il était déjà (points des Niumi Points) et sur l'accueil (interrupteur, poignée du réveil) : rien n'a été ajouté ailleurs.
+Écrans hors session en clair : 28 maquettes dessinées le 8 octobre 2026, aujourd'hui sur la page « Écrans validés » du même canevas. Elles couvrent la mise en route (écrans 1 à 4), l'accueil avant le coucher, la sonnerie, le bandeau, l'alerte d'autorisations, les réglages, l'aide, À propos et les Niumi Spots. Couleurs : fond blanc cassé (#FAFAF8), feuilles et cartes blanches, noir du logo (#0E0E10), ambre (#E9A23B). Les gris des maquettes noir et blanc sont repris presque tels quels, légèrement réchauffés. Un logo à fond transparent a été ajouté au canevas, parce que l'ancien avait un fond blanc qui se serait vu sur le blanc cassé. Sur ces écrans, l'ambre n'apparaît que là où il était déjà (points des Niumi Spots) et sur l'accueil (interrupteur, poignée du réveil) : rien n'a été ajouté ailleurs.
 
-Plus d'ambre sur les écrans clairs, décidé le 8 octobre 2026 : l'ambre vit dans les dessins, un détail par dessin. Quatre idées avaient été dessinées sur l'écran 1, page « Palette de couleurs » ; les trois autres (mot surligné, aplat ambre clair, progression) ne sont pas gardées. En pratique, un seul dessin n'avait pas encore d'ambre : celui du panneau 1 de l'écran 1, dont la pastille du cadenas devient ambre avec un cadenas noir. Les autres l'avaient déjà : le point du Niumi Point (écran 1 panneau 2, écran 3, écran 10) et le soleil de l'écran 11. Les icônes (autorisations, pièces, réglages) restent noires. Un essai rassemble ces dessins sur la même page ; il a été validé le 8 octobre 2026. Les icônes sont à l'étude : quatre idées sont dessinées sur l'écran 2, dernière rangée de la page (la coche « accordée » en ambre, des pastilles ambre, un détail ambre par icône, un carré noir au trait ambre) ; aucune n'est gardée. Décision du 8 octobre 2026 : pas d'ambre dans les icônes, elles restent noires.
+Plus d'ambre sur les écrans clairs, décidé le 8 octobre 2026 : l'ambre vit dans les dessins, un détail par dessin. Quatre idées avaient été dessinées sur l'écran 1, page « Palette de couleurs » ; les trois autres (mot surligné, aplat ambre clair, progression) ne sont pas gardées. En pratique, un seul dessin n'avait pas encore d'ambre : celui du panneau 1 de l'écran 1, dont la pastille du cadenas devient ambre avec un cadenas noir. Les autres l'avaient déjà : le point du Niumi Spot (écran 1 panneau 2, écran 3, écran 10) et le soleil de l'écran 11. Les icônes (autorisations, pièces, réglages) restent noires. Un essai rassemble ces dessins sur la même page ; il a été validé le 8 octobre 2026. Les icônes sont à l'étude : quatre idées sont dessinées sur l'écran 2, dernière rangée de la page (la coche « accordée » en ambre, des pastilles ambre, un détail ambre par icône, un carré noir au trait ambre) ; aucune n'est gardée. Décision du 8 octobre 2026 : pas d'ambre dans les icônes, elles restent noires.
 
 Cadran de l'écran 6 en sombre, en cours : une note ambre y est demandée le 8 octobre 2026, en plus du petit point qui marque l'heure. Quatre versions sont dessinées page « Palette de couleurs », dernière rangée : 1, un point ambre à l'heure du réveil ; 2, le bout de l'arc en ambre, côté réveil ; 3, les chiffres du centre en ambre ; 4, l'arc qui se remplit d'ambre au fil de la nuit. Aucune n'est gardée telle quelle : la piste d'un contour ambre est préférée. Quatre contours sont dessinés sur la rangée suivante : 1, un liseré tout autour de l'arc ; 2, un trait le long du bord extérieur de l'arc ; 3, un anneau fin autour du cadran entier ; 4, l'arc réduit à son contour. Aucun n'est gardé : les traits fins ne fonctionnent pas. Quatre notes plus douces sont dessinées sur la rangée suivante : une lueur ambre autour de l'arc, la piste du cadran en ambre sombre (#3B2B12), l'arc en dégradé du blanc cassé vers l'ambre côté réveil, une lueur au bout de l'arc. Aucune n'est gardée telle quelle. Piste suivante, proposée le même jour : un dégradé ambre qui suit le point de l'heure. Quatre versions sont dessinées sur les deux rangées du bas, à 23:10 puis à 3:00 pour voir le dégradé avancer : 1, un halo ambre autour du point, sur l'arc ; 2, une traîne ambre derrière le point ; 3, un dégradé du blanc cassé à l'ambre, du coucher jusqu'au point ; 4, une lueur autour du point, hors de l'arc. Dans les versions 1 à 3, le point devient noir pour rester visible sur l'ambre. Le halo (version 1) plaît, avec une demande : que l'ambre parte du coucher et aille jusqu'au point. C'est dessiné sur les trois rangées suivantes, à 23:10, 3:00 et 6:00, avec trois longueurs de fondu devant le point (celle du halo, une courte, une longue). Décidé le 8 octobre 2026 : on garde le fondu du halo, et l'arc qui devient presque entièrement ambre en fin de nuit est voulu. La page « Écrans validés » est mise à jour : accueil pendant la session, et les trois feuilles posées dessus (annulation, scan, sortie de secours). Le point de l'heure est noir (décidé le 8 octobre 2026, après un essai en blanc cassé dessiné sur les trois dernières rangées de la page « Palette de couleurs ») : 8,9:1 sur l'ambre, contre 2,1:1 pour le blanc cassé. Le cadran sombre est donc fixé : arc blanc cassé, ambre du coucher jusqu'au point, fondu du halo devant le point, point noir. Depuis la série des notes douces, le rendu est contrôlé par Claude dans un navigateur, hors du canevas.
 

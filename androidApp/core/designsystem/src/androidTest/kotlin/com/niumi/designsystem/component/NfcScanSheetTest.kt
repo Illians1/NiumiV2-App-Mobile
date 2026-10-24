@@ -177,11 +177,11 @@ class NfcScanSheetTest {
 
     private companion object {
         const val FAILURE_PANE = "Échec du scan"
-        const val EMERGENCY_LINK = "Je n’ai pas accès à mon Niumi Point"
+        const val EMERGENCY_LINK = "Je n’ai pas accès à mon Niumi Spot"
         val FAILURE =
             NfcScanSheetContent.Failure(
-                title = "Ce n’est pas un Niumi Point.",
-                help = "Scanne un Niumi Point que tu as enregistré.",
+                title = "Ce n’est pas un Niumi Spot.",
+                help = "Scanne un Niumi Spot que tu as enregistré.",
                 actionLabel = "Réessayer",
             )
     }

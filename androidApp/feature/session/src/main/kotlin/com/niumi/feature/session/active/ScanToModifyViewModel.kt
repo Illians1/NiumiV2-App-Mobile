@@ -160,9 +160,9 @@ class ScanToModifyViewModel
                     vibrationController.vibrateError()
                 }
 
-                // Étape 38 : la séparation « pas un Niumi Point » / « lecture ratée » ne vaut ici
+                // Étape 38 : la séparation « pas un Niumi Spot » / « lecture ratée » ne vaut ici
                 // qu'au journal ; cet écran, remplacé à l'étape 46, garde son seul texte d'échec.
-                ScanOutcome.NotANiumiPoint, ScanOutcome.Unreadable -> {
+                ScanOutcome.NotANiumiSpot, ScanOutcome.Unreadable -> {
                     technicalEventLog.log(TechnicalEventType.NFC_SCAN_INVALID)
                 }
 

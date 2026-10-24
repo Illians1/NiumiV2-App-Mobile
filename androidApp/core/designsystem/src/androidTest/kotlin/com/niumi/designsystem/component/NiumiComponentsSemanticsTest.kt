@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.niumi.designsystem.drawing.LockedPhoneDrawing
-import com.niumi.designsystem.drawing.PhoneNearPointDrawing
+import com.niumi.designsystem.drawing.PhoneNearSpotDrawing
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import org.junit.Rule
@@ -205,10 +205,10 @@ class NiumiComponentsSemanticsTest {
     @Test
     fun theDiscreetLinkIsAButtonOfFullTouchHeight() {
         var clicks = 0
-        show { NiumiDiscreetLink(text = "Je n'ai pas accès à mon Niumi Point", onClick = { clicks++ }) }
+        show { NiumiDiscreetLink(text = "Je n'ai pas accès à mon Niumi Spot", onClick = { clicks++ }) }
 
         composeRule
-            .onNodeWithText("Je n'ai pas accès à mon Niumi Point")
+            .onNodeWithText("Je n'ai pas accès à mon Niumi Spot")
             .assertRole(Role.Button)
             .assertTouchTarget()
             .performClick()
@@ -567,11 +567,11 @@ class NiumiComponentsSemanticsTest {
         show {
             Column {
                 LockedPhoneDrawing(contentDescription = "Téléphone verrouillé")
-                PhoneNearPointDrawing(contentDescription = "Téléphone et Niumi Point")
+                PhoneNearSpotDrawing(contentDescription = "Téléphone et Niumi Spot")
             }
         }
 
-        listOf("Téléphone verrouillé", "Téléphone et Niumi Point").forEach { label ->
+        listOf("Téléphone verrouillé", "Téléphone et Niumi Spot").forEach { label ->
             composeRule
                 .onNodeWithContentDescription(label)
                 .assertRole(Role.Image)

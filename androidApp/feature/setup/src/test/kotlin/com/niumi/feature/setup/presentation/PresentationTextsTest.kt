@@ -23,11 +23,11 @@ class PresentationTextsTest {
     fun theSecondPanelIsQuotedWordForWord() {
         assertThat(PresentationTexts.PANEL_2_TITLE).isEqualTo("Le matin, Niumi t’aide à te lever")
         assertThat(PresentationTexts.PANEL_2_BODY).isEqualTo(
-            "Ton alarme sonne jusqu’à ce que tu scannes le Niumi Point situé dans la pièce de ton choix.",
+            "Ton alarme sonne jusqu’à ce que tu scannes le Niumi Spot situé dans la pièce de ton choix.",
         )
         assertThat(PresentationTexts.CONFIGURE).isEqualTo("Configurer Niumi")
         assertThat(PresentationTexts.BACK).isEqualTo("Retour")
-        assertThat(PresentationTexts.PANEL_2_DRAWING).isEqualTo("Un téléphone approché d’un Niumi Point")
+        assertThat(PresentationTexts.PANEL_2_DRAWING).isEqualTo("Un téléphone approché d’un Niumi Spot")
         assertThat(PresentationTexts.PANEL_2_INDICATOR).isEqualTo("Panneau 2 sur 2")
     }
 

@@ -36,7 +36,7 @@ import javax.inject.Inject
  * l'activité : elles n'ont pas de source observable côté domaine, et les garder ici évite à
  * l'activité de recomposer elle-même un état déjà décrit par [AlarmUiState].
  *
- * **Feuille de scan (étape 38).** « Scanner le Niumi Point » ouvre « Prêt à scanner », la seule
+ * **Feuille de scan (étape 38).** « Scanner le Niumi Spot » ouvre « Prêt à scanner », la seule
  * feuille qui demande la lecture NFC (Q4, [readerModeRequested]) ; un échec la remplace et coupe la
  * lecture, « Réessayer » la rouvre. Le NFC coupé ouvre ou remplace par l'échec `NFC_DISABLED`, et
  * son retour à un état stable « activé » rend « Prêt à scanner » seul (SPEC_ANDROID §11.2,
@@ -79,7 +79,7 @@ class AlarmViewModel
             recompute()
         }
 
-        /** « Scanner le Niumi Point » ; « Réessayer » fait de même. */
+        /** « Scanner le Niumi Spot » ; « Réessayer » fait de même. */
         fun openScanSheet() {
             sheet = if (nfcAvailability == NfcAvailability.DISABLED) NFC_DISABLED_SHEET else ScanSheetState.Ready
             recompute()

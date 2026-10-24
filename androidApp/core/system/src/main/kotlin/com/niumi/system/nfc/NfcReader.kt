@@ -14,9 +14,9 @@ import com.niumi.system.common.OperationResult
  * `IOException`, `FormatException`) — un cas qu'aucune URI ne peut représenter. Consigné dans
  * ETAPE-04.md et répercuté sur le plan MVP.
  *
- * Étape 38 de la refonte : `onForeignTag` sépare le tag qui ne porte pas de Niumi Point (ni NDEF ni
- * URI, « Ce n'est pas un Niumi Point. ») de la lecture ratée (`IOException`, `FormatException`,
- * « Ton Niumi Point n'a pas pu être lu. »). Par défaut il rejoint `onUnreadable`, comme avant.
+ * Étape 38 de la refonte : `onForeignTag` sépare le tag qui ne porte pas de Niumi Spot (ni NDEF ni
+ * URI, « Ce n'est pas un Niumi Spot. ») de la lecture ratée (`IOException`, `FormatException`,
+ * « Ton Niumi Spot n'a pas pu être lu. »). Par défaut il rejoint `onUnreadable`, comme avant.
  */
 public interface NfcReader {
     public fun start(

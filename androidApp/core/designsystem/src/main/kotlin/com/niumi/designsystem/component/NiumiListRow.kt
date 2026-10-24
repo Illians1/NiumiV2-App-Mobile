@@ -134,7 +134,7 @@ private fun Modifier.separators(
 
 @Composable
 private fun RowsSample(state: NiumiFieldState) {
-    NiumiListRow(title = "Niumi Points", onClick = {}, state = state) { Text("2") }
+    NiumiListRow(title = "Niumi Spots", onClick = {}, state = state) { Text("2") }
     NiumiListRow(title = "Applications bloquées", onClick = {}, state = state) { Text("6") }
     NiumiListRow(title = "Aide", onClick = {}, state = state, bottomSeparator = true)
 }

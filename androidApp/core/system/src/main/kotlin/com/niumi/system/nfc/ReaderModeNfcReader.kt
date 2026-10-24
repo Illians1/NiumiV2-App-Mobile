@@ -55,7 +55,7 @@ public class ReaderModeNfcReader(
     // aucune hypothèse sur le thread appelant. Aucune exception ne doit s'échapper (§16) : un
     // tag physiquement illisible (déconnexion pendant la lecture, NDEF corrompu) devient
     // `onUnreadable()`, jamais une exception qui remonterait jusqu'au binder Android. Un tag lu
-    // sans NDEF ni URI ne porte pas de Niumi Point : `onForeignTag()` (étape 38).
+    // sans NDEF ni URI ne porte pas de Niumi Spot : `onForeignTag()` (étape 38).
     @Suppress("SwallowedException")
     private fun handleTag(
         tag: Tag,

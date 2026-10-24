@@ -13,7 +13,7 @@ object PresentationTexts {
     const val PANEL_2_TITLE = "Le matin, Niumi t’aide à te lever"
 
     const val PANEL_2_BODY =
-        "Ton alarme sonne jusqu’à ce que tu scannes le Niumi Point situé dans la pièce de ton choix."
+        "Ton alarme sonne jusqu’à ce que tu scannes le Niumi Spot situé dans la pièce de ton choix."
 
     const val CONTINUE = "Continuer"
 
@@ -24,7 +24,7 @@ object PresentationTexts {
 
     /** Libellés d'accessibilité des dessins. */
     const val PANEL_1_DRAWING = "Un téléphone dont les applications sont verrouillées"
-    const val PANEL_2_DRAWING = "Un téléphone approché d’un Niumi Point"
+    const val PANEL_2_DRAWING = "Un téléphone approché d’un Niumi Spot"
 
     /** Libellés d'accessibilité du repère à deux traits. */
     const val PANEL_1_INDICATOR = "Panneau 1 sur 2"

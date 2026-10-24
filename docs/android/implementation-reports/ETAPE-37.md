@@ -11,13 +11,13 @@ trois boutons). Cinquième étape du plan de refonte `docs/superpowers/plans/202
   - Il remplace le sélecteur en liste (`AppPickerScreen`, son ViewModel, ses textes et leurs
     tests, supprimés ; route `NiumiRoute.AppPicker` → `AppSelection`).
   - Titre, texte, carte centrée, mention du bas et « Continuer », inactif tant qu'aucune sélection
-    n'est validée (maquettes 10 et 12).
+    n'est validée (maquettes 12 et 14).
   - La carte montre la sélection **validée**, jamais les coches en cours (Q3). Avant le choix :
     six cases pointillées, « Aucune application choisie », pilule « Choisir les applications ».
     Ensuite : les vraies icônes, « N applications choisies » (singulier à 1), pilule « Modifier ».
   - Six cases au plus ; au-delà de six applications, cinq icônes puis « +N ». Sur un écran trop
     étroit, moins de cases (cinq à 360 dp, jugé bien par Mehdi).
-- **Page « Applications à bloquer »**, en pleine page (la maquette 11 dessine une feuille du bas,
+- **Page « Applications à bloquer »**, en pleine page (la maquette 13 dessine une feuille du bas,
   remplacée sur décision de Mehdi).
   - Titre, croix « Fermer sans enregistrer », champ « Rechercher » avec une croix qui le vide,
     grille de quatre colonnes (vraies icônes, coche dans une pastille encre), compteur, « Valider ».
@@ -70,7 +70,7 @@ l'étape 37.
 | Limite de 50 | Cases non cochées grisées et inactives, compteur « 50 applications choisies, c’est le maximum. » |
 | Carte | Six cases au plus, « +N » au-delà ; quatre icônes et « +N » à 360 dp, c'est bien |
 | États vides | Textes « Aucune application ne correspond. » et « Aucune application à bloquer sur ce téléphone. » |
-| Liste | En pleine page, croix à droite, au lieu de la feuille de la maquette 11 |
+| Liste | En pleine page, croix à droite, au lieu de la feuille de la maquette 13 |
 | Section | « Applications déjà choisies » en tête, puis « Toutes les applications » |
 | Chargement | Cercle seul, lu « Chargement des applications » par TalkBack |
 | Recherche | Croix « Effacer la recherche » |

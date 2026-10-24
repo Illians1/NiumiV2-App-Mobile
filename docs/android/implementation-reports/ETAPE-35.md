@@ -20,7 +20,7 @@ de départ : `e20449b` (étape 34).
   - `PresentationRoute` : le retour système suit la flèche sur le panneau 2. Sur le panneau 1, il
     n'est pas intercepté et quitte l'app.
 - **Dessins** (`:core:designsystem`, `com.niumi.designsystem.drawing`).
-  - `LockedPhoneDrawing` et `PhoneNearPointDrawing` : des `Canvas` qui reprennent la géométrie des
+  - `LockedPhoneDrawing` et `PhoneNearSpotDrawing` : des `Canvas` qui reprennent la géométrie des
     SVG des maquettes.
   - Socle commun `NiumiIllustration` : 342 × 240 au plus, proportions gardées, annoncé une fois
     comme image.
@@ -193,8 +193,8 @@ automatique activée).
   contenu reste visible, le reste défile. SPEC_ANDROID interdit de verrouiller l'orientation ; les
   maquettes ne prévoient que le portrait.
 - **Dessin de l'écran 10.** `SPECIFICATION.md` §4 dit que le panneau 2 et l'écran 10 ont le même
-  dessin, mais la maquette 28 trace une variante (`viewBox` 342 × 220, trait 3,5). L'étape 38
-  tranchera entre une variante de `PhoneNearPointDrawing` et un dessin unique.
+  dessin, mais la maquette 31 trace une variante (`viewBox` 342 × 220, trait 3,5). L'étape 38
+  tranchera entre une variante de `PhoneNearSpotDrawing` et un dessin unique.
 - **Cadenas du panneau 1** tracé à l'encre : correct en clair, seul thème de l'écran 1. En sombre,
   l'encre serait claire sur l'ambre ; à revoir si le dessin servait un jour en sombre.
 - **Espacement des voisins.** Les composants de 44 réservent désormais 48. L'accueil (étape 45),

@@ -27,7 +27,7 @@ import com.niumi.designsystem.component.NiumiPrimaryButton
 import com.niumi.designsystem.component.NiumiScreenScaffold
 import com.niumi.designsystem.component.NiumiTopBar
 import com.niumi.designsystem.drawing.LockedPhoneDrawing
-import com.niumi.designsystem.drawing.PhoneNearPointDrawing
+import com.niumi.designsystem.drawing.PhoneNearSpotDrawing
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiTheme
@@ -116,7 +116,7 @@ private fun PanelContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (isLastPanel) {
-                PhoneNearPointDrawing(contentDescription = panel.drawing)
+                PhoneNearSpotDrawing(contentDescription = panel.drawing)
             } else {
                 LockedPhoneDrawing(contentDescription = panel.drawing)
             }

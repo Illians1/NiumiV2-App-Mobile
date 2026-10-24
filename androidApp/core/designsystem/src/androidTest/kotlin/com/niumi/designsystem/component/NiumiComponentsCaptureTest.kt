@@ -89,12 +89,12 @@ class NiumiComponentsCaptureTest {
                 if (dark) {
                     NiumiBottomSheet(onDismiss = {}, title = "Annuler la session ?") {
                         Text(
-                            "Scanne ton Niumi Point pour annuler.",
+                            "Scanne ton Niumi Spot pour annuler.",
                             style = NiumiType.body16,
                             color = LocalNiumiPalette.current.textSecondary,
                         )
-                        NiumiPrimaryButton(text = "Scanner le Niumi Point", onClick = {})
-                        NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Point", onClick = {})
+                        NiumiPrimaryButton(text = "Scanner le Niumi Spot", onClick = {})
+                        NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Spot", onClick = {})
                     }
                 } else {
                     NiumiBottomSheet(onDismiss = {}, title = "Sonnerie", closeLabel = "Fermer") {
@@ -155,7 +155,7 @@ private fun ButtonsSample() {
     NiumiPrimaryButton(text = "Continuer", onClick = {})
     NiumiPrimaryButton(text = "Continuer", onClick = {}, enabled = false)
     NiumiOutlinedButton(text = "Recopier le texte", onClick = {})
-    NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Point", onClick = {})
+    NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Spot", onClick = {})
 }
 
 @Composable
@@ -203,7 +203,7 @@ private fun DaysSample(dark: Boolean) {
 private fun RowsSample(dark: Boolean) {
     val other = if (dark) NiumiFieldState.Locked else NiumiFieldState.Greyed
     Column {
-        NiumiListRow(title = "Niumi Points", onClick = {}) { Text("2") }
+        NiumiListRow(title = "Niumi Spots", onClick = {}) { Text("2") }
         NiumiListRow(title = "Autorisations", onClick = {}) { Text("3 sur 3") }
         NiumiListRow(title = "Aide", onClick = {}, bottomSeparator = true)
     }

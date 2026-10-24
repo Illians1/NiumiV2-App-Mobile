@@ -6,7 +6,7 @@ assemblage, et essais manuels sur appareil. Huitième étape du plan de refonte
 
 ## Ce qui est livré
 
-- **Feuille « Sonnerie »** (`:feature:session`, `ringtone/RingtoneSheet.kt`, maquettes 16 et 17,
+- **Feuille « Sonnerie »** (`:feature:session`, `ringtone/RingtoneSheet.kt`, maquettes 16 et 17 de l'ancienne numérotation,
   `design-plan/SPECIFICATION.md` §10), qui remplace l'écran 14 (Lot 7). Titre « Sonnerie » et croix
   « Fermer » (`NiumiBottomSheet`).
   - Section « Son » : les quatre sonneries de `NiumiRingtones` (Cloche, Énergique, Oiseaux, Piano),
@@ -119,7 +119,7 @@ déjà « Piano · Progressive · 2 min » d'une étape précédente.
 
 | Essai | Résultat |
 | --- | --- |
-| Ouverture de la feuille depuis l'écran 5, rendu | **OK** : fidèle aux maquettes 16/17 |
+| Ouverture de la feuille depuis l'écran 5, rendu | **OK** : fidèle aux maquettes 16/17 (ancienne numérotation) |
 | Choisir « Oiseaux » et la pastille « 5 min » | **OK** : mention « Volume max en 5 min » à jour |
 | Fermer, ligne de l'écran 5 | **OK** : « Oiseaux » / « Progressive · 5 min » |
 | Pourcentage du volume | **OK** : « 40 % » = 6/15 (`dumpsys audio`, `STREAM_ALARM`) |
@@ -138,7 +138,7 @@ lecteur d'écran n'a été dérouée à la main.
 
 Après la validation, Mehdi a redessiné la feuille et déposé un nouveau dossier `design-plan/maquettes`
 (61 maquettes, renumérotées ; la sonnerie passe en 18, 19 et 20). Conflit avec `SPECIFICATION.md` §10
-et la maquette 16 signalé, déviation confirmée. Décisions du même jour :
+et la maquette 16 (ancienne numérotation) signalé, déviation confirmée. Décisions du même jour :
 
 - **Interrupteur à la place de la pastille « Non »** : ligne « Sonnerie progressive » (16 au-dessus,
   48 de haut, séparateur), sous-ligne « Volume max en {durée} » quand il est allumé, interrupteur
@@ -152,7 +152,7 @@ et la maquette 16 signalé, déviation confirmée. Décisions du même jour :
   `VolumeRampDurations.DEFAULT_SECONDS` passe de 120 à 600 (remplace la décision du 2026-09-30).
   Une session déjà armée garde sa durée (`ArmSessionUseCaseTest` : sans préférence → 600).
 - Éteint : ni sous-ligne ni barre (maquette 20) ; la ligne de l'accueil n'affiche que le nom (D5).
-- **« Niumi Spot »** : les 61 maquettes renomment « Niumi Point » (42 sources). Renommage décidé,
+- **« Niumi Spot »** : les 61 maquettes renomment « Niumi Spot » (42 sources). Renommage décidé,
   consigné D22, à faire dans une étape dédiée ; rien ne change dans l'app ici. La renumérotation
   des maquettes n'est répercutée que pour la sonnerie (E13).
 

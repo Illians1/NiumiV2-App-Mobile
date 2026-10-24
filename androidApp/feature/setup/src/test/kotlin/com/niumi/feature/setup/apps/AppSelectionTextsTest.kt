@@ -14,7 +14,7 @@ class AppSelectionTextsTest {
     fun theScreenIsQuotedWordForWord() {
         assertThat(AppSelectionTexts.TITLE).isEqualTo("Quelles applications veux-tu bloquer ?")
         assertThat(AppSelectionTexts.BODY)
-            .isEqualTo("Elles seront inaccessibles de l’heure du coucher jusqu’au scan de ton Niumi Point.")
+            .isEqualTo("Elles seront inaccessibles de l’heure du coucher jusqu’au scan de ton Niumi Spot.")
         assertThat(AppSelectionTexts.NONE_CHOSEN).isEqualTo("Aucune application choisie")
         assertThat(AppSelectionTexts.CHOOSE).isEqualTo("Choisir les applications")
         assertThat(AppSelectionTexts.MODIFY).isEqualTo("Modifier")

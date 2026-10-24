@@ -100,7 +100,7 @@ private fun NiumiPrimaryButtonLightPreview() {
 @Composable
 private fun NiumiPrimaryButtonDarkPreview() {
     NiumiPreviewFrame(dark = true) {
-        NiumiPrimaryButton(text = "Scanner le Niumi Point", onClick = {})
+        NiumiPrimaryButton(text = "Scanner le Niumi Spot", onClick = {})
         NiumiPrimaryButton(text = "Terminer", onClick = {}, enabled = false)
     }
 }

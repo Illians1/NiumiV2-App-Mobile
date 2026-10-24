@@ -45,7 +45,7 @@ class NiumiBottomSheetTest {
                     title = "Annuler la session ?",
                     closeLabel = closeLabel,
                 ) { requestClose ->
-                    Text("Scanne ton Niumi Point pour annuler.")
+                    Text("Scanne ton Niumi Spot pour annuler.")
                     NiumiPrimaryButton(text = "Rester dans la session", onClick = requestClose)
                     NiumiOutlinedButton(text = "Valider", onClick = { contentActions++ })
                 }
@@ -62,7 +62,7 @@ class NiumiBottomSheetTest {
             .onNodeWithText("Annuler la session ?")
             .assertIsDisplayed()
             .assert(isHeading())
-        composeRule.onNodeWithText("Scanne ton Niumi Point pour annuler.").assertIsDisplayed()
+        composeRule.onNodeWithText("Scanne ton Niumi Spot pour annuler.").assertIsDisplayed()
     }
 
     @Test

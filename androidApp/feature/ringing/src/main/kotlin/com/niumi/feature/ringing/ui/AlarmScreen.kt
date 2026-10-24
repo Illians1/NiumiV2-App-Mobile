@@ -26,8 +26,8 @@ import com.niumi.designsystem.component.NfcScanSheetContent
 import com.niumi.designsystem.component.NiumiLoadingIndicator
 import com.niumi.designsystem.component.NiumiPrimaryButton
 import com.niumi.designsystem.component.NiumiScreenScaffold
-import com.niumi.designsystem.drawing.PhoneNearPointDrawing
-import com.niumi.designsystem.drawing.PhoneNearPointVariant
+import com.niumi.designsystem.drawing.PhoneNearSpotDrawing
+import com.niumi.designsystem.drawing.PhoneNearSpotVariant
 import com.niumi.designsystem.format.NiumiTimeFormat
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
@@ -40,13 +40,13 @@ import java.time.LocalDateTime
 
 /**
  * Écran 10 · Réveil (étape 38 ; `SPECIFICATION.md` §14, maquettes 28 à 33), toujours sombre : la
- * date, l'heure actuelle en 112, le téléphone approché du Niumi Point, « Rejoins ton Niumi Point »,
- * et le seul bouton « Scanner le Niumi Point », qui ouvre la feuille de scan. **Aucune action
+ * date, l'heure actuelle en 112, le téléphone approché du Niumi Spot, « Rejoins ton Niumi Spot »,
+ * et le seul bouton « Scanner le Niumi Spot », qui ouvre la feuille de scan. **Aucune action
  * d'arrêt ni de report** (SPEC_ANDROID §10.4, `AlarmScreenActionsTest`).
  *
  * Dessin et consigne sont centrés dans la place qui reste entre l'heure et le bouton ; sur un écran
  * trop court (paysage), le haut défile et le bouton reste visible. La place du lien « Je n'ai pas
- * accès à mon Niumi Point » est réservée sous le bouton jusqu'à son arrivée (étape 49), pour que
+ * accès à mon Niumi Spot » est réservée sous le bouton jusqu'à son arrivée (étape 49), pour que
  * l'écran tombe où la maquette 28 le dessine. La date commence 24 sous la marge du haut, au lieu
  * des 60 de la maquette (décisions du 2026-10-22).
  *
@@ -144,10 +144,10 @@ private fun InstructionBlock(instruction: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(NiumiDimens.alarmDrawingGap),
     ) {
-        PhoneNearPointDrawing(
+        PhoneNearSpotDrawing(
             contentDescription = AlarmTexts.DRAWING,
             modifier = Modifier.widthIn(max = NiumiDimens.alarmDrawingWidth),
-            variant = PhoneNearPointVariant.Alarm,
+            variant = PhoneNearSpotVariant.Alarm,
         )
         Text(
             text = instruction,

@@ -22,7 +22,7 @@ class RingingNotificationSpecsTest {
         assertThat(spec.channelId).isEqualTo(NiumiNotificationChannels.alarmRinging.id)
         assertThat(spec.category).isEqualTo(Notification.CATEGORY_ALARM)
         assertThat(spec.title).isEqualTo("Ton réveil Niumi sonne")
-        assertThat(spec.text).isEqualTo("Scanne ton Niumi Point pour l'arrêter et retrouver tes applis.")
+        assertThat(spec.text).isEqualTo("Scanne ton Niumi Spot pour l'arrêter et retrouver tes applis.")
         assertThat(spec.ongoing).isTrue()
         assertThat(spec.visibilityPublic).isTrue()
     }

@@ -15,9 +15,9 @@ kotlinx-serialization-json), sans rapport avec ces fichiers.
   clair et un aperçu sombre, et aucune dimension en dur hors `NiumiDimens` / `NiumiShapes` :
   - `NiumiPrimaryButton` : 56 de haut, encre ; inactif selon D9, sans action de clic ;
   - `NiumiOutlinedButton`, `NiumiDiscreetLink` (14, souligné, zone de 44) ;
-  - `NiumiPillButton` : pilule de choix, rôle radio, pour les durées de la maquette 16 ;
+  - `NiumiPillButton` : pilule de choix, rôle radio, pour les durées de la maquette 16 (ancienne numérotation) ;
   - `NiumiActionPill` : « Modifier » au trait, « Choisir les applications » pleine
-    (maquettes 10 et 12) ;
+    (maquettes 12 et 14) ;
   - `NiumiBottomSheet` : socle `ModalBottomSheet` de Material 3 1.4.0, pleine largeur, voile et
     liseré du thème, poignée de 40 × 4. En-tête titre + croix (22/600) ou titre seul (24/600).
     Le contenu reçoit `requestClose` ; une seule fermeture, quel qu'en soit le déclencheur ;
@@ -31,8 +31,8 @@ kotlinx-serialization-json), sans rapport avec ces fichiers.
 - **Trois états des champs de l'accueil** (`NiumiFieldState`), sur la pastille de jour et la
   rangée :
   - `Normal` ;
-  - `Greyed` : grisé mais modifiable (« Réveil désactivé », maquette 13) ;
-  - `Locked` : grisé et verrouillé (session, maquette 15). L'action du champ n'est jamais
+  - `Greyed` : grisé mais modifiable (« Réveil désactivé », maquette 15) ;
+  - `Locked` : grisé et verrouillé (session, maquette 17). L'action du champ n'est jamais
     appelée, TalkBack annonce « Verrouillé », et `onLockedClick` reste disponible pour le
     message de l'étape 45.
 - **`NiumiComponentTexts`** : « Verrouillé » et « niumi » (texte de remplacement du logo). Les
@@ -55,8 +55,8 @@ kotlinx-serialization-json), sans rapport avec ces fichiers.
 `enabled`, qui aurait rendu intouchable l'accueil « Réveil désactivé », alors que SPECIFICATION
 §9 l'y veut modifiable. Le bloc « Interfaces transverses » du plan est corrigé.
 2. **Le cadenas ambre reste.** VALEURS §2 disait « pas d'ambre dans les icônes », alors que §5 et
-   les maquettes 15 et 18 à 27 dessinent un cadenas ambre sur la carte « Blocage en cours », et
-   que l'icône du Niumi Point (maquette 47) porte un point ambre. La règle est précisée dans le
+   les maquettes 17 et 21 à 30 dessinent un cadenas ambre sur la carte « Blocage en cours », et
+   que l'icône du Niumi Spot (maquette 50) porte un point ambre. La règle est précisée dans le
    même changement : les icônes de navigation et d'action restent sans ambre ; ces deux icônes
    restent telles quelles (D14 précisé dans `POINTS-OUVERTS.md`). Les sept `ic_*` livrés ici ne
    changent pas.
@@ -174,8 +174,8 @@ Xiaomi 25080RABDG (`lapis`), Android 16 / API 36, HyperOS OS3.0.302.0.WPPEUXM.
 | Essai | Résultat |
 | --- | --- |
 | Tests instrumentés du module | **OK**, 37/37 |
-| Captures boutons, pilules, jours, rangées, cartes, haut d'écran, en clair et en sombre | **Conformes** aux maquettes 01, 13 à 16, 19, 23, 37 : couleurs par état, D9, `disabledBorder`, chevron ou cadenas, pastille d'interrupteur, logo dans les deux versions |
-| Captures des feuilles « Sonnerie » (clair) et « Annuler la session ? » (sombre) | **Défaut** puis **OK** : liseré déplacé (voir défaut 2), corrigé ; voile à 45 % et 60 %, poignée, titres, croix conformes aux maquettes 16 et 19 |
+| Captures boutons, pilules, jours, rangées, cartes, haut d'écran, en clair et en sombre | **Conformes** aux maquettes 01, 15 à 18, 22, 26, 40 : couleurs par état, D9, `disabledBorder`, chevron ou cadenas, pastille d'interrupteur, logo dans les deux versions |
+| Captures des feuilles « Sonnerie » (clair) et « Annuler la session ? » (sombre) | **Défaut** puis **OK** : liseré déplacé (voir défaut 2), corrigé ; voile à 45 % et 60 %, poignée, titres, croix conformes aux maquettes 18 et 22 |
 | Après la décision sur les marges : tests instrumentés du module | **OK**, 37/37 |
 | Après la décision sur les marges : captures des deux feuilles | **OK** : le contenu s'arrête juste au-dessus de la barre de navigation à trois boutons (48 dp), sans les 34 dp supplémentaires d'avant |
 | TalkBack (activé par Mehdi, page de composants temporaire retirée ensuite) | **OK** pour ce qui était visé : chaque pastille de jour est annoncée **en une seule fois** (jour et état ensemble, malgré les deux nœuds du relevé `uiautomator`), et « Verrouillé » est dit sur les pastilles et la rangée verrouillées. Les autres annonces (boutons, pilules, interrupteur, rangées, indicateur, logo) n'ont pas appelé de remarque de Mehdi |
@@ -195,11 +195,11 @@ Relecteur à contexte neuf, sur tout le changement, avant l'exécution sur appar
 
 Constats mineurs reportés, à reprendre avec l'écran qui en a besoin :
 
-- rangée de liste : la maquette 37 ajoute 10 de marge verticale au minimum de 64 (un titre sur
+- rangée de liste : la maquette 40 ajoute 10 de marge verticale au minimum de 64 (un titre sur
   deux lignes toucherait les séparateurs) ;
-- écart entre la valeur et l'icône : 6 sur les rangées de l'accueil (maquettes 13 à 16), 8
+- écart entre la valeur et l'icône : 6 sur les rangées de l'accueil (maquettes 15 à 18), 8
   ailleurs ;
-- marge du bas de la feuille figée à 34 ; la maquette 19 utilise 22 ;
+- marge du bas de la feuille figée à 34 ; la maquette 22 utilise 22 ;
 - espaces de « 9 h 26 », « 56 min » : espaces ordinaires, donc coupables en fin de ligne ;
   l'espace insécable est à décider ;
 - `NiumiLogo` déduit le thème par égalité avec `NiumiPalettes.Dark` ;

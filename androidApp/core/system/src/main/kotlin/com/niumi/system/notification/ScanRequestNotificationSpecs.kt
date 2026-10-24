@@ -13,7 +13,7 @@ object ScanRequestNotificationSpecs {
             channelId = NiumiNotificationChannels.sessionAwaitingScan.id,
             category = Notification.CATEGORY_ALARM,
             title = "Ton réveil Niumi est passé",
-            text = "Scanne ton Niumi Point pour retrouver tes applis.",
+            text = "Scanne ton Niumi Spot pour retrouver tes applis.",
             ongoing = true,
             actions = emptyList(),
         )

@@ -27,15 +27,15 @@ Cinq listes :
 | D11 | Écran 3, choix de la pièce | « Continuer » est-il grisé tant qu'aucune pièce n'est choisie ? Rien n'est dit |
 | D12 | ~~Ponctuation des titres~~ | **Tranché le 20 octobre 2026** : les deux titres de l'écran 1 s'écrivent sans point final, comme les autres titres de l'app (`SPECIFICATION.md` §4) |
 | D13 | ~~Apostrophes~~ | **Tranché le 19 octobre 2026** : apostrophe typographique (’) dans les textes de l'app. À la recopie depuis la spécification, l'apostrophe droite devient ’ |
-| D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » **Précisé le 20 octobre 2026** : « pas d'ambre dans les icônes » vise les icônes de navigation et d'action ; le cadenas ambre de la carte « Blocage en cours » et le point ambre de l'icône du Niumi Point restent tels quels (`VALEURS-DE-DESIGN.md` §2) **Exception ajoutée le 22 octobre 2026** : coche à l'encre dans une pastille ambre sur les autorisations accordées de l'écran 2 (`VALEURS-DE-DESIGN.md` §2) |
+| D14 | ~~Règle de l'ambre~~ | **Tranché le 19 octobre 2026** : règle validée telle quelle, « Sur fond clair, l'ambre ne porte jamais de texte et reste posé sur l'encre ou dans un dessin. » **Précisé le 20 octobre 2026** : « pas d'ambre dans les icônes » vise les icônes de navigation et d'action ; le cadenas ambre de la carte « Blocage en cours » et le point ambre de l'icône du Niumi Spot restent tels quels (`VALEURS-DE-DESIGN.md` §2) **Exception ajoutée le 22 octobre 2026** : coche à l'encre dans une pastille ambre sur les autorisations accordées de l'écran 2 (`VALEURS-DE-DESIGN.md` §2) |
 | D15 | Écran 11 | Le soleil en dégradé est gardé « pour l'instant ». L'écran peut encore changer |
-| D16 | Règles communes | Dans la liste de ce qui est exclu de l'app, que vise exactement le mot « confirmation » ? L'app a depuis des confirmations (écran 8, suppression d'un Niumi Point) |
+| D16 | Règles communes | Dans la liste de ce qui est exclu de l'app, que vise exactement le mot « confirmation » ? L'app a depuis des confirmations (écran 8, suppression d'un Niumi Spot) |
 | D17 | Accueil | Que se passe-t-il quand plus aucun jour n'est coché ? L'ancien écran 5 affichait « Choisis au moins un jour. », mais cet écran est supprimé et rien n'est dit pour l'accueil |
 | D18 | Écran 2 | Sur une tuile accordée, la maquette retire le bouton « ? » en même temps que « Autoriser ». Le guide doit-il rester accessible ? **Sans objet pour l'instant** (20 octobre 2026) : le guide est reporté avec M1, aucune tuile n'a de « ? » sur Android, et une tuile accordée montre la coche seule |
 | D19 | ~~Écran 2, taille du titre~~ | **Tranché le 19 octobre 2026** : 28, comme tous les titres d'écran |
 | D20 | Sortie de secours, iPhone | Que fait l'alarme pendant la recopie sur iPhone ? Le journal ne le dit que pour Android : la sonnerie baisse tant que la saisie avance et remonte si elle s'arrête |
-| D22 | « Niumi Spot » | **Décidé le 23 octobre 2026, à appliquer plus tard** : les 61 maquettes déposées ce jour-là disent « Niumi Spot » (42 sources) à la place de « Niumi Point ». Le renommage est acquis ; `SPECIFICATION.md`, `TEXTES-DES-MAQUETTES.md`, les textes de l'app et leurs tests disent encore « Niumi Point » jusqu'à une étape dédiée du plan Android (avant l'étape 53) |
-| D21 | ~~Niumi Points : libellés de l'option d'ajout sur l'écran 8, du refus « déjà enregistré » et de la limite de dix~~ | **Tranché le 19 octobre 2026** : troisième bouton au trait « Ajouter un Niumi Point » sous « Recopier le texte » (écran 8, pendant l'alarme seulement) ; « Ce Niumi Point est déjà enregistré. » avec « Réessayer » ; à dix, la ligne « Ajouter un Niumi Point » grisée avec « Tu as déjà dix Niumi Points. » Reporté dans `SPECIFICATION.md` §6, §13, §16 |
+| D22 | « Niumi Spot » | **Décidé le 23 octobre 2026, à appliquer plus tard** : les 61 maquettes déposées ce jour-là disent « Niumi Spot » (42 sources) à la place de « Niumi Spot ». Le renommage est acquis ; `SPECIFICATION.md`, `TEXTES-DES-MAQUETTES.md`, les textes de l'app et leurs tests disent encore « Niumi Spot » jusqu'à une étape dédiée du plan Android (avant l'étape 53) |
+| D21 | ~~Niumi Spots : libellés de l'option d'ajout sur l'écran 8, du refus « déjà enregistré » et de la limite de dix~~ | **Tranché le 19 octobre 2026** : troisième bouton au trait « Ajouter un Niumi Spot » sous « Recopier le texte » (écran 8, pendant l'alarme seulement) ; « Ce Niumi Spot est déjà enregistré. » avec « Réessayer » ; à dix, la ligne « Ajouter un Niumi Spot » grisée avec « Tu as déjà dix Niumi Spots. » Reporté dans `SPECIFICATION.md` §6, §13, §16 |
 
 ## 2. Textes à relire
 
@@ -58,12 +58,12 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | Écran 4, liste Android | Rechercher |
 | Écran 4, liste Android | Valider |
 | Sonnerie | Il se règle dans les réglages de ton téléphone. |
-| Accueil en session | Modifiable après avoir scanné ton Niumi Point. |
-| Notifications Android de sonnerie et d'attente de scan | ~~Disaient « boîtier »~~ ~~Tranché le 19 octobre 2026 : « Touche pour scanner ton Niumi Point et terminer la session. » et « Scanne ton Niumi Point pour terminer la session. »~~ **Retranché le 23 octobre 2026, sans le mot « session »** : « Ton réveil Niumi sonne », « Scanne ton Niumi Point pour l'arrêter et retrouver tes applis. » et « Scanne ton Niumi Point pour retrouver tes applis. » (`SPECIFICATION.md` §14, partie Android ; appliqué le même jour) |
-| Annulation, Android | Approche ton téléphone du Niumi Point pour annuler la session |
-| Niumi Points | N'importe lequel de tes Niumi Points arrête l'alarme. |
-| Niumi Points | Pour l'utiliser de nouveau, il faudra le scanner et l'ajouter. |
-| Niumi Points, renommer | Enregistrer |
+| Accueil en session | Modifiable après avoir scanné ton Niumi Spot. |
+| Notifications Android de sonnerie et d'attente de scan | ~~Disaient « boîtier »~~ ~~Tranché le 19 octobre 2026 : « Touche pour scanner ton Niumi Spot et terminer la session. » et « Scanne ton Niumi Spot pour terminer la session. »~~ **Retranché le 23 octobre 2026, sans le mot « session »** : « Ton réveil Niumi sonne », « Scanne ton Niumi Spot pour l'arrêter et retrouver tes applis. » et « Scanne ton Niumi Spot pour retrouver tes applis. » (`SPECIFICATION.md` §14, partie Android ; appliqué le même jour) |
+| Annulation, Android | Approche ton téléphone du Niumi Spot pour annuler la session |
+| Niumi Spots | N'importe lequel de tes Niumi Spots arrête l'alarme. |
+| Niumi Spots | Pour l'utiliser de nouveau, il faudra le scanner et l'ajouter. |
+| Niumi Spots, renommer | Enregistrer |
 | Aide | Les intertitres « Le soir », « Le matin », « Après le scan » |
 | Aide, Temps gagné | Après chaque réveil, Niumi compare le temps que tu as mis à te lever avec celui que tu mettais avant. |
 | Aide, Temps gagné | Temps pour sortir du lit avant Niumi |
@@ -101,18 +101,18 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | N° | Quoi | Remarque |
 | --- | --- | --- |
 | M1 | Les images du guide des autorisations, pour iPhone et pour Android, et les textes de chaque étape | Seule la mise en page est validée, avec un exemple. **Guide reporté sur Android le 20 octobre 2026** (étape 36) : l'écran 2 est livré sans « ? » jusqu'à ce que les textes et les images existent. L'exemple de l'alarme ne vaut pas pour Android, où l'alarme ne demande rien |
-| M2 | Les rubriques d'aide « Niumi Point perdu » et « Sortie de secours » | Non écrites |
+| M2 | Les rubriques d'aide « Niumi Spot perdu » et « Sortie de secours » | Non écrites |
 | M3 | La page « Licences » | Elle doit porter « Copyright IBM Corp. » et le texte de la licence de la police |
 | M4 | Le contenu de « Mentions légales » et de « Politique de confidentialité » | Non écrit |
-| M5 | Le message « temps écoulé » à l'annulation (sombre) et à l'association ou à l'ajout d'un Niumi Point (clair, avec le lien « Annuler ») | Seule la version du matin est dessinée. Les textes sont décidés |
+| M5 | Le message « temps écoulé » à l'annulation (sombre) et à l'association ou à l'ajout d'un Niumi Spot (clair, avec le lien « Annuler ») | Seule la version du matin est dessinée. Les textes sont décidés |
 | M6 | L'affichage des échecs du scan en dehors de l'écran 10 : association, ajout, annulation | Les textes existent pour l'association. La forme n'est pas dessinée |
 | M7 | ~~La feuille de sonnerie pendant une session~~ | **Tranché le 23 octobre 2026, sur Android** : la palette sombre du thème, comme la feuille de scan ; la bulle du volume suit `ink`/`onInk` et s'inverse avec elle |
 | M8 | L'écran 2 ouvert depuis les réglages pendant une session, et son guide | Versions sombres non dessinées. En attendant, le tap des avertissements de session reste sur le diagnostic d'incident (décision du 20 octobre 2026, revue à l'étape 52 du plan Android) |
-| M9 | La roue de « Temps gagné » et le parcours d'ajout d'un Niumi Point pendant une session | Versions sombres non dessinées |
-| M10 | Le message « Modifiable après avoir scanné ton Niumi Point. » | Le texte existe, sa forme n'est pas dessinée |
+| M9 | La roue de « Temps gagné » et le parcours d'ajout d'un Niumi Spot pendant une session | Versions sombres non dessinées |
+| M10 | Le message « Modifiable après avoir scanné ton Niumi Spot. » | Le texte existe, sa forme n'est pas dessinée |
 | M11 | L'écran 4 ouvert depuis l'accueil pour modifier la sélection | Même écran. Le retour vers l'accueil n'est pas dessiné |
 | M12 | Le bandeau de problème et l'alerte d'autorisations pendant une session | Versions sombres non dessinées. Les quatre maquettes existantes sont claires |
-| M13 | ~~L'écran 8 pendant l'alarme avec l'option d'ajout d'un Niumi Point~~ | **Tranché le 19 octobre 2026, sans maquette dédiée** : la feuille de l'écran 8 et le texte de D21 suffisent |
+| M13 | ~~L'écran 8 pendant l'alarme avec l'option d'ajout d'un Niumi Spot~~ | **Tranché le 19 octobre 2026, sans maquette dédiée** : la feuille de l'écran 8 et le texte de D21 suffisent |
 
 Pour les versions sombres manquantes, la règle est connue : mêmes mises en page et mêmes textes, avec les couleurs du thème sombre de `VALEURS-DE-DESIGN.md`.
 
@@ -130,7 +130,7 @@ Le journal des décisions (`annexes/journal-des-decisions.md`) contient des pass
 | E4 | Écran 6 | Deux tableaux décrivent une ancienne disposition en liste et un état « Pas de réveil prévu » | La maquette validée : cadran, carte, pastilles, deux lignes ; état « Réveil désactivé » |
 | E5 | Écran 5 | Un tableau décrit l'écran « Premier planning » | L'écran est supprimé |
 | E6 | Écran 2 | Le tableau liste quatre autorisations, dont le NFC | Trois tuiles, comme la maquette. Voir D10. Sur Android, deux tuiles de plus depuis le 21 octobre 2026 (« Batterie », « Verrouiller Niumi ») : `SPECIFICATION.md` §5 |
-| E7 | Écran 3, NFC coupé | « Le NFC est coupé sur ton téléphone. » à l'écran 3 ; « Le NFC est coupé. Active-le pour scanner ton Niumi Point. » à l'écran 10 | Les deux sont gardés tels quels, chacun sur son écran. À harmoniser si Mehdi le souhaite |
+| E7 | Écran 3, NFC coupé | « Le NFC est coupé sur ton téléphone. » à l'écran 3 ; « Le NFC est coupé. Active-le pour scanner ton Niumi Spot. » à l'écran 10 | Les deux sont gardés tels quels, chacun sur son écran. À harmoniser si Mehdi le souhaite |
 | E8 | Sonnerie | Plusieurs paragraphes parlent d'un curseur de volume réglable | Pas de curseur : une ligne « Volume du téléphone » et sa valeur (9 octobre) |
 | E9 | Palette | Le début de la section dit qu'aucune palette n'est choisie | Clair hors session, sombre pendant la session (8 et 9 octobre) |
 | E10 | Écran 11 | « Le point ambre du logo se lève comme un soleil » | Même dessin, avec le soleil en dégradé (9 octobre) |

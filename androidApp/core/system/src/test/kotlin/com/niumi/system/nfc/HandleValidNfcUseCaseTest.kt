@@ -307,32 +307,32 @@ class HandleValidNfcUseCaseTest {
 
             val outcome = harness.useCase().onUriRead(NfcScanFixtures.MALFORMED_URI)
 
-            assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiPoint)
+            assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiSpot)
             assertThat(harness.journal.calls.drop(before)).isEmpty()
             val present = harness.gateway.load() as LoadResult.Present
             assertThat(present.snapshot.state).isEqualTo(SessionStateDto.RINGING)
             assertThat(present.snapshot.revision).isEqualTo(3)
         }
 
-    /** Étape 38 : l'URI d'un autre tag (une adresse web) devient « Ce n'est pas un Niumi Point. ». */
+    /** Étape 38 : l'URI d'un autre tag (une adresse web) devient « Ce n'est pas un Niumi Spot. ». */
     @Test
-    fun aForeignUriIsNotANiumiPoint() =
+    fun aForeignUriIsNotANiumiSpot() =
         runTest {
             val harness = TestCoordinatorHarness()
             harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
 
             val outcome = harness.useCase().onUriRead("https://example.com/menu")
 
-            assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiPoint)
+            assertThat(outcome).isEqualTo(ScanOutcome.NotANiumiSpot)
             assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
         }
 
     /**
-     * Étape 38 : un Niumi Point d'une version que l'app ne lit pas encore est bien un Niumi Point,
-     * mais il n'a pas pu être enregistré : « Ce Niumi Point n'est pas enregistré. ».
+     * Étape 38 : un Niumi Spot d'une version que l'app ne lit pas encore est bien un Niumi Spot,
+     * mais il n'a pas pu être enregistré : « Ce Niumi Spot n'est pas enregistré. ».
      */
     @Test
-    fun anUnsupportedVersionIsAnUnregisteredNiumiPoint() =
+    fun anUnsupportedVersionIsAnUnregisteredNiumiSpot() =
         runTest {
             val harness = TestCoordinatorHarness()
             harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())

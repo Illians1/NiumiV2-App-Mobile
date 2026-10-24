@@ -6,7 +6,7 @@ package com.niumi.feature.ringing.ui
  * ouvrir les réglages NFC du téléphone. Vérifié par `AlarmScreenActionsTest`.
  */
 data class AlarmScreenActions(
-    /** « Scanner le Niumi Point ». */
+    /** « Scanner le Niumi Spot ». */
     val openScanSheet: () -> Unit = {},
     /** « Annuler », le voile, le glissement ou le retour, feuille ouverte. */
     val cancelScan: () -> Unit = {},

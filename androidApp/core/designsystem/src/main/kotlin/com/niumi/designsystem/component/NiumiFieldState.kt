@@ -13,7 +13,7 @@ enum class NiumiFieldState {
 
     /**
      * Session en cours : grisé et verrouillé (maquette 15). L'action du champ n'est jamais
-     * appelée ; un toucher ne peut que signaler « Modifiable après avoir scanné ton Niumi Point. »
+     * appelée ; un toucher ne peut que signaler « Modifiable après avoir scanné ton Niumi Spot. »
      * (forme du message ouverte, étape 45).
      */
     Locked,

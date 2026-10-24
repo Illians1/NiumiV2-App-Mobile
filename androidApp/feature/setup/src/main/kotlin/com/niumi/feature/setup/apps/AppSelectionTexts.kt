@@ -14,7 +14,7 @@ import com.niumi.core.domain.AppSelectionSummary
 object AppSelectionTexts {
     const val TITLE = "Quelles applications veux-tu bloquer ?"
 
-    const val BODY = "Elles seront inaccessibles de l’heure du coucher jusqu’au scan de ton Niumi Point."
+    const val BODY = "Elles seront inaccessibles de l’heure du coucher jusqu’au scan de ton Niumi Spot."
 
     const val NONE_CHOSEN = "Aucune application choisie"
 

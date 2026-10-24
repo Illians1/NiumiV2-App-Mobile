@@ -8,7 +8,7 @@ préparatoire, pas encore soumis. Décision de Mehdi du 2026-10-21, étape 36 du
 ## Fonction principale concernée
 
 Niumi bloque, pendant la nuit, les applications que l'utilisateur a lui-même choisies, jusqu'au
-scan d'un Niumi Point le matin. Le blocage repose sur un service d'accessibilité
+scan d'un Niumi Spot le matin. Le blocage repose sur un service d'accessibilité
 (`ACCESSIBILITY_DECLARATION.md`) qui doit recevoir les changements d'application au premier plan
 pendant toute la session.
 

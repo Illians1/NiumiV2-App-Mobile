@@ -45,10 +45,10 @@ class AlarmNfcScanCoordinator(
         return ScanOutcome.Unreadable
     }
 
-    /** Étape 38 : tag lu sans NDEF ni URI, « Ce n'est pas un Niumi Point. ». */
+    /** Étape 38 : tag lu sans NDEF ni URI, « Ce n'est pas un Niumi Spot. ». */
     fun handleForeignTag(): ScanOutcome {
-        recordOutcome(ScanOutcome.NotANiumiPoint)
-        return ScanOutcome.NotANiumiPoint
+        recordOutcome(ScanOutcome.NotANiumiSpot)
+        return ScanOutcome.NotANiumiSpot
     }
 
     private fun recordOutcome(outcome: ScanOutcome) {
@@ -58,7 +58,7 @@ class AlarmNfcScanCoordinator(
             }
 
             // Un tag lu puis refusé : la vibration d'erreur accompagne la feuille d'échec.
-            ScanOutcome.UnknownBox, ScanOutcome.NotANiumiPoint -> {
+            ScanOutcome.UnknownBox, ScanOutcome.NotANiumiSpot -> {
                 technicalEventLog.log(TechnicalEventType.NFC_SCAN_INVALID)
                 vibrationController.vibrateError()
             }

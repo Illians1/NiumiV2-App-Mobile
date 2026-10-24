@@ -29,7 +29,7 @@ class BlockingGuardNotificationSpecsTest {
         val spec = BlockingGuardNotificationSpecs.blocking("07:00")
 
         assertThat(spec.title).isEqualTo("Réveil prévu à 07:00")
-        assertThat(spec.text).isEqualTo("Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Point.")
+        assertThat(spec.text).isEqualTo("Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Spot.")
     }
 
     /** Service relancé par le système avant d'avoir relu la session : pas d'heure inventée. */

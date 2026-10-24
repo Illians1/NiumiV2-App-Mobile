@@ -2,11 +2,11 @@
 
 > **Pour l'agent chargé de l'exécution :** utiliser `superpowers:executing-plans` (une étape par session) ou `superpowers:subagent-driven-development`. Les cases `- [ ]` servent au suivi. S'arrêter aux portes de validation manuelle. Ne jamais commit ni push sans demande explicite, jamais de ligne `Co-Authored-By`. **Avant chaque étape, lire la ligne « Points ouverts touchés » et poser à Mehdi les questions non encore tranchées : ne jamais inventer une réponse** (`design-plan/CLAUDE-INSTRUCTIONS.md`).
 
-> **Note du 2026-10-19 — renumérotation et décisions.** Les numéros Lot 8 / étapes 29 à 31 (boîtiers multiples, 2026-10-13) et Lot 9 / étape 32 (réveil sans plein écran, 2026-10-18) ont été pris par le plan maître `2026-09-03-mvp-android.md` ; ce plan est donc renuméroté : lots 10 à 18, étapes 33 à 55 (ancien numéro + 4), phases M à U, et son contrat commun devient **1.5** (1.4 est celui des boîtiers multiples). Les acquis des Lots 8 et 9 du plan maître ne sont pas refaits : voir « Point de départ ». **Décisions de Mehdi du 2026-10-19** : les Niumi Points s'ajoutent, se renomment et se suppriment **même en session**, y compris pendant la sonnerie depuis l'écran 8 ; il en reste toujours au moins un ; dix au plus ; l'app propose des pièces mais un nom libre reste possible. Depuis le Lot 9 du plan maître, Niumi n'utilise plus le plein écran (conception `docs/superpowers/specs/2026-10-18-reveil-sans-plein-ecran-design.md`) : les passages qui le citaient ont été corrigés le 2026-10-18.
+> **Note du 2026-10-19 — renumérotation et décisions.** Les numéros Lot 8 / étapes 29 à 31 (boîtiers multiples, 2026-10-13) et Lot 9 / étape 32 (réveil sans plein écran, 2026-10-18) ont été pris par le plan maître `2026-09-03-mvp-android.md` ; ce plan est donc renuméroté : lots 10 à 18, étapes 33 à 55 (ancien numéro + 4), phases M à U, et son contrat commun devient **1.5** (1.4 est celui des boîtiers multiples). Les acquis des Lots 8 et 9 du plan maître ne sont pas refaits : voir « Point de départ ». **Décisions de Mehdi du 2026-10-19** : les Niumi Spots s'ajoutent, se renomment et se suppriment **même en session**, y compris pendant la sonnerie depuis l'écran 8 ; il en reste toujours au moins un ; dix au plus ; l'app propose des pièces mais un nom libre reste possible. Depuis le Lot 9 du plan maître, Niumi n'utilise plus le plein écran (conception `docs/superpowers/specs/2026-10-18-reveil-sans-plein-ecran-design.md`) : les passages qui le citaient ont été corrigés le 2026-10-18.
 
-**Objectif :** livrer l'app Android telle que la décrivent les 58 maquettes et `design-plan/SPECIFICATION.md` : réveil récurrent avec blocage automatique au coucher, accueil à cadran et trois états, jusqu'à dix Niumi Points modifiables même en session, sortie de secours, écran de réussite, réglages ; thème clair hors session et sombre pendant la session.
+**Objectif :** livrer l'app Android telle que la décrivent les 58 maquettes et `design-plan/SPECIFICATION.md` : réveil récurrent avec blocage automatique au coucher, accueil à cadran et trois états, jusqu'à dix Niumi Spots modifiables même en session, sortie de secours, écran de réussite, réglages ; thème clair hors session et sombre pendant la session.
 
-**Architecture :** `:shared:core` reste l'unique autorité des transitions (contrat KMP 1.5 : planning récurrent, désarmement sans scan avant le coucher, libération par sortie de secours, un à dix Niumi Points lus au moment du scan, temps gagné). Le planning (jours, heures, interrupteur) est calculé en KMP et stocké en natif ; un `WakePlanScheduler` Android arme, désarme et ré-arme les sessions sous le verrou du coordinateur existant. `:core:designsystem` porte palette, police, formes, dimensions et composants ; aucun écran ne contient de couleur, taille ou forme en dur. Le thème est choisi d'après l'état de la session persistée, jamais d'après le réglage du téléphone.
+**Architecture :** `:shared:core` reste l'unique autorité des transitions (contrat KMP 1.5 : planning récurrent, désarmement sans scan avant le coucher, libération par sortie de secours, un à dix Niumi Spots lus au moment du scan, temps gagné). Le planning (jours, heures, interrupteur) est calculé en KMP et stocké en natif ; un `WakePlanScheduler` Android arme, désarme et ré-arme les sessions sous le verrou du coordinateur existant. `:core:designsystem` porte palette, police, formes, dimensions et composants ; aucun écran ne contient de couleur, taille ou forme en dur. Le thème est choisi d'après l'état de la session persistée, jamais d'après le réglage du téléphone.
 
 **Stack :** inchangée (Kotlin 2.4.21, Compose BOM 2026.09.00, Material 3 comme socle de composants, Hilt, Room 2.8.5, DataStore, Navigation Compose 2.10.2, KMP, JUnit 4, Truth, ktlint, detekt). Ajout : police IBM Plex Sans (fichiers OFL dans `res/font`). Aucune dépendance nouvelle.
 
@@ -52,7 +52,7 @@ Valeurs copiées des sources ; chaque étape les respecte implicitement.
 - Maquettes dessinées pour 390 × 844 : les écrans doivent s'adapter aux autres tailles (`LISEZ-MOI.md`) ; ne jamais recopier le code des sources HTML.
 - Textes : tutoiement, mot pour mot, apostrophe selon D13 ; heures « 22:30 », « 7:00 » (sans zéro devant), durées « 9 h 26 », « 56 min », « 8 h 30 de sommeil » (`SPECIFICATION.md` §2).
 - Valeurs par défaut : lundi à vendredi, réveil 7:00, coucher 22:30 ; interrupteur éteint à la fin de la mise en route (`SPECIFICATION.md` §2, §9).
-- **Niumi Points** (décision du 2026-10-19) : de un à dix, nommés d'après une pièce proposée (Salle de bain, Cuisine, Salon, Entrée) ou librement ; ajout, renommage et suppression possibles à tout moment, session et sonnerie comprises (écran 8) ; le scan de n'importe quel point enregistré **au moment du scan** termine ou annule la session ; il en reste toujours au moins un (`SPECIFICATION.md` §6, §13, §16).
+- **Niumi Spots** (décision du 2026-10-19) : de un à dix, nommés d'après une pièce proposée (Salle de bain, Cuisine, Salon, Entrée) ou librement ; ajout, renommage et suppression possibles à tout moment, session et sonnerie comprises (écran 8) ; le scan de n'importe quel point enregistré **au moment du scan** termine ou annule la session ; il en reste toujours au moins un (`SPECIFICATION.md` §6, §13, §16).
 - Même fonctionnement iPhone/Android sauf différence écrite ; les différences Android voulues : feuille de scan dessinée par Niumi, écran 7 dessiné par Niumi, feuille d'applications dessinée par Niumi, pas de limite de 60 s au scan.
 - Modules Gradle inchangés (8, `ModuleListTest`) : l'accueil et les réglages vivent dans `:feature:session`, la mise en route dans `:feature:setup`, le design system dans `:core:designsystem`.
 - Règles techniques conservées : garde de déverrouillage sur tout dépôt (`Provider<Context>` jamais résolu avant `isUserUnlocked`, SPEC_ANDROID §7.3) ; aucune action d'arrêt dans le parcours de sonnerie (la sortie de secours n'en est pas une : elle est une libération prouvée, SPEC_CORE_KMP 1.5 §12) ; `setAlarmClock()` pour le réveil avec les dérogations §9.1 ; permissions du manifeste §14 sans ajout, hormis `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (étape 36, décision du 2026-10-21) ; journal technique §17.
@@ -67,7 +67,7 @@ Valeurs copiées des sources ; chaque étape les respecte implicitement.
 | --- | --- | --- | --- | --- |
 | Écran 1 · Présentation (2 panneaux) | §4 | — (2a onboarding) | 35 | `OnboardingScreen` supprimé |
 | Écran 2 · Autorisations (3 tuiles + guide) | §5 | 2 diagnostic (quatorze contrôles), consentement §12.3 | 36 | `ReadinessScreen`, `AccessibilityConsentScreen` supprimés |
-| Écran 3 · Association (consigne, scan, pièce) | §6 | 3 « Mes boîtiers » (Lot 8 du plan maître : liste, ajout, renommage, retrait) | 47 | `PairingScreen` supprimé à 47 ; renommage et suppression reviennent à 48 (écran 12 › Niumi Points) |
+| Écran 3 · Association (consigne, scan, pièce) | §6 | 3 « Mes boîtiers » (Lot 8 du plan maître : liste, ajout, renommage, retrait) | 47 | `PairingScreen` supprimé à 47 ; renommage et suppression reviennent à 48 (écran 12 › Niumi Spots) |
 | Écran 3 bis · Temps pour sortir du lit | §7 | — | 50 | nouveau |
 | Écran 4 · Choix des applications | §8 | 4 | 37 | `AppPickerScreen` supprimé |
 | Écran 6 · Accueil, 3 états | §9 | 1 accueil, 5 heure, 6 récap, 7 session active | 45 | `HomeScreen`, `WakeTimeScreen`, `SummaryScreen`, `ActiveSessionScreen` supprimés |
@@ -75,10 +75,10 @@ Valeurs copiées des sources ; chaque étape les respecte implicitement.
 | Annuler la session (feuille + scan + message) | §11 | 9 scan requis, 11 annulée | 46 | `ScanToModifyScreen`, `CancelledScreen` supprimés |
 | Écran 7 · Blocage | §12 | overlay §12.2 | 39 | overlay 3 s remplacé |
 | Écrans 8/9 · Sortie de secours | §13 | — | 49 | nouveau |
-| Écran 8 pendant l'alarme · ajout d'un Niumi Point | §13 | — | 49 | nouveau (décision du 2026-10-19 ; bouton « Ajouter un Niumi Point », sans maquette dédiée) |
+| Écran 8 pendant l'alarme · ajout d'un Niumi Spot | §13 | — | 49 | nouveau (décision du 2026-10-19 ; bouton « Ajouter un Niumi Spot », sans maquette dédiée) |
 | Écran 10 · Réveil + feuille + 4 échecs | §14 | 8 | 38 | `AlarmScreen` refait |
 | Écran 11 · Réussite | §15 | 10 terminée | 46 | `CompletedScreen` supprimé |
-| Écran 12 · Réglages, Niumi Points, Aide, À propos, Licences | §16 | 13 aide (partiel), 12 diagnostic (sans équivalent), 3 « Mes boîtiers » (renommage, retrait) | 48, 51 | `HelpScreen`, `IncidentDiagnosticScreen` supprimés (51, 53) |
+| Écran 12 · Réglages, Niumi Spots, Aide, À propos, Licences | §16 | 13 aide (partiel), 12 diagnostic (sans équivalent), 3 « Mes boîtiers » (renommage, retrait) | 48, 51 | `HelpScreen`, `IncidentDiagnosticScreen` supprimés (51, 53) |
 | Notification du soir, bandeau, alerte | §17 | notification §13.1 (gardée) | 52 | nouveau |
 
 SPEC_ANDROID §15 adopte la numérotation du design-plan à l'étape 54, avec cette table en colonne « ancien n° ».
@@ -90,7 +90,7 @@ SPEC_ANDROID §15 adopte la numérotation du design-plan à l'étape 54, avec ce
 3. **`HelpTextsTest` compare `HelpTexts` à `docs/android/LIMITES.md` mot pour mot** et `docs/android/play-console/PRIVACY_POLICY.md` affirme l'absence de secours logiciel : faux dès l'étape 49. `LIMITES.md` reste le document publié hors app (v2 à l'étape 54) ; la politique est relue aux étapes 49 et 54. Depuis le Lot 9 du plan maître, `HelpTextsTest` exige aussi que l'aide contienne `OnboardingTexts.limits` : l'étape 35 retire cette comparaison en supprimant l'onboarding.
 4. **Durées de montée** : l'étape 28 (`1225e87`) a porté `VolumeRampDurations.SECONDS` à `[120, 300, 600, 900]` ; le design-plan montre « Non, 1 min, 2 min, 5 min, 10 min ». **Q7 tranché le 2026-10-23 (étape 40)** : la liste ne change pas (mesure de l'étape 28, 1 min toujours jugée trop rapide) ; `VolumeRampDurations.sanitized()` ramène toute durée hors liste (30 s et 1 min d'avant l'étape 28, par exemple) à la plus proche — jamais une sonnerie muette, point de vigilance 15 du plan MVP.
 5. **Overlay touchable (étape 39)** : un `ComposeView` dans une fenêtre `TYPE_ACCESSIBILITY_OVERLAY` exige un `LifecycleOwner`, un `SavedStateRegistryOwner` et un `ViewModelStoreOwner` posés sur l'arbre de vues par le service ; `GLOBAL_ACTION_HOME` avant l'overlay comme aujourd'hui ; aucune exception possible dans `onAccessibilityEvent` ; retrait à la libération et dans `onUnbind`/`onInterrupt`. L'usage déclaré à Google Play change (`ACCESSIBILITY_DECLARATION.md`, `REVIEW_VIDEO_SCRIPT.md`).
-6. **Direct Boot et planning** : le planning et les Niumi Points vivent dans le stockage chiffré ; un ré-armement ne se fait qu'après `USER_UNLOCKED` ; une session `COMPLETED` sur appareil verrouillé laisse l'appareil sans session jusqu'au déverrouillage (§9.3 réconciliation). Le scan exige un appareil déverrouillé (SPEC_ANDROID §4.4, Lot 9 du plan maître) : la vérification lit toujours l'ensemble courant dans Room, et la projection Direct Boot v5 cesse de porter les boîtiers (étape 43).
+6. **Direct Boot et planning** : le planning et les Niumi Spots vivent dans le stockage chiffré ; un ré-armement ne se fait qu'après `USER_UNLOCKED` ; une session `COMPLETED` sur appareil verrouillé laisse l'appareil sans session jusqu'au déverrouillage (§9.3 réconciliation). Le scan exige un appareil déverrouillé (SPEC_ANDROID §4.4, Lot 9 du plan maître) : la vérification lit toujours l'ensemble courant dans Room, et la projection Direct Boot v5 cesse de porter les boîtiers (étape 43).
 7. **`ReleaseHygieneTest`** compte les sites `AlarmManager` : le rappel du soir en ajoute un (`setWindow`, 3e dérogation §9.1, décision Q18). Pas de `TODO` dans le code de production (le mot est interdit par le test) : un emplacement d'image non produite se nomme `PermissionGuideImagePlaceholder` sans ce mot.
 8. **Sessions successives** : `CLEAR_ACTIVE_SESSION` puis `ACTIVATION_REQUESTED` sous le même mutex ; garde Direct Boot scopée par `sessionId` ; jamais de ré-armement pendant `RELEASING` ; `EventFingerprintTest` reprend ses témoins au schéma 3.
 9. **Thème au démarrage** : `SessionSnapshotPublisher.snapshot` vaut `null` avant la première lecture ; `MainActivity` lit la persistance avant de composer ; `AlarmActivity` est toujours sombre (`Theme.Niumi.Dark`). Depuis l'étape 33 (décision de Mehdi du 2026-10-19) : écran de démarrage sombre avec le logo (`Theme.Niumi.Launch`), tenu tant que le thème est inconnu, sans minimum, trois secondes au plus ; aucun fond clair avant un accueil sombre.
@@ -99,7 +99,7 @@ SPEC_ANDROID §15 adopte la numérotation du design-plan à l'étape 54, avec ce
 12. **`DeviceReadinessChecker`, `SessionReadinessMonitor` et la notification §13.1 ne sont jamais supprimés** : ils alimentent les trois tuiles, l'alerte et le bandeau.
 13. **Relecture NFC sur état stable** (étape 31 du plan maître) : les écrans 8 et 9 actuels font disparaître seul le faux « NFC désactivé » lu juste après un redémarrage, dès que l'adaptateur est prêt. Les étapes 38 et 46 refont ces écrans : le comportement est conservé et prouvé par `AlarmViewModelTest` et `CancelSessionViewModelTest`, y compris avec Q4 (Reader Mode seulement feuille ouverte).
 14. **`ReadinessMessages` vivait dans `:feature:setup`** : l'étape 36 l'a déplacé vers `SYS/readiness/` avant de supprimer `SETUP/readiness/*`. *Corrigé le 2026-10-20 :* la notification §13.1 n'en dépendait pas (ses textes sont dans `SessionWarningNotificationSpecs`) ; c'est le récapitulatif (`:feature:session`), qui nomme désormais le contrôle refusant l'activation, et les feuilles de l'écran 2 qui le lisent.
-15. **Textes « boîtier » hors écrans** : les Lots 8 et 9 du plan maître ont écrit « boîtier » dans les notifications de sonnerie et d'attente de scan (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), dans `ReadinessMessages`, `LIMITES.md` et l'aide. L'étape 53 les balaie avec le grep « boîtier ». *Fait le 2026-10-23 pour les deux notifications* (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), avec les textes retranchés ce jour-là dans `SPECIFICATION.md` §14 : « Ton réveil Niumi sonne » / « Scanne ton Niumi Point pour l'arrêter et retrouver tes applis. » et « Scanne ton Niumi Point pour retrouver tes applis. » Restent pour l'étape 53 : `ReadinessMessages`, `LIMITES.md`, l'aide et les textes des écrans.
+15. **Textes « boîtier » hors écrans** : les Lots 8 et 9 du plan maître ont écrit « boîtier » dans les notifications de sonnerie et d'attente de scan (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), dans `ReadinessMessages`, `LIMITES.md` et l'aide. L'étape 53 les balaie avec le grep « boîtier ». *Fait le 2026-10-23 pour les deux notifications* (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), avec les textes retranchés ce jour-là dans `SPECIFICATION.md` §14 : « Ton réveil Niumi sonne » / « Scanne ton Niumi Spot pour l'arrêter et retrouver tes applis. » et « Scanne ton Niumi Spot pour retrouver tes applis. » Restent pour l'étape 53 : `ReadinessMessages`, `LIMITES.md`, l'aide et les textes des écrans.
 16. **`session_box` et `AndroidSessionExtras.boxes` disparaissent à l'étape 43** : jusque-là, `ArmSessionUseCase`, `HandleValidNfcUseCase`, `DiagnosticReport` et le récapitulatif lisent encore la liste figée ; aucune étape antérieure n'y touche.
 
 ### Cas limites que le design n'écrit pas, à verrouiller par un test
@@ -111,10 +111,10 @@ Le design-plan dit ce que l'app doit faire, pas tout ce qu'elle rencontrera. Cha
 3. **Apostrophes et majuscules automatiques du clavier** dans la recopie (le texte modèle contient « J'avais », « c'est », « jusqu'au ») : la comparaison ne doit pas signaler de faute ; `EmergencyTranscriptionTest`, étape 42.
 4. **Compte à rebours qui traverse minuit et durée inférieure à une heure** : « Réveil dans 56 min », « 9 h 26 », jamais « 0 h 56 » ; `NiumiTimeFormatTest` (étape 34) et `HomeViewModelTest` (étape 45).
 5. **Session armée avec une durée de montée retirée de la liste** (30 s ou 1 min, d'avant l'étape 28) : l'alarme sonne avec la durée assainie, jamais muette ; `VolumeRampDurations.sanitized()`, `AlarmSoundSettingsTest`, `RingingSoundResolverTest`, étape 40.
-6. **Niumi Point ajouté pendant la session**, depuis les réglages ou depuis l'écran 8 pendant la sonnerie, puis scanné : accepté (ensemble courant) ; un point supprimé en session n'arrête plus rien ; `HandleValidNfcUseCaseTest`, étape 43 ; `PointPairingViewModelTest` (mode `ALARM`), étape 49.
+6. **Niumi Spot ajouté pendant la session**, depuis les réglages ou depuis l'écran 8 pendant la sonnerie, puis scanné : accepté (ensemble courant) ; un point supprimé en session n'arrête plus rien ; `HandleValidNfcUseCaseTest`, étape 43 ; `PointPairingViewModelTest` (mode `ALARM`), étape 49.
 7. **Rotation ou mort du processus pendant la recopie** : la saisie survit à la rotation ; après une mort du processus, l'écran 9 revient vide et l'alarme sonne toujours ; `EmergencyExitViewModelTest`, étape 49.
-8. **Dixième Niumi Point enregistré** : la ligne « Ajouter un Niumi Point » reste visible mais grisée avec « Tu as déjà dix Niumi Points. », et `PairedBoxStore.add` répond `LimitReached` sans écrire ; `RoomPairedBoxStoreTest`, étape 43 ; `NiumiPointsViewModelTest`, étape 48.
-9. **Suppression du dernier Niumi Point** refusée au dépôt comme à l'écran : `PairedBoxRemoveResult.LastBoxKept`, « Supprimer » grisé ; `RoomPairedBoxStoreTest`, étape 43 ; `NiumiPointsViewModelTest`, étape 48.
+8. **Dixième Niumi Spot enregistré** : la ligne « Ajouter un Niumi Spot » reste visible mais grisée avec « Tu as déjà dix Niumi Spots. », et `PairedBoxStore.add` répond `LimitReached` sans écrire ; `RoomPairedBoxStoreTest`, étape 43 ; `NiumiSpotsViewModelTest`, étape 48.
+9. **Suppression du dernier Niumi Spot** refusée au dépôt comme à l'écran : `PairedBoxRemoveResult.LastBoxKept`, « Supprimer » grisé ; `RoomPairedBoxStoreTest`, étape 43 ; `NiumiSpotsViewModelTest`, étape 48.
 
 ## Décisions à soumettre à Mehdi, par étape
 
@@ -124,7 +124,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | --- | --- | --- | --- |
 | 33 | D9 | Bouton inactif en clair : `#E8E8E4`/`#5C5C60` (écran 2) ou `#C6C6C2`/blanc (écran 4) ? | **Tranché le 2026-10-19** : le premier, partout |
 | 33 | D13 | Apostrophe typographique (’) dans l'app ? | **Tranché le 2026-10-19** : oui, portée par les `Texts` et testée (dès l'étape 35) |
-| 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28. **D14 précisé le 2026-10-20** (étape 34) : icônes de navigation sans ambre ; cadenas de la carte « Blocage en cours » et point du Niumi Point restent ambre |
+| 33 | D14, D19 | Règle de l'ambre ; titre de l'écran 2 en 26 ou 28 ? | **Tranché le 2026-10-19** : règle validée telle quelle ; 28. **D14 précisé le 2026-10-20** (étape 34) : icônes de navigation sans ambre ; cadenas de la carte « Blocage en cours » et point du Niumi Spot restent ambre |
 | 34 | — | Marges haut et bas sur Android : marge de la maquette ajoutée aux barres système, ou la plus grande des deux ? | **Tranché le 2026-10-20** : la plus grande des deux, de chaque côté (VALEURS §4, SPEC_ANDROID §15). **Révisé le 2026-10-22 pour le bas** (étape 38) : barre de navigation plus 16 dp, jamais moins que 34 ; le haut et les côtés ne changent pas |
 | 35 | D12 | Point final des titres de l'écran 1 ? | **Tranché le 2026-10-20** : sans point sur les deux panneaux. Même jour : les six limites de l'onboarding ne sont plus montrées avant la première activation, l'aide les porte seule (SPEC_ANDROID §3) |
 | 36 | Q1 | Batterie, verrou des récents (HyperOS), Ne pas déranger, volume : aucune place dans le design. Où ? | **Tranché le 2026-10-20, révisé le 2026-10-21** : tuiles Android dédiées « Batterie » (demande directe d'exemption, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` déclarée, liste système en repli) et « Verrouiller Niumi » (feuille du geste, tuile masquée sans verrou), titre qui compte les tuiles, introduction « Sans elles, Niumi ne peut pas fonctionner. » ; Ne pas déranger et volume sans écran (refus nommé au récapitulatif, notification §13.1) |
@@ -133,7 +133,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 36 | — | Divulgation Google Play avant les réglages d'accessibilité | **Tranché le 2026-10-20, révisé le 2026-10-21** : fenêtre centrée sur l'écran 2 (`NiumiAlertDialog`, croix, toucher à côté), ouverte par « Autoriser » de la tuile « Blocage » ; même forme pour le verrou des récents et l'alarme exacte ; la page plein écran et sa route sont supprimées ; le guide facultatif ne peut pas porter la divulgation |
 | 36 | — | Icônes des tuiles en ambre | **Essai demandé le 2026-10-20, abandonné le 2026-10-22** : icônes à l'encre ; la coche d'une tuile accordée passe dans une pastille ambre (exception écrite à D14, VALEURS §2) |
 | 37 | Q3 | Compteur « N applications choisies » = sélection validée ; T9 clos par `<queries>` | **Tranché le 2026-10-22** : oui. Même jour : limite de 50 par grisé et phrase, « +N » sur la carte, liste en pleine page au lieu de la feuille, section « Applications déjà choisies », indicateur de chargement, croix d'effacement de la recherche |
-| 38 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | **Tranché le 2026-10-22** : seulement feuille « Prêt à scanner » ouverte ; §10.4/§11.2 amendés. Même jour, pendant les essais : consigne « Rejoins ton Niumi Point » (remplace « Scanne ton Niumi Point », §14) pour les trois états d'attente ; après le scan, date, heure et chargement seuls ; date à 24 dp sous la marge du haut (60 dans la maquette) ; place du lien de secours réservée ; « Prêt à scanner » à l'encre |
+| 38 | Q4 | Lecture NFC active seulement feuille ouverte (parité iPhone) ou dès l'écran 10 (comme aujourd'hui) ? | **Tranché le 2026-10-22** : seulement feuille « Prêt à scanner » ouverte ; §10.4/§11.2 amendés. Même jour, pendant les essais : consigne « Rejoins ton Niumi Spot » (remplace « Scanne ton Niumi Spot », §14) pour les trois états d'attente ; après le scan, date, heure et chargement seuls ; date à 24 dp sous la marge du haut (60 dans la maquette) ; place du lien de secours réservée ; « Prêt à scanner » à l'encre |
 | 38 | Q5, E7 | Texte « Déverrouille ton téléphone… » (§4.4) ; deux textes « NFC coupé » | **Q5 tranché le 2026-10-18** : aucun texte « Déverrouille ton téléphone… », l'écran n'est jamais affiché verrouillé (Lot 9 du plan maître). E7 : chaque texte sur son écran |
 | 39 | Q6, T10 | Écran 7 affiché jusqu'à « Fermer » ; déclaration Play à refaire | **Tranché le 2026-10-22** : oui, sans minuterie ; retiré aussi à la fin du blocage, à l'extinction de l'écran (ajout, pour ne pas reparaître sur l'écran de verrouillage), quand une application non bloquée autre que le lanceur, l'interface système et Niumi passe devant (ajout après relecture : appel entrant), à l'interruption et à la déliaison ; déclaration et script refaits, T10 reste ouvert (acceptation Play) |
 | 40 | Q7 | Durées : design Non/1/2/5/10 ou mesure de l'étape 28 (2/5/10/15, 1 min jugée trop rapide) ? | **Tranché le 2026-10-23** : la mesure de l'étape 28 (Non/2/5/10/15) — 1 min reste jugée trop rapide ; `VolumeRampDurations.SECONDS` ne change pas |
@@ -147,15 +147,15 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 41 | Q9 | Fuseau pendant `ARMED` | Figé pour la session en cours (décision 9) ; la suivante au nouveau fuseau |
 | 42 | D2 | Sortie de secours le matin : écran suivant, réveil du lendemain | Écran 11 sans « Bravo ! » ; planning laissé allumé |
 | 42 | D8, D3, Q10 | Autres textes à recopier ; « 1 heure et + » = 60 ; arrondi | Un seul texte livré, rotation prête ; 60 ; minute inférieure |
-| 43 | Q11 | Niumi Points valides en session : ensemble courant ou figé au coucher ? | **Tranché le 2026-10-19 : ensemble courant**, lu au moment du scan ; la liste figée du Lot 8 du plan maître (`session_box`) disparaît |
+| 43 | Q11 | Niumi Spots valides en session : ensemble courant ou figé au coucher ? | **Tranché le 2026-10-19 : ensemble courant**, lu au moment du scan ; la liste figée du Lot 8 du plan maître (`session_box`) disparaît |
 | 44 | Q12 | Sonnerie modifiable en `RINGING` ? | Non, `ARMED` seulement (comme aujourd'hui) |
 | 45 | M10, Q13 | Forme du message « Modifiable après avoir scanné… » ; point de l'heure actuelle | Message bas d'écran, même place que « Session annulée… » ; tick à la minute |
 | 46 | Q14 | Ré-armement échoué après le scan du matin | Accueil « Réveil désactivé » + bandeau ou alerte ; jamais un faux « Réveil prévu » |
 | 47 | D11, M5, M6, Q15 | « Continuer » grisé sans pièce ; échecs non dessinés ; URL de la page produit | Oui ; même feuille d'échec qu'à l'écran 10 avec « Annuler » ; URL à fournir |
-| 47 | Q21 | Nom du Niumi Point : pièce proposée ou nom libre ? | **Tranché le 2026-10-19** : quatre pièces proposées (Salle de bain, Cuisine, Salon, Entrée) et « Une autre pièce » en saisie libre ; la limite technique de 30 caractères (`PairedBoxName`) est conservée |
-| 48 | Q22, D21 | Nombre maximal et dernier point | **Tranché le 2026-10-19** : dix au plus (`PairedBoxLimit.MAX = 10`), toujours au moins un, suppression confirmée par une feuille ; à dix, la ligne « Ajouter un Niumi Point » grisée avec « Tu as déjà dix Niumi Points. » ; refus « Ce Niumi Point est déjà enregistré. » avec « Réessayer » (D21 tranché le 2026-10-19) |
+| 47 | Q21 | Nom du Niumi Spot : pièce proposée ou nom libre ? | **Tranché le 2026-10-19** : quatre pièces proposées (Salle de bain, Cuisine, Salon, Entrée) et « Une autre pièce » en saisie libre ; la limite technique de 30 caractères (`PairedBoxName`) est conservée |
+| 48 | Q22, D21 | Nombre maximal et dernier point | **Tranché le 2026-10-19** : dix au plus (`PairedBoxLimit.MAX = 10`), toujours au moins un, suppression confirmée par une feuille ; à dix, la ligne « Ajouter un Niumi Spot » grisée avec « Tu as déjà dix Niumi Spots. » ; refus « Ce Niumi Spot est déjà enregistré. » avec « Réessayer » (D21 tranché le 2026-10-19) |
 | 49 | D20, Q16 | Atténuation pendant la frappe (Android) | −20 dB pendant la saisie, remontée 2 s après la dernière touche ; D20 hors Android |
-| 49 | Q23, D21, M13 | Ajouter un Niumi Point pendant la sonnerie ? | **Tranché le 2026-10-19 : oui**, depuis l'écran 8 ouvert par « Je n'ai pas accès à mon Niumi Point » pendant l'alarme ; le soir, l'ajout passe par les réglages ; troisième bouton au trait « Ajouter un Niumi Point » sous « Recopier le texte », sans maquette dédiée (D21 et M13 tranchés le 2026-10-19) |
+| 49 | Q23, D21, M13 | Ajouter un Niumi Spot pendant la sonnerie ? | **Tranché le 2026-10-19 : oui**, depuis l'écran 8 ouvert par « Je n'ai pas accès à mon Niumi Spot » pendant l'alarme ; le soir, l'ajout passe par les réglages ; troisième bouton au trait « Ajouter un Niumi Spot » sous « Recopier le texte », sans maquette dédiée (D21 et M13 tranchés le 2026-10-19) |
 | 50 | D4 | Durée présélectionnée de la roue | 15 min |
 | 51 | M2, M3, M4, Q17 | Rubriques non écrites ; licences ; mentions légales ; « Version 1.0 » | Lignes absentes tant que non écrites ; OFL + « Copyright IBM Corp. » ; liens inertes ; `versionName` |
 | 52 | Q18, Q19, M12 | API du rappel ; « à chaque ouverture » ; bandeau/alerte sombres | `setWindow` 10 min (3e dérogation §9.1) ; chaque `onStart`, une fois ; palette sombre |
@@ -233,9 +233,9 @@ fun SessionSnapshotDto?.isSessionDark(): Boolean   // voir « Contraintes global
 
 // :core:system — com.niumi.system.nfc (étape 38)
 sealed interface ScanSheetState { data object Hidden; data object Ready; data class Failed(val reason: ScanFailureReason) }
-enum class ScanFailureReason { NOT_A_NIUMI_POINT, NOT_REGISTERED, UNREADABLE, NFC_DISABLED }
+enum class ScanFailureReason { NOT_A_NIUMI_SPOT, NOT_REGISTERED, UNREADABLE, NFC_DISABLED }
 fun scanFailureOf(outcome: ScanOutcome?, availability: NfcAvailability): ScanFailureReason?
-// Livré à l'étape 38 : ScanOutcome + NotANiumiPoint ; NfcReader.start(activity, onUri, onUnreadable, onForeignTag = onUnreadable)
+// Livré à l'étape 38 : ScanOutcome + NotANiumiSpot ; NfcReader.start(activity, onUri, onUnreadable, onForeignTag = onUnreadable)
 
 // :core:system — com.niumi.system.permissions (étapes 36, 52)
 enum class NiumiPermission { ALARM, APP_BLOCKING, NOTIFICATIONS }
@@ -243,7 +243,7 @@ data class PermissionStatus(val permission: NiumiPermission, val granted: Boolea
 fun interface PermissionStatusSource { suspend fun status(): List<PermissionStatus> }   // agrège DeviceReadinessChecker (permissionStatusesOf) ; NOT_APPLICABLE = accordé
 object PermissionAlertPolicy { fun alertFor(statuses: List<PermissionStatus>): PermissionAlert? }
 data class PermissionAlert(val missing: List<NiumiPermission>)
-sealed interface HomeProblem { data object NfcDisabled; data object NoNiumiPoint }
+sealed interface HomeProblem { data object NfcDisabled; data object NoNiumiSpot }
 object ProblemBannerPolicy { fun bannerFor(nfc: NfcAvailability, pointCount: Int): HomeProblem? }   // un seul, le plus grave d'abord
 
 // :feature:session — com.niumi.feature.session.blocking (étape 39)
@@ -290,7 +290,7 @@ interface PairedBoxStore {   // all() / add(credential, name) / rename(boxId, na
 // :app — routes finales (NiumiRoute, étapes 35 à 51)
 // Presentation, Permissions, AccessibilityConsent (étape 36), PermissionGuide(permission: String) /* reporté avec M1 */, PointPairing(mode: String /* SETUP | ADD | ALARM */),
 // TimeToGetUp(mode: String /* SETUP | EDIT */), AppSelection, Home, Success, EmergencyExit(origin: String /* HOME | ALARM */),
-// Settings, NiumiPoints, Help, HelpTopic(id: String), About, Licenses
+// Settings, NiumiSpots, Help, HelpTopic(id: String), About, Licenses
 ```
 
 ### Contrat KMP 1.5 (étapes 41 et 42)
@@ -363,7 +363,7 @@ Transitions ajoutées à §5.1 :
 | `ARMED` blocage appliqué | `EMERGENCY_EXIT_CONFIRMED` (preuve) | `RELEASING` | `CANCELLED` |
 | `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` | `EMERGENCY_EXIT_CONFIRMED` (preuve) | `RELEASING` | `COMPLETED` |
 
-Refus ajoutés à §5.2 : `DISARM_REQUESTED` avec blocage appliqué → `BLOCKING_ALREADY_APPLIED` ; hors `ARMED` → `INVALID_STATE_TRANSITION` ; `EMERGENCY_EXIT_CONFIRMED` sans preuve → `MISSING_EMERGENCY_PROOF` ; depuis `ARMED` en attente → `INVALID_STATE_TRANSITION` (avant le coucher, on désarme). Invariants §4 réécrits : « `releasedBy` est renseigné avant l'entrée dans `RELEASING` ; `nfcVerifiedAt` existe si et seulement si `releasedBy == NFC_SCAN` ; le Niumi Point vérifié appartient à l'ensemble **courant** des points enregistrés ». Décisions §2 réécrites : 3 (n'importe quel Niumi Point enregistré au moment du scan), 4 (avant le coucher, le planning se modifie sans scan ; après, scan ou sortie de secours), 7 et 13 (la sortie de secours est le seul secours, prouvée par la recopie), 11 et 16 (ajout, renommage, suppression possibles en session, sonnerie comprise ; de un à dix ; un point ajouté après l'activation termine la session, à l'inverse de la décision 16 du contrat 1.4 prise le 2026-10-13 et révisée le 2026-10-19), 15 (inchangée sur l'alarme programmée dès l'activation). Politique §10 : les contrôles de préparation ne bloquent plus l'activation (`checks = emptyList()` côté Android ; `pairedBoxCount` borné de 1 à 10 par `PairedBoxLimit`) ; `TRIGGER_NOT_IN_FUTURE` reste. Relance iOS (`AWAITING_NFC`) documentée en §11.2 comme effet natif répété, sans transition nouvelle.
+Refus ajoutés à §5.2 : `DISARM_REQUESTED` avec blocage appliqué → `BLOCKING_ALREADY_APPLIED` ; hors `ARMED` → `INVALID_STATE_TRANSITION` ; `EMERGENCY_EXIT_CONFIRMED` sans preuve → `MISSING_EMERGENCY_PROOF` ; depuis `ARMED` en attente → `INVALID_STATE_TRANSITION` (avant le coucher, on désarme). Invariants §4 réécrits : « `releasedBy` est renseigné avant l'entrée dans `RELEASING` ; `nfcVerifiedAt` existe si et seulement si `releasedBy == NFC_SCAN` ; le Niumi Spot vérifié appartient à l'ensemble **courant** des points enregistrés ». Décisions §2 réécrites : 3 (n'importe quel Niumi Spot enregistré au moment du scan), 4 (avant le coucher, le planning se modifie sans scan ; après, scan ou sortie de secours), 7 et 13 (la sortie de secours est le seul secours, prouvée par la recopie), 11 et 16 (ajout, renommage, suppression possibles en session, sonnerie comprise ; de un à dix ; un point ajouté après l'activation termine la session, à l'inverse de la décision 16 du contrat 1.4 prise le 2026-10-13 et révisée le 2026-10-19), 15 (inchangée sur l'alarme programmée dès l'activation). Politique §10 : les contrôles de préparation ne bloquent plus l'activation (`checks = emptyList()` côté Android ; `pairedBoxCount` borné de 1 à 10 par `PairedBoxLimit`) ; `TRIGGER_NOT_IN_FUTURE` reste. Relance iOS (`AWAITING_NFC`) documentée en §11.2 comme effet natif répété, sans transition nouvelle.
 
 ---
 
@@ -412,7 +412,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 34 : composants du design system
 
-**Specs à lire :** `VALEURS-DE-DESIGN.md` §4 (formes, boutons par rôle, ombres) ; `SPECIFICATION.md` §2 (écriture des heures) ; maquettes 13, 14, 16, 19, 23, 37 (sources HTML pour les valeurs) ; SPEC_ANDROID §15 « Règles UI » (TalkBack, 44 dp).
+**Specs à lire :** `VALEURS-DE-DESIGN.md` §4 (formes, boutons par rôle, ombres) ; `SPECIFICATION.md` §2 (écriture des heures) ; maquettes 15, 16, 18, 22, 26, 40 (sources HTML pour les valeurs) ; SPEC_ANDROID §15 « Règles UI » (TalkBack, 44 dp).
 
 **Points ouverts touchés :** D9 (bouton inactif), D13.
 
@@ -449,7 +449,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Points ouverts touchés :** D12, D13.
 
 **Fichiers :**
-- `:feature:setup` — créer `SETUP/presentation/PresentationScreen.kt` (`PresentationScreen(state, actions)`, `PresentationRoute(onConfigure)`), `PresentationTexts.kt` (`PANEL_1_TITLE`, `PANEL_1_BODY`, `PANEL_2_TITLE`, `PANEL_2_BODY`, `CONTINUE`, `CONFIGURE`), `PresentationViewModel.kt` (`state: PresentationUiState(panel: Int)`, `next()`, `back()`, `acknowledge()` → `SetupPreferences.acknowledgeOnboarding()`) ; `DS/drawing/LockedPhoneDrawing.kt` et `PhoneNearPointDrawing.kt` (dessins vectoriels Compose, un détail ambre chacun) ; supprimer `SETUP/onboarding/*` et ses tests.
+- `:feature:setup` — créer `SETUP/presentation/PresentationScreen.kt` (`PresentationScreen(state, actions)`, `PresentationRoute(onConfigure)`), `PresentationTexts.kt` (`PANEL_1_TITLE`, `PANEL_1_BODY`, `PANEL_2_TITLE`, `PANEL_2_BODY`, `CONTINUE`, `CONFIGURE`), `PresentationViewModel.kt` (`state: PresentationUiState(panel: Int)`, `next()`, `back()`, `acknowledge()` → `SetupPreferences.acknowledgeOnboarding()`) ; `DS/drawing/LockedPhoneDrawing.kt` et `PhoneNearSpotDrawing.kt` (dessins vectoriels Compose, un détail ambre chacun) ; supprimer `SETUP/onboarding/*` et ses tests.
 - `:app` — modifier `APP/navigation/NiumiRoute.kt` (`Onboarding` → `Presentation`), `NiumiNavHost.kt`, `HomeDestination.kt` ; modifier `androidApp/app/src/test/kotlin/com/niumi/app/help/HelpTextsTest.kt` (retirer la comparaison avec `OnboardingTexts`).
 - Tests : `PresentationTextsTest`, `PresentationViewModelTest` (panneau 1 → 2 → acquittement une seule fois), `PresentationScreenTest` (instrumenté : textes, deux traits, flèche de retour seulement sur le panneau 2), `HomeDestinationTest` mis à jour.
 
@@ -489,7 +489,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 37 : écran 4 · Choix des applications
 
-**Specs à lire :** `SPECIFICATION.md` §8 ; maquettes 10, 11, 12 ; SPEC_ANDROID §12.1 ; `SETUP/apps/AppPickerViewModel.kt` et `SYS/apps/AppSelectionStore.kt` existants.
+**Specs à lire :** `SPECIFICATION.md` §8 ; maquettes 12, 13, 14 ; SPEC_ANDROID §12.1 ; `SETUP/apps/AppPickerViewModel.kt` et `SYS/apps/AppSelectionStore.kt` existants.
 
 **Points ouverts touchés :** T9 (clos, point de vigilance 11), M11, Q3.
 
@@ -510,30 +510,30 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 38 : écran 10 · Réveil, feuille de scan et échecs
 
-**Specs à lire :** `SPECIFICATION.md` §14 (sans les parties iPhone) et §6 « Échecs du scan » ; maquettes 28 à 33 ; SPEC_ANDROID §10.4, §11.2, §4.4, §19.1 ; `RING/AlarmActivity.kt`, `AlarmNfcScanCoordinator.kt`, `AlarmViewModel.kt`, `RING/ui/AlarmScreen.kt`, `AlarmScreenState.kt` ; `SYS/nfc/ScanOutcome.kt`, `NfcAvailability.kt`.
+**Specs à lire :** `SPECIFICATION.md` §14 (sans les parties iPhone) et §6 « Échecs du scan » ; maquettes 31 à 36 ; SPEC_ANDROID §10.4, §11.2, §4.4, §19.1 ; `RING/AlarmActivity.kt`, `AlarmNfcScanCoordinator.kt`, `AlarmViewModel.kt`, `RING/ui/AlarmScreen.kt`, `AlarmScreenState.kt` ; `SYS/nfc/ScanOutcome.kt`, `NfcAvailability.kt`.
 
 **Points ouverts touchés :** Q4, Q5, E7, M6.
 
 **Fichiers :**
 - `:core:system` — créer `SYS/nfc/ScanSheetState.kt`, `ScanFailureReason.kt`, `ScanOutcomeMapping.kt`.
-- `:core:designsystem` — créer `DS/component/NfcScanSheet.kt` (titre « Prêt à scanner », rond d'icône, phrase, bouton « Annuler » gris ; état `Failed` : titre, phrase d'aide, bouton « Réessayer » ou « Ouvrir les réglages », lien de secours facultatif), `DS/drawing/PhoneNearPointDrawing.kt` réutilisé.
-- `:feature:ringing` — modifier `RING/ui/AlarmScreen.kt` (date « Vendredi 2 octobre », heure 112, dessin, consigne 30, bouton « Scanner le Niumi Point », lien « Je n'ai pas accès à mon Niumi Point » **masqué jusqu'à l'étape 49**), `AlarmScreenState.kt` (textes `ScanTexts` : consigne, phrase de la feuille « Approche ton téléphone du Niumi Point », quatre échecs mot pour mot, Q5 tranché : aucun texte de déverrouillage), `AlarmUiState.kt` (+ `sheet: ScanSheetState`), `AlarmViewModel.kt` (`openScanSheet()`, `cancelScan()`, `retryScan()`, `onScanOutcome()`), `AlarmActivity.kt` (Reader Mode activé/désactivé avec la feuille ; relecture NFC sur état stable conservée, vigilance 13 ; `AlarmNfcScanCoordinator` inchangé), `RING/ui/AlarmTexts.kt` (nouvel objet, remplace les constantes privées).
-- Tests : remplacer `AlarmScreenNoStopActionTest` par `AlarmScreenActionsTest` (instrumenté : les seuls nœuds cliquables sont « Scanner le Niumi Point » et, feuille ouverte, « Annuler »/« Réessayer » ; aucun ne dispatche d'événement ; vérifié par un `AlarmViewModel` fake qui enregistre les appels) ; `AlarmViewModelTest` (feuille ouverte → Reader Mode demandé ; échec → `Failed(reason)` ; `RELEASING` → feuille fermée ; NFC annoncé coupé juste après un redémarrage → `Failed(NFC_DISABLED)` disparaît seul dès que l'adaptateur est prêt) ; `ScanOutcomeMappingTest` (table `ScanOutcome` × `NfcAvailability` → `ScanFailureReason`) ; `AlarmTextsTest` ; `AlarmScreenStateTest` mis à jour.
+- `:core:designsystem` — créer `DS/component/NfcScanSheet.kt` (titre « Prêt à scanner », rond d'icône, phrase, bouton « Annuler » gris ; état `Failed` : titre, phrase d'aide, bouton « Réessayer » ou « Ouvrir les réglages », lien de secours facultatif), `DS/drawing/PhoneNearSpotDrawing.kt` réutilisé.
+- `:feature:ringing` — modifier `RING/ui/AlarmScreen.kt` (date « Vendredi 2 octobre », heure 112, dessin, consigne 30, bouton « Scanner le Niumi Spot », lien « Je n'ai pas accès à mon Niumi Spot » **masqué jusqu'à l'étape 49**), `AlarmScreenState.kt` (textes `ScanTexts` : consigne, phrase de la feuille « Approche ton téléphone du Niumi Spot », quatre échecs mot pour mot, Q5 tranché : aucun texte de déverrouillage), `AlarmUiState.kt` (+ `sheet: ScanSheetState`), `AlarmViewModel.kt` (`openScanSheet()`, `cancelScan()`, `retryScan()`, `onScanOutcome()`), `AlarmActivity.kt` (Reader Mode activé/désactivé avec la feuille ; relecture NFC sur état stable conservée, vigilance 13 ; `AlarmNfcScanCoordinator` inchangé), `RING/ui/AlarmTexts.kt` (nouvel objet, remplace les constantes privées).
+- Tests : remplacer `AlarmScreenNoStopActionTest` par `AlarmScreenActionsTest` (instrumenté : les seuls nœuds cliquables sont « Scanner le Niumi Spot » et, feuille ouverte, « Annuler »/« Réessayer » ; aucun ne dispatche d'événement ; vérifié par un `AlarmViewModel` fake qui enregistre les appels) ; `AlarmViewModelTest` (feuille ouverte → Reader Mode demandé ; échec → `Failed(reason)` ; `RELEASING` → feuille fermée ; NFC annoncé coupé juste après un redémarrage → `Failed(NFC_DISABLED)` disparaît seul dès que l'adaptateur est prêt) ; `ScanOutcomeMappingTest` (table `ScanOutcome` × `NfcAvailability` → `ScanFailureReason`) ; `AlarmTextsTest` ; `AlarmScreenStateTest` mis à jour.
 
 **Produit :** l'écran 10 et sa feuille, les quatre échecs, sans aucune action d'arrêt.
 
-- [x] **Écrire `ScanOutcomeMappingTest`, `AlarmTextsTest`, `AlarmViewModelTest`**, implémenter états, feuille, écran, activité. *(2026-10-22 : `ScanOutcome.NotANiumiPoint` et `onForeignTag` pour séparer « pas un Niumi Point » de « lecture ratée » ; `NfcScanSheet` reçoit un contenu présentationnel ; variante du dessin pour la maquette 28 ; voir `ETAPE-38.md`.)*
+- [x] **Écrire `ScanOutcomeMappingTest`, `AlarmTextsTest`, `AlarmViewModelTest`**, implémenter états, feuille, écran, activité. *(2026-10-22 : `ScanOutcome.NotANiumiSpot` et `onForeignTag` pour séparer « pas un Niumi Spot » de « lecture ratée » ; `NfcScanSheet` reçoit un contenu présentationnel ; variante du dessin pour la maquette 31 ; voir `ETAPE-38.md`.)*
 - [x] **Écrire `AlarmScreenActionsTest`**, supprimer `AlarmScreenNoStopActionTest`.
 - [x] **Vérifier :** batterie standard ; `./gradlew :feature:ringing:connectedDebugAndroidTest`. *(1 532 JVM ; instrumentés tous verts sauf l'échec A8 de `:app`, reproduit sur `HEAD`.)*
-- [x] **Valider sur appareil, rédiger `ETAPE-38.md`.** SPEC_ANDROID §10.4 (bouton et feuille ; Reader Mode selon Q4), §11.2 (tableau des échecs réécrit avec les textes du design), §19.1 (nouveau garde-fou), §15. *(2026-10-22 : douze essais conformes sur Xiaomi / Android 16 / HyperOS ; consigne « Rejoins ton Niumi Point », après-scan en chargement seul, date à 24 dp, « Prêt à scanner » à l'encre, décidés pendant les essais.)*
+- [x] **Valider sur appareil, rédiger `ETAPE-38.md`.** SPEC_ANDROID §10.4 (bouton et feuille ; Reader Mode selon Q4), §11.2 (tableau des échecs réécrit avec les textes du design), §19.1 (nouveau garde-fou), §15. *(2026-10-22 : douze essais conformes sur Xiaomi / Android 16 / HyperOS ; consigne « Rejoins ton Niumi Spot », après-scan en chargement seul, date à 24 dp, « Prêt à scanner » à l'encre, décidés pendant les essais.)*
 
-**Tests manuels :** alarme à l'heure → écran 10 sombre ; « Scanner » → feuille ; tag quelconque → « Ce n'est pas un Niumi Point. » ; tag inconnu → « Ce Niumi Point n'est pas enregistré. » ; NFC coupé → « Le NFC est coupé. » + « Ouvrir les réglages » ; le bon tag → `RELEASING`, feuille fermée ; écran verrouillé : la notification de sonnerie mène à l'écran 10 après déverrouillage (Q5 tranché).
+**Tests manuels :** alarme à l'heure → écran 10 sombre ; « Scanner » → feuille ; tag quelconque → « Ce n'est pas un Niumi Spot. » ; tag inconnu → « Ce Niumi Spot n'est pas enregistré. » ; NFC coupé → « Le NFC est coupé. » + « Ouvrir les réglages » ; le bon tag → `RELEASING`, feuille fermée ; écran verrouillé : la notification de sonnerie mène à l'écran 10 après déverrouillage (Q5 tranché).
 
 **Terminé quand :** quatre échecs mot pour mot (test) ; Reader Mode inactif feuille fermée (constaté avec Q4) ; aucune action n'arrête l'alarme (test).
 
 ### Étape 39 : écran 7 · Écran de blocage
 
-**Specs à lire :** `SPECIFICATION.md` §12 (partie Android) ; maquette 22 ; SPEC_ANDROID §12.2 (overlay, « ne pas démarrer une Activity depuis l'arrière-plan »), §12.3 ; `SESSION/blocking/*` ; `docs/android/play-console/ACCESSIBILITY_DECLARATION.md`, `REVIEW_VIDEO_SCRIPT.md` ; point de vigilance 5.
+**Specs à lire :** `SPECIFICATION.md` §12 (partie Android) ; maquette 25 ; SPEC_ANDROID §12.2 (overlay, « ne pas démarrer une Activity depuis l'arrière-plan »), §12.3 ; `SESSION/blocking/*` ; `docs/android/play-console/ACCESSIBILITY_DECLARATION.md`, `REVIEW_VIDEO_SCRIPT.md` ; point de vigilance 5.
 
 **Points ouverts touchés :** Q6, T10.
 
@@ -555,7 +555,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 40 : feuille « Sonnerie » et ligne « Sonnerie »
 
-**Specs à lire :** `SPECIFICATION.md` §10 ; maquettes 16, 17 ; SPEC_ANDROID §10.2 (montée), §15 « Lot 7 » ; `SESSION/ringtone/*`, `SYS/audio/VolumeRamp.kt`, `AlarmSoundPreferences.kt`, `AlarmVolumeSource.kt`, `NiumiRingtones.kt` ; `ETAPE-28.md` (mesure du 2026-10-08) ; point de vigilance 4.
+**Specs à lire :** `SPECIFICATION.md` §10 ; maquettes 18 à 20 ; SPEC_ANDROID §10.2 (montée), §15 « Lot 7 » ; `SESSION/ringtone/*`, `SYS/audio/VolumeRamp.kt`, `AlarmSoundPreferences.kt`, `AlarmVolumeSource.kt`, `NiumiRingtones.kt` ; `ETAPE-28.md` (mesure du 2026-10-08) ; point de vigilance 4.
 
 **Points ouverts touchés :** Q7, D7, D5, D6, M7.
 
@@ -569,7 +569,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 - [x] **Écrire les tests de durées et de textes**, implémenter `sanitized`, la feuille, les textes. *(2026-10-23 : décisions Q7, D7, D5, D6, M7 tranchées avec Mehdi avant l'implémentation ; `AlarmSoundSummary` remplace le résumé en chaîne unique ; `AlarmVolumeSource.alarmStreamPercent()` ajouté.)*
 - [x] **Vérifier :** batterie standard ; `grep -rn "RingtoneScreen\|NiumiRoute.Ringtone" androidApp` vide. *(1 vérifié vide ; JVM, ktlint, detekt, lintDebug et assembleDebug verts.)*
-- [x] **Valider sur appareil, rédiger `ETAPE-40.md`.** SPEC_ANDROID §3, §10.2, §15 (Lot 7 réécrit) ; `POINTS-OUVERTS.md` Q7 consigné. *(2026-10-23 : treize essais conformes sur Xiaomi / Android 16 / HyperOS ; défaut réel trouvé et corrigé pendant la validation — `NiumiBubble` non focusable ne recevait jamais `ACTION_OUTSIDE` sur cette surcouche, voir `ETAPE-40.md` ; session armée pour l'essai non annulée faute du Niumi Point physique.)*
+- [x] **Valider sur appareil, rédiger `ETAPE-40.md`.** SPEC_ANDROID §3, §10.2, §15 (Lot 7 réécrit) ; `POINTS-OUVERTS.md` Q7 consigné. *(2026-10-23 : treize essais conformes sur Xiaomi / Android 16 / HyperOS ; défaut réel trouvé et corrigé pendant la validation — `NiumiBubble` non focusable ne recevait jamais `ACTION_OUTSIDE` sur cette surcouche, voir `ETAPE-40.md` ; session armée pour l'essai non annulée faute du Niumi Spot physique.)*
 - [x] **Révision du 2026-10-23 (maquettes 18 à 20)** : interrupteur « Sonnerie progressive » (`NiumiSwitchSize.Row`), barre segmentée (`NiumiSegmentedBar`), défaut 10 min ; `SPECIFICATION.md` §10, `TEXTES` 18–20, `VALEURS` §2–§4 et JSON, `POINTS-OUVERTS` D6/D22/E13, SPEC_ANDROID §3/§10.2/§15/§19/§20 ; nouvelle validation sur appareil. *(2026-10-24 : instrumentés 56/56 et 21/21, dix essais conformes sur Xiaomi / Android 16 / HyperOS, écrans 5, 6 et 7 en sombre ; voir `ETAPE-40.md`.)*
 - [x] **Révision du 2026-10-24 : pourcentage du volume en direct** — `AlarmVolumeSource.changes()` (récepteur à chaud de `android.media.VOLUME_CHANGED_ACTION`), collecte bornée par `RingtoneSheetRoute` ; SPEC_ANDROID §13.1/§15/§19.1/§20, `SPECIFICATION.md` §10. *(2026-10-24 : JVM 1 585 verts ; sur appareil, le pourcentage suit le curseur « Alarme » et ignore « Média », récepteur retiré à la fermeture.)*
 - [x] **Revue des maquettes 18 à 20 du 2026-10-24** : « Volume du téléphone » avant « Sonnerie progressive » (16 au-dessus chacune), sous-ligne « Monte jusqu’au volume du téléphone en N min » ; `SPECIFICATION.md` §10, `TEXTES` 18–20, SPEC_ANDROID §15, D6.
@@ -588,7 +588,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 4. **Planning calculé en KMP, stocké en natif** : `NextOccurrenceCalculator` est pur ; l'interrupteur et le dépôt sont Android.
 5. **Contrôles de préparation non bloquants** (`SPECIFICATION.md` §2 « l'interrupteur s'active toujours ») : `ActivationPolicy` ne reçoit plus de contrôle bloquant ; les manques se signalent par l'alerte et le bandeau (étape 52).
 
-**Ce que chaque étape produit.** 41 : le moteur sait calculer la prochaine occurrence, se désarmer sans scan avant le coucher, et dire comment une session a été libérée. 42 : il porte la limite à dix Niumi Points, accepte la sortie de secours prouvée et calcule le temps gagné.
+**Ce que chaque étape produit.** 41 : le moteur sait calculer la prochaine occurrence, se désarmer sans scan avant le coucher, et dire comment une session a été libérée. 42 : il porte la limite à dix Niumi Spots, accepte la sortie de secours prouvée et calcule le temps gagné.
 
 ### Étape 41 : planning, prochaine occurrence, désarmement, `releasedBy`
 
@@ -621,9 +621,9 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Terminé quand :** chaque ligne ajoutée à §17 a son test ; `SessionEngineForbiddenTransitionsTest` couvre `DISARM_REQUESTED` depuis les dix états ; aucun test Android modifié ; SPEC_IOS §8/§9 alignés.
 
-### Étape 42 : limite à dix Niumi Points, sortie de secours, temps gagné
+### Étape 42 : limite à dix Niumi Spots, sortie de secours, temps gagné
 
-**Specs à lire :** SPEC_CORE_KMP §2 (3, 7, 11, 13, 16), §4, §6, §9.2, §10, §12, §14, §17 ; SPEC_IOS §4.6, §14, §15 ; `SPECIFICATION.md` §13, §15, §16 « Niumi Points » ; `KMP/nfc/NfcVerificationProof.kt` (modèle de la preuve opaque), `KMP/diagnostics/PairedBoxLimit.kt`, `ActivationPolicy.kt` ; « Contrat KMP 1.5 ».
+**Specs à lire :** SPEC_CORE_KMP §2 (3, 7, 11, 13, 16), §4, §6, §9.2, §10, §12, §14, §17 ; SPEC_IOS §4.6, §14, §15 ; `SPECIFICATION.md` §13, §15, §16 « Niumi Spots » ; `KMP/nfc/NfcVerificationProof.kt` (modèle de la preuve opaque), `KMP/diagnostics/PairedBoxLimit.kt`, `ActivationPolicy.kt` ; « Contrat KMP 1.5 ».
 
 **Points ouverts touchés :** D2, D3, D8, Q10.
 
@@ -631,7 +631,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - `:shared:core` — créer `KMP/emergency/EmergencyExitTexts.kt`, `EmergencyTranscription.kt`, `EmergencyExitProof.kt`, `KMP/domain/EmergencyReducer.kt` (sources et cibles du tableau 1.5 ; `releasedBy = EMERGENCY_EXIT` ; effets identiques à `VALID_NFC_SCANNED`), `KMP/insight/TimeToGetUpCalculator.kt`, `KMP/interop/EmergencyDtos.kt`, `InsightDtos.kt` ; modifier `SessionEventKind.kt`, `SessionEvent.kt` (+ `emergencyProof`), `ViolationCode.kt` (+ `MISSING_EMERGENCY_PROOF`), `SessionEventValidation.kt`, `SessionEngine.kt`, `NiumiCoreFacade.kt` (+ 3 méthodes), `SessionDtos.kt`, `KMP/diagnostics/PairedBoxLimit.kt` (`MAX = 10`, `MIN` inchangé).
 - Tests : `ActivationPolicyTest` (0, 1, 10 et 11 boîtiers ; `TOO_MANY_PAIRED_BOXES` au-dessus de dix), `EmergencyTranscriptionTest` (texte de 197 caractères ; casse, accents, ponctuation, espaces doubles ignorés ; apostrophe droite tapée au clavier contre apostrophe typographique du modèle → indifférent ; majuscule automatique du clavier en début de phrase → indifférent ; premier mot divergent → `MISMATCH` avec index ; préfixe du dernier mot → `INCOMPLETE` ; preuve seulement sur `COMPLETE` avec contexte ; id inconnu), `SessionEngineEmergencyExitTest` (depuis `ARMED` appliqué → `CANCELLED` ; depuis `RINGING` → `COMPLETED` ; sans preuve → `MISSING_EMERGENCY_PROOF` ; depuis `ARMED` en attente → refus), `TimeToGetUpCalculatorTest` (7:00 → 7:04, 15 déclarées → 4 / 11 ; 3 déclarées → `null` ; arrondi selon Q10), `EmergencyExitTextsTest` (197 caractères exactement, texte mot pour mot), `SessionEngineForbiddenTransitionsTest` étendu.
 
-**Produit :** le moteur accepte jusqu'à dix Niumi Points, la sortie de secours prouvée, et sait calculer le temps gagné.
+**Produit :** le moteur accepte jusqu'à dix Niumi Spots, la sortie de secours prouvée, et sait calculer le temps gagné.
 
 - [ ] **Étendre `ActivationPolicyTest` à dix et onze boîtiers**, porter `PairedBoxLimit.MAX` à 10.
 - [ ] **Écrire `EmergencyTranscriptionTest`, `EmergencyExitTextsTest`, `SessionEngineEmergencyExitTest`**, implémenter textes, normalisation, preuve, réducteur.
@@ -645,12 +645,12 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Lot ajouté le 2026-10-10.** Quatre décisions proposées :
 
-1. **Ensemble courant des Niumi Points** (Q11, tranché le 2026-10-19) : la vérification d'un scan lit `PairedBoxStore.all()` au moment du scan, l'appareil étant déverrouillé (SPEC_ANDROID §4.4) ; la liste figée du Lot 8 du plan maître disparaît (`session_box` supprimée, `AndroidSessionExtras.boxes` retiré).
+1. **Ensemble courant des Niumi Spots** (Q11, tranché le 2026-10-19) : la vérification d'un scan lit `PairedBoxStore.all()` au moment du scan, l'appareil étant déverrouillé (SPEC_ANDROID §4.4) ; la liste figée du Lot 8 du plan maître disparaît (`session_box` supprimée, `AndroidSessionExtras.boxes` retiré).
 2. **Projection Direct Boot v5** : + `releasedBy`, `disarmedAtEpochMillis` ; le champ `boxes` n'est plus écrit ni lu (un fichier v4 reste lisible) ; la projection ne sert plus qu'à sonner et à reconstruire avant déverrouillage.
 3. **Ré-armement natif sous le mutex du coordinateur** (`WakePlanScheduler`), jamais avant déverrouillage ; déclenché par l'interface, par `RELEASE_SUCCEEDED` (`COMPLETED`/`DISARMED`), par le démarrage et le déverrouillage.
 4. **Le planning est la source de la carte et du cadran ; la session est la source du verrouillage et du thème.**
 
-### Étape 43 : Room v6, Direct Boot v5, dépôts du planning et des Niumi Points
+### Étape 43 : Room v6, Direct Boot v5, dépôts du planning et des Niumi Spots
 
 **Specs à lire :** SPEC_ANDROID §7.2, §7.3, §11.1, §11.3, §16 ; SPEC_CORE_KMP §13 ; `SPECIFICATION.md` §2, §16 ; `ETAPE-30.md` ; `DB/entity/PairedBoxEntity.kt`, `entity/SessionBoxEntity.kt`, `dao/PairedBoxDao.kt`, `pairing/*`, `migration/Migrations.kt`, `directboot/*`, `SYS/nfc/HandleValidNfcUseCase.kt`, `SYS/setup/SetupPreferences.kt` (patron de garde) ; points de vigilance 6, 8 et 16.
 
@@ -663,7 +663,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - `:feature:setup` — `SETUP/pairing/PairingViewModel.kt`, `PairingUiState.kt`, `PairingTexts.kt` : le verrou « session en cours » est retiré (ajout, renommage, retrait possibles en session) ; `canAdd = boxes.size < PairedBoxLimit.MAX` ; « 5 boîtiers maximum. » devient « 10 boîtiers maximum. » (texte transitoire, l'écran disparaît à l'étape 47).
 - Tests : `Migration5To6Test` (instrumenté, `MigrationTestHelper`, depuis une base v5 peuplée d'une session `ARMED` avec `session_box` : rien n'est perdu, table absente, `releasedBy` déduit), `RoomPairedBoxStoreTest` (dernier refusé `LastBoxKept`, dixième accepté, onzième `LimitReached`, flux `points`), `DirectBootSnapshotJsonTest` (v4 lisible avec `boxes` ignoré, v5 aller-retour), `DirectBootRoomParityTest`, `HandleValidNfcUseCaseTest` (point ajouté après l'activation accepté ; point retiré refusé ; liste vide → `NO_PAIRED_BOX_MATCH`), `ArmSessionUseCaseTest`, `PairingViewModelTest` (plus de verrou en session, limite dix), `WakePlanStoreTest`, `DataStoreUnlockGuardTest` (les deux nouveaux dépôts), `SessionStatesTest`, `EventFingerprintTest` (témoins schéma 3), `NiumiDatabaseSchemaTest` (v6).
 
-**Produit :** la base lit l'ensemble courant des Niumi Points (un à dix) au moment du scan, stocke le planning, la durée déclarée et le moyen de libération, et relit les sessions des versions précédentes.
+**Produit :** la base lit l'ensemble courant des Niumi Spots (un à dix) au moment du scan, stocke le planning, la durée déclarée et le moyen de libération, et relit les sessions des versions précédentes.
 
 - [ ] **Écrire `Migration5To6Test` et `RoomPairedBoxStoreTest`**, implémenter la migration, le dépôt (flux, refus du dernier, limite dix) et la suppression de `session_box`.
 - [ ] **Écrire les tests Direct Boot, `HandleValidNfcUseCaseTest` et `PairingViewModelTest`**, implémenter la projection v5, la vérification sur l'ensemble courant et le déverrouillage de l'écran 3 actuel en session.
@@ -704,7 +704,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 45 : écran 6 · Accueil à trois états et cadran
 
-**Specs à lire :** `SPECIFICATION.md` §9, §2, §10 ; `VALEURS-DE-DESIGN.md` §5 ; maquettes 13, 14, 15, 18 (sources pour le cadran) ; SPEC_ANDROID §15 ; `APP/navigation/HomeScreen.kt`, `HomeViewModel.kt`, `HomeUiState.kt`, `HomeDestination.kt`, `SESSION/wake/*`, `summary/*`, `active/ActiveSession*`.
+**Specs à lire :** `SPECIFICATION.md` §9, §2, §10 ; `VALEURS-DE-DESIGN.md` §5 ; maquettes 15, 16, 17, 21 (sources pour le cadran) ; SPEC_ANDROID §15 ; `APP/navigation/HomeScreen.kt`, `HomeViewModel.kt`, `HomeUiState.kt`, `HomeDestination.kt`, `SESSION/wake/*`, `summary/*`, `active/ActiveSession*`.
 
 **Points ouverts touchés :** D5, D17, M10, Q8, Q13.
 
@@ -721,18 +721,18 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - [ ] **Vérifier :** batterie standard ; `grep -rn "WakeTimeScreen\|SummaryScreen\|ActiveSessionScreen" androidApp` vide.
 - [ ] **Valider sur appareil, rédiger `ETAPE-45.md`.** SPEC_ANDROID §15 (écran 6 à trois états), §8 (prochaine occurrence), §9.2.
 
-**Tests manuels :** fin de mise en route → « Réveil désactivé » grisé ; interrupteur → carte noire, « Réveil dans … » ; déplacer la poignée du coucher → la carte se met à jour, une session `DISARMED` puis `ARMED` en base ; régler une période déjà en cours → blocage immédiat, accueil sombre ; toucher un jour en session → « Modifiable après avoir scanné ton Niumi Point. » ; deux nuits L–V réelles.
+**Tests manuels :** fin de mise en route → « Réveil désactivé » grisé ; interrupteur → carte noire, « Réveil dans … » ; déplacer la poignée du coucher → la carte se met à jour, une session `DISARMED` puis `ARMED` en base ; régler une période déjà en cours → blocage immédiat, accueil sombre ; toucher un jour en session → « Modifiable après avoir scanné ton Niumi Spot. » ; deux nuits L–V réelles.
 
 **Terminé quand :** les trois états sont conformes aux maquettes (constaté) ; aucune écriture d'état de session depuis l'interface (grep `SessionCoordinator` dans `home/` vide : seul `WakePlanScheduler` est injecté).
 
 ### Étape 46 : annulation par scan et écran 11 · Réussite
 
-**Specs à lire :** `SPECIFICATION.md` §11, §15 ; maquettes 18 à 21, 36 ; SPEC_ANDROID §11.3 ; `SESSION/active/ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `RING/AlarmViewModel.kt` (`AlarmUiState.Exit`), `APP/navigation/DeepLinkDestination.kt`.
+**Specs à lire :** `SPECIFICATION.md` §11, §15 ; maquettes 21 à 24, 39 ; SPEC_ANDROID §11.3 ; `SESSION/active/ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `RING/AlarmViewModel.kt` (`AlarmUiState.Exit`), `APP/navigation/DeepLinkDestination.kt`.
 
 **Points ouverts touchés :** D2, D15, Q14.
 
 **Fichiers :**
-- `:feature:session` — créer `SESSION/home/CancelSessionSheet.kt` (titre, texte, bouton « Scanner le Niumi Point » → `NfcScanSheet` avec la phrase « Approche ton téléphone du Niumi Point pour annuler la session », lien de secours masqué jusqu'à l'étape 49), `CancelSessionViewModel.kt` (Reader Mode via `NfcReader` + `NfcScanHandler` existants ; relecture NFC sur état stable conservée, vigilance 13 ; succès → fermeture, message « Session annulée… »), `SESSION/success/SuccessScreen.kt`, `SuccessTexts.kt` (`standingAt(time)`, `afterAlarm(min)`, `bravo(min)`, `APPS_BACK`, `BACK_HOME`), `SuccessViewModel.kt` (lit la dernière session `COMPLETED`, `TimeToGetUpPreferences`, `computeTimeToGetUp` ; sans durée déclarée → pas de « Bravo ! »), `DS/drawing/SunriseDrawing.kt` (dégradé §2) ; supprimer `ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `CancelledTexts`, `CompletedTexts` et leurs tests.
+- `:feature:session` — créer `SESSION/home/CancelSessionSheet.kt` (titre, texte, bouton « Scanner le Niumi Spot » → `NfcScanSheet` avec la phrase « Approche ton téléphone du Niumi Spot pour annuler la session », lien de secours masqué jusqu'à l'étape 49), `CancelSessionViewModel.kt` (Reader Mode via `NfcReader` + `NfcScanHandler` existants ; relecture NFC sur état stable conservée, vigilance 13 ; succès → fermeture, message « Session annulée… »), `SESSION/success/SuccessScreen.kt`, `SuccessTexts.kt` (`standingAt(time)`, `afterAlarm(min)`, `bravo(min)`, `APPS_BACK`, `BACK_HOME`), `SuccessViewModel.kt` (lit la dernière session `COMPLETED`, `TimeToGetUpPreferences`, `computeTimeToGetUp` ; sans durée déclarée → pas de « Bravo ! »), `DS/drawing/SunriseDrawing.kt` (dégradé §2) ; supprimer `ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `CancelledTexts`, `CompletedTexts` et leurs tests.
 - `:feature:ringing` — `AlarmUiState.Exit` → destination `Success` (`COMPLETED`) ou `Home` (`CANCELLED`).
 - `:app` — `NiumiRoute.kt` (+ `Success` ; `ScanToModify`, `Cancelled`, `Completed` supprimées), `NiumiNavHost.kt`, `DeepLinkDestination.kt`.
 - Tests : `CancelSessionViewModelTest`, `SuccessTextsTest`, `SuccessViewModelTest` (7:04 / 4 min / 11 min ; pas de « Bravo ! » si plus lent ou sans durée), `AlarmUiStateTest`, `DeepLinkDestinationTest`.
@@ -748,20 +748,20 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Terminé quand :** deux nuits réelles passent par l'écran 11 puis « Réveil prévu » ; l'annulation éteint l'interrupteur (constaté en base).
 
-## Phase R — Lot 15 : Niumi Points et réglages (étapes 47 et 48)
+## Phase R — Lot 15 : Niumi Spots et réglages (étapes 47 et 48)
 
-### Étape 47 : écran 3 · Association du Niumi Point en trois temps
+### Étape 47 : écran 3 · Association du Niumi Spot en trois temps
 
-**Specs à lire :** `SPECIFICATION.md` §6 ; maquettes 05 à 08 ; SPEC_ANDROID §11.1 ; `SETUP/pairing/*` existant (écran 3 « Mes boîtiers » du Lot 8 du plan maître) ; `ETAPE-31.md` ; étape 38 (`NfcScanSheet`).
+**Specs à lire :** `SPECIFICATION.md` §6 ; maquettes 07 à 10 ; SPEC_ANDROID §11.1 ; `SETUP/pairing/*` existant (écran 3 « Mes boîtiers » du Lot 8 du plan maître) ; `ETAPE-31.md` ; étape 38 (`NfcScanSheet`).
 
 **Points ouverts touchés :** D11, M5, M6, E7, Q15 ; D21 et Q21 tranchés.
 
 **Fichiers :**
-- `:feature:setup` — créer `SETUP/pointpairing/PointPairingScreen.kt` (logo, flèche, dessin du Niumi Point, consigne, bouton, lien « Je n'ai pas encore de Niumi Point » → URL Q15), `RoomChoiceSheet.kt` (quatre cases avec icône : Salle de bain, Cuisine, Salon, Entrée ; « Une autre pièce » → champ « Nom de la pièce », clavier, validation par `PairedBoxName.sanitize` ; « Continuer », ou « Enregistrer » en mode renommage), `PointPairingTexts.kt`, `PointPairingViewModel.kt` (temps 1 → 2 → 3 ; `mode: SETUP | ADD | ALARM` ; échecs par `NfcScanSheet` avec « Annuler » à la place du lien ; `PairedBoxStore.add(credential, name)` : `Added` continue, `AlreadyPaired` → « Ce Niumi Point est déjà enregistré. » avec « Réessayer », `LimitReached` → « Tu as déjà dix Niumi Points. »), icônes `ic_bath`, `ic_kitchen`, `ic_sofa`, `ic_door` ; supprimer `SETUP/pairing/*` (`PairingScreen`, `PairingTexts`, `PairingUiState`, `PairingViewModel`, `PairingActions`, `DefaultBoxName`) et ses tests. Les noms existants (« Boîtier 1 ») restent des noms libres : aucune migration.
-- `:app` — `NiumiRoute.Pairing` → `PointPairing(mode)` ; `NiumiNavHost.kt` (`SETUP` → `TimeToGetUp` à partir de l'étape 50, `AppSelection` avant ; `ADD` → retour à `NiumiPoints` dès l'étape 48 ; `ALARM` branché à l'étape 49 dans `AlarmActivity`). Entre les étapes 47 et 48, renommage et suppression ne sont joignables nulle part : à signaler dans `ETAPE-47.md`.
+- `:feature:setup` — créer `SETUP/pointpairing/PointPairingScreen.kt` (logo, flèche, dessin du Niumi Spot, consigne, bouton, lien « Je n'ai pas encore de Niumi Spot » → URL Q15), `RoomChoiceSheet.kt` (quatre cases avec icône : Salle de bain, Cuisine, Salon, Entrée ; « Une autre pièce » → champ « Nom de la pièce », clavier, validation par `PairedBoxName.sanitize` ; « Continuer », ou « Enregistrer » en mode renommage), `PointPairingTexts.kt`, `PointPairingViewModel.kt` (temps 1 → 2 → 3 ; `mode: SETUP | ADD | ALARM` ; échecs par `NfcScanSheet` avec « Annuler » à la place du lien ; `PairedBoxStore.add(credential, name)` : `Added` continue, `AlreadyPaired` → « Ce Niumi Spot est déjà enregistré. » avec « Réessayer », `LimitReached` → « Tu as déjà dix Niumi Spots. »), icônes `ic_bath`, `ic_kitchen`, `ic_sofa`, `ic_door` ; supprimer `SETUP/pairing/*` (`PairingScreen`, `PairingTexts`, `PairingUiState`, `PairingViewModel`, `PairingActions`, `DefaultBoxName`) et ses tests. Les noms existants (« Boîtier 1 ») restent des noms libres : aucune migration.
+- `:app` — `NiumiRoute.Pairing` → `PointPairing(mode)` ; `NiumiNavHost.kt` (`SETUP` → `TimeToGetUp` à partir de l'étape 50, `AppSelection` avant ; `ADD` → retour à `NiumiSpots` dès l'étape 48 ; `ALARM` branché à l'étape 49 dans `AlarmActivity`). Entre les étapes 47 et 48, renommage et suppression ne sont joignables nulle part : à signaler dans `ETAPE-47.md`.
 - Tests : `PointPairingTextsTest`, `PointPairingViewModelTest` (trois temps, échecs, pièce proposée, pièce libre, « Continuer » selon D11, `AlreadyPaired`, `LimitReached`, mode `ALARM` rend la main à l'appelant après « Continuer »), `PointPairingScreenTest`.
 
-**Produit :** l'association et l'ajout d'un Niumi Point nommé.
+**Produit :** l'association et l'ajout d'un Niumi Spot nommé.
 
 - [ ] **Écrire les tests**, implémenter écran, feuilles, ViewModel ; supprimer `pairing/*`.
 - [ ] **Vérifier :** batterie standard ; `grep -rn "PairingScreen\|PairingTexts" androidApp` vide.
@@ -771,18 +771,18 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Terminé quand :** deux points nommés en base ; le lien ouvre l'URL ; aucun échec silencieux ; `grep -rn "DefaultBoxName\|PairingUiState" androidApp` vide.
 
-### Étape 48 : écran 12 · Réglages (squelette) et liste des Niumi Points
+### Étape 48 : écran 12 · Réglages (squelette) et liste des Niumi Spots
 
-**Specs à lire :** `SPECIFICATION.md` §16 (introduction, Niumi Points) ; maquettes 37, 42, 47 à 54 ; SPEC_ANDROID §15.
+**Specs à lire :** `SPECIFICATION.md` §16 (introduction, Niumi Spots) ; maquettes 40, 45, 50 à 57 ; SPEC_ANDROID §15.
 
-**Points ouverts touchés :** D21 et Q22 tranchés ; textes à relire du §2 de `POINTS-OUVERTS.md` (mentions Niumi Points, « Enregistrer »).
+**Points ouverts touchés :** D21 et Q22 tranchés ; textes à relire du §2 de `POINTS-OUVERTS.md` (mentions Niumi Spots, « Enregistrer »).
 
 **Fichiers :**
-- `:feature:session` — créer `SESSION/settings/SettingsScreen.kt` (quatre lignes : « Niumi Points · 2 », « Autorisations · 3 sur 3 », « Aide », « À propos » ; Aide et À propos inertes jusqu'à l'étape 51), `SettingsTexts.kt`, `SettingsViewModel.kt` (compte des points, `PermissionStatusSource`), `SESSION/niumipoints/NiumiPointsScreen.kt` (liste par position avec la pièce et le bouton « trois points », dernière ligne « Ajouter un Niumi Point » → `PointPairing(ADD)`, mention « N'importe lequel de tes Niumi Points arrête l'alarme. » ; à dix points, la ligne reste visible mais grisée avec « Tu as déjà dix Niumi Points. »), `NiumiPointsTexts.kt`, `NiumiPointsViewModel.kt` (observe `PairedBoxStore.points`), `RenameRoomSheet.kt` (réutilise `RoomChoiceSheet` en mode « Enregistrer »), `DeletePointSheet.kt` (titre avec la pièce, texte, « Supprimer », « Annuler » ; « Supprimer » grisé avec « Tu dois garder au moins un Niumi Point. » dans le menu quand il n'en reste qu'un).
-- `:app` — routes `Settings`, `NiumiPoints` ; `Permissions` rouverte depuis « Autorisations » ; icône réglages de l'accueil branchée.
-- Tests : `SettingsTextsTest`, `SettingsViewModelTest`, `NiumiPointsTextsTest`, `NiumiPointsViewModelTest` (renommer, supprimer avec confirmation, dernier refusé, dixième puis `LimitReached`, ajout et suppression pendant une session). Le scan d'un point ajouté en session est déjà prouvé par `HandleValidNfcUseCaseTest` (étape 43).
+- `:feature:session` — créer `SESSION/settings/SettingsScreen.kt` (quatre lignes : « Niumi Spots · 2 », « Autorisations · 3 sur 3 », « Aide », « À propos » ; Aide et À propos inertes jusqu'à l'étape 51), `SettingsTexts.kt`, `SettingsViewModel.kt` (compte des points, `PermissionStatusSource`), `SESSION/niumispots/NiumiSpotsScreen.kt` (liste par position avec la pièce et le bouton « trois points », dernière ligne « Ajouter un Niumi Spot » → `PointPairing(ADD)`, mention « N'importe lequel de tes Niumi Spots arrête l'alarme. » ; à dix points, la ligne reste visible mais grisée avec « Tu as déjà dix Niumi Spots. »), `NiumiSpotsTexts.kt`, `NiumiSpotsViewModel.kt` (observe `PairedBoxStore.points`), `RenameRoomSheet.kt` (réutilise `RoomChoiceSheet` en mode « Enregistrer »), `DeletePointSheet.kt` (titre avec la pièce, texte, « Supprimer », « Annuler » ; « Supprimer » grisé avec « Tu dois garder au moins un Niumi Spot. » dans le menu quand il n'en reste qu'un).
+- `:app` — routes `Settings`, `NiumiSpots` ; `Permissions` rouverte depuis « Autorisations » ; icône réglages de l'accueil branchée.
+- Tests : `SettingsTextsTest`, `SettingsViewModelTest`, `NiumiSpotsTextsTest`, `NiumiSpotsViewModelTest` (renommer, supprimer avec confirmation, dernier refusé, dixième puis `LimitReached`, ajout et suppression pendant une session). Le scan d'un point ajouté en session est déjà prouvé par `HandleValidNfcUseCaseTest` (étape 43).
 
-**Produit :** les réglages, la liste des Niumi Points avec ajout, renommage et suppression, en clair et en sombre.
+**Produit :** les réglages, la liste des Niumi Spots avec ajout, renommage et suppression, en clair et en sombre.
 
 - [ ] **Écrire les tests**, implémenter.
 - [ ] **Vérifier :** batterie standard.
@@ -796,14 +796,14 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 49 : écrans 8 et 9 · Sortie de secours
 
-**Specs à lire :** `SPECIFICATION.md` §13 ; maquettes 23 à 27 ; SPEC_CORE_KMP §12 (1.5) ; SPEC_ANDROID §3, §4.5 (à réécrire), §10.2 ; `SYS/audio/AlarmAudioEngine.kt`, `DefaultAlarmAudioEngine.kt`, `VolumeRampPolicy.kt` ; `docs/android/LIMITES.md`, `play-console/PRIVACY_POLICY.md` ; point de vigilance 3.
+**Specs à lire :** `SPECIFICATION.md` §13 ; maquettes 26 à 30 ; SPEC_CORE_KMP §12 (1.5) ; SPEC_ANDROID §3, §4.5 (à réécrire), §10.2 ; `SYS/audio/AlarmAudioEngine.kt`, `DefaultAlarmAudioEngine.kt`, `VolumeRampPolicy.kt` ; `docs/android/LIMITES.md`, `play-console/PRIVACY_POLICY.md` ; point de vigilance 3.
 
 **Points ouverts touchés :** D2, D8, D20, Q16 ; D21, M13 et Q23 tranchés.
 
 **Fichiers :**
 - `:core:system` — modifier `AlarmAudioEngine.kt` (+ `setAttenuated(active: Boolean)`), `DefaultAlarmAudioEngine.kt` (−20 dB selon Q16, la montée continue en dessous), créer `SYS/audio/TypingAttenuation.kt` (remontée 2 s après la dernière touche), `SYS/session/EmergencyExitUseCase.kt` (`verifyEmergencyTranscription` avec contexte → `EMERGENCY_EXIT_CONFIRMED` sous le verrou).
-- `:feature:session` — créer `SESSION/emergency/EmergencyWarningSheet.kt` (deux textes selon l'origine ; « Rester dans la session » principal ; « Recopier le texte » au trait ; origine `ALARM` seulement : troisième bouton au trait « Ajouter un Niumi Point », sous « Recopier le texte », qui ouvre `PointPairing(ALARM)`), `EmergencyTranscriptionScreen.kt` (« Annuler », compteur « N sur 197 caractères », consigne, texte modèle avec mot surligné, champ sans collage, message d'erreur, bouton « Sortir de la session » au-dessus du clavier), `EmergencyTexts.kt`, `EmergencyExitViewModel.kt` (texte choisi parmi `emergencyExitTexts()`, vérification à chaque frappe, atténuation si origine alarme).
-- `:feature:ringing` — `AlarmScreen.kt` et `NfcScanSheet` : lien « Je n'ai pas accès à mon Niumi Point » visible ; `CancelSessionSheet.kt` idem.
+- `:feature:session` — créer `SESSION/emergency/EmergencyWarningSheet.kt` (deux textes selon l'origine ; « Rester dans la session » principal ; « Recopier le texte » au trait ; origine `ALARM` seulement : troisième bouton au trait « Ajouter un Niumi Spot », sous « Recopier le texte », qui ouvre `PointPairing(ALARM)`), `EmergencyTranscriptionScreen.kt` (« Annuler », compteur « N sur 197 caractères », consigne, texte modèle avec mot surligné, champ sans collage, message d'erreur, bouton « Sortir de la session » au-dessus du clavier), `EmergencyTexts.kt`, `EmergencyExitViewModel.kt` (texte choisi parmi `emergencyExitTexts()`, vérification à chaque frappe, atténuation si origine alarme).
+- `:feature:ringing` — `AlarmScreen.kt` et `NfcScanSheet` : lien « Je n'ai pas accès à mon Niumi Spot » visible ; `CancelSessionSheet.kt` idem.
 - `:app` — route `EmergencyExit(origin)` ; depuis `AlarmActivity`, l'écran 9 et le parcours `PointPairing(ALARM)` s'ouvrent dans `AlarmActivity` (l'app doit rester au premier plan) ; au retour du mode `ALARM`, l'écran 10 rouvre la feuille de scan (`openScanSheet()`) et le point qui vient d'être ajouté est accepté (ensemble courant, étape 43).
 - Tests : `EmergencyTextsTest`, `EmergencyExitViewModelTest` (« 84 sur 197 caractères » ; premier mot divergent ; bouton actif seulement `COMPLETE` ; « Annuler » perd la saisie ; collage refusé ; rotation conserve la saisie), `TypingAttenuationTest`, `EmergencyExitUseCaseTest`, `AlarmScreenActionsTest` étendu (le lien et l'option d'ajout ne dispatchent rien à la session), `PointPairingViewModelTest` (mode `ALARM`).
 
@@ -815,11 +815,11 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Tests manuels :** soir : lien → écran 8 → « Rester » ; puis « Recopier » → recopie avec faute → mot signalé → correction → « Sortir » → accueil clair, message ; matin pendant l'alarme : la sonnerie baisse pendant la frappe, remonte à l'arrêt, s'arrête à la validation → écran 11 selon D2 ; matin, second essai : « Je n'ai pas accès… » → écran 8 → option d'ajout → scan d'un tag Niumi neuf → pièce → retour écran 10, feuille de scan ouverte → scan du nouveau point → écran 11.
 
-**Terminé quand :** `releasedBy = EMERGENCY_EXIT` en base après une sortie (constaté) ; aucun texte du dépôt n'affirme plus l'absence de secours ; un Niumi Point ajouté pendant la sonnerie arrête l'alarme (constaté).
+**Terminé quand :** `releasedBy = EMERGENCY_EXIT` en base après une sortie (constaté) ; aucun texte du dépôt n'affirme plus l'absence de secours ; un Niumi Spot ajouté pendant la sonnerie arrête l'alarme (constaté).
 
 ### Étape 50 : écran 3 bis et rubrique « Temps gagné »
 
-**Specs à lire :** `SPECIFICATION.md` §7, §16 « Aide / Temps gagné », §15 ; maquettes 09, 40, 45 ; étape 43 (`TimeToGetUpPreferences`).
+**Specs à lire :** `SPECIFICATION.md` §7, §16 « Aide / Temps gagné », §15 ; maquettes 11, 43, 48 ; étape 43 (`TimeToGetUpPreferences`).
 
 **Points ouverts touchés :** D3, D4, M9.
 
@@ -843,12 +843,12 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 51 : Autorisations depuis les réglages, Aide, À propos, Licences
 
-**Specs à lire :** `SPECIFICATION.md` §16 (Aide, À propos), §5 (réouverture de l'écran 2) ; maquettes 38 à 46 ; `design-plan/police/LISEZ-MOI.md` ; `APP/help/HelpScreen.kt`, `HelpTexts.kt` ; `docs/android/LIMITES.md`.
+**Specs à lire :** `SPECIFICATION.md` §16 (Aide, À propos), §5 (réouverture de l'écran 2) ; maquettes 41 à 49 ; `design-plan/police/LISEZ-MOI.md` ; `APP/help/HelpScreen.kt`, `HelpTexts.kt` ; `docs/android/LIMITES.md`.
 
 **Points ouverts touchés :** M2, M3, M4, M8, Q17, Q20.
 
 **Fichiers :**
-- `:feature:session` — créer `SESSION/settings/help/HelpScreen.kt` (liste des rubriques existantes : Fonctionnement, Temps gagné ; « Niumi Point perdu » et « Sortie de secours » absentes tant que M2), `HelpTopicScreen.kt`, `HelpTopics.kt` (« Fonctionnement » : phrases des écrans 1 et 11 sous « Le soir », « Le matin », « Après le scan »), `TimeSavedTopicScreen.kt` (texte « Après chaque réveil, Niumi compare… », carte « Temps pour sortir du lit avant Niumi · 15 min », « Modifier » → `TimeToGetUp(EDIT)`, modifiable en session), `SESSION/settings/about/AboutScreen.kt` (logo, « Version {versionName} », trois liens inertes selon M4, lien « Exporter le diagnostic » selon Q20), `AboutTexts.kt`, `LicensesScreen.kt` (« Copyright IBM Corp. » + texte de `res/raw/ofl_ibm_plex_sans.txt`) ; supprimer `APP/help/*`, `HelpTextsTest`, `HelpScreenTest`.
+- `:feature:session` — créer `SESSION/settings/help/HelpScreen.kt` (liste des rubriques existantes : Fonctionnement, Temps gagné ; « Niumi Spot perdu » et « Sortie de secours » absentes tant que M2), `HelpTopicScreen.kt`, `HelpTopics.kt` (« Fonctionnement » : phrases des écrans 1 et 11 sous « Le soir », « Le matin », « Après le scan »), `TimeSavedTopicScreen.kt` (texte « Après chaque réveil, Niumi compare… », carte « Temps pour sortir du lit avant Niumi · 15 min », « Modifier » → `TimeToGetUp(EDIT)`, modifiable en session), `SESSION/settings/about/AboutScreen.kt` (logo, « Version {versionName} », trois liens inertes selon M4, lien « Exporter le diagnostic » selon Q20), `AboutTexts.kt`, `LicensesScreen.kt` (« Copyright IBM Corp. » + texte de `res/raw/ofl_ibm_plex_sans.txt`) ; supprimer `APP/help/*`, `HelpTextsTest`, `HelpScreenTest`.
 - `:app` — routes `Help`, `HelpTopic(id)`, `About`, `Licenses` ; `Permissions` depuis « Autorisations ».
 - Tests : `HelpTopicsTest` (textes mot pour mot), `AboutTextsTest`, `LicensesScreenTest` (instrumenté : le texte de la licence est affiché en entier).
 
@@ -864,7 +864,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 52 : notification du soir, bandeau de problème, alerte d'autorisations
 
-**Specs à lire :** `SPECIFICATION.md` §17 ; maquettes 55 à 58 ; SPEC_ANDROID §9.1 (dérogations), §10.5, §13.1, §14 ; `SYS/notification/*`, `SYS/readiness/SessionReadinessWatcher.kt` ; `ReleaseHygieneTest` ; point de vigilance 7.
+**Specs à lire :** `SPECIFICATION.md` §17 ; maquettes 58 à 61 ; SPEC_ANDROID §9.1 (dérogations), §10.5, §13.1, §14 ; `SYS/notification/*`, `SYS/readiness/SessionReadinessWatcher.kt` ; `ReleaseHygieneTest` ; point de vigilance 7.
 
 **Points ouverts touchés :** D10, M12, Q18, Q19.
 
@@ -922,9 +922,9 @@ grep -rln "IncidentDiagnostic\|ActiveSession\|WakeTime\|Summary\|ScanToModify\|R
 | Activation dans la période | Blocage immédiat, accueil sombre |
 | Annulation par scan | Clair, « Réveil désactivé », message |
 | Sortie de secours soir et matin | Atténuation pendant la frappe ; `releasedBy = EMERGENCY_EXIT` |
-| Ajout d'un Niumi Point depuis les réglages en session, puis scan de ce point le matin après déverrouillage | Accepté, écran 11 (le scan exige un appareil déverrouillé, SPEC_ANDROID §4.4) |
-| Ajout d'un Niumi Point pendant la sonnerie depuis l'écran 8, puis scan de ce point | Accepté, écran 11 |
-| Dix Niumi Points enregistrés ; suppression du dernier | Ligne « Ajouter un Niumi Point » grisée avec « Tu as déjà dix Niumi Points. » ; « Supprimer » grisé |
+| Ajout d'un Niumi Spot depuis les réglages en session, puis scan de ce point le matin après déverrouillage | Accepté, écran 11 (le scan exige un appareil déverrouillé, SPEC_ANDROID §4.4) |
+| Ajout d'un Niumi Spot pendant la sonnerie depuis l'écran 8, puis scan de ce point | Accepté, écran 11 |
+| Dix Niumi Spots enregistrés ; suppression du dernier | Ligne « Ajouter un Niumi Spot » grisée avec « Tu as déjà dix Niumi Spots. » ; « Supprimer » grisé |
 | Redémarrage avant le coucher, sans déverrouillage jusqu'après le coucher | Blocage appliqué en retard, `MISSED_BLOCKING_START_WINDOW` |
 | Retrait du service d'accessibilité | Alerte à l'ouverture ; notification §13.1 |
 | NFC coupé | Bandeau ; échec sur l'écran 10 |
@@ -942,7 +942,7 @@ Une case cochée signifie « prouvé », jamais « implémenté ».
 - [ ] Aucune couleur, taille ou forme en dur hors `:core:designsystem` (grep, étape 33 et suivantes).
 - [ ] Le thème suit l'état de la session, jamais le téléphone (étape 33, constaté).
 - [ ] Un planning allumé arme la prochaine occurrence ; une modification avant le coucher ne demande pas de scan ; après le coucher, seul le scan ou la sortie de secours libère (étapes 41, 44, 45, 55).
-- [ ] N'importe quel Niumi Point enregistré au moment du scan arrête l'alarme, y compris ajouté pendant la session ou pendant la sonnerie ; il en reste toujours au moins un, dix au plus (étapes 42, 43, 47, 48, 49, 55).
+- [ ] N'importe quel Niumi Spot enregistré au moment du scan arrête l'alarme, y compris ajouté pendant la session ou pendant la sonnerie ; il en reste toujours au moins un, dix au plus (étapes 42, 43, 47, 48, 49, 55).
 - [ ] La sortie de secours exige la recopie exacte du texte de 197 caractères et compte comme un scan (étapes 42, 49, 55).
 - [ ] L'écran 11 affiche le temps gagné seulement s'il est positif (étapes 46, 50).
 - [ ] Les specs décrivent l'app livrée ; aucun écran supprimé n'y survit ; SPEC_IOS reflète le contrat 1.5 (étape 54).
@@ -953,7 +953,7 @@ Une case cochée signifie « prouvé », jamais « implémenté ».
 - Le plan suppose le plan maître clos à l'étape 32 et le dépôt propre avant l'étape 33 ; il ne refait rien des Lots 8 et 9 du plan maître.
 - Les fichiers de la police viennent de `github.com/IBM/plex` ; leur licence exacte est celle de l'archive téléchargée.
 - Les images du guide des autorisations (M1), les rubriques d'aide (M2), les mentions légales et la politique (M4) et les autres textes de secours (D8) ne sont pas produits par ce plan : les emplacements existent, les contenus viendront de Mehdi.
-- Les libellés décidés le 2026-10-19 (bouton « Ajouter un Niumi Point », « Ce Niumi Point est déjà enregistré. », « Tu as déjà dix Niumi Points. », textes des notifications) sont dans `SPECIFICATION.md` §6, §13, §14 et §16 ; l'écran 8 pendant l'alarme n'a pas de maquette dédiée.
+- Les libellés décidés le 2026-10-19 (bouton « Ajouter un Niumi Spot », « Ce Niumi Spot est déjà enregistré. », « Tu as déjà dix Niumi Spots. », textes des notifications) sont dans `SPECIFICATION.md` §6, §13, §14 et §16 ; l'écran 8 pendant l'alarme n'a pas de maquette dédiée.
 - L'app iOS n'est pas développée ; SPEC_IOS n'est tenue à jour que pour le contrat KMP.
 - Les contraintes Google Play (overlay touchable, service d'accessibilité) sont documentées mais non présumées acceptées : porte de validation à l'étape 55 et avant toute soumission.
 - Versions de bibliothèques inchangées ; aucune montée prévue, sauf si un build l'impose (à signaler, jamais silencieusement).

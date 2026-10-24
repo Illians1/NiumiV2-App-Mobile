@@ -7,10 +7,10 @@ de départ : `a21ac70`.
 
 ## Ce qui est livré
 
-- **Écran 7 · Écran de blocage** (`:feature:session`, `blocking/`), d'après la maquette 22 et
+- **Écran 7 · Écran de blocage** (`:feature:session`, `blocking/`), d'après la maquette 25 et
   `design-plan/SPECIFICATION.md` §12. Il remplace le bandeau non touchable de 3 s des Lots 1 à 9.
   - Logo de 54, titre « L’application YouTube est bloquée » (24/600, trois lignes au plus ; « Cette application est
-    bloquée » sans nom), « Tu pourras l’ouvrir après avoir scanné ton Niumi Point. », « Fermer »
+    bloquée » sans nom), « Tu pourras l’ouvrir après avoir scanné ton Niumi Spot. », « Fermer »
     (bouton principal) et « Ouvrir Niumi » (`NiumiTextButton`, nouveau composant : 16, à l'encre,
     sans soulignement). Toujours sombre.
   - Fenêtre `TYPE_ACCESSIBILITY_OVERLAY` plein écran, touchable, `FLAG_NOT_FOCUSABLE`, étendue sous
@@ -47,7 +47,7 @@ de départ : `a21ac70`.
   20 dp plus haut que sur la maquette). Retenu après cinq essais sur le téléphone (64, 80, 112 avec
   le logo fixe, 112 avec le logo remonté, puis 88).
 - **Nom de l'application dans le titre** : « L’application YouTube est bloquée », et « Tu pourras
-  l’ouvrir après avoir scanné ton Niumi Point. » au lieu de « Elle reviendra… ». « YouTube est
+  l’ouvrir après avoir scanné ton Niumi Spot. » au lieu de « Elle reviendra… ». « YouTube est
   bloqué » a été essayé d'abord, puis écarté sur la capture : « Calculatrice est bloqué ». L'accord
   avec « application » reste juste quel que soit le nom. Écart à la maquette, Android seulement ; l'iPhone reste ouvert (T13).
 - **« Fermer » reste le bouton principal** : geste attendu, parité avec l'iPhone où « Ouvrir
@@ -120,7 +120,7 @@ Session armée par le parcours réel, Calculatrice bloquée, Notes autorisées.
 
 | Essai | Résultat |
 | --- | --- |
-| 1. Rendu de l'écran 7 (capture) | **OK** : fidèle à la maquette 22 ; couvre barre d'état et barre de navigation |
+| 1. Rendu de l'écran 7 (capture) | **OK** : fidèle à la maquette 25 ; couvre barre d'état et barre de navigation |
 | 2. `validate_blocking.sh` essais 1 à 3 (lanceur, tâche existante, intent explicite) | **OK** |
 | 3. Essai 4 : écran 7 encore là après 4 s, retiré par « Fermer » | **OK** |
 | 4. Essai 4b : « Ouvrir Niumi » | **OK** : écran retiré, Niumi au premier plan (écran de session) |

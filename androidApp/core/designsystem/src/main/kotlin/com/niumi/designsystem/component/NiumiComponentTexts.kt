@@ -20,6 +20,6 @@ object NiumiComponentTexts {
      * maquettes 06, 20, 29). Phrase de la colonne Android : « téléphone », jamais « iPhone ».
      */
     const val SCAN_SHEET_TITLE = "Prêt à scanner"
-    const val SCAN_SHEET_PHRASE = "Approche ton téléphone du Niumi Point"
+    const val SCAN_SHEET_PHRASE = "Approche ton téléphone du Niumi Spot"
     const val SCAN_SHEET_CANCEL = "Annuler"
 }

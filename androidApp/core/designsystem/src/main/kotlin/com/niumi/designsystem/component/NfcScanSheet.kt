@@ -177,8 +177,8 @@ private fun FailureContent(
 
 private val PreviewFailure =
     NfcScanSheetContent.Failure(
-        title = "Ce n’est pas un Niumi Point.",
-        help = "Scanne un Niumi Point que tu as enregistré.",
+        title = "Ce n’est pas un Niumi Spot.",
+        help = "Scanne un Niumi Spot que tu as enregistré.",
         actionLabel = "Réessayer",
     )
 
@@ -207,7 +207,7 @@ private fun NfcScanSheetFailureDarkPreview() {
             onDismiss = {},
             onFailureAction = {},
             failurePaneTitle = "Échec du scan",
-            emergencyLinkText = "Je n’ai pas accès à mon Niumi Point",
+            emergencyLinkText = "Je n’ai pas accès à mon Niumi Spot",
             onEmergencyExit = {},
         )
     }

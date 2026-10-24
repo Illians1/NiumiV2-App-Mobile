@@ -21,7 +21,7 @@ object RingingNotificationSpecs {
             channelId = NiumiNotificationChannels.alarmRinging.id,
             category = Notification.CATEGORY_ALARM,
             title = "Ton réveil Niumi sonne",
-            text = "Scanne ton Niumi Point pour l'arrêter et retrouver tes applis.",
+            text = "Scanne ton Niumi Spot pour l'arrêter et retrouver tes applis.",
             ongoing = true,
             visibilityPublic = true,
             alertOnlyOnce = true,

@@ -8,7 +8,7 @@ import com.niumi.system.nfc.ScanSheetState
  * État d'affichage pur de l'écran 10 · Réveil (étape 38), sans dépendance à Compose ni à Android.
  * Indexé par [SessionStateDto] : l'écran reflète l'état réel du moteur, jamais une phase devinée.
  *
- * - Une seule consigne, « Rejoins ton Niumi Point », pour `RINGING`, `AWAITING_NFC` et
+ * - Une seule consigne, « Rejoins ton Niumi Spot », pour `RINGING`, `AWAITING_NFC` et
  *   `TRIGGERED_AWAITING_NFC` (décisions de Mehdi du 2026-10-22) : l'écran ne dit qu'une chose.
  * - `RELEASING` : le scan a eu lieu ; la date, l'heure et un cercle de chargement seuls
  *   ([showsReleaseLoader], décision du 2026-10-22), ni consigne, ni dessin, ni bouton, ni feuille.

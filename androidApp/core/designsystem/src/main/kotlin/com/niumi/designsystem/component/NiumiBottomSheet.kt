@@ -211,8 +211,8 @@ private fun NiumiBottomSheetLightPreview() {
 private fun NiumiBottomSheetDarkPreview() {
     NiumiPreviewFrame(dark = true) {
         NiumiBottomSheet(onDismiss = {}, title = "Annuler la session ?") {
-            NiumiPrimaryButton(text = "Scanner le Niumi Point", onClick = {})
-            NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Point", onClick = {})
+            NiumiPrimaryButton(text = "Scanner le Niumi Spot", onClick = {})
+            NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Spot", onClick = {})
         }
     }
 }

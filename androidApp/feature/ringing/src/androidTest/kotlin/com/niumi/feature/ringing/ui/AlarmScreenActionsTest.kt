@@ -135,7 +135,7 @@ class AlarmScreenActionsTest {
     @Test
     fun aScanFailureAddsOnlyRetryAndTheVeil() {
         listOf(
-            ScanFailureReason.NOT_A_NIUMI_POINT,
+            ScanFailureReason.NOT_A_NIUMI_SPOT,
             ScanFailureReason.NOT_REGISTERED,
             ScanFailureReason.UNREADABLE,
         ).forEach { reason ->

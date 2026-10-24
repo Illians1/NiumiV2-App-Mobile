@@ -53,11 +53,11 @@ fun NiumiDiscreetLink(
 @Preview(name = "Clair")
 @Composable
 private fun NiumiDiscreetLinkLightPreview() {
-    NiumiPreviewFrame(dark = false) { NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Point", onClick = {}) }
+    NiumiPreviewFrame(dark = false) { NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Spot", onClick = {}) }
 }
 
 @Preview(name = "Sombre")
 @Composable
 private fun NiumiDiscreetLinkDarkPreview() {
-    NiumiPreviewFrame(dark = true) { NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Point", onClick = {}) }
+    NiumiPreviewFrame(dark = true) { NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Spot", onClick = {}) }
 }

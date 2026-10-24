@@ -8,17 +8,17 @@ trois boutons). Sixième étape du plan de refonte `docs/superpowers/plans/2026-
 ## Ce qui est livré
 
 - **Écran 10 · Réveil** (`:feature:ringing`, numéroté 8 dans SPEC_ANDROID §15 jusqu'à l'étape 54),
-  toujours sombre, d'après les maquettes 28 à 33, avec les écarts décidés pendant les essais.
+  toujours sombre, d'après les maquettes 31 à 36, avec les écarts décidés pendant les essais.
   - Date « Jeudi 22 octobre » (« 1er » le premier du mois), 24 dp sous la marge du haut.
   - Heure actuelle en 112, sur une ligne (réduite si le texte agrandi la ferait déborder), relue au
     début de chaque minute et à chaque retour au premier plan.
-  - Dessin du téléphone approché du Niumi Point (variante fidèle à la maquette 28).
-  - Consigne **« Rejoins ton Niumi Point »** et un seul bouton, « Scanner le Niumi Point ».
-  - Place du lien « Je n'ai pas accès à mon Niumi Point » réservée sous le bouton jusqu'à
+  - Dessin du téléphone approché du Niumi Spot (variante fidèle à la maquette 31).
+  - Consigne **« Rejoins ton Niumi Spot »** et un seul bouton, « Scanner le Niumi Spot ».
+  - Place du lien « Je n'ai pas accès à mon Niumi Spot » réservée sous le bouton jusqu'à
     l'étape 49 : l'écran ne bougera pas à son arrivée.
   - Sur un écran trop court, le haut défile et le bouton reste visible.
 - **Feuille de scan** (`NfcScanSheet`, `:core:designsystem`), dessinée par Niumi, sans poignée.
-  - « Prêt à scanner » à l'encre, rond de l'icône, « Approche ton téléphone du Niumi Point »,
+  - « Prêt à scanner » à l'encre, rond de l'icône, « Approche ton téléphone du Niumi Spot »,
     « Annuler ».
   - Un échec remplace son contenu sans la refermer : titre annoncé par TalkBack, phrase d'aide,
     « Réessayer » ou « Ouvrir les réglages ». Fenêtre nommée « Échec du scan ».
@@ -29,11 +29,11 @@ trois boutons). Sixième étape du plan de refonte `docs/superpowers/plans/2026-
   « Le NFC est coupé. » ; au retour du NFC (réglages ou état stable `ON` après un redémarrage),
   l'échec redevient « Prêt à scanner » et la lecture reprend.
 - **Quatre échecs distincts.** Jusqu'ici, un tag étranger et une lecture ratée donnaient le même
-  résultat. `ScanOutcome.NotANiumiPoint` et `NfcReader.start(…, onForeignTag)` les séparent :
-  - pas de NDEF ni d'URI, ou URI refusée par le parseur commun → « Ce n'est pas un Niumi Point. » ;
-  - Niumi Point hors de la liste de la session, ou d'une version de protocole inconnue → « Ce Niumi
+  résultat. `ScanOutcome.NotANiumiSpot` et `NfcReader.start(…, onForeignTag)` les séparent :
+  - pas de NDEF ni d'URI, ou URI refusée par le parseur commun → « Ce n'est pas un Niumi Spot. » ;
+  - Niumi Spot hors de la liste de la session, ou d'une version de protocole inconnue → « Ce Niumi
     Point n'est pas enregistré. » ;
-  - `IOException`, `FormatException` → « Ton Niumi Point n'a pas pu être lu. ».
+  - `IOException`, `FormatException` → « Ton Niumi Spot n'a pas pu être lu. ».
   - La lecture prend d'abord le message NDEF en cache : un frôlement ne donne plus « n'a pas pu
     être lu » alors que tout était lu.
 - **Après un scan validé** (`RELEASING`) : la date, l'heure et un cercle de chargement seuls, lu
@@ -47,7 +47,7 @@ trois boutons). Sixième étape du plan de refonte `docs/superpowers/plans/2026-
 | Point | Décision |
 | --- | --- |
 | Q4 | Lecture NFC seulement feuille « Prêt à scanner » ouverte (parité iPhone) |
-| Consigne | « Rejoins ton Niumi Point » (remplace « Scanne ton Niumi Point » de §14, qui laissait croire qu'on pouvait scanner avant d'ouvrir la feuille), pour iPhone et Android, et pour les trois états d'attente |
+| Consigne | « Rejoins ton Niumi Spot » (remplace « Scanne ton Niumi Spot » de §14, qui laissait croire qu'on pouvait scanner avant d'ouvrir la feuille), pour iPhone et Android, et pour les trois états d'attente |
 | Après le scan | Date, heure et chargement seuls, lu « Fin de la session » (une première version avec texte et trois lignes de progression a été retirée pendant les essais) |
 | Mise en page | Place du lien de secours réservée ; date à 24 dp sous la marge du haut (60 dans la maquette, essayé à 0) |
 | « Prêt à scanner » | À l'encre au lieu du gris : vaut pour toutes les feuilles de scan Android |
@@ -59,9 +59,9 @@ Arbitrages pris sans question, signalés ici :
 - Textes de « Prêt à scanner » dans `NiumiComponentTexts`, les mêmes sur trois écrans.
 - Version de protocole inconnue → « n'est pas enregistré » ; NDEF corrompu → « n'a pas pu être lu ».
   L'écran 9 (scan requis) dit aussi « boîtier inconnu » pour une version inconnue.
-- Vibration d'erreur aussi pour « pas un Niumi Point » (tag lu puis refusé).
+- Vibration d'erreur aussi pour « pas un Niumi Spot » (tag lu puis refusé).
 - Feuille d'échec fermable par le voile, le glissement et le retour.
-- Dessin : variante fidèle à la maquette 28 plutôt qu'un dessin unique.
+- Dessin : variante fidèle à la maquette 31 plutôt qu'un dessin unique.
 - Sans matériel NFC (défensif) : « Cet appareil ne prend pas en charge le NFC. », sans bouton.
 
 ## Relecture indépendante
@@ -122,14 +122,14 @@ Xiaomi 25080RABDG (`lapis`), Android 16 / API 36, HyperOS OS3.0.302.0.WPPEUXM, 3
 | Essai | Résultat |
 | --- | --- |
 | 1. Écran 10 à la sonnerie | **OK** ; mise en page jugée trop basse → place du lien réservée, date remontée |
-| 2. Niumi Point approché feuille fermée (Q4) | **OK** : rien dans Niumi, lecture inactive |
+| 2. Niumi Spot approché feuille fermée (Q4) | **OK** : rien dans Niumi, lecture inactive |
 | 3. Scan feuille ouverte | **OK** : session terminée (la feuille ne gêne pas le Reader Mode) |
 | 4. Feuille « Prêt à scanner » | **OK** : journal NFC `reader_mode_change flags: 1` à l'ouverture ; titre jugé peu visible → encre |
-| 5. Tag étranger | **OK** : « Ce n'est pas un Niumi Point. », vibration, lecture coupée |
-| 6. « Réessayer », puis Niumi Point non associé | **OK** : « Ce Niumi Point n'est pas enregistré. » |
+| 5. Tag étranger | **OK** : « Ce n'est pas un Niumi Spot. », vibration, lecture coupée |
+| 6. « Réessayer », puis Niumi Spot non associé | **OK** : « Ce Niumi Spot n'est pas enregistré. » |
 | 7. Voile sur la feuille d'échec, puis retour | **OK** : la feuille se ferme, le retour ne fait rien |
 | 8. NFC coupé, « Ouvrir les réglages », NFC rallumé | **OK** : « Prêt à scanner » au retour, lecture reprise |
-| 9. Bon Niumi Point | **OK** : session terminée ; chargement trop bref pour être vu |
+| 9. Bon Niumi Spot | **OK** : session terminée ; chargement trop bref pour être vu |
 | 10. Écran verrouillé, notification, déverrouillage | **OK** : écran 10 ouvert par la notification |
 | 11. TalkBack sur l'écran et la feuille | **OK** |
 | 12. Redémarrage pendant la sonnerie, « Scanner » aussitôt | **OK** : « Le NFC est coupé. » environ 2 s, puis « Prêt à scanner » seul (lecture réactivée à 14:41:47 puis 14:41:52, relance HyperOS) ; scan accepté |
@@ -146,7 +146,7 @@ Reader Mode sur ce téléphone, le journal `reader_mode_change` fait foi.
   changement.
 - **Message système feuille fermée** : aucun n'a été signalé pendant l'essai 2 sur HyperOS ; d'autres fabricants
   peuvent afficher leur propre message quand un tag est approché sans lecture active.
-- **Jusqu'à l'étape 43**, un Niumi Point ajouté après l'activation reste refusé et s'annonce « Ce
-  Niumi Point n'est pas enregistré. ».
-- **iPhone** : la consigne « Rejoins ton Niumi Point » vaut aussi pour l'iPhone (§14).
+- **Jusqu'à l'étape 43**, un Niumi Spot ajouté après l'activation reste refusé et s'annonce « Ce
+  Niumi Spot n'est pas enregistré. ».
+- **iPhone** : la consigne « Rejoins ton Niumi Spot » vaut aussi pour l'iPhone (§14).
 - **Rien n'est committé.**

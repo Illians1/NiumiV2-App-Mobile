@@ -34,7 +34,7 @@ data class NiumiPalette(
     val tileGrey: Color,
     /** Emplacements d'icônes d'applications grisés. */
     val cellGrey: Color,
-    /** Interrupteur activé, poignée du réveil, point des Niumi Points, soleil. Jamais de texte en clair (D14). */
+    /** Interrupteur activé, poignée du réveil, point des Niumi Spots, soleil. Jamais de texte en clair (D14). */
     val amber: Color,
     /** Fond de la phrase « Bravo ! » (écran 11). */
     val amberTint: Color,

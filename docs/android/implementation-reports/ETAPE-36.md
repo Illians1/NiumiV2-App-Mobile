@@ -33,7 +33,7 @@ OS3.0.302.0.WPPEUXM, navigation à trois boutons). Quatrième étape du plan de 
   - Notifications : fenêtre système ; réglages de notification de Niumi quand Android ne la montre
     plus (demande déjà faite, persistée, et pas de justification à afficher) et avant Android 13.
   - Alarme exacte : fenêtre d'explication seule (`USE_EXACT_ALARM`, rien à demander).
-- **Fenêtre d'alerte** (`:core:designsystem`, `NiumiAlertDialog`) : maquette 57 dans la mise en
+- **Fenêtre d'alerte** (`:core:designsystem`, `NiumiAlertDialog`) : maquette 60 dans la mise en
   page de Mehdi du 2026-10-22 (croix ronde au coin, icône dans un rond gris, titre centré sur
   plusieurs lignes, texte à gauche, bouton de 52). Croix, toucher à côté et retour ferment ; une
   fenêtre se ferme d'elle-même quand son manque disparaît.

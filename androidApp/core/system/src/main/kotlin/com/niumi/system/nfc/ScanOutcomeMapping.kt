@@ -20,7 +20,7 @@ public fun scanFailureOf(
 
         NfcAvailability.ENABLED -> {
             when (outcome) {
-                ScanOutcome.NotANiumiPoint -> ScanFailureReason.NOT_A_NIUMI_POINT
+                ScanOutcome.NotANiumiSpot -> ScanFailureReason.NOT_A_NIUMI_SPOT
                 ScanOutcome.UnknownBox -> ScanFailureReason.NOT_REGISTERED
                 ScanOutcome.Unreadable -> ScanFailureReason.UNREADABLE
                 ScanOutcome.Accepted, ScanOutcome.Ignored, null -> null

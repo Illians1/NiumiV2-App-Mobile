@@ -33,7 +33,7 @@ object BlockingGuardNotificationSpecs {
     fun blocking(wakeTimeLabel: String?): NotificationSpec =
         spec(
             title = wakeTimeLabel?.let { "Réveil prévu à $it" } ?: "Réveil prévu",
-            text = "Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Point.",
+            text = "Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Spot.",
         )
 
     /**

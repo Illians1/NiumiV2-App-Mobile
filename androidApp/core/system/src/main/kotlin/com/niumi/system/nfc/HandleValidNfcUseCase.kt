@@ -119,11 +119,11 @@ class HandleValidNfcUseCase
             )
 
         /**
-         * Étape 38 : une URI que le parseur refuse n'est pas un Niumi Point, sauf une version
-         * inconnue — c'est un Niumi Point, que cette version de l'app n'a pas pu enregistrer.
+         * Étape 38 : une URI que le parseur refuse n'est pas un Niumi Spot, sauf une version
+         * inconnue — c'est un Niumi Spot, que cette version de l'app n'a pas pu enregistrer.
          */
         private fun refusalFor(status: BoxPayloadStatus): ScanOutcome =
-            if (status == BoxPayloadStatus.UNSUPPORTED_VERSION) ScanOutcome.UnknownBox else ScanOutcome.NotANiumiPoint
+            if (status == BoxPayloadStatus.UNSUPPORTED_VERSION) ScanOutcome.UnknownBox else ScanOutcome.NotANiumiSpot
 
         private fun refusalFor(status: BoxVerificationStatus): ScanOutcome =
             when (status) {

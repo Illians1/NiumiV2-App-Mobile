@@ -57,7 +57,7 @@ En cas de correspondance avec la liste d'applications bloquées de la session ac
 
 > L’application YouTube est bloquée
 >
-> Tu pourras l’ouvrir après avoir scanné ton Niumi Point.
+> Tu pourras l’ouvrir après avoir scanné ton Niumi Spot.
 
 (le titre nomme l'application bloquée, d'après le libellé relevé quand l'utilisateur l'a choisie ;
 ce libellé ne quitte jamais l'appareil)

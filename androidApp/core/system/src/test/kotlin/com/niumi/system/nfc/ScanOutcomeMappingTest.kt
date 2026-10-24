@@ -10,8 +10,8 @@ import org.junit.Test
 class ScanOutcomeMappingTest {
     @Test
     fun eachRefusedScanHasItsReasonWhenNfcIsOn() {
-        assertThat(scanFailureOf(ScanOutcome.NotANiumiPoint, NfcAvailability.ENABLED))
-            .isEqualTo(ScanFailureReason.NOT_A_NIUMI_POINT)
+        assertThat(scanFailureOf(ScanOutcome.NotANiumiSpot, NfcAvailability.ENABLED))
+            .isEqualTo(ScanFailureReason.NOT_A_NIUMI_SPOT)
         assertThat(scanFailureOf(ScanOutcome.UnknownBox, NfcAvailability.ENABLED))
             .isEqualTo(ScanFailureReason.NOT_REGISTERED)
         assertThat(scanFailureOf(ScanOutcome.Unreadable, NfcAvailability.ENABLED))
@@ -44,7 +44,7 @@ class ScanOutcomeMappingTest {
         val ALL_OUTCOMES: List<ScanOutcome?> =
             listOf(
                 ScanOutcome.Accepted,
-                ScanOutcome.NotANiumiPoint,
+                ScanOutcome.NotANiumiSpot,
                 ScanOutcome.UnknownBox,
                 ScanOutcome.Unreadable,
                 ScanOutcome.Ignored,

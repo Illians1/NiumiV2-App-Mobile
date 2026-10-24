@@ -15,19 +15,19 @@ import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
 
 /**
- * Un téléphone approché d'un Niumi Point, trois ondes entre les deux, le point ambre du Niumi Point
+ * Un téléphone approché d'un Niumi Spot, trois ondes entre les deux, le point ambre du Niumi Spot
  * comme seul détail ambre. Deux tracés, chacun recopié de sa maquette (étape 38 : une variante
  * plutôt qu'un dessin unique, pour rester fidèle aux deux sources) :
- * - [PhoneNearPointVariant.Presentation] : panneau 2 de l'écran 1 (maquette 02), `viewBox`
+ * - [PhoneNearSpotVariant.Presentation] : panneau 2 de l'écran 1 (maquette 02), `viewBox`
  *   342 × 240, trait 3, affiché 342 × 240 au plus ;
- * - [PhoneNearPointVariant.Alarm] : écran 10 (maquette 28), `viewBox` 342 × 220, trait 3,5,
+ * - [PhoneNearSpotVariant.Alarm] : écran 10 (maquette 28), `viewBox` 342 × 220, trait 3,5,
  *   affiché 264 × 170 au plus.
  */
 @Composable
-fun PhoneNearPointDrawing(
+fun PhoneNearSpotDrawing(
     contentDescription: String,
     modifier: Modifier = Modifier,
-    variant: PhoneNearPointVariant = PhoneNearPointVariant.Presentation,
+    variant: PhoneNearSpotVariant = PhoneNearSpotVariant.Presentation,
 ) {
     val palette = LocalNiumiPalette.current
     val g = variant.geometry
@@ -60,14 +60,14 @@ fun PhoneNearPointDrawing(
 }
 
 /** Les deux tracés du dessin, l'un par maquette. */
-enum class PhoneNearPointVariant(
-    internal val geometry: PhoneNearPointGeometry,
+enum class PhoneNearSpotVariant(
+    internal val geometry: PhoneNearSpotGeometry,
     internal val maxWidth: Dp,
     internal val maxHeight: Dp,
 ) {
     /** Maquette 02 : `M170 104 q12 16 0 32` et suivantes. */
     Presentation(
-        PhoneNearPointGeometry(
+        PhoneNearSpotGeometry(
             stroke = ILLUSTRATION_STROKE,
             phone = SvgRect(36f, 10f, 120f, 220f, 22f),
             speakerX = 84f,
@@ -84,7 +84,7 @@ enum class PhoneNearPointVariant(
 
     /** Maquette 28 : `M156 96 q10 14 0 28` et suivantes. */
     Alarm(
-        PhoneNearPointGeometry(
+        PhoneNearSpotGeometry(
             stroke = 3.5f,
             phone = SvgRect(46f, 20f, 96f, 180f, 18f),
             speakerX = 82f,
@@ -101,7 +101,7 @@ enum class PhoneNearPointVariant(
 }
 
 /** Coordonnées d'un tracé, dans le `viewBox` de sa maquette. */
-internal data class PhoneNearPointGeometry(
+internal data class PhoneNearSpotGeometry(
     val stroke: Float,
     val phone: SvgRect,
     val speakerX: Float,
@@ -126,19 +126,19 @@ internal data class SvgRect(
 /** Haut-parleur du téléphone, `h24` dans les deux maquettes. */
 private const val SPEAKER_LENGTH = 24f
 
-/** Point ambre du Niumi Point, `r=8` dans les deux maquettes. */
+/** Point ambre du Niumi Spot, `r=8` dans les deux maquettes. */
 private const val DOT_RADIUS = 8f
 
 @Preview(name = "Clair", widthDp = 390)
 @Composable
-private fun PhoneNearPointDrawingLightPreview() {
-    NiumiPreviewFrame(dark = false) { PhoneNearPointDrawing(contentDescription = "Téléphone et Niumi Point") }
+private fun PhoneNearSpotDrawingLightPreview() {
+    NiumiPreviewFrame(dark = false) { PhoneNearSpotDrawing(contentDescription = "Téléphone et Niumi Spot") }
 }
 
 @Preview(name = "Sombre, écran 10", widthDp = 390)
 @Composable
-private fun PhoneNearPointDrawingAlarmPreview() {
+private fun PhoneNearSpotDrawingAlarmPreview() {
     NiumiPreviewFrame(dark = true) {
-        PhoneNearPointDrawing(contentDescription = "Téléphone et Niumi Point", variant = PhoneNearPointVariant.Alarm)
+        PhoneNearSpotDrawing(contentDescription = "Téléphone et Niumi Spot", variant = PhoneNearSpotVariant.Alarm)
     }
 }

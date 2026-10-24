@@ -161,7 +161,7 @@ class AlarmViewModelTest {
         runTest {
             val cases =
                 mapOf(
-                    ScanOutcome.NotANiumiPoint to ScanFailureReason.NOT_A_NIUMI_POINT,
+                    ScanOutcome.NotANiumiSpot to ScanFailureReason.NOT_A_NIUMI_SPOT,
                     ScanOutcome.UnknownBox to ScanFailureReason.NOT_REGISTERED,
                     ScanOutcome.Unreadable to ScanFailureReason.UNREADABLE,
                 )

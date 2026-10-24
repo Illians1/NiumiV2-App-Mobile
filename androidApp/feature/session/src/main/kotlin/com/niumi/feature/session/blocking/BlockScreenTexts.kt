@@ -10,7 +10,7 @@ package com.niumi.feature.session.blocking
 object BlockScreenTexts {
     /** Titre de la maquette, gardé quand le nom manque. */
     const val FALLBACK_TITLE = "Cette application est bloquée"
-    const val BODY = "Tu pourras l’ouvrir après avoir scanné ton Niumi Point."
+    const val BODY = "Tu pourras l’ouvrir après avoir scanné ton Niumi Spot."
     const val CLOSE = "Fermer"
     const val OPEN_NIUMI = "Ouvrir Niumi"
 
