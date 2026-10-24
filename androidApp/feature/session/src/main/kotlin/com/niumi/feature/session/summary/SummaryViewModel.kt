@@ -13,6 +13,7 @@ import com.niumi.feature.session.activation.ActivationFailure
 import com.niumi.feature.session.activation.ActivationPreview
 import com.niumi.feature.session.activation.ArmSessionResult
 import com.niumi.feature.session.activation.ArmSessionUseCase
+import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.BlockingScheduleFormatter
 import com.niumi.feature.session.ui.WakeScheduleFormatter
@@ -101,7 +102,7 @@ class SummaryViewModel
         private fun applyPreview(
             preview: ActivationPreview,
             use24Hour: Boolean,
-            alarmSoundSummary: String,
+            alarmSoundSummary: AlarmSoundSummary,
         ) {
             val schedule = preview.scheduleResult.schedule
             val display =

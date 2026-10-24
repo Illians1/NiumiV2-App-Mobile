@@ -70,6 +70,21 @@ object NiumiDimens {
     val switchHeight = 32.dp
     val switchThumb = 26.dp
 
+    /** Interrupteur de ligne (feuille Sonnerie, maquette 18 ; décision du 2026-10-23) : 44 × 26, pastille de 20. */
+    val switchRowWidth = 44.dp
+    val switchRowHeight = 26.dp
+    val switchRowThumb = 20.dp
+
+    /**
+     * Barre segmentée (maquette 18, durées de la sonnerie progressive) : 48 de haut, marge intérieure
+     * de 4, écart de 4 entre segments, segments de 40. Le segment se dessine sur 40 mais se touche
+     * sur 48 : la hauteur de la barre, sans l'épaissir (décision du 2026-10-20 sur la zone de 48).
+     */
+    val segmentedBarHeight = 48.dp
+    val segmentedBarPadding = 4.dp
+    val segmentedBarGap = 4.dp
+    val segmentHeight = 40.dp
+
     /** Emplacement d'icône d'application (rangée de l'accueil). */
     val appIcon = 28.dp
 
@@ -363,4 +378,50 @@ object NiumiDimens {
 
     /** 6 entre « Fermer » et « Ouvrir Niumi ». */
     val blockButtonGap = 6.dp
+
+    // Feuille « Sonnerie » (étape 40), relevées dans les sources des maquettes 16 et 17.
+
+    /** Rangée d'un son : 48 de haut, séparateur au-dessus. */
+    val ringtoneRowHeight = 48.dp
+
+    /** Radio d'un son : cercle de 22, trait de 1,5 ; point intérieur de 12 une fois choisi. */
+    val ringtoneRadio = 22.dp
+    val ringtoneRadioStroke = 1.5.dp
+    val ringtoneRadioDot = 12.dp
+
+    /** Bouton rond de pré-écoute : cercle de 32, icône de 14, retrait de -6 pour aligner sur la marge. */
+    val ringtonePreviewCircle = 32.dp
+    val ringtonePreviewIcon = 14.dp
+    val ringtonePreviewInset = (-6).dp
+
+    /** Étiquette de section (« Son », « Sonnerie progressive ») : 8 au-dessus de « Son », sous l'en-tête. */
+    val ringtoneSoundSectionTop = 8.dp
+
+    /** 8 sous chaque étiquette de section, avant son groupe. */
+    val ringtoneSectionLabelBottom = 8.dp
+
+    /**
+     * Ligne « Sonnerie progressive » (maquettes 18 et 20, révision du 2026-10-23) : 16 au-dessus,
+     * 48 de haut au moins, sous-ligne « Volume max en… » à 2 du libellé, barre segmentée à 12 dessous.
+     */
+    val ringtoneRampRowTop = 16.dp
+    val ringtoneRampRowMinHeight = 48.dp
+    val ringtoneRampSubtitleGap = 2.dp
+    val ringtoneBarTop = 12.dp
+
+    /** 8 au-dessus d'un message d'échec, sous la ligne du volume. */
+    val ringtoneMessageTop = 8.dp
+
+    /** Ligne du volume, placée avant la montée progressive depuis le 2026-10-24 : 16 au-dessus, 48 de haut au moins. */
+    val ringtoneVolumeRowTop = 16.dp
+    val ringtoneVolumeRowMinHeight = 48.dp
+
+    /** Bulle du volume : 204 de large, 11 et 14 de marges intérieures, coins de 12, pointe de 12. */
+    val bubbleWidth = 204.dp
+    val bubblePaddingVertical = 11.dp
+    val bubblePaddingHorizontal = 14.dp
+    val bubbleTailSize = 12.dp
+    val bubbleTailInsetFromEnd = 22.dp
+    val bubbleGap = 8.dp
+    val bubbleElevation = 8.dp
 }

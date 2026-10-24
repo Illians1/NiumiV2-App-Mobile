@@ -254,6 +254,32 @@ class NiumiComponentsSemanticsTest {
         assertThat(clicks).isEqualTo(1)
     }
 
+    /** Barre segmentée (maquette 18, durées de la sonnerie progressive) : des boutons radio de 48 de haut. */
+    @Test
+    fun aSegmentedBarExposesRadioButtonsAndReportsTheChosenIndex() {
+        val chosen = mutableListOf<Int>()
+        show {
+            NiumiSegmentedBar(
+                labels = listOf("2 min", "5 min", "10 min", "15 min"),
+                selectedIndex = 2,
+                onSelect = { chosen += it },
+                contentDescription = "Sonnerie progressive : durée pour atteindre le volume maximal",
+            )
+        }
+
+        composeRule
+            .onNodeWithText("10 min")
+            .assertRole(Role.RadioButton)
+            .assertIsSelected()
+            .assertTouchTarget()
+        composeRule
+            .onNodeWithText("5 min")
+            .assertIsNotSelected()
+            .performClick()
+
+        assertThat(chosen).containsExactly(1)
+    }
+
     @Test
     fun anActionPillIsAButton() {
         var clicks = 0
@@ -451,6 +477,30 @@ class NiumiComponentsSemanticsTest {
             .performClick()
 
         assertThat(changes).containsExactly(true)
+    }
+
+    /** Interrupteur de ligne (maquette 18) : plus petit à dessiner, même rôle, même zone de 48. */
+    @Test
+    fun aRowSwitchIsASwitchOfFullTouchSize() {
+        val changes = mutableListOf<Boolean>()
+        show {
+            NiumiSwitch(
+                checked = true,
+                onCheckedChange = { changes += it },
+                contentDescription = "Sonnerie progressive",
+                size = NiumiSwitchSize.Row,
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Sonnerie progressive")
+            .assertRole(Role.Switch)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On))
+            .assertTouchTarget()
+            .assertWidthIsAtLeast(NiumiDimens.switchRowWidth)
+            .performClick()
+
+        assertThat(changes).containsExactly(false)
     }
 
     @Test

@@ -22,16 +22,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiShapes
 
 /**
- * Interrupteur général (VALEURS-DE-DESIGN.md §4 : 52 × 32, pastille de 26 ; maquettes 13 et 14),
- * dans une zone de toucher de 44 de haut. Activé : piste ambre, pastille encre ; éteint : piste
- * `border`, pastille `surface`. Le thème sombre n'a pas de maquette : mêmes rôles. Inactif : aucune
- * action de clic, piste `disabledFill`.
+ * Interrupteur (VALEURS-DE-DESIGN.md §4 ; [size] : général 52 × 32 ou de ligne 44 × 26), dans une
+ * zone de toucher de 44 de haut. Activé : piste ambre, pastille encre ; éteint : piste `border`,
+ * pastille `surface`. Le thème sombre n'a pas de maquette : mêmes rôles. Inactif : aucune action de
+ * clic, piste `disabledFill`.
  */
+@Suppress("LongParameterList") // Convention Compose : les paramètres d'un composant sont son API.
 @Composable
 fun NiumiSwitch(
     checked: Boolean,
@@ -39,9 +41,10 @@ fun NiumiSwitch(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     enabled: Boolean = true,
+    size: NiumiSwitchSize = NiumiSwitchSize.Main,
 ) {
     val palette = LocalNiumiPalette.current
-    val travel = NiumiDimens.switchWidth - NiumiDimens.switchThumb - NiumiDimens.switchThumbInset * 2
+    val travel = size.width - size.thumb - NiumiDimens.switchThumbInset * 2
     val position by animateFloatAsState(targetValue = if (checked) 1f else 0f, label = "thumb")
     val action =
         if (enabled) {
@@ -65,7 +68,7 @@ fun NiumiSwitch(
         Box(
             modifier =
                 Modifier
-                    .size(width = NiumiDimens.switchWidth, height = NiumiDimens.switchHeight)
+                    .size(width = size.width, height = size.height)
                     .clip(NiumiShapes.pill)
                     .background(
                         when {
@@ -80,7 +83,7 @@ fun NiumiSwitch(
                 modifier =
                     Modifier
                         .offset(x = travel * position)
-                        .size(NiumiDimens.switchThumb)
+                        .size(size.thumb)
                         .clip(NiumiShapes.pill)
                         .background(if (checked && enabled) palette.ink else palette.surface),
             )
@@ -103,5 +106,7 @@ private fun NiumiSwitchDarkPreview() {
     NiumiPreviewFrame(dark = true) {
         NiumiSwitch(checked = true, onCheckedChange = {})
         NiumiSwitch(checked = false, onCheckedChange = {})
+        NiumiSwitch(checked = true, onCheckedChange = {}, size = NiumiSwitchSize.Row)
+        NiumiSwitch(checked = false, onCheckedChange = {}, size = NiumiSwitchSize.Row)
     }
 }

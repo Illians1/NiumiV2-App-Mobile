@@ -94,7 +94,7 @@ class WakeTimeViewModel
             viewModelScope.launch { refreshAlarmSoundSummary() }
         }
 
-        /** Relu à chaque `ON_RESUME`, comme les heures (§15) : retour de l'écran 14 compris. */
+        /** Relu à chaque `ON_RESUME`, comme les heures (§9), et à la fermeture de la feuille Sonnerie. */
         private suspend fun refreshAlarmSoundSummary() {
             state = state.copy(alarmSoundSummary = AlarmSoundTexts.summary(alarmSoundPreferences.read().sanitized()))
         }

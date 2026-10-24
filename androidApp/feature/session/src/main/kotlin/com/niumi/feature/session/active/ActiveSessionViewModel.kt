@@ -10,6 +10,7 @@ import com.niumi.core.interop.SessionIncidentDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.BlockedPackage
+import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.BlockingScheduleFormatter
 import com.niumi.feature.session.ui.WakeScheduleDisplay
@@ -192,7 +193,7 @@ class ActiveSessionViewModel
         private data class SessionDetails(
             val blockedApps: List<BlockedPackage>? = null,
             val incidents: List<IncidentPresentation> = emptyList(),
-            val alarmSoundSummary: String? = null,
+            val alarmSoundSummary: AlarmSoundSummary? = null,
         )
 
         private companion object {

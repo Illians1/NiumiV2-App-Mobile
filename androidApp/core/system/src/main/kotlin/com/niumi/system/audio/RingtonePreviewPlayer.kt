@@ -4,7 +4,7 @@ import com.niumi.system.common.OperationResult
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Pré-écoute d'une sonnerie sur l'écran 14 (SPEC_ANDROID §10.2, §15, Lot 7). Jamais
+ * Pré-écoute d'une sonnerie sur la feuille Sonnerie (SPEC_ANDROID §10.2). Jamais
  * [AlarmAudioEngine], jamais le service : le moteur de réveil est un singleton dont `start` est
  * idempotent, et une pré-écoute qui le traverserait rendrait un vrai déclenchement sans effet.
  */
@@ -19,7 +19,7 @@ interface RingtonePreviewPlayer {
 
     /**
      * Clé en cours de lecture, ou `null`. Contrairement à [isPlaying], une simple consultation
-     * ponctuelle, ce flux notifie aussi la fin naturelle du fichier : sans lui, l'écran 14
+     * ponctuelle, ce flux notifie aussi la fin naturelle du fichier : sans lui, la feuille
      * garderait l'icône « arrêt » affichée après la fin d'une pré-écoute sans boucle (étape 27).
      */
     val playingKey: StateFlow<String?>

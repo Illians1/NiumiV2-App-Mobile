@@ -15,6 +15,7 @@ import com.niumi.feature.session.active.fakes.FakeSessionIncidentsReader
 import com.niumi.feature.session.active.fakes.FakeSessionPersistenceGateway
 import com.niumi.feature.session.active.fakes.RecordingForegroundReadinessTrigger
 import com.niumi.feature.session.active.fakes.presentSession
+import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.wake.fakes.FakeClock
 import com.niumi.feature.session.wake.fakes.FakeTimeZoneProvider
 import com.niumi.system.readiness.DeviceReadinessChecker
@@ -720,7 +721,7 @@ class ActiveSessionViewModelTest {
 
         snapshotPublisher.publish(snapshot())
 
-        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Piano · volume progressif sur 2 min")
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo(AlarmSoundSummary("Piano", "Progressive · 2 min"))
     }
 
     @Test
@@ -742,6 +743,6 @@ class ActiveSessionViewModelTest {
         gateway.result = LoadResult.Unreadable("json")
         viewModel.refresh(use24Hour = true)
 
-        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Piano · volume progressif sur 2 min")
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo(AlarmSoundSummary("Piano", "Progressive · 2 min"))
     }
 }

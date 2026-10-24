@@ -15,7 +15,6 @@ import com.niumi.feature.session.active.CancelledScreen
 import com.niumi.feature.session.active.CompletedScreen
 import com.niumi.feature.session.active.ScanToModifyRoute
 import com.niumi.feature.session.diagnostics.IncidentDiagnosticRoute
-import com.niumi.feature.session.ringtone.RingtoneRoute
 import com.niumi.feature.session.summary.SummaryRoute
 import com.niumi.feature.session.wake.WakeTimeChoice
 import com.niumi.feature.session.wake.WakeTimeRoute
@@ -63,7 +62,6 @@ fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
                 onContinue = { choice ->
                     navController.navigate(NiumiRoute.Summary(choice.localTimeIso, choice.blockingLocalTimeIso))
                 },
-                onOpenRingtone = { navController.navigate(NiumiRoute.Ringtone) },
             )
         }
         composable<NiumiRoute.Summary> { backStackEntry ->
@@ -76,7 +74,6 @@ fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
                 onSessionInProgress = { navController.navigateToActiveSession() },
             )
         }
-        composable<NiumiRoute.Ringtone> { RingtoneRoute() }
         activeSessionDestinations(navController)
     }
 }
@@ -137,7 +134,6 @@ private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostCont
         ActiveSessionRoute(
             onModifyOrCancel = { navController.navigate(NiumiRoute.ScanToModify) },
             onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
-            onOpenRingtone = { navController.navigate(NiumiRoute.Ringtone) },
         )
     }
     composable<NiumiRoute.ScanToModify> {

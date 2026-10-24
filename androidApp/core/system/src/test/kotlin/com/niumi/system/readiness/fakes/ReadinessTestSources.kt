@@ -25,6 +25,8 @@ import com.niumi.system.recents.RecentsLockStatus
 import com.niumi.system.session.fakes.FakeAccessibilityServiceStatus
 import com.niumi.system.session.fakes.FakeAlarmScheduler
 import com.niumi.system.session.fakes.FakeUptimeClock
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 class FakeNfcReader(
     var availabilityValue: NfcAvailability = NfcAvailability.ENABLED,
@@ -122,8 +124,13 @@ class FakeNotificationChannelStatus(
 
 class FakeAlarmVolumeSource(
     var volume: Int = 7,
+    var percent: Int? = 47,
 ) : AlarmVolumeSource {
     override fun alarmStreamVolume(): Int = volume
+
+    override fun alarmStreamPercent(): Int? = percent
+
+    override fun changes(): Flow<Unit> = emptyFlow()
 }
 
 class FakeInterruptionFilterSource(

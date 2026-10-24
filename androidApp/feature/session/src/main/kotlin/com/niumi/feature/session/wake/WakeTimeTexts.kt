@@ -17,7 +17,7 @@ object WakeTimeTexts {
 
     const val SESSION_IN_PROGRESS_MESSAGE = "Une session est déjà en cours."
 
-    /** Ligne « Sonnerie » sous la section blocage (§15, Lot 7), ouvrant l'écran 14. */
+    /** Ligne « Sonnerie » sous la section blocage (§9), ouvrant la feuille Sonnerie. */
     const val RINGTONE_ROW_TITLE = "Sonnerie"
 
     // Début du blocage (Lot 6, SPEC_ANDROID §15 « Écran 5 — début du blocage »).

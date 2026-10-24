@@ -52,11 +52,33 @@ class VolumeRampPolicyTest {
         assertThat(VolumeRampPolicy.isComplete(0, 0)).isTrue()
     }
 
+    /** Défaut 10 min depuis le 2026-10-23 (révision de l'étape 40), 2 min du 2026-09-30 à cette date. */
     @Test
-    fun durationsAreTheClosedListWithTwoMinutesByDefault() {
+    fun durationsAreTheClosedListWithTenMinutesByDefault() {
         assertThat(VolumeRampDurations.SECONDS).containsExactly(120, 300, 600, 900).inOrder()
-        assertThat(VolumeRampDurations.DEFAULT_SECONDS).isEqualTo(120)
+        assertThat(VolumeRampDurations.DEFAULT_SECONDS).isEqualTo(600)
         assertThat(VolumeRampDurations.SECONDS).contains(VolumeRampDurations.DEFAULT_SECONDS)
+    }
+
+    @Test
+    fun sanitizedKeepsNullAndAnyValueAlreadyInTheList() {
+        assertThat(VolumeRampDurations.sanitized(null)).isNull()
+        assertThat(VolumeRampDurations.sanitized(120)).isEqualTo(120)
+        assertThat(VolumeRampDurations.sanitized(900)).isEqualTo(900)
+    }
+
+    @Test
+    fun sanitizedRoundsAnOutsideValueToTheClosestDuration() {
+        // Durées d'avant l'étape 28 (30 s, 1 min), reprises aussi par AlarmSoundSettingsTest.
+        assertThat(VolumeRampDurations.sanitized(30)).isEqualTo(120)
+        assertThat(VolumeRampDurations.sanitized(60)).isEqualTo(120)
+        assertThat(VolumeRampDurations.sanitized(1_000)).isEqualTo(900)
+    }
+
+    @Test
+    fun sanitizedBreaksATieTowardsTheShorterDuration() {
+        // 450 est à 150 de 300 comme de 600 ; le plein volume arrive plus tôt avec 300.
+        assertThat(VolumeRampDurations.sanitized(450)).isEqualTo(300)
     }
 
     private companion object {

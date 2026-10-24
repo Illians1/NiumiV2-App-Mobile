@@ -4,6 +4,7 @@ import com.niumi.core.interop.IncidentSeverityDto
 import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.database.BlockedPackage
+import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.ui.WakeScheduleDisplay
 
 /**
@@ -39,7 +40,7 @@ data class ActiveSessionUiState(
     val incidents: List<IncidentPresentation> = emptyList(),
     val isLoading: Boolean = true,
     /** Résumé de la sonnerie **de la session** (§15, Lot 7), `null` sans session lisible. */
-    val alarmSoundSummary: String? = null,
+    val alarmSoundSummary: AlarmSoundSummary? = null,
 ) {
     val hasSession: Boolean get() = state != null
 

@@ -3,6 +3,7 @@ package com.niumi.system.ringing
 import com.niumi.system.audio.AlarmSound
 import com.niumi.system.audio.NiumiRingtones
 import com.niumi.system.audio.VolumeRamp
+import com.niumi.system.audio.VolumeRampDurations
 import com.niumi.system.session.LoadResult
 
 private const val MILLIS_PER_SECOND = 1_000L
@@ -42,7 +43,7 @@ object RingingSoundResolver {
                     ringtoneKey = if (known) extras.ringtoneKey else NiumiRingtones.DEFAULT_KEY,
                     vibrationEnabled = extras.vibrationEnabled,
                     volumeRamp =
-                        extras.volumeRampSeconds?.let { seconds ->
+                        VolumeRampDurations.sanitized(extras.volumeRampSeconds)?.let { seconds ->
                             VolumeRamp(
                                 durationMs = seconds * MILLIS_PER_SECOND,
                                 startedAtEpochMillis = present.snapshot.ringingAtEpochMillis ?: nowEpochMillis,

@@ -22,7 +22,7 @@ object NiumiRingtones {
      */
     const val LEGACY_KEY = "niumi_alarm"
 
-    /** Ordre d'affichage de l'écran 14. */
+    /** Ordre d'affichage de la feuille Sonnerie (étape 40). */
     val ALL: List<Ringtone> =
         listOf(
             Ringtone("niumi_bell", "Cloche"),

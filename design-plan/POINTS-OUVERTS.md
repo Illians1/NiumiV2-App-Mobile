@@ -1,6 +1,6 @@
 # Niumi · Points ouverts
 
-État au 9 octobre 2026, complété le 18 octobre (T11, E12) le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, T12, §2) et le 20 octobre 2026 (D14 précisé, D12). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
+État au 9 octobre 2026, complété le 18 octobre (T11, E12), le 19 octobre 2026 (D9, D13, D14, D19, D21, M13, T12, §2), le 20 octobre 2026 (D14 précisé, D12) et le 23 octobre 2026 (D5, D6, D7, M7, étape 40 du plan Android ; puis D22 et E13 avec les 61 nouvelles maquettes). Tout ce qui suit n'est **pas** une décision. Avant d'implémenter un de ces points, il faut poser la question à Mehdi.
 
 Cinq listes :
 
@@ -18,9 +18,9 @@ Cinq listes :
 | D2 | Sortie de secours, le matin | Après la recopie pendant l'alarme, quel écran s'affiche : l'écran 11, ou l'accueil avec un message ? Et le réveil reste-t-il activé pour le lendemain ? Le journal donne deux pistes qui ne mènent pas au même endroit : « Elle compte comme un scan et a le même effet », et « Après la recopie, la session est annulée, comme après un scan. L'accueil affiche le message « Session annulée… » », sans distinguer le soir du matin |
 | D3 | Écran 3 bis | « 1 heure et + » compte-t-il pour 60 minutes dans le calcul ? C'est une proposition, jamais confirmée |
 | D4 | Écran 3 bis | Quelle durée est présélectionnée à l'ouverture de la roue ? La maquette montre 15 min |
-| D5 | Accueil, ligne « Sonnerie » | Quand la sonnerie progressive est sur « Non », la ligne n'affiche-t-elle que le nom du son ? C'est l'hypothèse retenue |
-| D6 | Feuille de sonnerie | Que montre la mention « Volume max en 2 min » quand la sonnerie progressive est sur « Non » ? Rien n'est dit |
-| D7 | Sonnerie | Quels sont les vrais sons et leurs noms ? Ceux des maquettes sont des exemples |
+| D5 | ~~Accueil, ligne « Sonnerie »~~ | **Tranché le 23 octobre 2026** (étape 40 du plan Android) : oui, quand la sonnerie progressive est sur « Non », la ligne n'affiche que le nom du son |
+| D6 | ~~Feuille de sonnerie~~ | **Tranché le 23 octobre 2026** : la sous-ligne « Volume max en… » (« Monte jusqu’au volume du téléphone en… » depuis le 24 octobre) disparaît quand l'interrupteur « Sonnerie progressive » est éteint, et la barre des durées avec elle (maquette 20, dessinée le même jour en remplacement de la pastille « Non ») |
+| D7 | ~~Sonnerie~~ | **Tranché le 23 octobre 2026, sur Android** : les quatre sons déjà empaquetés (Cloche, Énergique, Oiseaux, Piano), sans cinquième son ; les noms des maquettes (Aube, Carillon, Oiseaux, Classique, Insistante) restent des exemples |
 | D8 | Sortie de secours | Quels autres textes à recopier ? Un seul est validé, et le texte doit changer à chaque sortie |
 | D9 | ~~Bouton inactif en clair~~ | **Tranché le 19 octobre 2026** : fond `#E8E8E4` et texte `#5C5C60` (style de l'écran 2), partout. Le style de l'écran 4 (`#C6C6C2`, texte blanc) n'est pas repris |
 | D10 | ~~Écran 2, NFC~~ | **Tranché le 20 octobre 2026** : pas de tuile NFC. Le NFC est signalé à l'association, au moment du scan et par le bandeau de l'accueil |
@@ -34,6 +34,7 @@ Cinq listes :
 | D18 | Écran 2 | Sur une tuile accordée, la maquette retire le bouton « ? » en même temps que « Autoriser ». Le guide doit-il rester accessible ? **Sans objet pour l'instant** (20 octobre 2026) : le guide est reporté avec M1, aucune tuile n'a de « ? » sur Android, et une tuile accordée montre la coche seule |
 | D19 | ~~Écran 2, taille du titre~~ | **Tranché le 19 octobre 2026** : 28, comme tous les titres d'écran |
 | D20 | Sortie de secours, iPhone | Que fait l'alarme pendant la recopie sur iPhone ? Le journal ne le dit que pour Android : la sonnerie baisse tant que la saisie avance et remonte si elle s'arrête |
+| D22 | « Niumi Spot » | **Décidé le 23 octobre 2026, à appliquer plus tard** : les 61 maquettes déposées ce jour-là disent « Niumi Spot » (42 sources) à la place de « Niumi Point ». Le renommage est acquis ; `SPECIFICATION.md`, `TEXTES-DES-MAQUETTES.md`, les textes de l'app et leurs tests disent encore « Niumi Point » jusqu'à une étape dédiée du plan Android (avant l'étape 53) |
 | D21 | ~~Niumi Points : libellés de l'option d'ajout sur l'écran 8, du refus « déjà enregistré » et de la limite de dix~~ | **Tranché le 19 octobre 2026** : troisième bouton au trait « Ajouter un Niumi Point » sous « Recopier le texte » (écran 8, pendant l'alarme seulement) ; « Ce Niumi Point est déjà enregistré. » avec « Réessayer » ; à dix, la ligne « Ajouter un Niumi Point » grisée avec « Tu as déjà dix Niumi Points. » Reporté dans `SPECIFICATION.md` §6, §13, §16 |
 
 ## 2. Textes à relire
@@ -105,7 +106,7 @@ Les textes que Mehdi a choisis parmi plusieurs propositions ne sont pas dans cet
 | M4 | Le contenu de « Mentions légales » et de « Politique de confidentialité » | Non écrit |
 | M5 | Le message « temps écoulé » à l'annulation (sombre) et à l'association ou à l'ajout d'un Niumi Point (clair, avec le lien « Annuler ») | Seule la version du matin est dessinée. Les textes sont décidés |
 | M6 | L'affichage des échecs du scan en dehors de l'écran 10 : association, ajout, annulation | Les textes existent pour l'association. La forme n'est pas dessinée |
-| M7 | La feuille de sonnerie pendant une session | Version sombre non dessinée |
+| M7 | ~~La feuille de sonnerie pendant une session~~ | **Tranché le 23 octobre 2026, sur Android** : la palette sombre du thème, comme la feuille de scan ; la bulle du volume suit `ink`/`onInk` et s'inverse avec elle |
 | M8 | L'écran 2 ouvert depuis les réglages pendant une session, et son guide | Versions sombres non dessinées. En attendant, le tap des avertissements de session reste sur le diagnostic d'incident (décision du 20 octobre 2026, revue à l'étape 52 du plan Android) |
 | M9 | La roue de « Temps gagné » et le parcours d'ajout d'un Niumi Point pendant une session | Versions sombres non dessinées |
 | M10 | Le message « Modifiable après avoir scanné ton Niumi Point. » | Le texte existe, sa forme n'est pas dessinée |
@@ -135,3 +136,4 @@ Le journal des décisions (`annexes/journal-des-decisions.md`) contient des pass
 | E10 | Écran 11 | « Le point ambre du logo se lève comme un soleil » | Même dessin, avec le soleil en dégradé (9 octobre) |
 | E11 | Sortie de secours, le matin | « L'accueil affiche le message « Session annulée… » », sans distinguer le soir du matin | Ce message est retenu pour le soir seulement. Le matin reste ouvert : voir D2 |
 | E12 | Écran 2, tuile « Alarme » sur Android | « L'affichage plein écran peut être retiré par l'utilisateur » | Retiré : Niumi n'utilise plus l'affichage plein écran (18 octobre, voir T11) |
+| E13 | Toutes les sections | Numéros de maquettes cités par `SPECIFICATION.md` (« Images : »), `TEXTES-DES-MAQUETTES.md`, `VALEURS-DE-DESIGN.md`, le plan Android et SPEC_ANDROID | Le dossier `maquettes/` a été entièrement renuméroté le 23 octobre 2026 (61 maquettes, `INDEX.md` fait foi). Seules les références de la sonnerie (18 à 20) ont été mises à jour ce jour-là ; le reste suit l'ancienne numérotation jusqu'à une passe complète |

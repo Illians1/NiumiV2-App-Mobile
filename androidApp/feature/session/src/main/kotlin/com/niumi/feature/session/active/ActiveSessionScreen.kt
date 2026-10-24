@@ -18,6 +18,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -30,6 +34,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.designsystem.effect.WindowFocusRegainedEffect
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.session.ringtone.RingtoneSheetRoute
 import com.niumi.feature.session.ui.AlarmSoundRow
 import com.niumi.system.nfc.nfcAdapterSettledChanges
 import com.niumi.system.readiness.openRecourse
@@ -39,8 +44,8 @@ import com.niumi.system.readiness.openRecourse
  * est « Modifier ou annuler », qui mène au scan : ni arrêt, ni annulation directe — le scan du
  * boîtier est le seul chemin de sortie (SPEC_CORE_KMP §2, points 3 et 4 ; SPEC_ANDROID §3).
  *
- * La ligne « Sonnerie » (Lot 7) est la seule exception : elle ouvre l'écran 14 sans passer par le
- * scan, et seulement en `ARMED` — la sonnerie n'est pas un terme de l'engagement (§3, §15).
+ * La ligne « Sonnerie » est la seule exception : elle ouvre la feuille Sonnerie sans passer par le
+ * scan, et seulement en `ARMED` — la sonnerie n'est pas un terme de l'engagement (§3, §9).
  */
 @Composable
 fun ActiveSessionScreen(
@@ -253,11 +258,13 @@ private fun OtherIncidents(
 fun ActiveSessionRoute(
     onModifyOrCancel: () -> Unit,
     onOpenDiagnostic: () -> Unit,
-    onOpenRingtone: () -> Unit,
     viewModel: ActiveSessionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    // Feuille « Sonnerie » (étape 40) : un état d'affichage, pas une navigation — elle ne
+    // déclenche pas `ON_RESUME`, d'où le `refresh()` explicite à sa fermeture.
+    var showRingtoneSheet by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.refresh(DateFormat.is24HourFormat(context)) }
 
@@ -284,7 +291,7 @@ fun ActiveSessionRoute(
             ActiveSessionActions(
                 onModifyOrCancel = onModifyOrCancel,
                 onOpenDiagnostic = onOpenDiagnostic,
-                onOpenRingtone = onOpenRingtone,
+                onOpenRingtone = { showRingtoneSheet = true },
                 // §13 : les `Intent` de réglages sont construits par l'écran, jamais par le
                 // ViewModel ni par `DeviceReadinessChecker`. Un recours sans `Intent` n'a de toute
                 // façon pas de bouton (`IncidentPresentation`). `openRecourse` ouvre le même
@@ -292,6 +299,15 @@ fun ActiveSessionRoute(
                 onRemediate = { incident -> incident.action?.let(context::openRecourse) },
             ),
     )
+
+    if (showRingtoneSheet) {
+        RingtoneSheetRoute(
+            onDismiss = {
+                showRingtoneSheet = false
+                viewModel.refresh(DateFormat.is24HourFormat(context))
+            },
+        )
+    }
 }
 
 @Preview(showBackground = true)

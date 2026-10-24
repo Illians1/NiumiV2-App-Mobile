@@ -29,7 +29,7 @@ Le passage au clair se fait au moment où la session se termine : écran de réu
 | Séparateur | `#DCDCD8` | Lignes entre les rangées des listes |
 | Piste | `#E8E8E4` | Piste du cadran, bouton « Annuler » de la feuille de scan, bouton inactif (tous les écrans, D9) |
 | Désactivé | `#C6C6C2` | Éléments grisés de l'accueil « Réveil désactivé », dont le bord des jours non cochés (maquette 13) ; poignée des feuilles du bas ; traits inactifs de l'indicateur de panneau (le bouton inactif de l'écran 4 de la maquette n'est pas repris, D9) |
-| Tuile grise | `#EFEFEB` | Tuiles d'autorisation, rond de l'icône de scan |
+| Tuile grise | `#EFEFEB` | Tuiles d'autorisation, rond de l'icône de scan, fond de la barre segmentée (23 octobre 2026) |
 | Case grisée | `#F1F1EE` | Emplacements des icônes d'applications quand l'accueil est grisé (« Réveil désactivé ») |
 | Ambre | `#E9A23B` | Interrupteur activé, poignée du réveil sur le cadran, point des Niumi Points, pastille du cadenas (écran 1), pastille de la coche d'une autorisation accordée (écran 2), soleil (écran 11) |
 | Teinte ambre | `#FCF1DF` | Fond de la phrase « Bravo ! » (écran 11) |
@@ -107,8 +107,8 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | 16 | 600 | Noms des autorisations, « Blocage en cours », son choisi, « 80 % » |
 | 16 | 500 | « Réveil activé », « Réveil désactivé », jours cochés, pilule « Modifier », bouton de la recopie |
 | 16 | 400 | Texte courant, noms des pièces. Interligne 1,35 |
-| 15 | 500 | Bouton « Autoriser », pastille de durée choisie |
-| 15 | 400 | Pastilles de durée, lien « Annuler la session », texte d'introduction de l'écran 2 |
+| 15 | 500 | Bouton « Autoriser », segment de durée choisi |
+| 15 | 400 | Segments de durée, lien « Annuler la session », texte d'introduction de l'écran 2 |
 | 14 | 600 | Liens du bandeau de problème |
 | 14 | 400 | Phrases des tuiles, deuxième ligne des cartes, liens discrets |
 | 13 | 500 | Message d'erreur de la recopie |
@@ -127,7 +127,9 @@ Les valeurs exactes de chaque écran sont dans les fichiers de `maquettes/source
 | Bouton d'une alerte ou de la feuille de scan | 52 de haut, coins de 14 |
 | Bouton de la recopie (au-dessus du clavier) | 48 de haut, coins de 14 |
 | Bouton « Autoriser » d'une tuile | 46 de haut, coins de 12 |
-| Bouton en pilule | 44 de haut (« Modifier », durées) ou 48 (« Choisir les applications »), coins égaux à la moitié de la hauteur |
+| Bouton en pilule | 44 de haut (« Modifier ») ou 48 (« Choisir les applications »), coins égaux à la moitié de la hauteur. Les durées de la sonnerie progressive, en pilules jusqu'au 23 octobre 2026, sont passées en barre segmentée |
+| Barre segmentée | 48 de haut, coins de 14, marge intérieure de 4, fond « Tuile grise » ; segments de largeur égale, 40 de haut, coins de 10, le choisi en encre (durées de la sonnerie progressive, maquette 18, 23 octobre 2026) |
+| Interrupteur de ligne | 44 × 26, pastille de 20 (« Sonnerie progressive », maquette 18, 23 octobre 2026) |
 | Pastille de jour | Cercle de 44 |
 | Carte | Coins de 14 |
 | Tuile d'autorisation, case de pièce | Coins de 16 |

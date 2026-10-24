@@ -5,10 +5,11 @@ import com.niumi.system.audio.NiumiRingtones
 import com.niumi.system.audio.Ringtone
 
 /**
- * État de l'écran 14 (SPEC_ANDROID §15, Lot 7). [isSessionArmed] distingue les deux modes : en
- * `ARMED`, [settings] reflète la session (ce qui sonnera), le bandeau [RingtoneTexts.ARMED_BANNER]
- * s'affiche, et chaque changement écrit la préférence **et** la session ; sinon, [settings] reflète
- * la seule préférence.
+ * État de la feuille « Sonnerie » (SPECIFICATION.md §10, étape 40). [isSessionArmed] distingue les
+ * deux modes : en `ARMED`, [settings] reflète la session (ce qui sonnera) et chaque changement
+ * écrit la préférence **et** la session ; sinon, [settings] reflète la seule préférence.
+ * [volumePercent] est le volume du flux d'alarme, affiché sans réglage possible (§10) ; `null`
+ * s'il n'est pas lisible.
  */
 data class RingtoneUiState(
     val settings: AlarmSoundSettings = AlarmSoundSettings(),
@@ -16,6 +17,7 @@ data class RingtoneUiState(
     val previewingKey: String? = null,
     val isAlarmVolumeZero: Boolean = false,
     val isSessionArmed: Boolean = false,
+    val volumePercent: Int? = null,
     val message: String? = null,
     val isLoading: Boolean = true,
 )

@@ -6,6 +6,7 @@ import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleDto
+import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.wake.fakes.FakeAlarmSoundPreferences
 import com.niumi.feature.session.wake.fakes.FakeClock
@@ -464,7 +465,7 @@ class WakeTimeViewModelTest {
         val viewModel =
             viewModel(alarmSoundPreferences = FakeAlarmSoundPreferences(AlarmSoundSettings("niumi_oiseaux", 300)))
 
-        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Oiseaux · volume progressif sur 5 min")
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo(AlarmSoundSummary("Oiseaux", "Progressive · 5 min"))
     }
 
     @Test
@@ -483,7 +484,7 @@ class WakeTimeViewModelTest {
         alarmSoundPreferences.settings = AlarmSoundSettings("niumi_bell", null)
         viewModel.refresh(use24Hour = true)
 
-        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Cloche · volume constant")
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo(AlarmSoundSummary("Cloche", null))
     }
 
     private fun armedSnapshot() =

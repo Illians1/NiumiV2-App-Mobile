@@ -32,10 +32,28 @@ class AlarmSoundSettingsTest {
     }
 
     @Test
-    fun aRampDurationOutsideTheClosedListFallsBackToTheDefaultDuration() {
+    fun aRampDurationOutsideTheClosedListFallsBackToTheClosestDuration() {
+        // 45 est plus proche de 120 que de toute autre durée de la liste — pas du défaut (600 depuis
+        // le 2026-10-23) ; voir VolumeRampPolicyTest pour les égalités.
         val settings = AlarmSoundSettings("niumi_piano", 45).sanitized()
 
-        assertThat(settings.volumeRampSeconds).isEqualTo(VolumeRampDurations.DEFAULT_SECONDS)
+        assertThat(settings.volumeRampSeconds).isEqualTo(120)
+    }
+
+    @Test
+    fun aRampDurationFromBeforeTheStep28TighteningSanitizesToTheClosestDuration() {
+        // 60 s (1 min) existait avant l'étape 28 ; point de vigilance 4, cas limite 5.
+        assertThat(AlarmSoundSettings("niumi_piano", 60).sanitized().volumeRampSeconds).isEqualTo(120)
+        // 900 s reste dans la liste depuis l'étape 28 et n'est pas touché.
+        assertThat(AlarmSoundSettings("niumi_piano", 900).sanitized().volumeRampSeconds).isEqualTo(900)
+    }
+
+    @Test
+    fun aRampDurationSanitizesToTheClosestValueRatherThanAlwaysTheDefault() {
+        // Preuve que sanitized() délègue bien à VolumeRampDurations.sanitized plutôt que de
+        // toujours retomber sur DEFAULT_SECONDS (120) : une valeur hors liste mais proche d'une
+        // autre durée que le défaut doit prendre cette autre durée.
+        assertThat(AlarmSoundSettings("niumi_piano", 1_000).sanitized().volumeRampSeconds).isEqualTo(900)
     }
 
     @Test

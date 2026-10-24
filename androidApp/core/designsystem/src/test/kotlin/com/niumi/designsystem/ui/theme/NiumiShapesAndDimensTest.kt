@@ -108,6 +108,52 @@ class NiumiShapesAndDimensTest {
         assertDp("interrupteur, pastille", NiumiDimens.switchThumb, number("interrupteur", "pastille"))
     }
 
+    /** Interrupteur de ligne (feuille Sonnerie, maquette 18 ; décision du 2026-10-23) : 44 × 26, pastille de 20. */
+    @Test
+    fun rowSwitch() {
+        assertDp("interrupteur de ligne, largeur", NiumiDimens.switchRowWidth, number("interrupteurDeLigne", "largeur"))
+        assertDp(
+            "interrupteur de ligne, hauteur",
+            NiumiDimens.switchRowHeight,
+            number("interrupteurDeLigne", "hauteur"),
+        )
+        assertDp(
+            "interrupteur de ligne, pastille",
+            NiumiDimens.switchRowThumb,
+            number("interrupteurDeLigne", "pastille"),
+        )
+    }
+
+    /** Barre segmentée (feuille Sonnerie, maquette 18) : 48 de haut, coins 14, marge 4, segments de 40, coins 10. */
+    @Test
+    fun segmentedBar() {
+        assertDp("barre segmentée, hauteur", NiumiDimens.segmentedBarHeight, number("barreSegmentee", "hauteur"))
+        assertUniformRadius("barre segmentée", NiumiShapes.segmentedBar, number("barreSegmentee", "rayon"))
+        assertDp("barre segmentée, marge", NiumiDimens.segmentedBarPadding, number("barreSegmentee", "marge"))
+        val segment =
+            forms
+                .getValue("barreSegmentee")
+                .jsonObject
+                .getValue("segment")
+                .jsonObject
+        assertDp(
+            "segment, hauteur",
+            NiumiDimens.segmentHeight,
+            segment
+                .getValue("hauteur")
+                .jsonPrimitive.content
+                .toFloat(),
+        )
+        assertUniformRadius(
+            "segment",
+            NiumiShapes.segment,
+            segment
+                .getValue("rayon")
+                .jsonPrimitive.content
+                .toFloat(),
+        )
+    }
+
     /** Une forme ajoutée au design sans jeton ferait échouer ce test au lieu d'être oubliée. */
     @Test
     fun everyFormOfTheDesignValuesIsCovered() {
@@ -126,6 +172,8 @@ class NiumiShapesAndDimensTest {
                 "feuilleDuBas",
                 "emplacementIcone",
                 "interrupteur",
+                "interrupteurDeLigne",
+                "barreSegmentee",
             )
         // L'écran de référence des maquettes (390 × 844) n'est pas un jeton : les écrans s'adaptent.
         val notATokenKeys = setOf("ecranDeReference")

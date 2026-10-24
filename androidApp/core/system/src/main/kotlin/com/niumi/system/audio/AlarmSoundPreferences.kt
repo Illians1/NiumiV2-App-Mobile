@@ -31,10 +31,7 @@ data class AlarmSoundSettings(
     fun sanitized(): AlarmSoundSettings =
         AlarmSoundSettings(
             ringtoneKey = if (NiumiRingtones.byKey(ringtoneKey) != null) ringtoneKey else NiumiRingtones.DEFAULT_KEY,
-            volumeRampSeconds =
-                volumeRampSeconds?.let {
-                    if (it in VolumeRampDurations.SECONDS) it else VolumeRampDurations.DEFAULT_SECONDS
-                },
+            volumeRampSeconds = VolumeRampDurations.sanitized(volumeRampSeconds),
         )
 }
 

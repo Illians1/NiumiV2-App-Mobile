@@ -329,9 +329,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Dimanche
 - Icônes des 6 applications bloquées
 
-## 16 · Sonnerie · La feuille
+## 18 · Sonnerie · La feuille
 
-Fichier : `16_sonnerie-la-feuille`
+Fichier : `18_sonnerie-la-feuille` (maquettes de la sonnerie redessinées et renumérotées le 23 octobre 2026 ; les autres entrées de ce relevé gardent l'ancienne numérotation jusqu'à une passe complète, voir `POINTS-OUVERTS.md` E13)
 
 - Coucher
 - 22:30
@@ -358,14 +358,13 @@ Fichier : `16_sonnerie-la-feuille`
 - Oiseaux
 - Classique
 - Insistante
+- Volume du téléphone 80 %
 - Sonnerie progressive
-- Non
+- Monte jusqu’au volume du téléphone en 2 min
 - 1 min
 - 2 min
 - 5 min
 - 10 min
-- Volume max en 2 min
-- Volume du téléphone 80 %
 
 Libellés d'accessibilité présents dans le fichier source :
 
@@ -387,70 +386,23 @@ Libellés d'accessibilité présents dans le fichier source :
 - Écouter Oiseaux
 - Écouter Classique
 - Écouter Insistante
-- Sonnerie progressive : durée pour atteindre le volume maximal
 - Volume du téléphone : 80 %
-
-## 17 · Sonnerie · Quand on touche le volume
-
-Fichier : `17_sonnerie-quand-on-touche-le-volume`
-
-- Coucher
-- 22:30
-- Réveil
-- 7:00
-- Réveil dans
-- 9 h 26
-- Réveil activé
-- Blocage des apps dans 56 min
-- 8 h 30 de sommeil
-- L
-- M
-- M
-- J
-- V
-- S
-- D
-- Applications bloquées 6
-- Sonnerie Carillon Progressive · 2 min
-- Sonnerie
-- Son
-- Aube
-- Carillon
-- Oiseaux
-- Classique
-- Insistante
 - Sonnerie progressive
-- Non
-- 1 min
-- 2 min
-- 5 min
-- 10 min
-- Volume max en 2 min
-- Volume du téléphone 80 %
+- Sonnerie progressive : durée pour atteindre le volume maximal
+
+## 19 · Sonnerie · Quand on touche le volume
+
+Fichier : `19_sonnerie-quand-on-touche-le-volume`
+
+Mêmes textes que la maquette 18, plus la bulle :
+
 - Il se règle dans les réglages de ton téléphone.
 
-Libellés d'accessibilité présents dans le fichier source :
+## 20 · Sonnerie · Progressive désactivée
 
-- Réglages
-- Réveil activé
-- Lundi
-- Mardi
-- Mercredi
-- Jeudi
-- Vendredi
-- Samedi
-- Dimanche
-- Icônes des 6 applications bloquées
-- Sonnerie
-- Fermer
-- Son de la sonnerie
-- Écouter Aube
-- Écouter Carillon
-- Écouter Oiseaux
-- Écouter Classique
-- Écouter Insistante
-- Sonnerie progressive : durée pour atteindre le volume maximal
-- Volume du téléphone : 80 %
+Fichier : `20_sonnerie-progressive-desactivee`
+
+Mêmes textes que la maquette 18, sans « Monte jusqu’au volume du téléphone en 2 min » ni les durées : la ligne « Sonnerie progressive » reste, interrupteur éteint.
 
 ## 18 · Annuler · 1. Le lien sur l'accueil
 

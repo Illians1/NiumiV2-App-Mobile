@@ -21,16 +21,19 @@ import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.LoadResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
 /**
- * Écran 14 (SPEC_ANDROID §15, Lot 7). Deux modes selon la session lue par la passerelle : une
- * session `Present` en `ARMED` fait foi (ce qui sonnera), sinon la préférence seule.
+ * Feuille « Sonnerie » (SPECIFICATION.md §10, étape 40). Deux modes selon la session lue par la
+ * passerelle : une session `Present` en `ARMED` fait foi (ce qui sonnera), sinon la préférence
+ * seule.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RingtoneViewModelTest {
@@ -114,16 +117,19 @@ class RingtoneViewModelTest {
         assertThat(coordinator.updateCalls).isEqualTo(0)
     }
 
+    /** Interrupteur (révision du 2026-10-23) : allumer propose le défaut, 10 min ; éteindre = volume constant. */
     @Test
     fun enablingTheRampProposesTheDefaultDurationAndDisablingItClearsIt() {
         gateway.result = LoadResult.Absent
         val viewModel = viewModel()
 
-        viewModel.onVolumeRampEnabledChanged(enabled = true)
-        assertThat(viewModel.state.settings.volumeRampSeconds).isEqualTo(VolumeRampDurations.DEFAULT_SECONDS)
-
         viewModel.onVolumeRampEnabledChanged(enabled = false)
         assertThat(viewModel.state.settings.volumeRampSeconds).isNull()
+        assertThat(preferences.written?.volumeRampSeconds).isNull()
+
+        viewModel.onVolumeRampEnabledChanged(enabled = true)
+        assertThat(viewModel.state.settings.volumeRampSeconds).isEqualTo(VolumeRampDurations.DEFAULT_SECONDS)
+        assertThat(VolumeRampDurations.DEFAULT_SECONDS).isEqualTo(600)
     }
 
     @Test
@@ -131,10 +137,60 @@ class RingtoneViewModelTest {
         gateway.result = LoadResult.Absent
         val viewModel = viewModel()
 
-        viewModel.onVolumeRampSecondsChanged(300)
+        viewModel.onVolumeRampSelected(300)
 
         assertThat(viewModel.state.settings.volumeRampSeconds).isEqualTo(300)
+        assertThat(preferences.written?.volumeRampSeconds).isEqualTo(300)
     }
+
+    @Test
+    fun disablingTheRampInArmedModeIsAppliedToTheSessionToo() {
+        gateway.result = presentSession(armedSnapshot(), emptyList()).copy(extras = sessionExtras())
+        val viewModel = viewModel()
+
+        viewModel.onVolumeRampEnabledChanged(enabled = false)
+
+        assertThat(coordinator.updateCalls).isEqualTo(1)
+        assertThat(coordinator.lastVolumeRampSeconds).isNull()
+    }
+
+    @Test
+    fun theVolumePercentIsLoadedFromTheAlarmStream() {
+        gateway.result = LoadResult.Absent
+        volumeSource.percent = 47
+        val viewModel = viewModel()
+
+        assertThat(viewModel.state.volumePercent).isEqualTo(47)
+    }
+
+    /**
+     * Révision du 2026-10-24 : un volume changé feuille ouverte (touches, panneau de HyperOS qui ne
+     * prend pas le focus) se lit aussitôt. Seul le volume est relu : la session armée entre-temps
+     * ne fait pas basculer la feuille, qui ne la relit qu'à `ON_RESUME`.
+     */
+    @Test
+    fun anAnnouncedVolumeChangeUpdatesThePercentAndTheZeroMessageOnly() =
+        runTest(UnconfinedTestDispatcher()) {
+            gateway.result = LoadResult.Absent
+            val viewModel = viewModel()
+            val observing = launch { viewModel.observeVolumeChanges() }
+            gateway.result = presentSession(armedSnapshot(), emptyList()).copy(extras = sessionExtras())
+
+            volumeSource.percent = 60
+            volumeSource.changes.emit(Unit)
+            assertThat(viewModel.state.volumePercent).isEqualTo(60)
+            assertThat(viewModel.state.isAlarmVolumeZero).isFalse()
+
+            volumeSource.volume = 0
+            volumeSource.percent = 0
+            volumeSource.changes.emit(Unit)
+            assertThat(viewModel.state.volumePercent).isEqualTo(0)
+            assertThat(viewModel.state.isAlarmVolumeZero).isTrue()
+
+            assertThat(viewModel.state.isSessionArmed).isFalse()
+            assertThat(viewModel.state.settings).isEqualTo(PREFERENCE_SETTINGS)
+            observing.cancel()
+        }
 
     @Test
     fun aFailedWriteShowsAMessageAndKeepsTheChosenValueDisplayed() {

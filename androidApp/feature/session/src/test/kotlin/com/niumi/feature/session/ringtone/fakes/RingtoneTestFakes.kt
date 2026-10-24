@@ -14,9 +14,11 @@ import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.ReconcileReason
 import com.niumi.system.session.ReconcileResult
 import com.niumi.system.session.SessionCoordinator
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/** Fakes locaux de l'écran 14 : `:core:system/src/test` n'est pas exporté (aucun `testFixtures`). */
+/** Fakes locaux de la feuille Sonnerie : `:core:system/src/test` n'est pas exporté (aucun `testFixtures`). */
 class FakeAlarmSoundPreferences(
     var settings: AlarmSoundSettings = AlarmSoundSettings(),
     var writeFails: Boolean = false,
@@ -35,8 +37,16 @@ class FakeAlarmSoundPreferences(
 
 class FakeAlarmVolumeSource(
     var volume: Int = 10,
+    var percent: Int? = 80,
 ) : AlarmVolumeSource {
+    /** Annonce « le volume d'alarme a pu changer », émise par le test. */
+    val changes = MutableSharedFlow<Unit>()
+
     override fun alarmStreamVolume(): Int = volume
+
+    override fun alarmStreamPercent(): Int? = percent
+
+    override fun changes(): Flow<Unit> = changes
 }
 
 /**
@@ -84,10 +94,10 @@ class FakeSessionCoordinator : SessionCoordinator {
     override suspend fun dispatch(
         event: SessionEventDto,
         extras: AndroidSessionExtras?,
-    ): DispatchResult = throw UnsupportedOperationException("Non utilisé par l'écran 14")
+    ): DispatchResult = throw UnsupportedOperationException("Non utilisé par la feuille Sonnerie")
 
     override suspend fun reconcile(reason: ReconcileReason): ReconcileResult =
-        throw UnsupportedOperationException("Non utilisé par l'écran 14")
+        throw UnsupportedOperationException("Non utilisé par la feuille Sonnerie")
 
     override suspend fun updateAlarmSound(
         ringtoneKey: String,

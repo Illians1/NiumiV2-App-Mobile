@@ -19,6 +19,7 @@ import com.niumi.feature.session.activation.fakes.RecordingPairedBoxStore
 import com.niumi.feature.session.activation.fakes.RecordingReadinessChecker
 import com.niumi.feature.session.activation.fakes.RecordingSessionCoordinator
 import com.niumi.feature.session.activation.fakes.RecordingTimeZoneProvider
+import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.wake.WakeTimeTexts
 import com.niumi.feature.session.wake.fakes.FakeAlarmSoundPreferences
 import com.niumi.feature.session.wake.fakes.FakeClock
@@ -199,7 +200,7 @@ class SummaryViewModelTest {
 
         val viewModel = loadedViewModel()
 
-        assertThat(viewModel.state.alarmSoundSummary).isEqualTo("Cloche · volume constant")
+        assertThat(viewModel.state.alarmSoundSummary).isEqualTo(AlarmSoundSummary("Cloche", null))
     }
 
     @Test

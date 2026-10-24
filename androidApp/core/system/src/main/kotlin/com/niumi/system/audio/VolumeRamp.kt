@@ -23,6 +23,26 @@ data class VolumeRamp(
 object VolumeRampDurations {
     val SECONDS: List<Int> = listOf(120, 300, 600, 900)
 
-    /** 2 min, décision du 2026-09-30 : valeur par défaut et valeur proposée à l'activation de l'interrupteur. */
-    const val DEFAULT_SECONDS = 120
+    /**
+     * 10 min, décision du 2026-10-23 (révision de l'étape 40, feuille à interrupteur) : valeur par
+     * défaut d'une préférence jamais réglée et valeur proposée quand on allume l'interrupteur.
+     * Remplace les 2 min du 2026-09-30 ; une session déjà armée garde la durée copiée à l'activation.
+     */
+    const val DEFAULT_SECONDS = 600
+
+    /**
+     * Ramène une durée lue (préférence ou extras de session) à la liste fermée (étape 40,
+     * point de vigilance 4) : `null` reste `null` (volume constant), une valeur déjà dans
+     * [SECONDS] est gardée, toute autre valeur (30 s et 1 min d'avant l'étape 28, par exemple)
+     * prend la durée la plus proche — à égalité, la plus courte, pour que le plein volume
+     * arrive plus tôt plutôt que plus tard. Une sonnerie n'est donc jamais muette.
+     */
+    fun sanitized(seconds: Int?): Int? =
+        seconds?.let { value ->
+            if (value in SECONDS) {
+                value
+            } else {
+                SECONDS.minBy { candidate -> kotlin.math.abs(candidate - value) }
+            }
+        }
 }

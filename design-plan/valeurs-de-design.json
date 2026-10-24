@@ -229,6 +229,20 @@
       "largeur": 52,
       "hauteur": 32,
       "pastille": 26
+    },
+    "interrupteurDeLigne": {
+      "largeur": 44,
+      "hauteur": 26,
+      "pastille": 20
+    },
+    "barreSegmentee": {
+      "hauteur": 48,
+      "rayon": 14,
+      "marge": 4,
+      "segment": {
+        "hauteur": 40,
+        "rayon": 10
+      }
     }
   },
   "cadran": {

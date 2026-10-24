@@ -22,18 +22,19 @@ import com.niumi.designsystem.R
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 
 /**
- * Ligne « Sonnerie », partagée par les écrans 5, 6 et 7 (SPEC_ANDROID §15, Lot 7) : même titre,
- * même résumé. Une fonction séparée plutôt qu'un bloc dans chaque écran, pour ne pas faire
- * dépasser `LongMethod` de detekt sur des composables déjà proches du plafond (`ETAPE-24.md`,
- * `ETAPE-27.md`).
+ * Ligne « Sonnerie » (maquette 16), partagée par les écrans 5, 6 et 7 : [title] à gauche, à
+ * droite [summary] — le nom du son et, dessous, « Progressive · {durée} » quand elle n'est pas sur
+ * « Non » (D5, D6, étape 40). Une fonction séparée plutôt qu'un bloc dans chaque écran, pour ne pas
+ * faire dépasser `LongMethod` de detekt sur des composables déjà proches du plafond
+ * (`ETAPE-24.md`, `ETAPE-27.md`).
  *
- * [onClick] nul sur l'écran 6, qui ne fait qu'afficher le résumé de la préférence (§15) ; sur
+ * [onClick] nul sur l'écran 6, qui ne fait qu'afficher le résumé de la préférence (§9) ; sur
  * l'écran 5 toujours non nul ; sur l'écran 7 seulement en `ARMED` (§3, dérogation « sans scan »).
  */
 @Composable
 fun AlarmSoundRow(
     title: String,
-    summary: String,
+    summary: AlarmSoundSummary,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
@@ -48,13 +49,16 @@ fun AlarmSoundRow(
             modifier.fillMaxWidth().padding(vertical = 8.dp)
         }
     Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LocalNiumiPalette.current.textSecondary,
-            )
+        Text(text = title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(text = summary.name, style = MaterialTheme.typography.bodyLarge)
+            summary.detail?.let { detail ->
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LocalNiumiPalette.current.textSecondary,
+                )
+            }
         }
         if (onClick != null) {
             Image(

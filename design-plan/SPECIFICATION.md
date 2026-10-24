@@ -250,23 +250,25 @@ L'accueil récapitule le prochain réveil et permet de modifier tout ce qui peut
 
 ## 10. Choix de la sonnerie
 
-Images : `16_sonnerie-la-feuille`, `17_sonnerie-quand-on-touche-le-volume`. Thème clair dans les maquettes.
+Images : `18_sonnerie-la-feuille`, `19_sonnerie-quand-on-touche-le-volume`, `20_sonnerie-progressive-desactivee` (maquettes redessinées le 23 octobre 2026 : l'ancienne pastille « Non » est devenue un interrupteur). Thème clair dans les maquettes.
 
-Une feuille monte du bas par-dessus l'accueil quand on touche la ligne « Sonnerie ». Elle reste accessible pendant une session ; sa version sombre n'est pas dessinée **(ouvert)**.
+Une feuille monte du bas par-dessus l'accueil quand on touche la ligne « Sonnerie ». Elle reste accessible pendant une session ; sa version sombre n'est pas dessinée : sur Android, c'est la même feuille sous la palette sombre, comme la feuille de scan (M7, tranché le 23 octobre 2026).
 
 | Élément | Contenu |
 | --- | --- |
 | Titre | Sonnerie, avec une croix pour fermer |
-| Section « Son » | Cinq sons en liste. Chaque ligne a un bouton rond pour choisir et un bouton pour écouter |
-| Section « Sonnerie progressive » | Cinq pastilles : Non, 1 min, 2 min, 5 min, 10 min |
-| Sous les pastilles | Volume max en 2 min. Ce qui s'affiche quand le choix est « Non » n'est pas décidé **(ouvert)** |
-| Dernière ligne | « Volume du téléphone » à gauche, « 80 % » à droite. Pas de curseur |
+| Section « Son » | Les sons en liste. Chaque ligne a un bouton rond pour choisir et un bouton pour écouter. Sur Android, les quatre sons déjà empaquetés (Cloche, Énergique, Oiseaux, Piano ; D7, tranché le 23 octobre 2026) |
+| Ligne « Volume du téléphone » | « Volume du téléphone » à gauche, « 80 % » à droite. Pas de curseur. Placée avant la sonnerie progressive depuis le 24 octobre 2026 : la sous-ligne de celle-ci renvoie à ce volume |
+| Ligne « Sonnerie progressive » | Un interrupteur à droite ; dessous le libellé, « Monte jusqu’au volume du téléphone en 2 min » quand il est allumé (texte revu le 24 octobre 2026, « Volume max en 2 min » auparavant), rien quand il est éteint (D6, tranché le 23 octobre 2026) |
+| Barre des durées | Sous la ligne, seulement quand l'interrupteur est allumé : une barre segmentée, le choix en noir. La maquette montre 1 min, 2 min, 5 min, 10 min ; sur Android, 2, 5, 10 et 15 min (Q7, tranché le 23 octobre 2026 : liste mesurée le 8 octobre, 1 min jugée trop rapide) |
 
-- Les noms des sons dans les maquettes (Aube, Carillon, Oiseaux, Classique, Insistante) sont des exemples. Les vrais sons restent à choisir **(ouvert)**.
-- La sonnerie progressive monte jusqu'au volume maximal en 1, 2, 5 ou 10 minutes, ou ne monte pas (« Non »).
+- Les noms des sons dans les maquettes (Aube, Carillon, Oiseaux, Classique, Insistante) sont des exemples. Les vrais sons restent à choisir **(ouvert, sauf sur Android : D7)**.
+- La sonnerie progressive monte jusqu'au volume maximal en 1, 2, 5 ou 10 minutes (2, 5, 10 ou 15 sur Android), ou ne monte pas quand l'interrupteur est éteint.
+- Allumer l'interrupteur choisit 10 min, et 10 min est aussi le réglage d'une installation neuve (décision du 23 octobre 2026, qui remplace les 2 min du 30 septembre).
 - Niumi affiche le volume du téléphone mais ne permet pas de le modifier, sur iPhone comme sur Android.
+- Sur Android, le pourcentage suit les changements faits pendant que la feuille est ouverte (touches ou panneau de volume ; décision du 24 octobre 2026). Sur iPhone, voir T2.
 - Toucher la ligne du volume affiche une bulle noire au-dessus d'elle : « Il se règle dans les réglages de ton téléphone. » La bulle disparaît quand on touche ailleurs. Aucun signe n'indique que la ligne se touche.
-- Sur l'accueil, quand la sonnerie progressive est sur « Non », la ligne n'affiche que le nom du son **(ouvert : à confirmer)**.
+- Sur l'accueil, quand l'interrupteur est éteint, la ligne n'affiche que le nom du son (D5, tranché le 23 octobre 2026).
 
 Contraintes vérifiées :
 

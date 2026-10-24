@@ -39,6 +39,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.session.ringtone.RingtoneSheetRoute
 import com.niumi.feature.session.ui.AlarmSoundRow
 import java.time.LocalTime
 
@@ -219,7 +220,6 @@ private val BLOCKING_ITEM_SHAPE = RoundedCornerShape(8.dp)
 @Composable
 fun WakeTimeRoute(
     onContinue: (WakeTimeChoice) -> Unit,
-    onOpenRingtone: () -> Unit,
     viewModel: WakeTimeViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -227,6 +227,9 @@ fun WakeTimeRoute(
     val initial = LocalTime.parse(viewModel.state.localTimeIso)
     val is24Hour = DateFormat.is24HourFormat(context)
     val pickerState = rememberTimePickerState(initial.hour, initial.minute, is24Hour)
+    // Feuille « Sonnerie » (étape 40) : un état d'affichage, pas une navigation — elle ne
+    // déclenche pas `ON_RESUME`, d'où le `refresh()` explicite à sa fermeture.
+    var showRingtoneSheet by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refresh(is24Hour)
@@ -256,10 +259,19 @@ fun WakeTimeRoute(
                 },
                 onBlockingModeChanged = viewModel::onBlockingModeChanged,
                 onBlockingTimeChanged = viewModel::onBlockingTimeChanged,
-                onOpenRingtone = onOpenRingtone,
+                onOpenRingtone = { showRingtoneSheet = true },
             ),
         pickerContent = { TimePicker(state = pickerState) },
     )
+
+    if (showRingtoneSheet) {
+        RingtoneSheetRoute(
+            onDismiss = {
+                showRingtoneSheet = false
+                viewModel.refresh(DateFormat.is24HourFormat(context))
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

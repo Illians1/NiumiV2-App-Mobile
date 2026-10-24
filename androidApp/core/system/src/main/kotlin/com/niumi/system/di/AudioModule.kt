@@ -100,7 +100,7 @@ object AudioModule {
             CoroutineScope(SupervisorJob() + dispatcher),
         )
 
-    /** Pré-écoute de l'écran 14 (Lot 7) : même fabrique `USAGE_ALARM`, jamais le moteur de réveil. */
+    /** Pré-écoute de la feuille Sonnerie : même fabrique `USAGE_ALARM`, jamais le moteur de réveil. */
     @Provides
     @Singleton
     fun provideRingtonePreviewPlayer(
@@ -115,8 +115,8 @@ object AudioModule {
     ): AlarmVolumeSource = AndroidAlarmVolumeSource(context)
 
     /**
-     * Préférence de sonnerie (écran 14, étape 27) : binding séparé de `ReadinessModule`, déjà au
-     * plafond `TooManyFunctions` de detekt (`ETAPE-24.md`).
+     * Préférence de sonnerie (feuille Sonnerie, étape 27, revue à l'étape 40) : binding séparé de
+     * `ReadinessModule`, déjà au plafond `TooManyFunctions` de detekt (`ETAPE-24.md`).
      */
     @Provides
     @Singleton

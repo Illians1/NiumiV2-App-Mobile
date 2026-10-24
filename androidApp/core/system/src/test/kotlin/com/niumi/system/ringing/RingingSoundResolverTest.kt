@@ -33,10 +33,19 @@ class RingingSoundResolverTest {
 
     @Test
     fun theSessionRingtoneAndRampAreKeptAndTheRampStartsWhenTheSessionStartedRinging() {
+        val resolved = RingingSoundResolver.resolve(present(volumeRampSeconds = 300), SESSION_ID, NOW)
+
+        assertThat(resolved.sound).isEqualTo(AlarmSound("niumi_oiseaux", true, VolumeRamp(300_000, T0)))
+        assertThat(resolved.fallback).isFalse()
+    }
+
+    @Test
+    fun aRampDurationFromBeforeTheStep28TighteningIsSanitizedToTheClosestValue() {
+        // Cas limite 5 du plan de refonte : une session armée avant l'étape 28 (30 s ou 1 min, hors
+        // de la liste fermée depuis) doit tout de même sonner avec une montée, jamais muette.
         val resolved = RingingSoundResolver.resolve(present(volumeRampSeconds = 60), SESSION_ID, NOW)
 
-        assertThat(resolved.sound).isEqualTo(AlarmSound("niumi_oiseaux", true, VolumeRamp(60_000, T0)))
-        assertThat(resolved.fallback).isFalse()
+        assertThat(resolved.sound.volumeRamp).isEqualTo(VolumeRamp(120_000, T0))
     }
 
     @Test
@@ -64,12 +73,12 @@ class RingingSoundResolverTest {
     fun aKeyOutsideTheCatalogFallsBackToTheDefaultAndKeepsTheSessionRamp() {
         val resolved =
             RingingSoundResolver.resolve(
-                present(ringtoneKey = NiumiRingtones.LEGACY_KEY, volumeRampSeconds = 30),
+                present(ringtoneKey = NiumiRingtones.LEGACY_KEY, volumeRampSeconds = 300),
                 SESSION_ID,
                 NOW,
             )
 
-        assertThat(resolved.sound).isEqualTo(AlarmSound(NiumiRingtones.DEFAULT_KEY, true, VolumeRamp(30_000, T0)))
+        assertThat(resolved.sound).isEqualTo(AlarmSound(NiumiRingtones.DEFAULT_KEY, true, VolumeRamp(300_000, T0)))
         assertThat(resolved.fallback).isTrue()
     }
 

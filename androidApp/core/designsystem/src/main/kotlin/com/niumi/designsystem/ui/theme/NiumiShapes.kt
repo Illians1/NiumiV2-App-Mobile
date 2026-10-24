@@ -43,4 +43,11 @@ object NiumiShapes {
 
     /** Champ « Rechercher » de la feuille : coins de 14. */
     val searchField = RoundedCornerShape(14.dp)
+
+    /** Corps de la bulle du volume (feuille « Sonnerie », maquette 19) : coins de 12. */
+    val bubble = RoundedCornerShape(12.dp)
+
+    /** Barre segmentée (maquette 18) : coins de 14 ; chaque segment, coins de 10. */
+    val segmentedBar = RoundedCornerShape(14.dp)
+    val segment = RoundedCornerShape(10.dp)
 }

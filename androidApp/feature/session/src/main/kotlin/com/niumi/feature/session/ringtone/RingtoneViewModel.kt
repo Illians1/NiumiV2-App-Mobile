@@ -21,9 +21,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Écran 14 (SPEC_ANDROID §15, Lot 7). Deux modes, décidés par la session plutôt que par un
- * argument de route (étape 27, faiblesse de spec signalée : §15 ne précise pas comment l'écran sait
- * dans quel mode se présenter) :
+ * Feuille « Sonnerie » (SPECIFICATION.md §10, étape 40). Deux modes, décidés par la session plutôt
+ * que par un argument de route (étape 27, faiblesse de spec signalée : la spec ne précise pas
+ * comment la feuille sait dans quel mode se présenter) :
  *
  * - une session `Present` en `ARMED` : [RingtoneUiState.settings] reflète **ce qui sonnera**, et
  *   chaque changement écrit la préférence puis appelle [SessionCoordinator.updateAlarmSound] ;
@@ -57,32 +57,48 @@ class RingtoneViewModel
         }
 
         private suspend fun load() {
-            val sessionSettings = sessionArmedSettings()
+            // Les réglages de la session ne font foi qu'en `ARMED` (ce qui sonnera).
+            val sessionSettings =
+                (gateway.load() as? LoadResult.Present)
+                    ?.takeIf { it.snapshot.state == SessionStateDto.ARMED }
+                    ?.let { AlarmSoundSettings(it.extras.ringtoneKey, it.extras.volumeRampSeconds).sanitized() }
             state =
                 state.copy(
                     settings = sessionSettings ?: preferences.read().sanitized(),
                     isSessionArmed = sessionSettings != null,
                     isAlarmVolumeZero = alarmVolumeSource.alarmStreamVolume() <= 0,
+                    volumePercent = alarmVolumeSource.alarmStreamPercent(),
                     isLoading = false,
                 )
         }
 
-        private suspend fun sessionArmedSettings(): AlarmSoundSettings? {
-            val loaded = gateway.load()
-            if (loaded !is LoadResult.Present || loaded.snapshot.state != SessionStateDto.ARMED) return null
-            return AlarmSoundSettings(loaded.extras.ringtoneKey, loaded.extras.volumeRampSeconds).sanitized()
+        /**
+         * Pourcentage en direct (révision du 2026-10-24) : relit le seul volume à chaque annonce,
+         * jamais la session ni la préférence, qu'une écriture en cours rendrait périmées. La
+         * collecte est bornée par [RingtoneSheetRoute] (feuille affichée, application visible) :
+         * ce ViewModel appartient à l'écran hôte et survit à la fermeture de la feuille.
+         */
+        suspend fun observeVolumeChanges() {
+            alarmVolumeSource.changes().collect {
+                state =
+                    state.copy(
+                        isAlarmVolumeZero = alarmVolumeSource.alarmStreamVolume() <= 0,
+                        volumePercent = alarmVolumeSource.alarmStreamPercent(),
+                    )
+            }
         }
 
         fun onRingtoneSelected(key: String) = apply(state.settings.copy(ringtoneKey = key))
 
+        /**
+         * Interrupteur (révision du 2026-10-23) : allumer propose [VolumeRampDurations.DEFAULT_SECONDS],
+         * éteindre = volume constant.
+         */
         fun onVolumeRampEnabledChanged(enabled: Boolean) =
-            apply(
-                state.settings.copy(
-                    volumeRampSeconds = if (enabled) VolumeRampDurations.DEFAULT_SECONDS else null,
-                ),
-            )
+            apply(state.settings.copy(volumeRampSeconds = if (enabled) VolumeRampDurations.DEFAULT_SECONDS else null))
 
-        fun onVolumeRampSecondsChanged(seconds: Int) = apply(state.settings.copy(volumeRampSeconds = seconds))
+        /** Un segment de la barre : une durée du catalogue. */
+        fun onVolumeRampSelected(seconds: Int) = apply(state.settings.copy(volumeRampSeconds = seconds))
 
         /**
          * Toujours la préférence d'abord, la session ensuite (§15) : un échec de l'une ne doit pas

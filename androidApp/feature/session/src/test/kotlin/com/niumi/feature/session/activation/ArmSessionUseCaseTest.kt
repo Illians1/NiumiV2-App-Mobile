@@ -284,7 +284,7 @@ class ArmSessionUseCaseTest {
 
     /**
      * Lot 7 : sans préférence (l'écran 14 arrive à l'étape 27), une session sonne « Piano » avec une
-     * montée sur 2 min — le défaut décidé le 2026-09-30.
+     * montée sur 10 min — le défaut décidé le 2026-10-23 (2 min du 2026-09-30 à cette date).
      */
     @Test
     fun theExtrasCarryTheDefaultRingtoneRampVibrationAndFrozenLabels() =
@@ -294,7 +294,7 @@ class ArmSessionUseCaseTest {
             useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(coordinator.lastExtras?.ringtoneKey).isEqualTo("niumi_piano")
-            assertThat(coordinator.lastExtras?.volumeRampSeconds).isEqualTo(120)
+            assertThat(coordinator.lastExtras?.volumeRampSeconds).isEqualTo(600)
             assertThat(coordinator.lastExtras?.vibrationEnabled).isTrue()
             assertThat(coordinator.lastExtras?.blockedPackages).containsExactlyElementsIn(selection).inOrder()
         }

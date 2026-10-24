@@ -1,5 +1,6 @@
 package com.niumi.feature.session.wake
 
+import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.WakeScheduleDisplay
 import com.niumi.feature.session.ui.WakeScheduleFormatter
@@ -35,8 +36,8 @@ data class WakeTimeUiState(
     val message: String? = null,
     val isSessionInProgress: Boolean = false,
     val isLoading: Boolean = true,
-    /** Résumé de la préférence de sonnerie (§15, Lot 7), relu comme les heures à chaque `ON_RESUME`. */
-    val alarmSoundSummary: String = AlarmSoundTexts.summary(AlarmSoundSettings()),
+    /** Résumé de la préférence de sonnerie (§9), relu comme les heures à chaque `ON_RESUME`. */
+    val alarmSoundSummary: AlarmSoundSummary = AlarmSoundTexts.summary(AlarmSoundSettings()),
 ) {
     val isBlockingImmediate: Boolean get() = blockingLocalTimeIso == null
 
