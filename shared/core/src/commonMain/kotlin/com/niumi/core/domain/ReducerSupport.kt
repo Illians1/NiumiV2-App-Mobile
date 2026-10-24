@@ -4,7 +4,7 @@ import com.niumi.core.nfc.NfcVerificationProof
 
 /** États finaux de la machine (SPEC_CORE_KMP §5), partagés entre les réducteurs par famille. */
 internal val FINAL_STATES: Set<SessionState> =
-    setOf(SessionState.COMPLETED, SessionState.CANCELLED, SessionState.FAILED)
+    setOf(SessionState.COMPLETED, SessionState.CANCELLED, SessionState.DISARMED, SessionState.FAILED)
 
 /**
  * Une décision refusée renvoie le [snapshot] reçu inchangé et une liste d'effets vide

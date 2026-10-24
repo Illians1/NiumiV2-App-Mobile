@@ -5,6 +5,7 @@ import com.niumi.core.domain.SessionEngine
 import com.niumi.core.nfc.BoxPayloadParser
 import com.niumi.core.nfc.BoxVerifier
 import com.niumi.core.schedule.BlockingScheduleCalculator
+import com.niumi.core.schedule.NextOccurrenceCalculator
 import com.niumi.core.schedule.TriggerDelayPolicy
 import com.niumi.core.schedule.WakeScheduleCalculator
 
@@ -63,4 +64,12 @@ public class NiumiCoreFacade {
      */
     public fun computeBlockingSchedule(input: BlockingScheduleInputDto): BlockingScheduleResultDto =
         BlockingScheduleCalculator.compute(input.toDomain()).toDto()
+
+    /**
+     * Calcule la prochaine occurrence d'un planning récurrent (SPEC_CORE_KMP §8.4). Huitième
+     * méthode, ajoutée par le contrat 1.5 (§14) : réveil et coucher prêts pour une activation, ou
+     * le statut qui empêche d'armer (aucun jour, heure ou fuseau invalide, période vide).
+     */
+    public fun computeNextOccurrence(input: NextOccurrenceInputDto): NextOccurrenceResultDto =
+        NextOccurrenceCalculator.compute(input.toDomain()).toDto()
 }

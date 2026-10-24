@@ -7,6 +7,7 @@ import com.niumi.core.domain.SessionActivationEventFixtures.activationSucceededE
 import com.niumi.core.domain.SessionLifecycleEventFixtures.alarmFiredEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.alarmSoundStoppedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.blockingStartElapsedEvent
+import com.niumi.core.domain.SessionLifecycleEventFixtures.disarmRequestedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.incidentReportedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.invalidNfcScannedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.releaseFailedEvent
@@ -16,6 +17,7 @@ import com.niumi.core.domain.SessionSnapshotFixtures.armedSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.awaitingNfcSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.cancelledSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.completedSnapshot
+import com.niumi.core.domain.SessionSnapshotFixtures.disarmedSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.failedSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.preparingSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.releasingSnapshot
@@ -29,7 +31,8 @@ import kotlin.test.assertTrue
 // Interprétation retenue à l'implémentation des réducteurs : tout état non final. Voir
 // `ETAPE-07.md`.
 private val ACTIVE_STATES: Set<SessionState> =
-    SessionState.entries.toSet() - setOf(SessionState.COMPLETED, SessionState.CANCELLED, SessionState.FAILED)
+    SessionState.entries.toSet() -
+        setOf(SessionState.COMPLETED, SessionState.CANCELLED, SessionState.DISARMED, SessionState.FAILED)
 
 // Couples (état source, événement) explicitement autorisés par la table de SPEC_CORE_KMP §5.1.
 // `null` représente l'absence de snapshot (« aucun » dans la table).
@@ -49,6 +52,10 @@ private val ALLOWED_PAIRS: Set<Pair<SessionState?, SessionEventKind>> =
         // `SessionEngineBlockingStartTest`.
         add(SessionState.ARMED to SessionEventKind.BLOCKING_START_ELAPSED)
         add(SessionState.ARMED to SessionEventKind.VALID_NFC_SCANNED)
+        // Contrat 1.5 : comme `BLOCKING_START_ELAPSED`, autorisé seulement blocage en attente et
+        // avant le coucher. Le refus sur le snapshot `ARMED` immédiat de cette table et
+        // l'acceptation d'une session en attente sont prouvés par `SessionEngineDisarmTest`.
+        add(SessionState.ARMED to SessionEventKind.DISARM_REQUESTED)
         add(SessionState.RINGING to SessionEventKind.VALID_NFC_SCANNED)
         add(SessionState.AWAITING_NFC to SessionEventKind.VALID_NFC_SCANNED)
         add(SessionState.TRIGGERED_AWAITING_NFC to SessionEventKind.VALID_NFC_SCANNED)
@@ -96,6 +103,7 @@ class SessionEngineForbiddenTransitionsTest {
             SessionState.RELEASING -> releasingSnapshot(ReleaseTarget.COMPLETED, revision = revision)
             SessionState.COMPLETED -> completedSnapshot(revision = revision)
             SessionState.CANCELLED -> cancelledSnapshot(revision = revision)
+            SessionState.DISARMED -> disarmedSnapshot(revision = revision)
             SessionState.FAILED -> failedSnapshot(revision = revision)
         }
 
@@ -151,6 +159,10 @@ class SessionEngineForbiddenTransitionsTest {
 
             SessionEventKind.INCIDENT_REPORTED -> {
                 incidentReportedEvent(expectedRevision = revision)
+            }
+
+            SessionEventKind.DISARM_REQUESTED -> {
+                disarmRequestedEvent(expectedRevision = revision)
             }
         }
 }

@@ -5,8 +5,10 @@ package com.niumi.core.domain
  * Incrémentée à chaque changement incompatible des DTO exposés aux plateformes natives. Passée à
  * `2` par le contrat 1.3 (blocage différé) : les DTO gagnent des champs, deux valeurs d'enum
  * apparaissent et la façade une septième méthode. Les valeurs par défaut Kotlin ne traversent pas
- * la frontière Swift, la rupture est donc réelle pour iOS.
+ * la frontière Swift, la rupture est donc réelle pour iOS. Passée à `3` par le contrat 1.5 : un état,
+ * un événement, une cible de libération, `ReleaseMeans`, deux champs de snapshot et la méthode
+ * `computeNextOccurrence`.
  */
 public object NiumiCoreVersion {
-    public const val SCHEMA_VERSION: Int = 2
+    public const val SCHEMA_VERSION: Int = 3
 }

@@ -32,6 +32,7 @@ class SetupGateTest {
                 setOf(
                     SessionStateDto.COMPLETED,
                     SessionStateDto.CANCELLED,
+                    SessionStateDto.DISARMED,
                     SessionStateDto.FAILED,
                 )
 

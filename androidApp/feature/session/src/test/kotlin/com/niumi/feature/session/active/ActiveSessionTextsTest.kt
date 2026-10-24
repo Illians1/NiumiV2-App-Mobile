@@ -168,7 +168,7 @@ class ActiveSessionTextsTest {
             .isEqualTo("Réveil programmé · blocage à 22:30")
     }
 
-    /** Les huit autres états ne portent aucune heure de début : leur libellé ne change pas. */
+    /** Les neuf autres états ne portent aucune heure de début : leur libellé ne change pas. */
     @Test
     fun theBlockingStartNeverChangesTheOtherStateLabels() {
         SessionStateDto.entries

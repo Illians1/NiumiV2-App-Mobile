@@ -1,6 +1,7 @@
 package com.niumi.core.interop
 
 import com.niumi.core.domain.NfcScanEventFixtures
+import com.niumi.core.domain.ReleaseMeans
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionActivationEventFixtures
 import com.niumi.core.domain.SessionEvent
@@ -11,11 +12,12 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Aller-retour `domaine → dto → domaine` pour chacun des neuf états de SPEC_CORE_KMP §5 et pour
- * un événement représentatif de chacun des onze [com.niumi.core.domain.SessionEventKind]
+ * Aller-retour `domaine → dto → domaine` pour chacun des dix états de SPEC_CORE_KMP §5 et pour
+ * un événement représentatif de chacun des treize [com.niumi.core.domain.SessionEventKind]
  * (SPEC_CORE_KMP §13 : « les plateformes doivent avoir un test de mapping aller-retour »).
  */
 class DtoRoundTripTest {
@@ -105,6 +107,59 @@ class DtoRoundTripTest {
     fun cancelledSnapshotRoundTrips() = assertSnapshotRoundTrips(SessionSnapshotFixtures.cancelledSnapshot())
 
     @Test
+    fun releasingTowardDisarmedSnapshotRoundTrips() =
+        assertSnapshotRoundTrips(SessionSnapshotFixtures.releasingTowardDisarmedSnapshot())
+
+    @Test
+    fun disarmedSnapshotRoundTrips() = assertSnapshotRoundTrips(SessionSnapshotFixtures.disarmedSnapshot())
+
+    @Test
+    fun aVersionThreeDisarmedSnapshotKeepsItsReleaseMeansThroughJson() {
+        val disarmed = SessionSnapshotFixtures.disarmedSnapshot().toDto()
+
+        val decoded =
+            Json.decodeFromString<SessionSnapshotDto>(
+                Json.encodeToString(SessionSnapshotDto.serializer(), disarmed),
+            )
+
+        assertEquals(disarmed, decoded)
+        assertEquals(ReleaseMeans.PLAN_CHANGE, decoded.releasedBy)
+        assertEquals(SessionSnapshotFixtures.disarmedSnapshot(), decoded.toDomain())
+    }
+
+    @Test
+    fun aVersionTwoSnapshotWithoutReleaseMeansIsReadAsReleasedByScan() {
+        // Contrat 1.5, SPEC_CORE_KMP §7.1 : avant 1.5, seul un scan libérait une session.
+        val dto = Json.decodeFromString<SessionSnapshotDto>(versionTwoReleasingJson)
+
+        assertNull(dto.releasedBy)
+        assertNull(dto.disarmedAtEpochMillis)
+        val snapshot = dto.toDomain()
+        assertEquals(2, snapshot.schemaVersion)
+        assertEquals(ReleaseMeans.NFC_SCAN, snapshot.releasedBy)
+    }
+
+    @Test
+    fun aSnapshotWithoutScanNorReleaseMeansKeepsNoReleaseMeans() {
+        val dto = SessionSnapshotFixtures.armedSnapshot().toDto().copy(schemaVersion = 2)
+
+        assertNull(dto.toDomain().releasedBy)
+    }
+
+    @Test
+    fun aVersionThreeSnapshotStoredWithoutReleaseMeansIsReadAsReleasedByScan() {
+        // Jusqu'à la migration Room v6 (étape 43), Android relit des snapshots v3 sans releasedBy :
+        // la déduction ne dépend pas de schemaVersion, sans quoi RELEASE_SUCCEEDED serait refusé.
+        val stored = SessionSnapshotFixtures.releasingSnapshot(ReleaseTarget.COMPLETED).toDto().copy(releasedBy = null)
+
+        assertEquals(ReleaseMeans.NFC_SCAN, stored.toDomain().releasedBy)
+    }
+
+    @Test
+    fun disarmRequestedEventRoundTrips() =
+        assertEventRoundTrips(SessionLifecycleEventFixtures.disarmRequestedEvent(expectedRevision = 2))
+
+    @Test
     fun failedSnapshotRoundTrips() = assertSnapshotRoundTrips(SessionSnapshotFixtures.failedSnapshot())
 
     @Test
@@ -178,6 +233,36 @@ class DtoRoundTripTest {
         assertFalse(json.contains("proof", ignoreCase = true))
         assertFalse(json.contains(boxId))
     }
+
+    private val versionTwoReleasingJson =
+        """
+        {
+          "schemaVersion": 2,
+          "revision": 5,
+          "sessionId": "11111111-1111-1111-1111-111111111111",
+          "wakeSchedule": {
+            "localDateIso": "2026-09-08",
+            "localTimeIso": "07:00",
+            "zoneIdAtActivation": "Europe/Paris",
+            "triggerAtEpochMillis": 1800000000000
+          },
+          "blockingSchedule": {},
+          "state": "RELEASING",
+          "releaseTarget": "COMPLETED",
+          "health": "HEALTHY",
+          "createdAtEpochMillis": 1700000000000,
+          "armedAtEpochMillis": 1700000001000,
+          "blockingAppliedAtEpochMillis": 1700000000000,
+          "ringingAtEpochMillis": 1800000000000,
+          "alarmSoundStoppedAtEpochMillis": null,
+          "triggerElapsedAtEpochMillis": null,
+          "nfcVerifiedAtEpochMillis": 1800000002000,
+          "releasingAtEpochMillis": 1800000002000,
+          "completedAtEpochMillis": null,
+          "cancelledAtEpochMillis": null,
+          "failureCode": null
+        }
+        """.trimIndent()
 
     private fun assertSnapshotRoundTrips(snapshot: SessionSnapshot) {
         assertEquals(snapshot, snapshot.toDto().toDomain())

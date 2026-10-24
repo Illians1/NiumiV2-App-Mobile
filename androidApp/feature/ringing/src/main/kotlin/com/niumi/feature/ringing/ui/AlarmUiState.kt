@@ -72,7 +72,9 @@ sealed interface AlarmUiState {
                     Exit(AlarmExitDestination.CANCELLED)
                 }
 
-                SessionStateDto.FAILED -> {
+                // Un désarmement (contrat 1.5) précède le coucher : rien à montrer après, comme
+                // une activation échouée.
+                SessionStateDto.DISARMED, SessionStateDto.FAILED -> {
                     Exit(AlarmExitDestination.HOME)
                 }
 

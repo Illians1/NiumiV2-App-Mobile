@@ -6,6 +6,7 @@ import com.niumi.core.domain.BlockingSchedule
 import com.niumi.core.domain.DomainViolation
 import com.niumi.core.domain.IncidentSeverity
 import com.niumi.core.domain.Platform
+import com.niumi.core.domain.ReleaseMeans
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionEffect
 import com.niumi.core.domain.SessionEngine
@@ -18,6 +19,9 @@ import com.niumi.core.domain.SessionState
 import com.niumi.core.domain.WakeSchedule
 import com.niumi.core.schedule.BlockingScheduleCalculator
 import com.niumi.core.schedule.BlockingScheduleInput
+import com.niumi.core.schedule.NextOccurrenceCalculator
+import com.niumi.core.schedule.NextOccurrenceInput
+import com.niumi.core.schedule.WakePlan
 import com.niumi.core.schedule.WakeScheduleCalculator
 import com.niumi.core.schedule.WakeScheduleInput
 import kotlinx.serialization.Serializable
@@ -152,6 +156,54 @@ class FixturesTest {
     }
 
     @Serializable
+    private data class WakePlanFixture(
+        val name: String,
+        val enabledIsoDays: Set<Int>,
+        val wakeTimeIso: String,
+        val bedtimeIso: String,
+        val zoneId: String,
+        val nowEpochMillis: Long,
+        val expectedStatus: String,
+        val expectedWakeLocalDateIso: String? = null,
+        val expectedTriggerAtEpochMillis: Long? = null,
+        val expectedBlockingLocalDateIso: String? = null,
+        val expectedBlockingLocalTimeIso: String? = null,
+        val expectedBlockingStartsAtEpochMillis: Long? = null,
+        val expectedBlockingStartsImmediately: Boolean? = null,
+    )
+
+    @Test
+    fun everyWakePlanFixtureMatchesItsExpectedNextOccurrence() {
+        val json = readFixtureResource("wake_plans.json")
+        val fixtures = Json.decodeFromString<List<WakePlanFixture>>(json)
+
+        for (fixture in fixtures) {
+            val result =
+                NextOccurrenceCalculator.compute(
+                    NextOccurrenceInput(
+                        WakePlan(fixture.enabledIsoDays, fixture.wakeTimeIso, fixture.bedtimeIso),
+                        fixture.zoneId,
+                        fixture.nowEpochMillis,
+                    ),
+                )
+
+            val message = "fixture en échec : ${fixture.name}"
+            assertEquals(fixture.expectedStatus, result.status.name, message)
+            val occurrence = result.occurrence
+            assertEquals(fixture.expectedWakeLocalDateIso, occurrence?.wakeSchedule?.localDateIso, message)
+            assertEquals(fixture.expectedTriggerAtEpochMillis, occurrence?.wakeSchedule?.triggerAtEpochMillis, message)
+            assertEquals(fixture.expectedBlockingLocalDateIso, occurrence?.blockingSchedule?.localDateIso, message)
+            assertEquals(fixture.expectedBlockingLocalTimeIso, occurrence?.blockingSchedule?.localTimeIso, message)
+            assertEquals(
+                fixture.expectedBlockingStartsAtEpochMillis,
+                occurrence?.blockingSchedule?.startsAtEpochMillis,
+                message,
+            )
+            assertEquals(fixture.expectedBlockingStartsImmediately, occurrence?.blockingStartsImmediately, message)
+        }
+    }
+
+    @Serializable
     private data class EventFixture(
         val kind: String,
         val sessionId: String,
@@ -253,6 +305,10 @@ class FixturesTest {
                 releasingSnapshot(ReleaseTarget.CANCELLED)
             }
 
+            "releasingDisarmed", "disarmed" -> {
+                disarmSnapshot(final = name == "disarmed")
+            }
+
             "completed" -> {
                 snapshot(SessionState.COMPLETED, revision = 6)
             }
@@ -270,6 +326,29 @@ class FixturesTest {
             }
         }
 
+    // Désarmement (contrat 1.5) : session différée libérée sans scan avant son coucher, en cours de
+    // nettoyage puis à l'état final.
+    private fun disarmSnapshot(final: Boolean): SessionSnapshot {
+        val releasing =
+            snapshot(SessionState.RELEASING, revision = 3).copy(
+                blockingSchedule = REFERENCE_BLOCKING_SCHEDULE,
+                blockingAppliedAtEpochMillis = null,
+                releaseTarget = ReleaseTarget.DISARMED,
+                nfcVerifiedAtEpochMillis = null,
+                releasingAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS - 60_000L,
+                releasedBy = ReleaseMeans.PLAN_CHANGE,
+            )
+        return if (final) {
+            releasing.copy(
+                revision = 4,
+                state = SessionState.DISARMED,
+                disarmedAtEpochMillis = BLOCKING_STARTS_AT_EPOCH_MILLIS - 59_000L,
+            )
+        } else {
+            releasing
+        }
+    }
+
     private fun releasingSnapshot(releaseTarget: ReleaseTarget): SessionSnapshot =
         snapshot(SessionState.RELEASING, revision = 5, releaseTarget = releaseTarget)
 
@@ -279,8 +358,9 @@ class FixturesTest {
         releaseTarget: ReleaseTarget? = null,
         failureCode: String? = null,
     ): SessionSnapshot {
-        // `RELEASING` exige `nfcVerifiedAtEpochMillis` (invariant vérifié par `ReleaseReducer`,
-        // SPEC_CORE_KMP §4) : les deux champs sont donc liés ici plutôt qu'indépendants.
+        // `RELEASING` par scan exige `releasedBy = NFC_SCAN` et `nfcVerifiedAtEpochMillis`
+        // (invariant vérifié par `ReleaseReducer`, SPEC_CORE_KMP §4, contrat 1.5) : les champs sont
+        // donc liés ici plutôt qu'indépendants.
         val nfcVerifiedAtEpochMillis = if (state == SessionState.RELEASING) TRIGGER_AT_EPOCH_MILLIS + 2_000L else null
         return SessionSnapshot(
             schemaVersion = SessionSnapshot.SCHEMA_VERSION,
@@ -302,6 +382,7 @@ class FixturesTest {
             completedAtEpochMillis = null,
             cancelledAtEpochMillis = null,
             failureCode = failureCode,
+            releasedBy = if (state == SessionState.RELEASING) ReleaseMeans.NFC_SCAN else null,
         )
     }
 

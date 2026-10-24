@@ -17,17 +17,43 @@ public class SessionEngine {
 
         return when (event.kind) {
             SessionEventKind.ACTIVATION_REQUESTED -> ActivationReducer.onRequested(snapshot, event)
+
             SessionEventKind.ACTIVATION_SUCCEEDED -> ActivationReducer.onSucceeded(snapshot, event)
+
             SessionEventKind.ACTIVATION_FAILED -> ActivationReducer.onFailed(snapshot, event)
+
             SessionEventKind.ALARM_FIRED -> TriggerReducer.onAlarmFired(snapshot, event)
+
             SessionEventKind.ALARM_SOUND_STOPPED -> TriggerReducer.onAlarmSoundStopped(snapshot, event)
+
             SessionEventKind.TRIGGER_ELAPSED -> TriggerReducer.onTriggerElapsed(snapshot, event)
+
             SessionEventKind.BLOCKING_START_ELAPSED -> BlockingReducer.onStartElapsed(snapshot, event)
-            SessionEventKind.VALID_NFC_SCANNED -> NfcReducer.onValidScan(snapshot, event)
-            SessionEventKind.INVALID_NFC_SCANNED -> NfcReducer.onInvalidScan(snapshot, event)
-            SessionEventKind.RELEASE_SUCCEEDED -> ReleaseReducer.onSucceeded(snapshot, event)
-            SessionEventKind.RELEASE_FAILED -> ReleaseReducer.onFailed(snapshot, event)
+
             SessionEventKind.INCIDENT_REPORTED -> IncidentReducer.onReported(snapshot, event)
+
+            SessionEventKind.VALID_NFC_SCANNED,
+            SessionEventKind.INVALID_NFC_SCANNED,
+            SessionEventKind.DISARM_REQUESTED,
+            SessionEventKind.RELEASE_SUCCEEDED,
+            SessionEventKind.RELEASE_FAILED,
+            -> reduceRelease(snapshot, event)
         }
     }
+
+    // Familles qui mènent à `RELEASING` ou en sortent (scan, désarmement, nettoyage) : aiguillage
+    // séparé depuis le contrat 1.5, le treizième événement portant `reduce` au-delà du seuil de
+    // complexité de detekt (`ETAPE-41.md`).
+    private fun reduceRelease(
+        snapshot: SessionSnapshot?,
+        event: SessionEvent,
+    ): SessionDecision =
+        when (event.kind) {
+            SessionEventKind.VALID_NFC_SCANNED -> NfcReducer.onValidScan(snapshot, event)
+            SessionEventKind.INVALID_NFC_SCANNED -> NfcReducer.onInvalidScan(snapshot, event)
+            SessionEventKind.DISARM_REQUESTED -> DisarmReducer.onDisarmRequested(snapshot, event)
+            SessionEventKind.RELEASE_SUCCEEDED -> ReleaseReducer.onSucceeded(snapshot, event)
+            SessionEventKind.RELEASE_FAILED -> ReleaseReducer.onFailed(snapshot, event)
+            else -> error("aiguillé vers reduceRelease par erreur : ${event.kind}")
+        }
 }

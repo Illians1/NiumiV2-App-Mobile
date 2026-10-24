@@ -1,0 +1,203 @@
+[
+  {
+    "name": "thursday_evening_gives_friday_morning_with_bedtime_on_thursday",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789063200000,
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-09-11",
+    "expectedTriggerAtEpochMillis": 1789102800000,
+    "expectedBlockingLocalDateIso": "2026-09-10",
+    "expectedBlockingLocalTimeIso": "22:30",
+    "expectedBlockingStartsAtEpochMillis": 1789072200000,
+    "expectedBlockingStartsImmediately": false
+  },
+  {
+    "name": "friday_night_skips_the_weekend_to_monday_with_bedtime_on_sunday",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789160400000,
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-09-14",
+    "expectedTriggerAtEpochMillis": 1789362000000,
+    "expectedBlockingLocalDateIso": "2026-09-13",
+    "expectedBlockingLocalTimeIso": "22:30",
+    "expectedBlockingStartsAtEpochMillis": 1789331400000,
+    "expectedBlockingStartsImmediately": false
+  },
+  {
+    "name": "bedtime_after_midnight_falls_on_the_wake_day",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "01:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789063200000,
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-09-11",
+    "expectedTriggerAtEpochMillis": 1789102800000,
+    "expectedBlockingLocalDateIso": "2026-09-11",
+    "expectedBlockingLocalTimeIso": "01:00",
+    "expectedBlockingStartsAtEpochMillis": 1789081200000,
+    "expectedBlockingStartsImmediately": false
+  },
+  {
+    "name": "period_in_progress_blocks_immediately",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789074000000,
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-09-11",
+    "expectedTriggerAtEpochMillis": 1789102800000,
+    "expectedBlockingStartsImmediately": true
+  },
+  {
+    "name": "wake_time_already_passed_moves_to_the_next_checked_day",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789020000000,
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-09-11",
+    "expectedTriggerAtEpochMillis": 1789102800000,
+    "expectedBlockingLocalDateIso": "2026-09-10",
+    "expectedBlockingLocalTimeIso": "22:30",
+    "expectedBlockingStartsAtEpochMillis": 1789072200000,
+    "expectedBlockingStartsImmediately": false
+  },
+  {
+    "name": "no_checked_day_is_reported",
+    "enabledIsoDays": [],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789063200000,
+    "expectedStatus": "NO_DAY_ENABLED"
+  },
+  {
+    "name": "bedtime_equal_to_wake_is_reported",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "07:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789063200000,
+    "expectedStatus": "BEDTIME_EQUALS_WAKE"
+  },
+  {
+    "name": "non_existent_wake_time_in_spring_gap_resolves_to_first_valid_instant",
+    "enabledIsoDays": [
+      7
+    ],
+    "wakeTimeIso": "02:30",
+    "bedtimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1774724400000,
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-03-29",
+    "expectedTriggerAtEpochMillis": 1774746000000,
+    "expectedBlockingLocalDateIso": "2026-03-28",
+    "expectedBlockingLocalTimeIso": "22:30",
+    "expectedBlockingStartsAtEpochMillis": 1774733400000,
+    "expectedBlockingStartsImmediately": false
+  },
+  {
+    "name": "bedtime_and_wake_merged_by_spring_gap_are_reported_as_equal",
+    "enabledIsoDays": [
+      7
+    ],
+    "wakeTimeIso": "02:45",
+    "bedtimeIso": "02:15",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1774724400000,
+    "expectedStatus": "BEDTIME_EQUALS_WAKE"
+  },
+  {
+    "name": "repeated_wake_time_in_autumn_overlap_resolves_to_first_occurrence",
+    "enabledIsoDays": [
+      7
+    ],
+    "wakeTimeIso": "02:30",
+    "bedtimeIso": "01:00",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1792864800000,
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-10-25",
+    "expectedTriggerAtEpochMillis": 1792888200000,
+    "expectedBlockingLocalDateIso": "2026-10-25",
+    "expectedBlockingLocalTimeIso": "01:00",
+    "expectedBlockingStartsAtEpochMillis": 1792882800000,
+    "expectedBlockingStartsImmediately": false
+  },
+  {
+    "name": "invalid_wake_time_is_reported",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "25:00",
+    "bedtimeIso": "22:30",
+    "zoneId": "Europe/Paris",
+    "nowEpochMillis": 1789063200000,
+    "expectedStatus": "INVALID_TIME"
+  },
+  {
+    "name": "unknown_zone_is_reported",
+    "enabledIsoDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "wakeTimeIso": "07:00",
+    "bedtimeIso": "22:30",
+    "zoneId": "Mars/Olympus",
+    "nowEpochMillis": 1789063200000,
+    "expectedStatus": "UNKNOWN_ZONE"
+  }
+]

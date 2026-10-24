@@ -365,9 +365,13 @@ final class NiumiSessionRecord {
     var releasingAt: Date?
     var completedAt: Date?
     var cancelledAt: Date?
+    var disarmedAt: Date?
+    var releasedByCode: String?
     var failureCode: String?
 }
 ```
+
+`releasedByCode` et `disarmedAt` (contrat KMP 1.5, section 7.1) portent le moyen de libération (`NFC_SCAN`, `EMERGENCY_EXIT`, `PLAN_CHANGE`) et l'instant d'arrivée à `DISARMED`. Un enregistrement sans `releasedByCode` se lit comme libéré par scan s'il porte `nfcVerifiedAt` ; cette lecture est faite par la façade KMP, et la migration SwiftData vers `schemaVersion` 3 est testée.
 
 Les quatre champs `blocking*` (contrat KMP 1.3, section 7.5) sont tous nuls pour un blocage immédiat ; `blockingAppliedAt` est renseigné dès que le moteur a demandé les shields. Un enregistrement de `schemaVersion` 1 se lit comme un blocage immédiat dont `blockingAppliedAt` vaut `createdAt`, et la migration SwiftData est testée. `revision` reste positive et augmente à chaque décision métier acceptée. `stateCode`, `releaseTargetCode` et `healthCode` utilisent les codes canoniques du contrat KMP. Un code inconnu produit une erreur de migration ou de corruption; il n'est pas remplacé par une valeur par défaut. SwiftData permet un aller-retour complet avec `SessionSnapshotDto`.
 
@@ -375,7 +379,7 @@ La liste des boîtiers associés (`boxID`, `boxTokenSha256Hex`, nom — contrat 
 
 ### État métier
 
-Les neuf états proviennent de `NiumiCore`:
+Les dix états proviennent de `NiumiCore` (`DISARMED` depuis le contrat KMP 1.5):
 
 ```text
 PREPARING
@@ -386,6 +390,7 @@ TRIGGERED_AWAITING_NFC
 RELEASING
 COMPLETED
 CANCELLED
+DISARMED
 FAILED
 ```
 
@@ -500,8 +505,10 @@ stateDiagram-v2
     RINGING --> RELEASING: NFC valide
     AWAITING_NFC --> RELEASING: NFC valide
     TRIGGERED_AWAITING_NFC --> RELEASING: NFC valide
+    ARMED --> RELEASING: Désarmement avant le coucher
     RELEASING --> COMPLETED: Nettoyage réussi
     RELEASING --> CANCELLED: Nettoyage réussi
+    RELEASING --> DISARMED: Nettoyage réussi
 ```
 
 ### Transitions autorisées
@@ -518,10 +525,11 @@ stateDiagram-v2
 | `TRIGGERED_AWAITING_NFC` | `ALARM_SOUND_STOPPED` | état inchangé | conserver les shields et la demande de scan |
 | `ARMED`, avant `triggerAtEpochMillis` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `CANCELLED`, persister `nfcVerifiedAt` et retirer la demande de scan |
 | `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | cibler `COMPLETED`, persister `nfcVerifiedAt` et retirer la demande de scan |
+| `ARMED`, shields en attente, avant `blockingStartsAtEpochMillis` | `DISARM_REQUESTED` | `RELEASING` | cibler `DISARMED`, `releasedBy = PLAN_CHANGE` ; annuler l'alarme AlarmKit et la planification du début des shields (contrat KMP 1.5) |
 | `RELEASING` | `RELEASE_FAILED` | `RELEASING` | enregistrer l'incident et reprendre les effets manquants |
 | `RELEASING` | `RELEASE_SUCCEEDED` | cible enregistrée | supprimer le pointeur de session active |
 
-Aucune action d'interface ne doit atteindre `COMPLETED` ou `CANCELLED` sans `nfcVerifiedAt` et `RELEASE_SUCCEEDED`. Pendant `RELEASING`, certains shields peuvent déjà être retirés: l'état seul ne permet pas de déduire la configuration effective de ManagedSettings. Un événement dupliqué, ancien ou destiné à une autre session ne fait jamais régresser la révision.
+Aucune action d'interface ne doit atteindre `COMPLETED` ou `CANCELLED` sans `nfcVerifiedAt` et `RELEASE_SUCCEEDED`. `DISARMED` (contrat KMP 1.5) n'est atteint que par un changement de planning avant le coucher, puis `RELEASE_SUCCEEDED` ; le moteur refuse `DISARM_REQUESTED` à partir du coucher (`BLOCKING_START_ALREADY_ELAPSED`), une fois les shields demandés (`BLOCKING_ALREADY_APPLIED`) ou hors de `ARMED`. Pendant `RELEASING`, certains shields peuvent déjà être retirés: l'état seul ne permet pas de déduire la configuration effective de ManagedSettings. Un événement dupliqué, ancien ou destiné à une autre session ne fait jamais régresser la révision.
 
 Dans `ARMED`, l'état seul ne dit pas si les shields sont appliqués : `blockingAppliedAt` le dit (contrat KMP 1.3, section 4). `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` depuis `ARMED` appliquent eux aussi des shields encore en attente, dans la même décision.
 
@@ -573,6 +581,8 @@ Pour une heure choisie `HH:mm`:
 5. enregistrer la `Date` finale dans la session.
 
 Le MVP programme une date absolue avec `Alarm.Schedule.fixed`. Un changement de fuseau après activation ne doit pas modifier silencieusement l'instant enregistré. L'écran actif affiche l'heure locale correspondant à cet instant. Le produit pourra adopter un horaire relatif dans une version ultérieure si le besoin est confirmé.
+
+Contrat KMP 1.5 : pour un planning récurrent (jours de réveil, heure de réveil, heure de coucher), la prochaine occurrence est calculée par `computeNextOccurrence` (contrat KMP, section 8.4) : premier jour coché dont le réveil est strictement futur, coucher la veille si son heure est plus tardive que celle du réveil, sinon le jour même, blocage immédiat si le coucher est déjà atteint. Aucun calcul de jour ni de coucher n'est écrit en Swift. Avant le coucher, un changement de planning ou de fuseau désarme la session en attente puis arme la suivante ; après le coucher, l'instant est conservé (décisions communes 4 et 9).
 
 `CORRIGÉ`: le calcul appartient à `NiumiCore`. Si l'heure locale choisie n'existe pas, utiliser le premier instant valide après le saut. Si elle existe deux fois, choisir la première occurrence. Après `ACTIVATION_SUCCEEDED`, l'instant devient immuable. Une programmation `Alarm.Schedule.fixed` est déjà absolue: un changement d'heure ou de fuseau vérifie l'alarme et ne la reprogramme que si elle manque ou diffère, puis recalcule seulement l'affichage local.
 
@@ -786,7 +796,9 @@ Le lecteur Core NFC transmet l'URI brute au parseur de `NiumiCore`. Swift ne dup
 13. conserver l'entrée d'historique;
 14. afficher la confirmation adaptée à la cible finale.
 
-Un scan depuis `ARMED` avant l'heure fixe `releaseTarget = CANCELLED`. Un scan depuis `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` fixe `releaseTarget = COMPLETED`.
+Un scan depuis `ARMED` avant l'heure fixe `releaseTarget = CANCELLED`. Un scan depuis `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` fixe `releaseTarget = COMPLETED`. Le moteur renseigne `releasedBy = NFC_SCAN` dans les deux cas (contrat KMP 1.5).
+
+Désarmement (contrat KMP 1.5) : avant le coucher, un changement de planning envoie `DISARM_REQUESTED` ; le moteur fixe `releaseTarget = DISARMED` et `releasedBy = PLAN_CHANGE`, sans `nfcVerifiedAt`. Le coordinateur annule l'alarme AlarmKit et la planification du début des shields, sans shield à retirer, puis envoie `RELEASE_SUCCEEDED` dès que l'annulation de l'alarme a réussi (seul effet requis) et persiste `DISARMED` avec `disarmedAt`.
 
 Si l'application s'interrompt après l'étape 3, la restauration reprend la publication du snapshot puis les effets manquants. La présence de `nfcVerifiedAt` dans SwiftData autorise cette reprise. Sans cette valeur, le mécanisme de récupération ne retire pas les shields.
 

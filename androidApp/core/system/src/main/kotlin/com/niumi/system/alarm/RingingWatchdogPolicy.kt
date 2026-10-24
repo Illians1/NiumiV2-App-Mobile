@@ -26,6 +26,7 @@ object RingingWatchdogPolicy {
             SessionStateDto.RELEASING,
             SessionStateDto.COMPLETED,
             SessionStateDto.CANCELLED,
+            SessionStateDto.DISARMED,
             SessionStateDto.FAILED,
             -> WatchdogAction.Disarm
         }

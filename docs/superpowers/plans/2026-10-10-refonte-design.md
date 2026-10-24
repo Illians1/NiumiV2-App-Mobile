@@ -142,9 +142,9 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 40 | M7 | Version sombre de la feuille, non dessinée | **Tranché le 2026-10-23** : la palette sombre du thème (comme la feuille de scan) ; la bulle suit `ink`/`onInk` |
 | 40 | — | **Révision du 2026-10-23** (maquettes 18 à 20 redessinées après validation) : interrupteur à la place de « Non » ; forme des durées ; allumage et défaut ; taille de l'interrupteur | **Tranché le 2026-10-23** : interrupteur « Sonnerie progressive » (44 × 26, pastille de 20, nouveau jeton) ; barre segmentée (fond « Tuile grise », 48, segments de 40) à quatre durées 2/5/10/15 (Q7 tenu) ; allumer choisit **10 min**, qui devient aussi le défaut d'une préférence neuve (`DEFAULT_SECONDS` 600, remplace les 2 min du 2026-09-30) |
 | 40 | D22 | Les 61 nouvelles maquettes disent « Niumi Spot » | **Décidé le 2026-10-23, à appliquer plus tard** : renommage acquis, étape dédiée à prévoir avant l'étape 53 ; la renumérotation des maquettes (E13) est à répercuter dans les specs et ce plan |
-| 41 | Q8 | Coucher égal au réveil | Le cadran impose 15 min d'écart ; `BEDTIME_EQUALS_WAKE` défensif en KMP |
-| 41 | D17 | Aucun jour coché | Interrupteur allumé mais rien d'armé, carte « Aucun jour choisi » ; texte à écrire par Mehdi |
-| 41 | Q9 | Fuseau pendant `ARMED` | Figé pour la session en cours (décision 9) ; la suivante au nouveau fuseau |
+| 41 | Q8 | Coucher égal au réveil | **Tranché le 2026-10-24** : le cadran impose 15 min d'écart ; `BEDTIME_EQUALS_WAKE` défensif en KMP, aussi quand le trou de printemps confond les deux instants |
+| 41 | D17 | Aucun jour coché | **Reporté à l'étape 45 le 2026-10-24** : le moteur répond `NO_DAY_ENABLED` ; le comportement de l'interrupteur et le texte de la carte se décident avec l'accueil (recommandation : interrupteur allumé mais rien d'armé, carte « Aucun jour choisi ») |
+| 41 | Q9 | Fuseau pendant `ARMED` | **Tranché le 2026-10-24, autrement que recommandé** : avant le coucher, un changement de fuseau désarme la session en attente et la réarme à l'heure locale du nouveau fuseau ; après le coucher, l'instant est conservé (décision 9). Mis en œuvre par le coordinateur à l'étape 44 |
 | 42 | D2 | Sortie de secours le matin : écran suivant, réveil du lendemain | Écran 11 sans « Bravo ! » ; planning laissé allumé |
 | 42 | D8, D3, Q10 | Autres textes à recopier ; « 1 heure et + » = 60 ; arrondi | Un seul texte livré, rotation prête ; 60 ; minute inférieure |
 | 43 | Q11 | Niumi Spots valides en session : ensemble courant ou figé au coucher ? | **Tranché le 2026-10-19 : ensemble courant**, lu au moment du scan ; la liste figée du Lot 8 du plan maître (`session_box`) disparaît |
@@ -594,7 +594,9 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Specs à lire :** SPEC_CORE_KMP §2 (décisions 1, 4, 11, 15), §4, §5 à §5.2, §6, §7.1, §8, §10, §12, §14, §17 ; SPEC_IOS §8, §9, §11, §15, §16 ; `SPECIFICATION.md` §2 et §9 ; « Contrat KMP 1.5 » ci-dessus ; `KMP/domain/*Reducer.kt`, `ReducerSupport.kt`, `SessionEventValidation.kt`, `KMP/schedule/WakeScheduleCalculator.kt`, `BlockingScheduleCalculator.kt`, `KMP/interop/*` ; points de vigilance 8 et 10.
 
-**Points ouverts touchés :** D17, Q8, Q9.
+**Points ouverts touchés :** D17, Q8, Q9 (décisions du 2026-10-24 au tableau ; D17 reporté à l'étape 45).
+
+**Écarts décidés le 2026-10-24 (voir `ETAPE-41.md`).** `DISARM_REQUESTED` est refusé dès le coucher (`occurredAt ≥ startsAtEpochMillis`, nouvelle violation `BLOCKING_START_ALREADY_ELAPSED`), même si `BLOCKING_START_ELAPSED` n'a pas encore été traité, et non seulement après le réveil. Ajouter `DISARMED` et `DISARM_REQUESTED` casse huit `when` exhaustifs Android : ils reçoivent une branche « état final », `SESSION_FINAL_STATES` reçoit `DISARMED` (avancé de l'étape 43), et quatre tests Android qui listaient les états finaux sont adaptés (la phrase « aucun test Android modifié » ci-dessous était fausse). La table de `SessionEngineForbiddenTransitionsTest` est de 10 × 13 à cette étape, 10 × 14 à l'étape 42.
 
 **Fichiers :**
 - `:shared:core` — créer `KMP/schedule/WakePlan.kt`, `NextOccurrenceCalculator.kt`, `NextOccurrenceInput.kt`, `NextOccurrenceResult.kt`, `KMP/domain/ReleaseMeans.kt`, `DisarmReducer.kt` (`onDisarmRequested` : exige `ARMED`, `isBlockingPending`, `occurredAt < triggerAt` ; snapshot `RELEASING` cible `DISARMED`, `releasedBy = PLAN_CHANGE`, `disarmedAtEpochMillis` renseigné à `RELEASE_SUCCEEDED`), `KMP/interop/PlanDtos.kt`, `PlanDtoMappers.kt` ; modifier `SessionState.kt`, `ReleaseTarget.kt`, `SessionEventKind.kt`, `SessionSnapshot.kt` (`SCHEMA_VERSION = 3`, deux champs), `NfcReducer.kt` (`releasedBy = NFC_SCAN`), `ReleaseReducer.kt` (`DISARMED` à `RELEASE_SUCCEEDED`), `SessionEngine.kt`, `SessionEventValidation.kt`, `ReducerSupport.kt`, `ViolationCode.kt`, `KMP/diagnostics/ActivationPolicy.kt` (contrôles ignorés si liste vide ; `pairedBoxCount` déjà borné par `PairedBoxLimit`), `interop/SessionDtos.kt`, `DtoMappers.kt`, `SessionSnapshotEventMappers.kt`, `NiumiCoreFacade.kt` (+ `computeNextOccurrence`), `NiumiCoreVersion.kt` (1.5, schéma 3).
@@ -603,23 +605,23 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** un moteur qui calcule l'occurrence suivante d'un planning et se désarme proprement avant le coucher.
 
-- [ ] **Écrire `NextOccurrenceCalculatorTest`**, implémenter le calculateur (délégation à `WakeScheduleCalculator` pour la DST).
-- [ ] **Écrire `SessionEngineDisarmTest`**, étendre les tests de libération et de transitions interdites, implémenter `DISARMED`, `releasedBy`, `DisarmReducer`.
-- [ ] **Étendre les tests de mapping et de façade**, implémenter DTO, façade, version.
-- [ ] **Vérifier :**
+- [x] **Écrire `NextOccurrenceCalculatorTest`**, implémenter le calculateur (délégation à `WakeScheduleCalculator` pour la DST).
+- [x] **Écrire `SessionEngineDisarmTest`**, étendre les tests de libération et de transitions interdites, implémenter `DISARMED`, `releasedBy`, `DisarmReducer`.
+- [x] **Étendre les tests de mapping et de façade**, implémenter DTO, façade, version.
+- [x] **Vérifier :** *(2026-10-24 : tout vert, voir `ETAPE-41.md`.)*
 
 ```bash
 ./gradlew :shared:core:jvmTest
 ./gradlew :shared:core:linkDebugFrameworkIosSimulatorArm64
-./gradlew testDebugUnitTest          # aucun test Android modifié pour passer : les défauts des DTO suffisent
+./gradlew testDebugUnitTest          # quatre tests Android adaptés au nouvel état final (écart du 2026-10-24)
 ./gradlew ktlintCheck detekt
 ```
 
-- [ ] **Rédiger `ETAPE-41.md`.** SPEC_CORE_KMP et SPEC_IOS (sections listées) mises à jour.
+- [x] **Rédiger `ETAPE-41.md`.** SPEC_CORE_KMP et SPEC_IOS (sections listées) mises à jour.
 
 **Tests manuels :** aucun (module commun). Le framework iOS doit se construire.
 
-**Terminé quand :** chaque ligne ajoutée à §17 a son test ; `SessionEngineForbiddenTransitionsTest` couvre `DISARM_REQUESTED` depuis les dix états ; aucun test Android modifié ; SPEC_IOS §8/§9 alignés.
+**Terminé quand :** chaque ligne ajoutée à §17 a son test ; `SessionEngineForbiddenTransitionsTest` couvre `DISARM_REQUESTED` depuis les dix états ; ~~aucun test Android modifié~~ quatre tests Android adaptés au nouvel état final, aucun comportement Android changé (écart du 2026-10-24) ; SPEC_IOS §8/§9 alignés.
 
 ### Étape 42 : limite à dix Niumi Spots, sortie de secours, temps gagné
 
@@ -658,7 +660,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Fichiers :**
 - `:core:database` — modifier `pairing/PairedBoxStore.kt` et `RoomPairedBoxStore.kt` (+ `points: Flow<List<PairedBoxDto>>` ; `remove` répond `PairedBoxRemoveResult` et refuse le dernier), `dao/PairedBoxDao.kt` (+ `observe()`), `entity/AlarmSessionEntity.kt` (+ `releasedBy`, `disarmedAtEpochMillis`), `migration/Migrations.kt` (`MIGRATION_5_6` : deux colonnes ajoutées, `releasedBy = 'NFC_SCAN'` si `nfcVerifiedAtEpochMillis` non nul, `schemaVersion = 3`, `DROP TABLE session_box`), `NiumiDatabase.kt` (version 6, `schemas/6.json`), `AndroidSessionExtras.kt` (`boxes` retiré ; `freezeFrom` sans boîtiers), `mapping/SessionSnapshotMapper.kt`, `directboot/DirectBootSnapshot.kt` (v5 : + `releasedBy`, `disarmedAtEpochMillis` ; `boxes` retiré), `DirectBootMapper.kt`, `DirectBootJson.kt` (lecture v4 : `boxes` ignoré), `DirectBootMirror.kt`, `DirectBootRoomMerge.kt` ; supprimer `entity/SessionBoxEntity.kt`, `dao/SessionBoxDao.kt`, `SessionBox.kt`, `mapping/SessionBoxMapper.kt`, `directboot/DirectBootBoxMapper.kt` ; créer `pairing/PairedBoxRemoveResult.kt`.
-- `:core:system` — modifier `SYS/nfc/HandleValidNfcUseCase.kt` (`verifyBox` sur `pairedBoxStore.all()` lu au moment du scan ; `extras.boxes` disparaît), `SYS/session/SessionStates.kt` (`SESSION_FINAL_STATES` + `DISARMED`, `isSessionDark` sur `RELEASING` selon la cible) ; créer `SYS/plan/WakePlan.kt`, `WakePlanStore.kt`, `DataStoreWakePlanStore.kt` (`niumi_wake_plan`, garde de déverrouillage identique à `DataStoreSetupPreferences`), `SYS/insight/TimeToGetUpPreferences.kt`, `DataStoreTimeToGetUpPreferences.kt` (`niumi_time_to_get_up`), bindings Hilt.
+- `:core:system` — modifier `SYS/nfc/HandleValidNfcUseCase.kt` (`verifyBox` sur `pairedBoxStore.all()` lu au moment du scan ; `extras.boxes` disparaît), `SYS/session/SessionStates.kt` (`SESSION_FINAL_STATES` + `DISARMED` *déjà fait à l'étape 41* ; `isSessionDark` et `isBlockingInForce` sur `RELEASING` selon la cible ; `APP/navigation/LauncherDestination.requiresAlarmScreen` faux pour `RELEASING` vers `DISARMED`) ; créer `SYS/plan/WakePlan.kt`, `WakePlanStore.kt`, `DataStoreWakePlanStore.kt` (`niumi_wake_plan`, garde de déverrouillage identique à `DataStoreSetupPreferences`), `SYS/insight/TimeToGetUpPreferences.kt`, `DataStoreTimeToGetUpPreferences.kt` (`niumi_time_to_get_up`), bindings Hilt.
 - `:feature:session` — `SESSION/activation/ArmSessionUseCase.kt` (plus de copie des boîtiers dans les extras), `ActivationPreview.boxNames` et `DiagnosticReport.boxes` lus dans `PairedBoxStore.all()` (liste courante), `active/ScanToModifyViewModel.kt` si la liste figée y est lue.
 - `:feature:setup` — `SETUP/pairing/PairingViewModel.kt`, `PairingUiState.kt`, `PairingTexts.kt` : le verrou « session en cours » est retiré (ajout, renommage, retrait possibles en session) ; `canAdd = boxes.size < PairedBoxLimit.MAX` ; « 5 boîtiers maximum. » devient « 10 boîtiers maximum. » (texte transitoire, l'écran disparaît à l'étape 47).
 - Tests : `Migration5To6Test` (instrumenté, `MigrationTestHelper`, depuis une base v5 peuplée d'une session `ARMED` avec `session_box` : rien n'est perdu, table absente, `releasedBy` déduit), `RoomPairedBoxStoreTest` (dernier refusé `LastBoxKept`, dixième accepté, onzième `LimitReached`, flux `points`), `DirectBootSnapshotJsonTest` (v4 lisible avec `boxes` ignoré, v5 aller-retour), `DirectBootRoomParityTest`, `HandleValidNfcUseCaseTest` (point ajouté après l'activation accepté ; point retiré refusé ; liste vide → `NO_PAIRED_BOX_MATCH`), `ArmSessionUseCaseTest`, `PairingViewModelTest` (plus de verrou en session, limite dix), `WakePlanStoreTest`, `DataStoreUnlockGuardTest` (les deux nouveaux dépôts), `SessionStatesTest`, `EventFingerprintTest` (témoins schéma 3), `NiumiDatabaseSchemaTest` (v6).
@@ -682,7 +684,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Points ouverts touchés :** Q12, Q14.
 
 **Fichiers :**
-- `:core:system` — créer `SYS/plan/WakePlanScheduler.kt`, `DefaultWakePlanScheduler.kt` (sous `SessionCoordinator.withLock` : si `ARMED` en attente → `DISARM_REQUESTED` et attente de `DISARMED` ; si session après le coucher → `LockedBySession` ; puis `computeNextOccurrence` et `ACTIVATION_REQUESTED` avec `checks = emptyList()` ; `enabled = false` → désarmement seul), `PlanChangeReason.kt`, `PlanApplyResult.kt`, `SYS/session/DisarmResult.kt` ; modifier `SessionEventFactory.kt` (+ `disarmRequested`, `emergencyExitConfirmed`), `DefaultSessionCoordinator.kt` (après `RELEASE_SUCCEEDED` : `COMPLETED`/`DISARMED` → `rearmAfterFinalState()` ; `CANCELLED` → `WakePlanStore.write(enabled = false)`), `SessionReconciler.kt`, `SessionStartupReconciler.kt` (au démarrage et à `USER_UNLOCKED` : aucune session active et planning allumé → `apply(PROCESS_START | USER_UNLOCKED)`), `ReconcileResult.kt`, `TechnicalEventType.kt`.
+- `:core:system` — créer `SYS/plan/WakePlanScheduler.kt`, `DefaultWakePlanScheduler.kt` (sous `SessionCoordinator.withLock` : si `ARMED` en attente → `DISARM_REQUESTED` et attente de `DISARMED` ; si session après le coucher → `LockedBySession` ; puis `computeNextOccurrence` et `ACTIVATION_REQUESTED` avec `checks = emptyList()` ; `enabled = false` → désarmement seul ; `TIMEZONE_CHANGED` avant le coucher → désarmement puis ré-armement à l'heure locale du nouveau fuseau, après le coucher → rien, décision Q9 du 2026-10-24 ; `DISARM_REQUESTED` refusé par `BLOCKING_START_ALREADY_ELAPSED` → appliquer le blocage et répondre `LockedBySession`), `PlanChangeReason.kt`, `PlanApplyResult.kt`, `SYS/session/DisarmResult.kt` ; modifier `SessionEventFactory.kt` (+ `disarmRequested`, `emergencyExitConfirmed`), `DefaultSessionCoordinator.kt` (`DISARM_REQUESTED` dans l'aiguillage des phases à effets requis, aujourd'hui `else -> error` ; `PublishSnapshotExecutor` : `DISARMED` → `SESSION_DISARMED` ; après `RELEASE_SUCCEEDED` : `COMPLETED`/`DISARMED` → `rearmAfterFinalState()` ; `CANCELLED` → `WakePlanStore.write(enabled = false)`), `SessionReconciler.kt`, `SessionStartupReconciler.kt` (au démarrage et à `USER_UNLOCKED` : aucune session active et planning allumé → `apply(PROCESS_START | USER_UNLOCKED)`), `ReconcileResult.kt`, `TechnicalEventType.kt`.
 - `:feature:session` — `ArmSessionUseCase` → `SESSION/activation/ArmOccurrenceUseCase.kt` (reçoit une `NextOccurrenceDto`, lit sonnerie et sélection au moment d'armer ; aucune liste de boîtiers).
 - Tests : `WakePlanSchedulerTest` (interrupteur allumé → armé ; changement d'heure → `DISARMED` puis `ARMED` avec deux `sessionId` ; après coucher → `LockedBySession` ; période en cours → blocage immédiat ; aucun jour → `NoDayEnabled`), `SessionCoordinatorDisarmTest`, `SessionCoordinatorEmergencyExitTest`, `SessionCoordinatorRearmTest` (`COMPLETED` → nouvelle session ; `CANCELLED` → interrupteur éteint, rien d'armé), `SessionReconcilerRearmTest`, `ArmOccurrenceUseCaseTest`, `TechnicalEventTypeTest`.
 

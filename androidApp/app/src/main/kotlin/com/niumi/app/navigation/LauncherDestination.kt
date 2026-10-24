@@ -60,6 +60,7 @@ fun requiresAlarmScreen(state: SessionStateDto?): Boolean =
         SessionStateDto.ARMED,
         SessionStateDto.COMPLETED,
         SessionStateDto.CANCELLED,
+        SessionStateDto.DISARMED,
         SessionStateDto.FAILED,
         null,
         -> false

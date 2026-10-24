@@ -45,6 +45,13 @@ class AlarmUiStateTest {
             .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.HOME))
     }
 
+    /** Contrat 1.5 : une session désarmée avant son coucher n'a aucun écran de fin. */
+    @Test
+    fun aDisarmedSessionFallsBackToHome() {
+        assertThat(forState(SessionStateDto.DISARMED))
+            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.HOME))
+    }
+
     /** Avant la sonnerie, l'écran 7 est le seul écran atteignable (§10.4). */
     @Test
     fun theStatesBeforeRingingCloseTheAlarmScreen() {
@@ -58,7 +65,8 @@ class AlarmUiStateTest {
 
         assertThat(classified).hasSize(SessionStateDto.entries.size)
         assertThat(classified.filterValues { it is AlarmUiState.Visible }).hasSize(4)
-        assertThat(classified.filterValues { it is AlarmUiState.Exit }).hasSize(3)
+        // COMPLETED, CANCELLED, DISARMED (contrat 1.5, vers l'accueil) et FAILED.
+        assertThat(classified.filterValues { it is AlarmUiState.Exit }).hasSize(4)
         assertThat(classified.filterValues { it == AlarmUiState.Close }).hasSize(2)
     }
 }

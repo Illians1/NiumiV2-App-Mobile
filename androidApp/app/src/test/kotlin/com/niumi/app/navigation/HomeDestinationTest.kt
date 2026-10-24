@@ -16,11 +16,12 @@ class HomeDestinationTest {
             SessionStateDto.entries.filterNot {
                 it == SessionStateDto.COMPLETED ||
                     it == SessionStateDto.CANCELLED ||
+                    it == SessionStateDto.DISARMED ||
                     it == SessionStateDto.FAILED
             }
 
         // Exhaustivité : un état ajouté à la machine commune doit être classé explicitement.
-        assertThat(nonFinalStates).hasSize(SessionStateDto.entries.size - 3)
+        assertThat(nonFinalStates).hasSize(SessionStateDto.entries.size - 4)
         nonFinalStates.forEach { state ->
             assertThat(homeDestinationFor(state, onboardingAcknowledged = true))
                 .isEqualTo(NiumiRoute.ActiveSession)
@@ -31,7 +32,7 @@ class HomeDestinationTest {
 
     @Test
     fun everyFinalStateFallsBackToTheSetupJourney() {
-        listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED)
+        listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.DISARMED, SessionStateDto.FAILED)
             .forEach { state ->
                 assertThat(homeDestinationFor(state, onboardingAcknowledged = true))
                     .isEqualTo(NiumiRoute.Permissions)

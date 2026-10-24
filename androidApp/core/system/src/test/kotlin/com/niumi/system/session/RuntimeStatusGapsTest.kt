@@ -92,7 +92,12 @@ class RuntimeStatusGapsTest {
     fun noGapOutlivesASession() {
         val status = SessionRuntimeStatus(false, false, false, false, false, nfcEvaluable = true)
 
-        listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED).forEach { state ->
+        listOf(
+            SessionStateDto.COMPLETED,
+            SessionStateDto.CANCELLED,
+            SessionStateDto.DISARMED,
+            SessionStateDto.FAILED,
+        ).forEach { state ->
             assertThat(RuntimeStatusGaps.of(status, state)).isEmpty()
         }
     }

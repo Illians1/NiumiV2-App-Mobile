@@ -113,6 +113,12 @@ object ActiveSessionTexts {
                 "Session annulée"
             }
 
+            // Libellé transitoire (contrat 1.5) : cet écran disparaît à l'étape 45 du plan de
+            // refonte et n'est jamais affiché pour une session désarmée.
+            SessionStateDto.DISARMED -> {
+                "Session désarmée"
+            }
+
             SessionStateDto.FAILED -> {
                 "L'activation a échoué"
             }

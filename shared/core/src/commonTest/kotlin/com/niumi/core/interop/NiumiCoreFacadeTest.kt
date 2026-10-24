@@ -6,6 +6,7 @@ import com.niumi.core.diagnostics.ReadinessCheckInput
 import com.niumi.core.diagnostics.ReadinessSeverity
 import com.niumi.core.domain.SessionEventKind
 import com.niumi.core.schedule.BlockingScheduleStatus
+import com.niumi.core.schedule.NextOccurrenceStatus
 import com.niumi.core.schedule.TriggerDelayOutcome
 import com.niumi.core.schedule.WakeScheduleCalculator
 import com.niumi.core.schedule.WakeScheduleInput
@@ -148,6 +149,44 @@ class NiumiCoreFacadeTest {
         nowEpochMillis = 1_788_890_400_000L,
         triggerAtEpochMillis = 1_788_930_000_000L,
     )
+
+    @Test
+    fun computeNextOccurrenceArmsTheNextCheckedMorningWithItsBedtime() {
+        // 2026-09-10 (jeudi) 20:00 Europe/Paris → vendredi 7:00, coucher jeudi 22:30.
+        val result = facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = 1_789_063_200_000L))
+
+        assertEquals(NextOccurrenceStatus.VALID, result.status)
+        val occurrence = requireNotNull(result.occurrence)
+        assertEquals(
+            WakeScheduleDto("2026-09-11", "07:00", "Europe/Paris", 1_789_102_800_000L),
+            occurrence.wakeSchedule,
+        )
+        assertEquals(BlockingScheduleDto("2026-09-10", "22:30", 1_789_072_200_000L), occurrence.blockingSchedule)
+        assertEquals(false, occurrence.blockingStartsImmediately)
+    }
+
+    @Test
+    fun computeNextOccurrenceRelaysRefusalsWithoutThrowing() {
+        val now = 1_789_063_200_000L
+
+        assertEquals(
+            NextOccurrenceStatus.NO_DAY_ENABLED,
+            facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, days = emptySet())).status,
+        )
+        assertEquals(
+            NextOccurrenceStatus.UNKNOWN_ZONE,
+            facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, zoneId = "Not/AZone")).status,
+        )
+        assertNull(
+            facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, days = emptySet())).occurrence,
+        )
+    }
+
+    private fun nextOccurrenceInput(
+        nowEpochMillis: Long,
+        days: Set<Int> = setOf(1, 2, 3, 4, 5),
+        zoneId: String = "Europe/Paris",
+    ) = NextOccurrenceInputDto(WakePlanDto(days, "07:00", "22:30"), zoneId, nowEpochMillis)
 
     @Test
     fun evaluateTriggerDelayNotReached() {

@@ -44,6 +44,17 @@ class ActivationPolicyTest {
     }
 
     @Test
+    fun anEmptyCheckListStillAppliesTheCommonRules() {
+        // Contrat 1.5 : les contrôles de préparation ne bloquent plus l'activation, le natif peut
+        // n'en transmettre aucun ; les règles communes restent appliquées.
+        assertTrue(ActivationPolicy.evaluate(input(checks = emptyList())).allowed)
+
+        val result = ActivationPolicy.evaluate(input(checks = emptyList(), triggerAtEpochMillis = NOW_EPOCH_MILLIS))
+
+        assertEquals(listOf(ActivationReasonCode.TRIGGER_NOT_IN_FUTURE), result.blockingReasons.map { it.code })
+    }
+
+    @Test
     fun nullBlockingStartIsAllowed() {
         // Blocage immédiat : aucune contrainte d'antériorité (SPEC_CORE_KMP §8.3).
         val result = ActivationPolicy.evaluate(input(blockingStartsAtEpochMillis = null))

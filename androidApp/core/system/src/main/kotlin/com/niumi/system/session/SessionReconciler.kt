@@ -130,7 +130,7 @@ class SessionReconciler(
                 resumeRelease(snapshot, dispatch, actions)
             }
 
-            SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED -> {
+            SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.DISARMED, SessionStateDto.FAILED -> {
                 gateway.clearActive(sessionId)
                 actions += ReconcileAction.PointerCleared
             }

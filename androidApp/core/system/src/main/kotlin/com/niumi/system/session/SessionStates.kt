@@ -6,7 +6,7 @@ import com.niumi.core.interop.SessionStateDto
 /**
  * États finaux de la machine commune. `FINAL_STATES` existe déjà dans `:shared:core`
  * (`ReducerSupport.kt`) mais est `internal` à `commonMain`, inaccessible depuis Android — redéfini
- * ici pour les mêmes trois valeurs (SPEC_CORE_KMP §5.1).
+ * ici pour les mêmes quatre valeurs (SPEC_CORE_KMP §5.1 ; `DISARMED` depuis le contrat 1.5).
  *
  * Public depuis l'étape 13 : trois modules avaient besoin de la même règle (le coordinateur ici,
  * la destination de l'accueil dans `:app`, la garde du parcours de préparation dans
@@ -14,7 +14,7 @@ import com.niumi.core.interop.SessionStateDto
  * `SessionScanStatesTest`, vaut mieux que trois copies à maintenir ensemble.
  */
 val SESSION_FINAL_STATES: Set<SessionStateDto> =
-    setOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED)
+    setOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.DISARMED, SessionStateDto.FAILED)
 
 /**
  * Les deux états où le scan du boîtier est la seule issue et où la notification de §10.5 doit être
@@ -56,6 +56,7 @@ fun SessionSnapshotDto?.isBlockingInForce(): Boolean =
         SessionStateDto.PREPARING,
         SessionStateDto.COMPLETED,
         SessionStateDto.CANCELLED,
+        SessionStateDto.DISARMED,
         SessionStateDto.FAILED,
         -> false
     }

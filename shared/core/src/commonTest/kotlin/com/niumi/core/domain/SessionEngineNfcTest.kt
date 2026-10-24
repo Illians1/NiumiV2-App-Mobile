@@ -29,6 +29,7 @@ class SessionEngineNfcTest {
         assertEquals(SessionState.RELEASING, snapshot.state)
         assertEquals(ReleaseTarget.CANCELLED, snapshot.releaseTarget)
         assertEquals(occurredAt, snapshot.nfcVerifiedAtEpochMillis)
+        assertEquals(ReleaseMeans.NFC_SCAN, snapshot.releasedBy)
         assertEquals(
             listOf(
                 SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT,
@@ -43,8 +44,9 @@ class SessionEngineNfcTest {
 
     @Test
     fun validScanBeforeTheBlockingStartCancelsTheSessionAndItsBlockingStart() {
-        // Décision commune 15 : l'engagement est pris à l'activation, même avant le début du
-        // blocage — le scan reste la seule sortie, et il annule l'alarme de début programmée.
+        // Décision commune 15 : avant le début du blocage, le scan annule toujours la session, et
+        // l'alarme de début programmée avec elle (le désarmement sans scan est l'autre issue depuis
+        // le contrat 1.5, `SessionEngineDisarmTest`).
         val pending = armedBlockingPendingSnapshot()
         val occurredAt = BLOCKING_STARTS_AT_EPOCH_MILLIS - 1_000L
         val event = validNfcScannedEvent(expectedRevision = pending.revision, occurredAtEpochMillis = occurredAt)
@@ -93,6 +95,7 @@ class SessionEngineNfcTest {
                     ),
             )
         assertEquals(ReleaseTarget.COMPLETED, requireNotNull(fromRinging.snapshot).releaseTarget)
+        assertEquals(ReleaseMeans.NFC_SCAN, requireNotNull(fromRinging.snapshot).releasedBy)
 
         val awaitingNfc = awaitingNfcSnapshot()
         val fromAwaitingNfc =

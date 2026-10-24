@@ -70,6 +70,7 @@ internal object NfcReducer {
                 releaseTarget = releaseTarget,
                 nfcVerifiedAtEpochMillis = event.occurredAtEpochMillis,
                 releasingAtEpochMillis = event.occurredAtEpochMillis,
+                releasedBy = ReleaseMeans.NFC_SCAN,
             )
         val builder =
             SessionEffectBuilder(newSnapshot.sessionId, newSnapshot.revision)

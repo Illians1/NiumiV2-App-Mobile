@@ -458,6 +458,8 @@ d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé
 ligne d'outbox, une application bloquée et un incident, pour prouver qu'aucune donnée n'est
 perdue par le `CASCADE` qui n'a pas lieu.
 
+**Contrat KMP 1.5 avant Room v6 (étape 41 du plan de refonte).** Le moteur commun écrit désormais des snapshots de `schemaVersion` 3, avec `releasedBy` et `disarmedAtEpochMillis`. Room v5 et la projection Direct Boot v4 n'ont pas encore ces colonnes : une session libérée par scan est relue sans `releasedBy`, et la façade le rétablit à `NFC_SCAN` dès que `nfcVerifiedAtEpochMillis` est renseigné (SPEC_CORE_KMP §7.1). Aucune session ne reste donc en `RELEASING`. Les deux colonnes arrivent avec Room v6 et la projection v5 (étape 43). Android ne produit ni `DISARM_REQUESTED` ni `DISARMED` avant l'étape 44 ; `DISARMED` est déjà classé parmi les états finaux (`SESSION_FINAL_STATES`), et l'écran de réveil sort alors vers l'accueil.
+
 ### 7.3 Snapshot Direct Boot
 
 Room reste dans le stockage protégé par les identifiants. Un snapshot minimal doit être copié dans le stockage protégé de l'appareil avec `createDeviceProtectedStorageContext()`.

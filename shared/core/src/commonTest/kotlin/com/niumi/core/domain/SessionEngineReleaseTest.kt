@@ -5,6 +5,7 @@ import com.niumi.core.domain.SessionLifecycleEventFixtures.releaseFailedEvent
 import com.niumi.core.domain.SessionLifecycleEventFixtures.releaseSucceededEvent
 import com.niumi.core.domain.SessionSnapshotFixtures.armedSnapshot
 import com.niumi.core.domain.SessionSnapshotFixtures.releasingSnapshot
+import com.niumi.core.domain.SessionSnapshotFixtures.releasingTowardDisarmedSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -88,6 +89,51 @@ class SessionEngineReleaseTest {
         val decision = engine.reduce(snapshot = forged, event = event)
 
         assertEquals(forged, decision.snapshot)
+        assertEquals(listOf(ViolationCode.INVALID_STATE_TRANSITION), decision.violations.map { it.code })
+    }
+
+    @Test
+    fun releaseSucceededOnForgedReleasingWithoutReleasedByIsRejected() {
+        // Contrat 1.5, §4 : `releasedBy` est renseigné avant l'entrée dans `RELEASING`.
+        val forged = releasingSnapshot(ReleaseTarget.COMPLETED).copy(releasedBy = null)
+
+        assertForgedReleasingIsRejected(forged)
+    }
+
+    @Test
+    fun releaseSucceededOnForgedReleasingWithMismatchedMeansIsRejected() {
+        // `nfcVerifiedAt` existe si et seulement si `releasedBy == NFC_SCAN` ; `DISARMED` est
+        // atteint par un changement de planning et seulement par lui.
+        val disarmedWithoutPlanChange = releasingTowardDisarmedSnapshot().copy(releasedBy = ReleaseMeans.NFC_SCAN)
+        val disarmedWithScan =
+            releasingTowardDisarmedSnapshot().copy(nfcVerifiedAtEpochMillis = NFC_VERIFIED_AT_EPOCH_MILLIS)
+        val completedByPlanChange =
+            releasingSnapshot(ReleaseTarget.COMPLETED)
+                .copy(releasedBy = ReleaseMeans.PLAN_CHANGE, nfcVerifiedAtEpochMillis = null)
+        val scanWithoutVerification = releasingSnapshot(ReleaseTarget.CANCELLED).copy(nfcVerifiedAtEpochMillis = null)
+
+        listOf(disarmedWithoutPlanChange, disarmedWithScan, completedByPlanChange, scanWithoutVerification)
+            .forEach(::assertForgedReleasingIsRejected)
+    }
+
+    @Test
+    fun releaseSucceededKeepsTheReleaseMeans() {
+        val releasing = releasingSnapshot(ReleaseTarget.COMPLETED)
+
+        val decision = engine.reduce(releasing, releaseSucceededEvent(expectedRevision = releasing.revision))
+
+        assertEquals(ReleaseMeans.NFC_SCAN, decision.snapshot?.releasedBy)
+    }
+
+    private fun assertForgedReleasingIsRejected(forged: SessionSnapshot) {
+        val decision =
+            engine.reduce(
+                snapshot = forged,
+                event = releaseSucceededEvent(expectedRevision = forged.revision),
+            )
+
+        assertEquals(forged, decision.snapshot)
+        assertTrue(decision.effects.isEmpty())
         assertEquals(listOf(ViolationCode.INVALID_STATE_TRANSITION), decision.violations.map { it.code })
     }
 }

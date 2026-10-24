@@ -2,6 +2,7 @@ package com.niumi.core.interop
 
 import com.niumi.core.domain.IncidentSeverity
 import com.niumi.core.domain.Platform
+import com.niumi.core.domain.ReleaseMeans
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionEffectKind
 import com.niumi.core.domain.SessionEventKind
@@ -30,6 +31,8 @@ public typealias SessionEffectKindDto = SessionEffectKind
 public typealias SessionHealthDto = SessionHealth
 
 public typealias ReleaseTargetDto = ReleaseTarget
+
+public typealias ReleaseMeansDto = ReleaseMeans
 
 public typealias PlatformDto = Platform
 
@@ -77,6 +80,11 @@ public data class SessionIncidentDto(
     val platform: PlatformDto,
 )
 
+/**
+ * [releasedBy] et [disarmedAtEpochMillis] (contrat 1.5) ont une valeur par défaut `null` : un
+ * snapshot persisté avant le contrat 1.5, ou par une persistance native qui ne les porte pas encore,
+ * reste lisible ; `toDomain()` déduit alors `releasedBy` (SPEC_CORE_KMP §7.1).
+ */
 @Serializable
 public data class SessionSnapshotDto(
     val schemaVersion: Int,
@@ -98,6 +106,8 @@ public data class SessionSnapshotDto(
     val completedAtEpochMillis: Long?,
     val cancelledAtEpochMillis: Long?,
     val failureCode: String?,
+    val releasedBy: ReleaseMeansDto? = null,
+    val disarmedAtEpochMillis: Long? = null,
 )
 
 /**

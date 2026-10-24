@@ -14,4 +14,5 @@ public enum class SessionEventKind {
     RELEASE_SUCCEEDED,
     RELEASE_FAILED,
     INCIDENT_REPORTED,
+    DISARM_REQUESTED,
 }

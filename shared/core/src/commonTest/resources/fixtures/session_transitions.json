@@ -656,5 +656,104 @@
     "expectedViolations": [
       "INVALID_STATE_TRANSITION"
     ]
+  },
+  {
+    "name": "disarm_requested_before_bedtime_releases_toward_disarmed",
+    "snapshot": "armedBlockingPending",
+    "event": {
+      "kind": "DISARM_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996340000,
+      "expectedRevision": 2
+    },
+    "expectedState": "RELEASING",
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "CANCEL_ALARM",
+      "CANCEL_BLOCKING_START"
+    ],
+    "expectedViolations": []
+  },
+  {
+    "name": "disarm_requested_at_bedtime_is_refused",
+    "snapshot": "armedBlockingPending",
+    "event": {
+      "kind": "DISARM_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996400000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "BLOCKING_START_ALREADY_ELAPSED"
+    ]
+  },
+  {
+    "name": "disarm_requested_with_blocking_applied_is_refused",
+    "snapshot": "armedBlockingApplied",
+    "event": {
+      "kind": "DISARM_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996340000,
+      "expectedRevision": 2
+    },
+    "expectedState": "ARMED",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "BLOCKING_ALREADY_APPLIED"
+    ]
+  },
+  {
+    "name": "disarm_requested_outside_armed_is_refused",
+    "snapshot": "ringing",
+    "event": {
+      "kind": "DISARM_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996340000,
+      "expectedRevision": 3
+    },
+    "expectedState": "RINGING",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
+  },
+  {
+    "name": "release_succeeded_from_releasing_disarmed_reaches_disarmed",
+    "snapshot": "releasingDisarmed",
+    "event": {
+      "kind": "RELEASE_SUCCEEDED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996341000,
+      "expectedRevision": 3
+    },
+    "expectedState": "DISARMED",
+    "expectedEffects": [
+      "PUBLISH_PLATFORM_SNAPSHOT",
+      "CLEAR_ACTIVE_SESSION"
+    ],
+    "expectedViolations": []
+  },
+  {
+    "name": "disarm_requested_on_a_disarmed_session_is_refused",
+    "snapshot": "disarmed",
+    "event": {
+      "kind": "DISARM_REQUESTED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1799996342000,
+      "expectedRevision": 4
+    },
+    "expectedState": "DISARMED",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "INVALID_STATE_TRANSITION"
+    ]
   }
 ]

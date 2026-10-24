@@ -18,6 +18,10 @@ internal const val RELEASED_AT_EPOCH_MILLIS = TRIGGER_AT_EPOCH_MILLIS + 3_000L
 // comme l'exige SPEC_CORE_KMP §7.5.
 internal const val BLOCKING_STARTS_AT_EPOCH_MILLIS = TRIGGER_AT_EPOCH_MILLIS - 3_600_000L
 
+// Désarmement de référence (contrat 1.5) : une minute avant le coucher, puis fin du nettoyage.
+internal const val DISARM_REQUESTED_AT_EPOCH_MILLIS = BLOCKING_STARTS_AT_EPOCH_MILLIS - 60_000L
+internal const val DISARMED_AT_EPOCH_MILLIS = DISARM_REQUESTED_AT_EPOCH_MILLIS + 1_000L
+
 internal const val SESSION_ID = "11111111-1111-1111-1111-111111111111"
 internal const val OTHER_SESSION_ID = "22222222-2222-2222-2222-222222222222"
 internal const val EVENT_ID_1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -141,6 +145,31 @@ internal object SessionSnapshotFixtures {
         releaseTarget = releaseTarget,
         nfcVerifiedAtEpochMillis = NFC_VERIFIED_AT_EPOCH_MILLIS,
         releasingAtEpochMillis = NFC_VERIFIED_AT_EPOCH_MILLIS,
+        releasedBy = ReleaseMeans.NFC_SCAN,
+    )
+
+    /**
+     * Désarmement en cours (contrat 1.5) : une session différée, avant son coucher, libérée par un
+     * changement de planning — sans scan, donc sans `nfcVerifiedAtEpochMillis`.
+     */
+    internal fun releasingTowardDisarmedSnapshot(
+        sessionId: String = SESSION_ID,
+        revision: Long = 3,
+        health: SessionHealth = SessionHealth.HEALTHY,
+    ) = armedBlockingPendingSnapshot(sessionId, revision, health).copy(
+        state = SessionState.RELEASING,
+        releaseTarget = ReleaseTarget.DISARMED,
+        releasingAtEpochMillis = DISARM_REQUESTED_AT_EPOCH_MILLIS,
+        releasedBy = ReleaseMeans.PLAN_CHANGE,
+    )
+
+    internal fun disarmedSnapshot(
+        sessionId: String = SESSION_ID,
+        revision: Long = 4,
+        health: SessionHealth = SessionHealth.HEALTHY,
+    ) = releasingTowardDisarmedSnapshot(sessionId, revision, health).copy(
+        state = SessionState.DISARMED,
+        disarmedAtEpochMillis = DISARMED_AT_EPOCH_MILLIS,
     )
 
     internal fun completedSnapshot(
@@ -162,6 +191,7 @@ internal object SessionSnapshotFixtures {
             releaseTarget = ReleaseTarget.CANCELLED,
             nfcVerifiedAtEpochMillis = CANCEL_NFC_VERIFIED_AT_EPOCH_MILLIS,
             releasingAtEpochMillis = CANCEL_NFC_VERIFIED_AT_EPOCH_MILLIS,
+            releasedBy = ReleaseMeans.NFC_SCAN,
         ).copy(
             state = SessionState.CANCELLED,
             cancelledAtEpochMillis = CANCEL_NFC_VERIFIED_AT_EPOCH_MILLIS,
@@ -381,6 +411,23 @@ internal object SessionLifecycleEventFixtures {
         nfcProof = null,
         failureCode = null,
         incident = incident,
+    )
+
+    internal fun disarmRequestedEvent(
+        expectedRevision: Long,
+        sessionId: String = SESSION_ID,
+        eventId: String = EVENT_ID_2,
+        occurredAtEpochMillis: Long = DISARM_REQUESTED_AT_EPOCH_MILLIS,
+    ) = SessionEvent(
+        eventId = eventId,
+        sessionId = sessionId,
+        kind = SessionEventKind.DISARM_REQUESTED,
+        occurredAtEpochMillis = occurredAtEpochMillis,
+        expectedRevision = expectedRevision,
+        activationRequest = null,
+        nfcProof = null,
+        failureCode = null,
+        incident = null,
     )
 
     internal fun incident(

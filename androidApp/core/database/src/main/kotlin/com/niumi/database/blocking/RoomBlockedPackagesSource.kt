@@ -206,7 +206,12 @@ class RoomBlockedPackagesSource
              * que `TechnicalEventLogScope`.
              */
             val FINAL_STATES =
-                setOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED)
+                setOf(
+                    SessionStateDto.COMPLETED,
+                    SessionStateDto.CANCELLED,
+                    SessionStateDto.DISARMED,
+                    SessionStateDto.FAILED,
+                )
 
             /**
              * `SATISFIED` compte comme réussi : SPEC_CORE_KMP §6 en fait une précondition déjà

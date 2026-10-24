@@ -61,5 +61,9 @@ class PublishSnapshotExecutor(
             SessionStateDto.AWAITING_NFC,
             SessionStateDto.TRIGGERED_AWAITING_NFC,
             -> null
+
+            // Contrat 1.5 : jamais produit avant l'étape 44 du plan de refonte, qui ajoute
+            // `SESSION_DISARMED` au journal technique.
+            SessionStateDto.DISARMED -> null
         }
 }

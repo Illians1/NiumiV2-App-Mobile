@@ -61,7 +61,7 @@ public object WakeScheduleCalculator {
     }
 
     @Suppress("SwallowedException")
-    private fun resolveZone(zoneId: String): TimeZone? =
+    internal fun resolveZone(zoneId: String): TimeZone? =
         try {
             TimeZone.of(zoneId)
         } catch (invalidZone: IllegalArgumentException) {
@@ -69,7 +69,7 @@ public object WakeScheduleCalculator {
         }
 
     @Suppress("SwallowedException")
-    private fun resolveLocalTime(localTimeIso: String): LocalTime? =
+    internal fun resolveLocalTime(localTimeIso: String): LocalTime? =
         try {
             LocalTime.parse(localTimeIso)
         } catch (invalidTime: IllegalArgumentException) {
@@ -82,9 +82,10 @@ public object WakeScheduleCalculator {
      * round-trip : reconvertir l'instant obtenu redonne le même [LocalDateTime]. Le trou de
      * printemps ne l'est pas : `toInstant(zone)` décale alors l'heure locale de la taille du saut
      * au lieu de retenir le premier instant valide après le saut, ce que la spec impose. Voir
-     * `ETAPE-08.md`, constat sur le plan d'origine.
+     * `ETAPE-08.md`, constat sur le plan d'origine. Partagée avec [NextOccurrenceCalculator]
+     * (contrat 1.5) pour que réveil et coucher d'un planning suivent les mêmes règles.
      */
-    private fun resolveInstant(
+    internal fun resolveInstant(
         local: LocalDateTime,
         zone: TimeZone,
     ): Instant {

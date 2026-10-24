@@ -59,6 +59,7 @@ object RingingServiceRecovery {
                     SessionStateDto.RELEASING,
                     SessionStateDto.COMPLETED,
                     SessionStateDto.CANCELLED,
+                    SessionStateDto.DISARMED,
                     SessionStateDto.FAILED,
                     -> {
                         RingingRecovery.StopWithoutTouchingState
