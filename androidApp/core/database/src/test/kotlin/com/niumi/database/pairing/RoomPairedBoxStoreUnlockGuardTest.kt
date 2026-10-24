@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.database.NiumiDatabase
 import com.niumi.database.directboot.UnlockState
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -12,7 +13,8 @@ import javax.inject.Provider
 /**
  * `ROOM_BEFORE_UNLOCK` (SPEC_ANDROID §7.3), écart documenté dans le KDoc de [RoomPairedBoxStore] :
  * [RoomPairedBoxStore.all] renvoie une liste vide avant déverrouillage sans jamais résoudre
- * [NiumiDatabase] (le diagnostic de réconciliation `LOCKED_BOOT` doit pouvoir s'exécuter) ;
+ * [NiumiDatabase] (le diagnostic de réconciliation `LOCKED_BOOT` doit pouvoir s'exécuter), et
+ * [RoomPairedBoxStore.points] une seule liste vide, sous la même condition (étape 43) ;
  * [RoomPairedBoxStore.add], [RoomPairedBoxStore.rename] et [RoomPairedBoxStore.remove] gardent le
  * refus strict des autres dépôts Room, la base n'étant jamais résolue (Lot 8).
  */
@@ -31,6 +33,13 @@ class RoomPairedBoxStoreUnlockGuardTest {
         runBlocking {
             assertThat(store.all()).isEmpty()
         }
+
+    @Test
+    fun `points emits a single empty list before unlock without resolving the database`() {
+        val emitted = runBlocking { store.points.toList() }
+
+        assertThat(emitted).containsExactly(emptyList<PairedBoxDto>())
+    }
 
     @Test
     fun `add is refused before unlock`() {

@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.CollectionInfo
@@ -74,17 +73,11 @@ fun PairingScreen(
         ) {
             Text(text = PairingTexts.TITLE, style = MaterialTheme.typography.headlineSmall)
 
-            if (state.isSessionInProgress) {
-                Text(text = PairingTexts.SESSION_IN_PROGRESS, style = MaterialTheme.typography.bodyLarge)
-            }
-
             BoxList(state = state, actions = actions)
 
-            if (!state.isSessionInProgress) AddSection(state = state, actions = actions)
+            AddSection(state = state, actions = actions)
 
-            state.message
-                ?.takeUnless { it == PairingTexts.SESSION_IN_PROGRESS }
-                ?.let { message -> Text(text = message, style = MaterialTheme.typography.bodyMedium) }
+            state.message?.let { message -> Text(text = message, style = MaterialTheme.typography.bodyMedium) }
 
             if (state.canContinue) {
                 Button(
@@ -118,8 +111,9 @@ private fun BoxList(
             BoxRow(
                 row = row,
                 index = index,
-                // Une session fige la liste (§11.1), un dialogue ouvert attend sa réponse.
-                areActionsEnabled = !state.isSessionInProgress && !state.isDialogOpen,
+                // Un dialogue ouvert attend sa réponse ; une session ne fige plus rien (étape 43).
+                areActionsEnabled = !state.isDialogOpen,
+                canRemove = state.canRemove,
                 actions = actions,
             )
         }
@@ -131,6 +125,7 @@ private fun BoxRow(
     row: PairedBoxRow,
     index: Int,
     areActionsEnabled: Boolean,
+    canRemove: Boolean,
     actions: PairingActions,
 ) {
     Column(
@@ -153,13 +148,17 @@ private fun BoxRow(
             ) {
                 Text(PairingTexts.RENAME_LABEL)
             }
-            TextButton(
-                onClick = { actions.onRemove(row.boxId) },
-                enabled = areActionsEnabled,
-                colors = neutralTextButton(),
-                modifier = Modifier.semantics { contentDescription = PairingTexts.removeDescription(row.name) },
-            ) {
-                Text(PairingTexts.REMOVE_LABEL)
+            // Décision Q22 (étape 43) : il reste toujours au moins un boîtier, sans texte nouveau
+            // sur cet écran transitoire (décision de Mehdi du 2026-10-24).
+            if (canRemove) {
+                TextButton(
+                    onClick = { actions.onRemove(row.boxId) },
+                    enabled = areActionsEnabled,
+                    colors = neutralTextButton(),
+                    modifier = Modifier.semantics { contentDescription = PairingTexts.removeDescription(row.name) },
+                ) {
+                    Text(PairingTexts.REMOVE_LABEL)
+                }
             }
         }
     }
@@ -289,23 +288,18 @@ private fun neutralOutlinedButton(): ButtonColors =
  * l'effet quand « Ajouter un boîtier » ouvre la lecture ou qu'un dialogue la ferme : l'observateur
  * réinscrit reçoit `ON_RESUME` si l'écran est déjà au premier plan.
  *
- * [onSessionInProgress] applique la garde de `SetupGate` : une session en cours interdit toute
- * modification des boîtiers (SPEC_CORE_KMP §2 point 11).
+ * Ouvert aussi pendant une session, depuis l'écran de session active (étape 43, lien transitoire) :
+ * les boîtiers se modifient à tout moment (SPEC_CORE_KMP §2, décisions 11 et 16).
  */
 @Composable
 fun PairingRoute(
     onContinue: () -> Unit,
-    onSessionInProgress: () -> Unit,
     viewModel: PairingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val activity = context.findActivity()
     val state = viewModel.state
-
-    LaunchedEffect(state.isSessionInProgress) {
-        if (state.isSessionInProgress) onSessionInProgress()
-    }
 
     DisposableEffect(lifecycleOwner, activity, state.isReaderModeExpected) {
         val observer =

@@ -3,6 +3,10 @@ package com.niumi.feature.setup.pairing
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.PairedBoxCredentialDto
+import com.niumi.core.interop.SessionHealthDto
+import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.SessionStateDto
+import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.feature.setup.pairing.fakes.FakeNfcReader
@@ -61,18 +65,42 @@ class PairingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(availability: NfcAvailability = NfcAvailability.ENABLED): PairingViewModel {
+    private fun viewModel(
+        availability: NfcAvailability = NfcAvailability.ENABLED,
+        // Par défaut, aucun snapshot publié : aucune session en cours, le parcours est ouvert. La
+        // règle elle-même est prouvée sur tous les états par `SetupGateTest`.
+        snapshotPublisher: SessionSnapshotPublisher = SessionSnapshotPublisher(),
+    ): PairingViewModel {
         reader.availabilityValue = availability
         return PairingViewModel(
             facade = NiumiCoreFacade(),
             pairedBoxStore = store,
             technicalEventLog = log,
             nfcReader = reader,
-            // Aucun snapshot publié : aucune session en cours, le parcours est ouvert. La règle
-            // elle-même est prouvée sur tous les états par `SetupGateTest`.
-            snapshotPublisher = SessionSnapshotPublisher(),
+            snapshotPublisher = snapshotPublisher,
         )
     }
+
+    private fun armedSnapshot() =
+        SessionSnapshotDto(
+            schemaVersion = 3,
+            revision = 2,
+            sessionId = "11111111-1111-1111-1111-111111111111",
+            wakeSchedule = WakeScheduleDto("2026-10-25", "07:00", "Europe/Paris", 2_000_000_000_000L),
+            state = SessionStateDto.ARMED,
+            releaseTarget = null,
+            health = SessionHealthDto.HEALTHY,
+            createdAtEpochMillis = 1_000L,
+            armedAtEpochMillis = 1_100L,
+            ringingAtEpochMillis = null,
+            alarmSoundStoppedAtEpochMillis = null,
+            triggerElapsedAtEpochMillis = null,
+            nfcVerifiedAtEpochMillis = null,
+            releasingAtEpochMillis = null,
+            completedAtEpochMillis = null,
+            cancelledAtEpochMillis = null,
+            failureCode = null,
+        )
 
     /** Scanne un boîtier neuf et valide le nom proposé. */
     private fun PairingViewModel.addScanned(uri: String) {
@@ -268,56 +296,94 @@ class PairingViewModelTest {
         assertThat(viewModel.state.pendingName).isEqualTo("Boîtier 2")
     }
 
+    /**
+     * Décision Q22 (étape 43) : il reste toujours au moins un boîtier. Le dépôt refuse le dernier
+     * (`LastBoxKept`) et l'écran ne propose pas de le retirer.
+     */
     @Test
-    fun removingTheLastBoxIsAllowedOutsideASession() {
+    fun removingTheLastBoxIsRefusedAndKeepsIt() {
         store.boxes = listOf(box(1))
         val viewModel = viewModel()
 
+        assertThat(viewModel.state.canRemove).isFalse()
         viewModel.editor.remove(
             viewModel.state.boxes
                 .single()
                 .boxId,
         )
 
-        assertThat(store.boxes).isEmpty()
-        assertThat(viewModel.state.canContinue).isFalse()
+        assertThat(store.boxes).hasSize(1)
+        assertThat(viewModel.state.boxes).hasSize(1)
+        assertThat(viewModel.state.canContinue).isTrue()
     }
 
-    /** §11.1 : aucun ajout, retrait ni renommage pendant une session — la liste reste visible. */
     @Test
-    fun aSessionInProgressDisablesEveryActionAndExplains() {
+    fun withTwoBoxesEitherCanBeRemoved() {
+        store.boxes = listOf(box(1), box(2))
+
+        assertThat(viewModel().state.canRemove).isTrue()
+    }
+
+    /**
+     * Étape 43 (SPEC_CORE_KMP §2, décisions 11 et 16) : en session, les boîtiers s'ajoutent, se
+     * renomment et se retirent ; seul « Continuer » disparaît, la mise en route n'ayant rien à
+     * préparer pendant une session (décision de Mehdi du 2026-10-24 : l'écran sert alors à gérer la liste).
+     */
+    @Test
+    fun aSessionInProgressStillAllowsAddRenameAndRemoveButHidesContinue() {
         store.boxes = listOf(box(1), box(2))
         val viewModel = viewModel()
+        viewModel.onSessionStateChanged(isSessionInProgress = true)
+
         viewModel.startAdding()
+        assertThat(viewModel.state.isReaderModeExpected).isTrue()
+        viewModel.onUriRead(OTHER_URI)
+        viewModel.editor.confirmAdd()
         val first =
             viewModel.state.boxes
                 .first()
                 .boxId
-
-        viewModel.onSessionStateChanged(isSessionInProgress = true)
-        viewModel.startAdding()
-        viewModel.onUriRead(OTHER_URI)
         viewModel.editor.startRename(first)
-        viewModel.editor.remove(first)
+        viewModel.editor.onNameChanged("Cuisine")
+        viewModel.editor.confirmRename()
+        viewModel.editor.remove(viewModel.state.boxes[1].boxId)
 
-        assertThat(store.writeCallCount).isEqualTo(0)
-        assertThat(viewModel.state.boxes).hasSize(2)
-        assertThat(viewModel.state.canAdd).isFalse()
-        assertThat(viewModel.state.isReaderModeExpected).isFalse()
-        assertThat(viewModel.state.pendingName).isNull()
-        assertThat(viewModel.state.renaming).isNull()
-        assertThat(viewModel.state.message).isEqualTo(PairingTexts.SESSION_IN_PROGRESS)
+        assertThat(store.boxes.map { it.name }).containsExactly("Cuisine", "Boîtier 3").inOrder()
+        assertThat(viewModel.state.canAdd).isTrue()
+        assertThat(viewModel.state.canContinue).isFalse()
     }
 
+    /**
+     * Mesuré sur appareil le 2026-10-24 (étape 43) : ouvert pendant une session armée, l'écran
+     * montrait « Continuer ». La lecture des boîtiers au démarrage suspend ; la session publiée
+     * pendant cette suspension était écrasée par la copie de l'état d'avant la lecture.
+     */
     @Test
-    fun aSessionStartingWhileANameDialogIsOpenClosesItWithoutWriting() {
+    fun aSessionPublishedWhileTheBoxesAreReadStillHidesContinue() {
+        store.boxes = listOf(box(1))
+        val gate = CompletableDeferred<Unit>()
+        store.allGate = gate
+        val publisher = SessionSnapshotPublisher()
+        publisher.publish(armedSnapshot())
+
+        val viewModel = viewModel(snapshotPublisher = publisher)
+        gate.complete(Unit)
+
+        assertThat(viewModel.state.boxes).hasSize(1)
+        assertThat(viewModel.state.isSessionInProgress).isTrue()
+        assertThat(viewModel.state.canContinue).isFalse()
+    }
+
+    /** Une session qui démarre pendant le dialogue du nom ne l'interrompt plus : l'ajout aboutit. */
+    @Test
+    fun aSessionStartingWhileANameDialogIsOpenLetsTheAddComplete() {
         val viewModel = viewModel()
         viewModel.onUriRead(VALID_URI)
 
         viewModel.onSessionStateChanged(isSessionInProgress = true)
         viewModel.editor.confirmAdd()
 
-        assertThat(store.writeCallCount).isEqualTo(0)
+        assertThat(store.boxes.map { it.credential.boxId }).containsExactly(VALID_BOX_ID)
         assertThat(viewModel.state.pendingName).isNull()
     }
 

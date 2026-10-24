@@ -71,9 +71,9 @@ object HelpTexts {
                 title = "Boîtiers",
                 items =
                     listOf(
-                        "Seuls les boîtiers associés au moment de l'activation terminent la session. Tant " +
-                            "qu'elle dure, tu ne peux ni en ajouter, ni en retirer, ni en renommer. Un boîtier " +
-                            "retiré ne termine plus rien.",
+                        "N'importe quel boîtier enregistré au moment du scan termine la session. Tu peux en " +
+                            "ajouter, en retirer ou en renommer à tout moment, même pendant une session ; il en " +
+                            "reste toujours au moins un. Un boîtier retiré ne termine plus rien.",
                     ),
             ),
             HelpSection(

@@ -52,10 +52,11 @@ object DirectBootMapper {
             completedAtEpochMillis = snapshot.completedAtEpochMillis,
             cancelledAtEpochMillis = snapshot.cancelledAtEpochMillis,
             failureCode = snapshot.failureCode,
+            releasedBy = snapshot.releasedBy,
+            disarmedAtEpochMillis = snapshot.disarmedAtEpochMillis,
             ringtoneKey = extras.ringtoneKey,
             vibrationEnabled = extras.vibrationEnabled,
             volumeRampSeconds = extras.volumeRampSeconds,
-            boxes = extras.boxes.map { it.toProjection() },
             blockedPackages = extras.blockedPackages.map { it.toProjection() },
             eventReceipts = receipts.map { it.toProjection() },
             pendingEffects = effects.map { it.toProjection() },
@@ -70,6 +71,11 @@ object DirectBootMapper {
  * correct par chance pour un schedule immédiat, mais l'instant d'application serait perdu. La
  * projection est réécrite dans la version courante à la fusion suivante. Un fichier v1 ne se lit
  * jamais « pas de session ».
+ *
+ * **Lecture d'un fichier v1 à v4 (étape 43).** `releasedBy` et `disarmedAtEpochMillis` y sont absents
+ * et se lisent `null` (valeur par défaut du champ) : la façade rétablit `releasedBy = NFC_SCAN` dès
+ * que `nfcVerifiedAtEpochMillis` est renseigné (SPEC_CORE_KMP §7.1), et aucune session n'était
+ * désarmée avant le contrat 1.5. Rien à traduire ici, d'où l'absence de seuil lu dans ce mapper.
  */
 fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
     SessionSnapshotDto(
@@ -108,6 +114,8 @@ fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
         completedAtEpochMillis = completedAtEpochMillis,
         cancelledAtEpochMillis = cancelledAtEpochMillis,
         failureCode = failureCode,
+        releasedBy = releasedBy,
+        disarmedAtEpochMillis = disarmedAtEpochMillis,
     )
 
 /**
@@ -116,15 +124,9 @@ fun DirectBootSnapshot.Active.toSnapshotDto(): SessionSnapshotDto =
  * se lit comme sa remplaçante — même règle que `MIGRATION_3_4`, que la projection n'atteint pas
  * avant la fusion. Sans elle, un réveil après redémarrage, avant tout déverrouillage, sonnerait par
  * le repli de `RingingSoundResolver`.
- *
- * **Lecture d'un fichier v1, v2 ou v3 (Lot 8, SPEC_ANDROID §7.3).** `boxes` y est absent (liste
- * vide, valeur par défaut) ; la liste figée se reconstruit depuis les deux anciens champs à plat,
- * sans nom : c'est le seul renseignement dont ce fichier a jamais eu besoin pour que le scan
- * reconnaisse le boîtier d'origine avant déverrouillage.
  */
 fun DirectBootSnapshot.Active.toExtras(): AndroidSessionExtras =
     AndroidSessionExtras(
-        boxes = if (hasMultipleBoxes) boxes.map { it.toDomain() } else listOf(legacyBox()),
         ringtoneKey = if (hasRingtoneCatalog) ringtoneKey else LegacyRingtone.migrate(ringtoneKey),
         vibrationEnabled = vibrationEnabled,
         volumeRampSeconds = volumeRampSeconds,
@@ -163,6 +165,3 @@ private val DirectBootSnapshot.Active.isLegacyProjection: Boolean
 
 private val DirectBootSnapshot.Active.hasRingtoneCatalog: Boolean
     get() = projectionSchemaVersion >= PROJECTION_VERSION_WITH_RINGTONE_CATALOG
-
-private val DirectBootSnapshot.Active.hasMultipleBoxes: Boolean
-    get() = projectionSchemaVersion >= PROJECTION_VERSION_WITH_MULTIPLE_BOXES

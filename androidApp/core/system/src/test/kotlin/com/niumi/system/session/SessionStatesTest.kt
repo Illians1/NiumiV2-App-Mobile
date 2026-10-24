@@ -47,15 +47,28 @@ class SessionStatesTest {
 
     /**
      * La libération est en cours : le passage au clair se fait à la fin de la session (VALEURS §1),
-     * pas au scan. Les deux cibles connues aujourd'hui (`COMPLETED`, `CANCELLED`) restent sombres ;
-     * l'étape 43 ajoute `DISARMED`, clair.
+     * pas au scan. `COMPLETED` et `CANCELLED` restent sombres jusqu'à l'état final.
      */
     @Test
     fun releasingTowardsCompletedOrCancelledIsDark() {
-        ReleaseTargetDto.entries.forEach { target ->
+        listOf(ReleaseTargetDto.COMPLETED, ReleaseTargetDto.CANCELLED).forEach { target ->
             val releasing = inState(SessionStateDto.RELEASING).copy(releaseTarget = target)
             assertWithMessage(target.name).that(releasing.isSessionDark()).isTrue()
+            assertWithMessage(target.name).that(releasing.isBlockingInForce()).isTrue()
         }
+    }
+
+    /**
+     * Étape 43 (VALEURS §1, contrat 1.5) : un désarmement n'a lieu qu'avant le coucher, blocage en
+     * attente — rien n'a jamais été bloqué. `RELEASING` vers `DISARMED` est donc clair, et le blocage
+     * n'y est pas en vigueur.
+     */
+    @Test
+    fun releasingTowardsDisarmedIsLightAndNotBlocking() {
+        val releasing = inState(SessionStateDto.RELEASING).copy(releaseTarget = ReleaseTargetDto.DISARMED)
+
+        assertThat(releasing.isSessionDark()).isFalse()
+        assertThat(releasing.isBlockingInForce()).isFalse()
     }
 
     @Test

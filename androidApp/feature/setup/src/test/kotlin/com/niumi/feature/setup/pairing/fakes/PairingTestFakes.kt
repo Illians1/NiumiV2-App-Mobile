@@ -8,11 +8,14 @@ import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.database.pairing.PairedBoxAddResult
 import com.niumi.database.pairing.PairedBoxDto
+import com.niumi.database.pairing.PairedBoxRemoveResult
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.common.OperationResult
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * Journal qui conserve le `detailsJson` en plus du type, contrairement au `FakeTechnicalEventLog`
@@ -93,9 +96,26 @@ class FakePairedBoxStore(
         boxes = boxes.map { if (it.credential.boxId == boxId) it.copy(name = name) else it }
     }
 
-    override suspend fun remove(boxId: String) {
+    override val points: Flow<List<PairedBoxDto>>
+        get() = flowOf(boxes)
+
+    /** Même ordre de refus que `RoomPairedBoxStore` : inconnu d'abord, dernier boîtier ensuite (étape 43). */
+    override suspend fun remove(boxId: String): PairedBoxRemoveResult {
         writeCallCount++
-        boxes = boxes.filterNot { it.credential.boxId == boxId }
+        return when {
+            boxes.none { it.credential.boxId == boxId } -> {
+                PairedBoxRemoveResult.Unknown
+            }
+
+            boxes.size <= PairedBoxLimit.MIN -> {
+                PairedBoxRemoveResult.LastBoxKept
+            }
+
+            else -> {
+                boxes = boxes.filterNot { it.credential.boxId == boxId }
+                PairedBoxRemoveResult.Removed
+            }
+        }
     }
 }
 

@@ -2,6 +2,7 @@ package com.niumi.system.nfc
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.domain.IncidentCodes
+import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.SessionEventDto
 import com.niumi.core.interop.SessionEventKindDto
 import com.niumi.core.interop.SessionStateDto
@@ -9,6 +10,7 @@ import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.EventReceipt
 import com.niumi.system.common.IdGenerator
 import com.niumi.system.common.OperationResult
+import com.niumi.system.readiness.fakes.FakePairedBoxStore
 import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.LoadResult
@@ -25,11 +27,15 @@ import org.junit.Test
 
 /**
  * SPEC_ANDROID §11.3, points 1 à 4 : éligibilité de l'état, réconciliation avant scan, vérification
- * du boîtier **figé dans la session**, construction de l'événement porteur de la preuve. Les points
+ * du boîtier contre l'**ensemble courant** de `PairedBoxStore` lu au moment du scan (étape 43,
+ * SPEC_CORE_KMP §2 décisions 11 et 16), construction de l'événement porteur de la preuve. Les points
  * 5 à 14 appartiennent au coordinateur et à ses exécuteurs, déjà couverts depuis l'étape 11 ; ce
  * test vérifie ce que le cas d'usage ajoute et comment il interprète le [DispatchResult].
  */
 class HandleValidNfcUseCaseTest {
+    /** Ensemble courant : le boîtier de [NfcScanFixtures.SESSION_BOX_URI], seul, sauf mention contraire. */
+    private val pairedBoxStore = FakePairedBoxStore(NfcScanFixtures.pairedBoxes(NiumiCoreFacade()))
+
     /**
      * [IdGenerator] partagé avec le harnais, comme en production où Hilt n'en fournit qu'un :
      * deux générateurs séquentiels indépendants produiraient le même premier identifiant, et
@@ -41,10 +47,12 @@ class HandleValidNfcUseCaseTest {
             coordinator = coordinator,
             facade = facade,
             eventFactory = NfcScanEventFactory(idGenerator, clock),
+            pairedBoxStore = pairedBoxStore,
         )
 
-    private fun TestCoordinatorHarness.sessionExtras(uri: String = NfcScanFixtures.SESSION_BOX_URI) =
-        NfcScanFixtures.extrasFor(facade, uri)
+    /** Les extras ne portent plus aucun boîtier : l'ensemble de référence est [pairedBoxStore]. */
+    @Suppress("UnusedReceiverParameter")
+    private fun TestCoordinatorHarness.sessionExtras() = SessionDtoFixtures.extras()
 
     /**
      * État tel que persisté. `null` une fois la session terminée : `CLEAR_ACTIVE_SESSION` efface
@@ -70,6 +78,7 @@ class HandleValidNfcUseCaseTest {
                 SessionStateDto.PREPARING,
                 SessionStateDto.COMPLETED,
                 SessionStateDto.CANCELLED,
+                SessionStateDto.DISARMED,
                 SessionStateDto.FAILED,
             ).forEach { state ->
                 val harness = TestCoordinatorHarness()
@@ -212,16 +221,11 @@ class HandleValidNfcUseCaseTest {
             assertThat(coordinator.reconcileReasons).containsExactly(ReconcileReason.BEFORE_SCAN)
         }
 
-    // --- 3. Vérification contre le boîtier figé dans la session (§11.3 point 3) -----------------
+    // --- 3. Vérification contre l'ensemble courant des boîtiers (§11.3 point 3, étape 43) -------
 
-    /**
-     * Les boîtiers de référence sont ceux figés dans la session, jamais `PairedBoxEntity` : une
-     * association pendant la session ne doit pas ouvrir une sortie que l'utilisateur n'avait pas
-     * au moment de s'engager (contrat 1.4 : liste figée). Le cas d'usage n'injecte pas
-     * `PairedBoxStore` du tout ; ce test l'observe de l'extérieur.
-     */
+    /** Un boîtier Niumi valide mais jamais enregistré ne termine rien. */
     @Test
-    fun aTagOutsideTheFrozenListIsRefused() =
+    fun aTagOfAnUnregisteredBoxIsRefused() =
         runTest {
             val harness = TestCoordinatorHarness()
             harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
@@ -244,13 +248,13 @@ class HandleValidNfcUseCaseTest {
             assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
         }
 
-    /** Lot 8 : la liste figée compte plusieurs boîtiers, n'importe lequel suffit à terminer la session. */
+    /** N'importe lequel des boîtiers enregistrés suffit à terminer la session. */
     @Test
-    fun aTagMatchingTheSecondOfThreeFrozenBoxesEndsTheSession() =
+    fun aTagMatchingTheSecondOfThreeRegisteredBoxesEndsTheSession() =
         runTest {
             val harness = TestCoordinatorHarness()
             val threeBoxes =
-                NfcScanFixtures.extrasForMany(
+                NfcScanFixtures.pairedBoxes(
                     harness.facade,
                     listOf(
                         NfcScanFixtures.SESSION_BOX_URI,
@@ -258,38 +262,73 @@ class HandleValidNfcUseCaseTest {
                         NfcScanFixtures.THIRD_BOX_URI,
                     ),
                 )
-            harness.persistSession(SessionStateDto.RINGING, extras = threeBoxes)
             val coordinator = ProgrammableCoordinator()
+            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
 
-            val outcome = harness.useCaseWith(coordinator).onUriRead(NfcScanFixtures.SECOND_BOX_URI)
+            val outcome =
+                harness
+                    .useCaseWith(coordinator, FakePairedBoxStore(threeBoxes))
+                    .onUriRead(NfcScanFixtures.SECOND_BOX_URI)
 
             assertThat(outcome).isEqualTo(ScanOutcome.Accepted)
             val proof = checkNotNull(coordinator.dispatched.single().nfcProof)
-            assertThat(proof.boxId).isEqualTo(threeBoxes.boxes[1].boxId)
+            assertThat(proof.boxId).isEqualTo(threeBoxes[1].credential.boxId)
         }
 
     /**
-     * Un boîtier associé **après** l'activation n'est jamais dans la liste figée (§11.3 point 3,
-     * Lot 8) : le dépôt courant peut le connaître, le scan ne le reconnaît pas.
+     * Cas limite 6 du plan de refonte : un boîtier enregistré **après** l'activation — depuis les
+     * réglages ou pendant la sonnerie — termine la session. La liste figée du contrat 1.4 disparaît.
      */
     @Test
-    fun aTagMatchingABoxPairedAfterActivationIsRefused() =
+    fun aTagMatchingABoxPairedAfterActivationEndsTheSession() =
         runTest {
             val harness = TestCoordinatorHarness()
             harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
+            val added = NfcScanFixtures.pairedBoxes(harness.facade, listOf(NfcScanFixtures.OTHER_BOX_URI)).single()
+            pairedBoxStore.add(added.credential, added.name)
 
             val outcome = harness.useCase().onUriRead(NfcScanFixtures.OTHER_BOX_URI)
+
+            assertThat(outcome).isEqualTo(ScanOutcome.Accepted)
+            assertThat(harness.finalState()).isEqualTo(SessionStateDto.COMPLETED)
+        }
+
+    /** Cas limite 6 : un boîtier retiré pendant la session n'arrête plus rien ; les autres, si. */
+    @Test
+    fun aTagOfABoxRemovedDuringTheSessionIsRefused() =
+        runTest {
+            val harness = TestCoordinatorHarness()
+            val twoBoxes =
+                NfcScanFixtures.pairedBoxes(
+                    harness.facade,
+                    listOf(NfcScanFixtures.SESSION_BOX_URI, NfcScanFixtures.SECOND_BOX_URI),
+                )
+            val store = FakePairedBoxStore(twoBoxes)
+            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
+            store.remove(twoBoxes[1].credential.boxId)
+
+            val outcome =
+                harness
+                    .useCaseWith(
+                        ProgrammableCoordinator(),
+                        store,
+                    ).onUriRead(NfcScanFixtures.SECOND_BOX_URI)
 
             assertThat(outcome).isEqualTo(ScanOutcome.UnknownBox)
             assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
         }
 
-    /** Liste figée vide (migration ou projection corrompue, point de vigilance 3 du Lot 8) : refus, jamais de levée. */
+    /**
+     * Ensemble vide — avant déverrouillage, `RoomPairedBoxStore.all()` répond une liste vide, et un
+     * scan verrouillé est impossible par conception (SPEC_ANDROID §4.4) : `NO_PAIRED_BOX_MATCH`, donc
+     * un refus, jamais une levée ni une acceptation.
+     */
     @Test
-    fun anEmptyFrozenListRefusesEveryScanWithoutThrowing() =
+    fun anEmptyRegisteredSetRefusesEveryScanWithoutThrowing() =
         runTest {
             val harness = TestCoordinatorHarness()
-            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras().copy(boxes = emptyList()))
+            harness.persistSession(SessionStateDto.RINGING, extras = harness.sessionExtras())
+            pairedBoxStore.clear()
 
             val outcome = harness.useCase().onUriRead(NfcScanFixtures.SESSION_BOX_URI)
 
@@ -450,13 +489,16 @@ class HandleValidNfcUseCaseTest {
                 .contains(IncidentCodes.BLOCKING_PERMISSION_REVOKED)
         }
 
-    private fun TestCoordinatorHarness.useCaseWith(coordinator: SessionCoordinator) =
-        HandleValidNfcUseCase(
-            gateway = gateway,
-            coordinator = coordinator,
-            facade = facade,
-            eventFactory = NfcScanEventFactory(SequentialIdGenerator(), clock),
-        )
+    private fun TestCoordinatorHarness.useCaseWith(
+        coordinator: SessionCoordinator,
+        store: FakePairedBoxStore = pairedBoxStore,
+    ) = HandleValidNfcUseCase(
+        gateway = gateway,
+        coordinator = coordinator,
+        facade = facade,
+        eventFactory = NfcScanEventFactory(SequentialIdGenerator(), clock),
+        pairedBoxStore = store,
+    )
 }
 
 /**

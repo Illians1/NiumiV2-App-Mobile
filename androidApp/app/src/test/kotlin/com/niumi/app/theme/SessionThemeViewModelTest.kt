@@ -132,7 +132,6 @@ class SessionThemeViewModelTest {
 
     private fun extras() =
         AndroidSessionExtras(
-            boxes = emptyList(),
             ringtoneKey = "niumi_default",
             vibrationEnabled = true,
             volumeRampSeconds = null,

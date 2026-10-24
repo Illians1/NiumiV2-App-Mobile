@@ -1,5 +1,6 @@
 package com.niumi.system.session
 
+import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 
@@ -34,9 +35,13 @@ fun SessionStateDto?.isSessionInProgress(): Boolean = this != null && this !in S
  * Le blocage des applications est-il en vigueur, du coucher jusqu'à la fin de la session ?
  *
  * Le coucher est l'instant où le blocage est appliqué : une session `ARMED` dont le blocage
- * différé attend encore son heure ne bloque rien. `RELEASING` est encore en vigueur : le blocage
- * n'est levé qu'à la fin de la libération. À l'étape 43, `RELEASING` vers `DISARMED` (désarmement
- * avant le coucher) ne le sera plus. Aucune session, ou une persistance illisible, se lit « non ».
+ * différé attend encore son heure ne bloque rien. `RELEASING` vers `COMPLETED` ou `CANCELLED` est
+ * tenu pour en vigueur : le blocage n'est levé qu'à la fin de la libération (VALEURS §1, thème
+ * sombre jusqu'à l'état final), y compris pour une annulation avant le coucher, où il n'avait pas
+ * encore commencé. `RELEASING` vers
+ * `DISARMED` ne l'est pas : le désarmement n'a lieu qu'avant le coucher, blocage en attente
+ * (SPEC_CORE_KMP §5.1, contrat 1.5 ; étape 43). Aucune session, ou une persistance illisible, se
+ * lit « non ».
  *
  * Deux consommateurs, une seule règle : le thème de l'app ([isSessionDark]) et le service de garde
  * du blocage (SPEC_ANDROID §12.5, correctif A8 du 2026-10-19).
@@ -47,10 +52,11 @@ fun SessionSnapshotDto?.isBlockingInForce(): Boolean =
 
         SessionStateDto.ARMED -> blockingAppliedAtEpochMillis != null
 
+        SessionStateDto.RELEASING -> releaseTarget != ReleaseTargetDto.DISARMED
+
         SessionStateDto.RINGING,
         SessionStateDto.AWAITING_NFC,
         SessionStateDto.TRIGGERED_AWAITING_NFC,
-        SessionStateDto.RELEASING,
         -> true
 
         SessionStateDto.PREPARING,

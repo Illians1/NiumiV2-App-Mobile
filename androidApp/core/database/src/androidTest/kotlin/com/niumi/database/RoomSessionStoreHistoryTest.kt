@@ -101,7 +101,7 @@ class RoomSessionStoreHistoryTest {
                 .containsExactly("ALARM_PERMISSION_REVOKED")
         }
 
-    /** Le figeage de `boxId`/`ringtoneKey` (`freezeFrom`) doit continuer de fonctionner après la
+    /** Le figeage de `ringtoneKey` (`freezeFrom`) doit continuer de fonctionner après la
      * correction de l'upsert : la session est mise à jour, jamais recréée. */
     @Test
     fun blockedAppsAreReplacedNotAccumulatedAcrossRevisions() =

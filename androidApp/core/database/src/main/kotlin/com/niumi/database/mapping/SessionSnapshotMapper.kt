@@ -5,7 +5,6 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
-import com.niumi.database.SessionBox
 import com.niumi.database.entity.AlarmSessionEntity
 
 /**
@@ -17,7 +16,9 @@ import com.niumi.database.entity.AlarmSessionEntity
  *
  * `BlockingScheduleDto` est aplati de la même façon (v3, Lot 6). Les quatre champs sont renseignés
  * **explicitement** dans les deux sens : les valeurs par défaut posées sur les DTO à l'étape 22 sont
- * transitoires, et s'y appuyer ici ferait relire tout blocage différé comme immédiat.
+ * transitoires, et s'y appuyer ici ferait relire tout blocage différé comme immédiat. Même règle
+ * pour `releasedBy` et `disarmedAtEpochMillis` (v6, contrat 1.5) : les oublier ferait relire toute
+ * session libérée par la sortie de secours ou désarmée comme libérée sans moyen connu.
  */
 fun SessionSnapshotDto.toEntity(extras: AndroidSessionExtras): AlarmSessionEntity =
     AlarmSessionEntity(
@@ -48,6 +49,8 @@ fun SessionSnapshotDto.toEntity(extras: AndroidSessionExtras): AlarmSessionEntit
         completedAtEpochMillis = completedAtEpochMillis,
         cancelledAtEpochMillis = cancelledAtEpochMillis,
         failureCode = failureCode,
+        releasedBy = releasedBy,
+        disarmedAtEpochMillis = disarmedAtEpochMillis,
     )
 
 fun AlarmSessionEntity.toSnapshotDto(): SessionSnapshotDto =
@@ -82,18 +85,13 @@ fun AlarmSessionEntity.toSnapshotDto(): SessionSnapshotDto =
         completedAtEpochMillis = completedAtEpochMillis,
         cancelledAtEpochMillis = cancelledAtEpochMillis,
         failureCode = failureCode,
+        releasedBy = releasedBy,
+        disarmedAtEpochMillis = disarmedAtEpochMillis,
     )
 
-/**
- * [blockedPackages] et [boxes] viennent chacun d'une requête séparée (`BlockedAppDao`,
- * `SessionBoxDao`) : pas de colonne dédiée sur `alarm_session` (Lot 8).
- */
-fun AlarmSessionEntity.toExtras(
-    blockedPackages: List<BlockedPackage>,
-    boxes: List<SessionBox>,
-): AndroidSessionExtras =
+/** [blockedPackages] vient d'une requête séparée (`BlockedAppDao`) : pas de colonne dédiée sur `alarm_session`. */
+fun AlarmSessionEntity.toExtras(blockedPackages: List<BlockedPackage>): AndroidSessionExtras =
     AndroidSessionExtras(
-        boxes = boxes,
         ringtoneKey = ringtoneKey,
         vibrationEnabled = vibrationEnabled,
         volumeRampSeconds = volumeRampSeconds,

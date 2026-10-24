@@ -72,9 +72,9 @@ class DiagnosticExporterTest {
         assertThat(text).doesNotContain("e29b-41d4")
     }
 
-    /** SPEC_ANDROID §17, Lot 8 : une ligne par boîtier figé, nom et huit caractères, jamais un hash. */
+    /** SPEC_ANDROID §17 : une ligne par boîtier enregistré (étape 43), nom et huit caractères, jamais un hash. */
     @Test
-    fun theExportListsEachFrozenBoxByNameAndEightCharactersAndNeverAHash() {
+    fun theExportListsEachRegisteredBoxByNameAndEightCharactersAndNeverAHash() {
         val secondBoxId = "11111111-1111-1111-1111-111111111111"
         val text =
             export(

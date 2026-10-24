@@ -6,6 +6,7 @@ import com.niumi.core.diagnostics.PairedBoxLimit
 import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.database.pairing.PairedBoxAddResult
 import com.niumi.database.pairing.PairedBoxDto
+import com.niumi.database.pairing.PairedBoxRemoveResult
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.apps.AppSelectionSource
 import com.niumi.system.audio.AlarmVolumeSource
@@ -26,6 +27,7 @@ import com.niumi.system.session.fakes.FakeAccessibilityServiceStatus
 import com.niumi.system.session.fakes.FakeAlarmScheduler
 import com.niumi.system.session.fakes.FakeUptimeClock
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 class FakeNfcReader(
@@ -44,30 +46,35 @@ class FakeNfcReader(
         get() = availabilityValue
 }
 
-/** Un boîtier associé par défaut : c'est l'état « tout vert » du contrôle `PAIRED_BOX` (Lot 8). */
+/**
+ * Un boîtier associé par défaut : c'est l'état « tout vert » du contrôle `PAIRED_BOX` (Lot 8).
+ * Mêmes refus que `RoomPairedBoxStore` : doublon, onzième boîtier, dernier boîtier retiré (étape 43).
+ */
 class FakePairedBoxStore(
     seed: List<PairedBoxDto> =
         listOf(PairedBoxDto(PairedBoxCredentialDto(1, "box-1", "a".repeat(64)), "Boîtier 1")),
 ) : PairedBoxStore {
-    private val boxes = seed.toMutableList()
+    private val boxes = MutableStateFlow(seed)
 
-    override suspend fun all(): List<PairedBoxDto> = boxes.toList()
+    override val points: Flow<List<PairedBoxDto>> = boxes
+
+    override suspend fun all(): List<PairedBoxDto> = boxes.value
 
     override suspend fun add(
         credential: PairedBoxCredentialDto,
         name: String,
     ): PairedBoxAddResult =
         when {
-            boxes.any { it.credential.boxId == credential.boxId } -> {
+            boxes.value.any { it.credential.boxId == credential.boxId } -> {
                 PairedBoxAddResult.AlreadyPaired
             }
 
-            boxes.size >= PairedBoxLimit.MAX -> {
+            boxes.value.size >= PairedBoxLimit.MAX -> {
                 PairedBoxAddResult.LimitReached
             }
 
             else -> {
-                boxes += PairedBoxDto(credential, name)
+                boxes.value += PairedBoxDto(credential, name)
                 PairedBoxAddResult.Added
             }
         }
@@ -76,27 +83,36 @@ class FakePairedBoxStore(
         boxId: String,
         name: String,
     ) {
-        val index = boxes.indexOfFirst { it.credential.boxId == boxId }
-        if (index >= 0) boxes[index] = boxes[index].copy(name = name)
+        boxes.value = boxes.value.map { if (it.credential.boxId == boxId) it.copy(name = name) else it }
     }
 
-    override suspend fun remove(boxId: String) {
-        boxes.removeAll { it.credential.boxId == boxId }
-    }
+    override suspend fun remove(boxId: String): PairedBoxRemoveResult =
+        when {
+            boxes.value.none { it.credential.boxId == boxId } -> {
+                PairedBoxRemoveResult.Unknown
+            }
+
+            boxes.value.size <= PairedBoxLimit.MIN -> {
+                PairedBoxRemoveResult.LastBoxKept
+            }
+
+            else -> {
+                boxes.value = boxes.value.filterNot { it.credential.boxId == boxId }
+                PairedBoxRemoveResult.Removed
+            }
+        }
 
     /** Convenience de test, hors interface : « aucun boîtier associé ». */
-    fun clear() = boxes.clear()
+    fun clear() {
+        boxes.value = emptyList()
+    }
 
     /** Convenience de test, hors interface : force un nombre de boîtiers distincts. */
     fun seedCount(count: Int) {
-        boxes.clear()
-        repeat(count) { index ->
-            boxes +=
-                PairedBoxDto(
-                    PairedBoxCredentialDto(1, "box-$index", "a".repeat(64)),
-                    "Boîtier ${index + 1}",
-                )
-        }
+        boxes.value =
+            List(count) { index ->
+                PairedBoxDto(PairedBoxCredentialDto(1, "box-$index", "a".repeat(64)), "Boîtier ${index + 1}")
+            }
     }
 }
 

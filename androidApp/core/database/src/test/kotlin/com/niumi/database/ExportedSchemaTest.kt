@@ -9,7 +9,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import java.io.File
 
-private const val CURRENT_VERSION = 5
+private const val CURRENT_VERSION = 6
 
 /**
  * Garde-fou contre un `exportSchema` désactivé ou un schéma non committé (SPEC_CORE_KMP §13 :
@@ -57,7 +57,6 @@ class ExportedSchemaTest {
             "alarm_session",
             "blocked_app",
             "paired_box",
-            "session_box",
             "technical_event",
             "session_incident",
             "session_event_receipt",
@@ -162,24 +161,46 @@ class ExportedSchemaTest {
         assertThat(fields).doesNotContain("boxTokenSha256Hex")
     }
 
-    /** SPEC_ANDROID §7.2 (v5, Lot 8) : `session_box` fige la liste des boîtiers, sur le modèle de `blocked_app`. */
+    /**
+     * SPEC_ANDROID §7.2 (v6, étape 43) : `session_box` disparaît — la vérification d'un scan lit
+     * l'ensemble courant des boîtiers (SPEC_CORE_KMP §2, décisions 11 et 16). Le schéma v5 la garde.
+     */
     @Test
-    fun sessionBoxCarriesTheFrozenBoxListSinceVersionFive() {
+    fun sessionBoxIsDroppedSinceVersionSix() {
+        fun tableNames(version: Int) =
+            database(version).getValue("entities").jsonArray.map {
+                it.jsonObject
+                    .getValue("tableName")
+                    .jsonPrimitive.content
+            }
+
+        assertThat(tableNames(5)).contains("session_box")
+        assertThat(tableNames(CURRENT_VERSION)).doesNotContain("session_box")
+    }
+
+    /**
+     * SPEC_ANDROID §7.2 (v6, étape 43) : `releasedBy` et `disarmedAtEpochMillis` (contrat 1.5),
+     * nullables comme les colonnes de v3 — `MIGRATION_5_6` les ajoute sans clause `DEFAULT`.
+     */
+    @Test
+    fun alarmSessionCarriesTheNullableReleaseColumnsSinceVersionSix() {
         val fields =
             database(CURRENT_VERSION)
                 .getValue("entities")
                 .jsonArray
                 .map { it.jsonObject }
-                .single { it.getValue("tableName").jsonPrimitive.content == "session_box" }
+                .single { it.getValue("tableName").jsonPrimitive.content == "alarm_session" }
                 .getValue("fields")
                 .jsonArray
-                .map {
-                    it.jsonObject
-                        .getValue("fieldPath")
-                        .jsonPrimitive.content
-                }
+                .map { it.jsonObject }
+                .associateBy { it.getValue("fieldPath").jsonPrimitive.content }
 
-        assertThat(fields).containsExactly("sessionId", "boxId", "tokenSha256", "name", "position")
+        val releasedBy = fields.getValue("releasedBy")
+        val disarmedAt = fields.getValue("disarmedAtEpochMillis")
+        assertThat(releasedBy.getValue("affinity").jsonPrimitive.content).isEqualTo("TEXT")
+        assertThat(disarmedAt.getValue("affinity").jsonPrimitive.content).isEqualTo("INTEGER")
+        assertThat(releasedBy["notNull"]?.jsonPrimitive?.content).isNotEqualTo("true")
+        assertThat(disarmedAt["notNull"]?.jsonPrimitive?.content).isNotEqualTo("true")
     }
 
     /** SPEC_ANDROID §11.1 (v5, Lot 8) : `paired_box` gagne `name` et `position`. */

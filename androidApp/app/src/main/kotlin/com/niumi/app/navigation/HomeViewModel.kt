@@ -68,10 +68,11 @@ class HomeViewModel
         }
 
         private fun recompute() {
-            val sessionState = snapshotPublisher.snapshot.value?.state
+            val snapshot = snapshotPublisher.snapshot.value
+            val sessionState = snapshot?.state
             val storageUnreadable = storageIntegrity.failure.value != null
             val acknowledged = onboardingAcknowledged ?: false
-            val launcher = launcherDestinationFor(sessionState, acknowledged)
+            val launcher = launcherDestinationFor(sessionState, snapshot?.releaseTarget, acknowledged)
             val destination = homeDestinationFor(sessionState, acknowledged, storageUnreadable)
             state =
                 HomeUiState(

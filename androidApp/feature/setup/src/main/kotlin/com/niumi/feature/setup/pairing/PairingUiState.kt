@@ -24,6 +24,10 @@ data class Renaming(
 /**
  * État de l'écran 3 « Mes boîtiers » (SPEC_ANDROID §15, Lot 8).
  *
+ * [isSessionInProgress] (étape 43) ne bloque plus rien : les boîtiers se modifient en session
+ * (SPEC_CORE_KMP §2, décisions 11 et 16). Il masque seulement « Continuer », la suite de la mise en
+ * route n'ayant rien à préparer pendant une session (décision de Mehdi du 2026-10-24).
+ *
  * [isScanning] : la lecture a été demandée par « Ajouter un boîtier », ou ouverte d'office faute
  * de tout boîtier (décision du 2026-10-17). [pendingName] : un boîtier neuf vient d'être lu, son
  * nom attend confirmation ; le credential lu reste dans le ViewModel, hors de l'état affiché.
@@ -39,13 +43,16 @@ data class PairingUiState(
 ) {
     val isAtLimit: Boolean get() = boxes.size >= PairedBoxLimit.MAX
 
-    val canAdd: Boolean get() = !isAtLimit && !isSessionInProgress
+    val canAdd: Boolean get() = !isAtLimit
+
+    /** Décision Q22 : il reste toujours au moins un boîtier, « Retirer » disparaît sur le dernier (étape 43). */
+    val canRemove: Boolean get() = boxes.size > PairedBoxLimit.MIN
 
     val isDialogOpen: Boolean get() = pendingName != null || renaming != null
 
     /**
      * Le Reader Mode n'écoute que lorsqu'un ajout est réellement attendu : jamais pendant un
-     * dialogue (un second scan écraserait le premier) ni pendant une session (§11.1).
+     * dialogue (un second scan écraserait le premier). Session comprise depuis l'étape 43 (§11.1).
      */
     val isReaderModeExpected: Boolean
         get() = nfcAvailability == NfcAvailability.ENABLED && canAdd && isScanning && !isDialogOpen

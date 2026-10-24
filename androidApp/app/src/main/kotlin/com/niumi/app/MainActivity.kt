@@ -141,7 +141,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 sessionSnapshotPublisher.snapshot
-                    .map { requiresAlarmScreen(it?.state) }
+                    .map { requiresAlarmScreen(it?.state, it?.releaseTarget) }
                     .distinctUntilChanged()
                     .collect { required ->
                         if (required) startActivity(AlarmActivity.intent(this@MainActivity))

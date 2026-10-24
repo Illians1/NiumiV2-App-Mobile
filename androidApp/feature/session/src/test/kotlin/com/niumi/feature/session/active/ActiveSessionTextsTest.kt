@@ -31,6 +31,7 @@ class ActiveSessionTextsTest {
             ActiveSessionTexts.CRITICAL_INCIDENTS_TITLE,
             ActiveSessionTexts.INCIDENT_RESOLVED,
             ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON,
+            ActiveSessionTexts.OPEN_BOXES_BUTTON,
             ScanToModifyTexts.INVITATION,
             ScanToModifyTexts.TITLE,
             ScanToModifyTexts.UNKNOWN_BOX,
@@ -86,6 +87,18 @@ class ActiveSessionTextsTest {
     @Test
     fun theModifyOrCancelButtonIsStatedWordForWord() {
         assertThat(ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON).isEqualTo("Modifier ou annuler")
+    }
+
+    /** Étape 43, texte de Mehdi du 2026-10-24 : un boîtier non enregistré au moment du scan. */
+    @Test
+    fun anUnknownBoxIsStatedWordForWord() {
+        assertThat(ScanToModifyTexts.UNKNOWN_BOX).isEqualTo("Ce Niumi Spot n'est pas connu. Rien n'a été modifié.")
+    }
+
+    /** Étape 43 : même libellé que le titre de l'écran 3 qu'il ouvre (« Mes boîtiers »). */
+    @Test
+    fun theBoxesLinkNamesTheScreenItOpens() {
+        assertThat(ActiveSessionTexts.OPEN_BOXES_BUTTON).isEqualTo("Mes boîtiers")
     }
 
     @Test

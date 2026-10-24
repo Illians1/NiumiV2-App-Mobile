@@ -15,8 +15,12 @@ object ScanToModifyTexts {
 
     const val TITLE = "Scan requis"
 
-    /** §11.2 : un boîtier qui n'est pas celui de la session ne change aucun état (SPEC_CORE_KMP §4). */
-    const val UNKNOWN_BOX = "Ce boîtier n'est pas celui de ta session. Rien n'a été modifié."
+    /**
+     * §11.2 : un boîtier non enregistré au moment du scan ne change aucun état (SPEC_CORE_KMP §4).
+     * Texte de Mehdi du 2026-10-24 (étape 43) : l'ancien « n'est pas celui de ta session » ne tenait
+     * plus, les boîtiers n'étant plus figés dans la session.
+     */
+    const val UNKNOWN_BOX = "Ce Niumi Spot n'est pas connu. Rien n'a été modifié."
 
     /** §11.2 : texte dédié au tag physiquement illisible, distinct d'un boîtier inconnu. */
     const val UNREADABLE = "Ce tag n'a pas pu être lu. Réessaie en le posant bien à plat contre le téléphone."

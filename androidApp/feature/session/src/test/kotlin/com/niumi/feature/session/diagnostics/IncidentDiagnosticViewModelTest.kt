@@ -2,6 +2,7 @@ package com.niumi.feature.session.diagnostics
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.IncidentSeverityDto
+import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.core.interop.PlatformDto
 import com.niumi.core.interop.ReadinessSeverityDto
 import com.niumi.core.interop.SessionHealthDto
@@ -12,9 +13,10 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.logging.DeviceContext
 import com.niumi.database.logging.TechnicalEventEntry
 import com.niumi.database.logging.TechnicalEventType
+import com.niumi.database.pairing.PairedBoxDto
+import com.niumi.feature.session.activation.fakes.CallJournal
+import com.niumi.feature.session.activation.fakes.RecordingPairedBoxStore
 import com.niumi.feature.session.active.fakes.FakeSessionIncidentsReader
-import com.niumi.feature.session.active.fakes.FakeSessionPersistenceGateway
-import com.niumi.feature.session.active.fakes.presentSession
 import com.niumi.feature.session.wake.fakes.FakeTimeZoneProvider
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessAction
@@ -45,7 +47,13 @@ class IncidentDiagnosticViewModelTest {
     private val boxId = "550e8400-e29b-41d4-a716-446655440000"
 
     private val snapshotPublisher = SessionSnapshotPublisher()
-    private val gateway = FakeSessionPersistenceGateway()
+
+    /** Étape 43 : l'export nomme les boîtiers enregistrés, lus dans le dépôt courant. */
+    private val pairedBoxStore =
+        RecordingPairedBoxStore(
+            CallJournal(),
+            listOf(PairedBoxDto(PairedBoxCredentialDto(1, boxId, "a".repeat(64)), "Boîtier 1")),
+        )
     private val incidentsReader = FakeSessionIncidentsReader()
     private val technicalEventLog = ReplayingTechnicalEventLog()
     private val storageIntegrity = StorageIntegrityState()
@@ -113,11 +121,11 @@ class IncidentDiagnosticViewModelTest {
             sources =
                 DiagnosticSources(
                     snapshotPublisher = snapshotPublisher,
-                    gateway = gateway,
                     incidentsReader = incidentsReader,
                     technicalEventLog = technicalEventLog,
                     readinessChecker = readinessChecker,
                     storageIntegrity = storageIntegrity,
+                    pairedBoxStore = pairedBoxStore,
                 ),
             deviceContext = deviceContext,
             timeZoneProvider = FakeTimeZoneProvider(zoneId = "Europe/Paris"),
@@ -126,7 +134,6 @@ class IncidentDiagnosticViewModelTest {
     /** SPEC_CORE_KMP §7.3 : `CRITICAL` avant `DEGRADED` avant `WARNING`. */
     @Test
     fun incidentsAreOrderedBySeverityThenByMostRecent() {
-        gateway.result = presentSession(snapshot(), emptyList())
         snapshotPublisher.publish(snapshot())
         incidentsReader.incidents =
             listOf(
@@ -155,7 +162,6 @@ class IncidentDiagnosticViewModelTest {
      */
     @Test
     fun aSupersededRefreshNeverOverwritesTheLatestChecks() {
-        gateway.result = presentSession(snapshot(), emptyList())
         snapshotPublisher.publish(snapshot())
         val supersededGate = CompletableDeferred<Unit>()
         var calls = 0
@@ -193,11 +199,11 @@ class IncidentDiagnosticViewModelTest {
                 sources =
                     DiagnosticSources(
                         snapshotPublisher = snapshotPublisher,
-                        gateway = gateway,
                         incidentsReader = incidentsReader,
                         technicalEventLog = technicalEventLog,
                         readinessChecker = gatedChecker,
                         storageIntegrity = storageIntegrity,
+                        pairedBoxStore = pairedBoxStore,
                     ),
                 deviceContext = deviceContext,
                 timeZoneProvider = FakeTimeZoneProvider(zoneId = "Europe/Paris"),
@@ -217,7 +223,6 @@ class IncidentDiagnosticViewModelTest {
 
     @Test
     fun theChecksOfTheLastReadinessRunArePresented() {
-        gateway.result = presentSession(snapshot(), emptyList())
         snapshotPublisher.publish(snapshot())
         checks =
             listOf(
@@ -238,7 +243,6 @@ class IncidentDiagnosticViewModelTest {
 
     @Test
     fun theTechnicalEventsArePresented() {
-        gateway.result = presentSession(snapshot(), emptyList())
         snapshotPublisher.publish(snapshot())
         technicalEventLog.entries =
             listOf(
@@ -266,7 +270,6 @@ class IncidentDiagnosticViewModelTest {
      */
     @Test
     fun theExportedTextNeverCarriesTheTokenHashAndTruncatesTheBoxId() {
-        gateway.result = presentSession(snapshot(), emptyList())
         snapshotPublisher.publish(snapshot())
         val viewModel = viewModel()
         viewModel.refresh()
@@ -308,7 +311,6 @@ class IncidentDiagnosticViewModelTest {
      */
     @Test
     fun anUnexpectedFailureIsShownWithoutLeavingTheScreenLoading() {
-        gateway.result = presentSession(snapshot(), emptyList())
         snapshotPublisher.publish(snapshot())
         incidentsReader.failure = IllegalStateException("unexpected")
 

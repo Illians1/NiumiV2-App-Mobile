@@ -1,6 +1,7 @@
 package com.niumi.database.blocking
 
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionEffectKind
 import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
@@ -76,8 +77,6 @@ class DirectBootBlockedPackagesSourceTest {
         failureCode = null,
         ringtoneKey = "niumi_default",
         vibrationEnabled = true,
-        boxId = "550e8400-e29b-41d4-a716-446655440000",
-        boxTokenSha256Hex = "a".repeat(64),
         blockedPackages = blockedPackages,
         eventReceipts = emptyList(),
         pendingEffects = pendingEffects,
@@ -192,6 +191,24 @@ class DirectBootBlockedPackagesSourceTest {
         runTest {
             assertThat(readState(snapshot(SessionState.RELEASING)))
                 .isEqualTo(BlockedPackagesState.Releasing(sessionId, emptySet()))
+        }
+
+    /**
+     * Étape 43 : un désarmement n'a lieu qu'avant le coucher, et rien n'a jamais été bloqué. Même
+     * un `REMOVE_BLOCKING` resté en attente — que `DisarmReducer` n'émet d'ailleurs pas — ne fait
+     * pas bloquer `RELEASING` vers `DISARMED`, comme `isBlockingInForce` côté thème et garde.
+     */
+    @Test
+    fun releasingTowardsDisarmedNeverBlocks() =
+        runTest {
+            val stored =
+                snapshot(
+                    SessionState.RELEASING,
+                    listOf(effect(SessionEffectKind.REMOVE_BLOCKING, EffectStatus.PENDING)),
+                    blockingAppliedAtEpochMillis = null,
+                ).copy(releaseTarget = ReleaseTarget.DISARMED)
+
+            assertThat(readState(stored)).isEqualTo(BlockedPackagesState.Releasing(sessionId, emptySet()))
         }
 
     @Test

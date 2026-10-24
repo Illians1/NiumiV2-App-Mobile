@@ -1,6 +1,7 @@
 package com.niumi.database.blocking
 
 import android.database.sqlite.SQLiteException
+import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.isBlockingPending
@@ -76,6 +77,10 @@ class RoomBlockedPackagesSource
          * (`:shared:core`) et non par une recopie de la règle : le KDoc de `BlockingStatus` interdit
          * toute troisième copie, côté commun comme côté natif.
          *
+         * **`RELEASING` vers `DISARMED` ne bloque rien (étape 43)** : un désarmement n'a lieu qu'avant le
+         * coucher, et `DisarmReducer` n'émet aucun `REMOVE_BLOCKING` ; sans cette exception, l'absence de
+         * l'effet ferait bloquer pendant la libération, contre `isBlockingInForce` (thème, garde).
+         *
          * C'est bien le champ du snapshot qui décide, et non le statut de l'effet `APPLY_BLOCKING`
          * comme pour `PREPARING` : dans le miroir Direct Boot, une session différée n'a aucun
          * `APPLY_BLOCKING` avant son début, et « absent donc exécuté » y donnerait un blocage actif
@@ -95,7 +100,9 @@ class RoomBlockedPackagesSource
                     BlockedPackagesState.Releasing(
                         sessionId = session.id,
                         effectivePackages =
-                            if (hasSucceededInRoom(database, session.id, SessionEffectKindDto.REMOVE_BLOCKING)) {
+                            if (session.releaseTarget == ReleaseTargetDto.DISARMED ||
+                                hasSucceededInRoom(database, session.id, SessionEffectKindDto.REMOVE_BLOCKING)
+                            ) {
                                 emptySet()
                             } else {
                                 packages
@@ -161,7 +168,9 @@ class RoomBlockedPackagesSource
                     BlockedPackagesState.Releasing(
                         sessionId = stored.sessionId,
                         effectivePackages =
-                            if (isPendingInDirectBoot(stored, SessionEffectKindDto.REMOVE_BLOCKING)) {
+                            if (stored.releaseTarget != ReleaseTargetDto.DISARMED &&
+                                isPendingInDirectBoot(stored, SessionEffectKindDto.REMOVE_BLOCKING)
+                            ) {
                                 packages
                             } else {
                                 emptySet()

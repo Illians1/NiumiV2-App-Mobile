@@ -3,6 +3,7 @@ package com.niumi.database.blocking
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.BlockingScheduleDto
+import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
@@ -232,6 +233,28 @@ class RoomBlockedPackagesSourceTest {
 
             assertThat(readState())
                 .isEqualTo(BlockedPackagesState.Releasing(sessionId, blockedPackages.toSet()))
+        }
+
+    /**
+     * Étape 43 : `DisarmReducer` n'émet aucun `REMOVE_BLOCKING` — rien n'a jamais été bloqué avant le
+     * coucher. Sans cette branche, la règle ci-dessus bloquerait les applications pendant la
+     * libération d'un désarmement, alors que le thème et la garde la disent hors blocage.
+     */
+    @Test
+    fun releasingTowardsDisarmedNeverBlocks() =
+        runTest {
+            store.commitDecision(
+                StoredDecision(
+                    snapshot =
+                        snapshotInState(SessionStateDto.RELEASING)
+                            .copy(releaseTarget = ReleaseTargetDto.DISARMED),
+                    receipt = RoomTestFixtures.receipt("seed-event", sessionId),
+                    effects = emptyList(),
+                    androidExtras = RoomTestFixtures.extras(blockedPackages = blockedPackages),
+                ),
+            )
+
+            assertThat(readState()).isEqualTo(BlockedPackagesState.Releasing(sessionId, emptySet()))
         }
 
     /**

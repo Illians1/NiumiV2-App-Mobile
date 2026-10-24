@@ -26,8 +26,8 @@ import javax.inject.Inject
  * Écran 3 « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8). Ne juge jamais lui-même de la
  * validité d'un payload : `NiumiCoreFacade.parseBoxPayload` tranche (SPEC_CORE_KMP §9.3), et seul
  * `PairedBoxCredentialDto.fromPayload` calcule l'empreinte — le token en clair ne quitte jamais
- * `:shared:core`. Les refus d'un doublon et d'un onzième boîtier viennent du dépôt, en résultat
- * typé ; un nom invalide est arrêté ici par la fonction même du dépôt, `PairedBoxName.sanitize`.
+ * `:shared:core`. Les refus d'un doublon, d'un onzième boîtier et du retrait du dernier viennent du
+ * dépôt, en résultat typé ; un nom invalide est arrêté ici par la fonction même du dépôt, `PairedBoxName.sanitize`.
  *
  * Le ViewModel ne lit de [NfcReader] que sa disponibilité : le Reader Mode lui-même se branche
  * sur l'activité hôte depuis [PairingRoute], parce que `enableReaderMode` exige une `Activity`
@@ -56,8 +56,8 @@ class PairingViewModel
                 // comme à la première configuration ; sinon elle attend « Ajouter un boîtier ».
                 if (state.boxes.isEmpty() && state.canAdd) state = state.copy(isScanning = true)
             }
-            // Garde de `SetupGate` : la liste figée dans une session en cours ne se modifie pas
-            // (SPEC_CORE_KMP §2 point 11).
+            // Une session en cours ne verrouille plus les boîtiers (étape 43, SPEC_CORE_KMP §2
+            // décisions 11 et 16) : elle masque seulement « Continuer ».
             viewModelScope.launch {
                 snapshotPublisher.snapshot.collect { snapshot ->
                     onSessionStateChanged(!isSetupEditable(snapshot?.state))
@@ -68,13 +68,13 @@ class PairingViewModel
         /**
          * Recalcule la disponibilité du NFC au retour des réglages (SPEC_ANDROID §13). Perdre le
          * lecteur efface le retour du scan précédent : « Réessaie en approchant le boîtier » sous
-         * un NFC coupé conseille une action impossible, donc un faux état (§15). Un ajout réussi
-         * et la garde de session, eux, énoncent un fait et survivent.
+         * un NFC coupé conseille une action impossible, donc un faux état (§15). Un ajout réussi,
+         * lui, énonce un fait et survit.
          */
         fun refreshAvailability() {
             val availability = nfcReader.availability
             val losesReader = availability != NfcAvailability.ENABLED
-            val keepsMessage = state.message in DURABLE_MESSAGES
+            val keepsMessage = state.message == PairingTexts.BOX_ADDED
             state =
                 state.copy(
                     nfcAvailability = availability,
@@ -96,24 +96,9 @@ class PairingViewModel
             nfcReader.stop(activity)
         }
 
-        /** Une session qui démarre ferme tout : lecture, dialogues, candidat non confirmé (§11.1). */
+        /** Une session qui démarre n'interrompt rien (étape 43) : elle masque seulement « Continuer ». */
         fun onSessionStateChanged(isSessionInProgress: Boolean) {
-            if (isSessionInProgress) pendingCandidate = null
-            state =
-                if (isSessionInProgress) {
-                    state.copy(
-                        isSessionInProgress = true,
-                        isScanning = false,
-                        pendingName = null,
-                        renaming = null,
-                        message = PairingTexts.SESSION_IN_PROGRESS,
-                    )
-                } else {
-                    state.copy(
-                        isSessionInProgress = false,
-                        message = state.message.takeUnless { it == PairingTexts.SESSION_IN_PROGRESS },
-                    )
-                }
+            state = state.copy(isSessionInProgress = isSessionInProgress)
         }
 
         fun startAdding() {
@@ -127,8 +112,8 @@ class PairingViewModel
 
         /**
          * Appelé depuis le callback du Reader Mode (thread binder) : lance sa propre coroutine.
-         * Un scan arrivé hors d'une lecture attendue — dialogue ouvert, session démarrée, lecture
-         * annulée entre-temps — est ignoré : il écraserait un candidat ou contournerait §11.1.
+         * Un scan arrivé hors d'une lecture attendue — dialogue ouvert, lecture annulée entre-temps —
+         * est ignoré : il écraserait un candidat.
          */
         fun onUriRead(uri: String) {
             viewModelScope.launch {
@@ -142,8 +127,8 @@ class PairingViewModel
                 }
                 val candidate = PairedBoxCredentialDto.fromPayload(payload)
                 val existing = pairedBoxStore.all()
-                // Revérifiée après la suspension : une seconde lecture du même tag, un renommage
-                // ouvert ou une session démarrée pendant la lecture du dépôt l'emportent.
+                // Revérifiée après la suspension : une seconde lecture du même tag ou un renommage
+                // ouvert pendant la lecture du dépôt l'emportent.
                 if (!state.isReaderModeExpected) return@launch
                 when {
                     // Relu au dépôt et non dans `state` : la liste affichée peut dater.
@@ -192,11 +177,11 @@ class PairingViewModel
                     }
             }
 
-            /** Un nom refusé par `PairedBoxName.sanitize`, ou une session démarrée entre-temps, n'écrit rien. */
+            /** Un nom refusé par `PairedBoxName.sanitize` n'écrit rien. */
             fun confirmAdd() {
                 val candidate = pendingCandidate
                 val name = state.pendingName?.let(PairedBoxName::sanitize)
-                if (candidate == null || name == null || state.isSessionInProgress) return
+                if (candidate == null || name == null) return
                 pendingCandidate = null
                 viewModelScope.launch {
                     val message =
@@ -216,7 +201,7 @@ class PairingViewModel
             }
 
             fun startRename(boxId: String) {
-                if (state.isSessionInProgress || state.isDialogOpen) return
+                if (state.isDialogOpen) return
                 val row = state.boxes.firstOrNull { it.boxId == boxId } ?: return
                 state = state.copy(isScanning = false, renaming = Renaming(boxId, row.name), message = null)
             }
@@ -224,7 +209,7 @@ class PairingViewModel
             fun confirmRename() {
                 val renaming = state.renaming
                 val name = renaming?.text?.let(PairedBoxName::sanitize)
-                if (renaming == null || name == null || state.isSessionInProgress) return
+                if (renaming == null || name == null) return
                 viewModelScope.launch {
                     pairedBoxStore.rename(renaming.boxId, name)
                     refreshBoxes()
@@ -236,9 +221,14 @@ class PairingViewModel
                 state = state.copy(renaming = null)
             }
 
-            /** Sans confirmation (§15) : retirer le dernier est permis, le diagnostic refusera l'activation. */
+            /**
+             * Sans confirmation sur cet écran transitoire (§15 ; la feuille de confirmation arrive à
+             * l'étape 48). Le dernier boîtier n'est jamais retiré (décision Q22) : l'écran masque
+             * « Retirer », et le dépôt répond `LastBoxKept` si l'appel passe quand même — la liste
+             * relue l'affiche alors telle qu'elle est.
+             */
             fun remove(boxId: String) {
-                if (state.isSessionInProgress || state.isDialogOpen) return
+                if (state.isDialogOpen || !state.canRemove) return
                 viewModelScope.launch {
                     pairedBoxStore.remove(boxId)
                     refreshBoxes()
@@ -247,21 +237,21 @@ class PairingViewModel
             }
         }
 
+        /**
+         * La lecture du dépôt suspend : elle précède la copie, pour que celle-ci parte de l'état
+         * **courant**. `state.copy(boxes = all())` lisait `state` avant la suspension et écrasait
+         * ce qui avait changé pendant — une session publiée au démarrage, mesuré sur appareil le
+         * 2026-10-24 (« Continuer » affiché en session).
+         */
         private suspend fun refreshBoxes() {
-            state =
-                state.copy(
-                    boxes =
-                        pairedBoxStore.all().map { box ->
-                            PairedBoxRow(
-                                boxId = box.credential.boxId,
-                                prefix = PairingTexts.prefixOf(box.credential.boxId),
-                                name = box.name,
-                            )
-                        },
-                )
-        }
-
-        private companion object {
-            val DURABLE_MESSAGES = setOf(PairingTexts.BOX_ADDED, PairingTexts.SESSION_IN_PROGRESS)
+            val rows =
+                pairedBoxStore.all().map { box ->
+                    PairedBoxRow(
+                        boxId = box.credential.boxId,
+                        prefix = PairingTexts.prefixOf(box.credential.boxId),
+                        name = box.name,
+                    )
+                }
+            state = state.copy(boxes = rows)
         }
     }

@@ -2,16 +2,16 @@ package com.niumi.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.niumi.core.interop.ReleaseMeansDto
 import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionStateDto
 
 /**
- * Session persistée, colonnes exactes de SPEC_ANDROID §7.2. La liste des boîtiers associés est
- * figée à part, dans [SessionBoxEntity] (`session_box`, Lot 8) sur le modèle de
- * [BlockedAppEntity] : `RoomSessionStore.commitDecision` l'écrit à la création de la session,
- * jamais depuis l'appelant. `localDate`/`localTime` reprennent le nom de colonne de §7.2, qui
- * diffère de `localDateIso`/`localTimeIso` du DTO (SPEC_CORE_KMP §7.2) : divergence absorbée par
+ * Session persistée, colonnes exactes de SPEC_ANDROID §7.2. Aucune liste de boîtiers n'y est
+ * attachée depuis v6 (étape 43) : la vérification d'un scan lit l'ensemble courant de `paired_box`.
+ * `localDate`/`localTime` reprennent le nom de colonne de §7.2, qui diffère de
+ * `localDateIso`/`localTimeIso` du DTO (SPEC_CORE_KMP §7.2) : divergence absorbée par
  * `SessionSnapshotMapper`.
  *
  * Les quatre colonnes `blocking*` (v3, Lot 6) sont toutes nulles pour un blocage immédiat et toutes
@@ -22,6 +22,9 @@ import com.niumi.core.interop.SessionStateDto
  * `volumeRampSeconds` (v4, Lot 7) : durée de la montée progressive, nulle pour un volume constant.
  * Avec `ringtoneKey`, seule colonne modifiable après l'activation hors décision du moteur, par
  * `RoomSessionAlarmSoundStore`, et seulement en `ARMED` (SPEC_ANDROID §3, §7.2).
+ *
+ * `releasedBy` et `disarmedAtEpochMillis` (v6, contrat 1.5) : moyen de libération et instant du
+ * désarmement, nuls tant que la session n'est pas libérée (SPEC_CORE_KMP §7.1).
  */
 @Entity(tableName = "alarm_session")
 data class AlarmSessionEntity(
@@ -52,4 +55,6 @@ data class AlarmSessionEntity(
     val completedAtEpochMillis: Long?,
     val cancelledAtEpochMillis: Long?,
     val failureCode: String?,
+    val releasedBy: ReleaseMeansDto?,
+    val disarmedAtEpochMillis: Long?,
 )

@@ -14,7 +14,6 @@ import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
-import com.niumi.database.SessionBox
 import com.niumi.database.StoredDecision
 import com.niumi.database.blocking.BlockedPackagesRead
 import com.niumi.database.blocking.BlockedPackagesSource
@@ -139,7 +138,6 @@ class BlockingStartReceiverInstrumentedTest {
                     effects = emptyList(),
                     androidExtras =
                         AndroidSessionExtras(
-                            boxes = listOf(SessionBox(BOX_ID, "a".repeat(64), "Boîtier 1")),
                             ringtoneKey = "niumi_piano",
                             vibrationEnabled = false,
                             volumeRampSeconds = null,
@@ -225,7 +223,6 @@ class BlockingStartReceiverInstrumentedTest {
     private companion object {
         const val SESSION_ID = "4f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6b"
         const val EVENT_ID = "4f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6c"
-        const val BOX_ID = "4f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6d"
         const val BLOCKED_PACKAGE = "com.example.app"
         const val REVISION = 2L
         const val TRIGGER_DELAY_MS = 600_000L

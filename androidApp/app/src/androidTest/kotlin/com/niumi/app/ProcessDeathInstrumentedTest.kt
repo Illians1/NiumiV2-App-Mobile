@@ -19,7 +19,6 @@ import com.niumi.core.schedule.TriggerDelayPolicy
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
-import com.niumi.database.SessionBox
 import com.niumi.database.StoredDecision
 import com.niumi.database.blocking.BlockedPackagesRead
 import com.niumi.database.blocking.BlockedPackagesSource
@@ -282,7 +281,6 @@ class ProcessDeathInstrumentedTest {
                     effects = emptyList(),
                     androidExtras =
                         AndroidSessionExtras(
-                            boxes = listOf(SessionBox(BOX_ID, "a".repeat(64), "Boîtier 1")),
                             ringtoneKey = "niumi_piano",
                             vibrationEnabled = false,
                             volumeRampSeconds = null,
@@ -350,7 +348,6 @@ class ProcessDeathInstrumentedTest {
                     effects = emptyList(),
                     androidExtras =
                         AndroidSessionExtras(
-                            boxes = listOf(SessionBox(BOX_ID, "a".repeat(64), "Boîtier 1")),
                             ringtoneKey = "niumi_piano",
                             vibrationEnabled = false,
                             volumeRampSeconds = null,
@@ -486,7 +483,6 @@ class ProcessDeathInstrumentedTest {
         const val SESSION_ID = "5b7c1e2a-6f3d-4a8b-9c0d-1e2f3a4b5c6d"
         const val SESSION_ID_ON_TIME = "5b7c1e2a-6f3d-4a8b-9c0d-1e2f3a4b5c7d"
         const val SESSION_ID_MISSED = "5b7c1e2a-6f3d-4a8b-9c0d-1e2f3a4b5c8d"
-        const val BOX_ID = "5b7c1e2a-6f3d-4a8b-9c0d-1e2f3a4b5c6f"
         const val BLOCKED_PACKAGE = "com.example.app"
         const val REVISION = 2L
         const val TRIGGER_DELAY_MS = 600_000L

@@ -2,6 +2,8 @@ package com.niumi.database.directboot
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.domain.ReleaseMeans
+import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionState
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.database.AlwaysUnlockedState
@@ -12,7 +14,6 @@ import com.niumi.database.PendingEffect
 import com.niumi.database.RoomSessionStore
 import com.niumi.database.RoomTestFixtures
 import com.niumi.database.StoredDecision
-import com.niumi.database.mapping.toDomain
 import com.niumi.database.newInMemoryDatabase
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -198,7 +199,6 @@ class RoomDirectBootMergeTest {
         runTest {
             val tampered =
                 projection(revision = 5, state = SessionState.ARMED).copy(
-                    boxes = listOf(DirectBootBox("ffffffff-ffff-ffff-ffff-ffffffffffff", "f".repeat(64))),
                     ringtoneKey = "autre_sonnerie",
                     vibrationEnabled = false,
                     volumeRampSeconds = 5,
@@ -212,19 +212,25 @@ class RoomDirectBootMergeTest {
             assertThat(entity.volumeRampSeconds).isEqualTo(RoomTestFixtures.extras().volumeRampSeconds)
         }
 
-    /** §7.2, Lot 8 : la fusion ne touche jamais `session_box`, qui reste celle de Room. */
+    /**
+     * Étape 43, contrat 1.5 : une libération décidée avant déverrouillage atteint Room avec son moyen
+     * — la sortie de secours ne doit pas se relire comme un scan, ni un désarmement perdre son instant.
+     */
     @Test
-    fun frozenBoxListIsNeverOverwrittenByTheProjection() =
+    fun theReleaseMeansOfANewerProjectionReachesRoom() =
         runTest {
-            val tampered =
-                projection(revision = 5, state = SessionState.ARMED).copy(
-                    boxes = listOf(DirectBootBox("ffffffff-ffff-ffff-ffff-ffffffffffff", "f".repeat(64))),
+            val released =
+                projection(revision = 5, state = SessionState.RELEASING).copy(
+                    releaseTarget = ReleaseTarget.DISARMED,
+                    releasedBy = ReleaseMeans.PLAN_CHANGE,
+                    disarmedAtEpochMillis = 1_700_000_009_000L,
                 )
 
-            merge.merge(tampered)
+            merge.merge(released)
 
-            val boxes = database.sessionBoxDao().forSession(SESSION_ID).map { it.toDomain() }
-            assertThat(boxes).isEqualTo(RoomTestFixtures.extras().boxes)
+            val entity = requireNotNull(database.sessionDao().findById(SESSION_ID))
+            assertThat(entity.releasedBy).isEqualTo(ReleaseMeans.PLAN_CHANGE)
+            assertThat(entity.disarmedAtEpochMillis).isEqualTo(1_700_000_009_000L)
         }
 
     /**

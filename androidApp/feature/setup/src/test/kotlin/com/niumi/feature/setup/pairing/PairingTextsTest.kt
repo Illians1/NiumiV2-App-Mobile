@@ -26,8 +26,6 @@ class PairingTextsTest {
         assertThat(PairingTexts.BOX_ADDED).isEqualTo("Boîtier ajouté.")
         assertThat(PairingTexts.ALREADY_PAIRED).isEqualTo("Ce boîtier est déjà associé.")
         assertThat(PairingTexts.LIMIT_REACHED).isEqualTo("10 boîtiers maximum.")
-        assertThat(PairingTexts.SESSION_IN_PROGRESS)
-            .isEqualTo("Une session est en cours. Tes boîtiers ne peuvent pas être modifiés avant sa fin.")
         assertThat(PairingTexts.CONTINUE_BUTTON_LABEL).isEqualTo("Continuer")
     }
 

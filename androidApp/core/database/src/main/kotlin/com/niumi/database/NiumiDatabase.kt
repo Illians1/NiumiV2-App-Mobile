@@ -12,14 +12,12 @@ import com.niumi.database.dao.IncidentDao
 import com.niumi.database.dao.OutboxDao
 import com.niumi.database.dao.PairedBoxDao
 import com.niumi.database.dao.ReceiptDao
-import com.niumi.database.dao.SessionBoxDao
 import com.niumi.database.dao.SessionDao
 import com.niumi.database.dao.TechnicalEventDao
 import com.niumi.database.entity.ActiveSessionPointerEntity
 import com.niumi.database.entity.AlarmSessionEntity
 import com.niumi.database.entity.BlockedAppEntity
 import com.niumi.database.entity.PairedBoxEntity
-import com.niumi.database.entity.SessionBoxEntity
 import com.niumi.database.entity.SessionEffectOutboxEntity
 import com.niumi.database.entity.SessionEventReceiptEntity
 import com.niumi.database.entity.SessionIncidentEntity
@@ -45,20 +43,24 @@ import com.niumi.database.entity.TechnicalEventEntity
  * (liste des boîtiers figée à l'activation, sur le modèle de `blocked_app`) et retire `boxId` et
  * `boxTokenSha256Hex` d'`alarm_session`, recréée sans ces deux colonnes :
  * voir [com.niumi.database.migration.MIGRATION_4_5].
+ *
+ * v6 (étape 43, contrat 1.5) ajoute à `alarm_session` les colonnes nullables `releasedBy` et
+ * `disarmedAtEpochMillis`, et supprime `session_box` : la vérification d'un scan lit l'ensemble
+ * courant de `paired_box` (SPEC_CORE_KMP §2, décisions 11 et 16) :
+ * voir [com.niumi.database.migration.MIGRATION_5_6].
  */
 @Database(
     entities = [
         AlarmSessionEntity::class,
         BlockedAppEntity::class,
         PairedBoxEntity::class,
-        SessionBoxEntity::class,
         TechnicalEventEntity::class,
         SessionIncidentEntity::class,
         SessionEventReceiptEntity::class,
         SessionEffectOutboxEntity::class,
         ActiveSessionPointerEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(SessionEnumConverters::class, EffectEnumConverters::class, IncidentEnumConverters::class)
@@ -76,8 +78,6 @@ abstract class NiumiDatabase : RoomDatabase() {
     abstract fun incidentDao(): IncidentDao
 
     abstract fun pairedBoxDao(): PairedBoxDao
-
-    abstract fun sessionBoxDao(): SessionBoxDao
 
     abstract fun technicalEventDao(): TechnicalEventDao
 }

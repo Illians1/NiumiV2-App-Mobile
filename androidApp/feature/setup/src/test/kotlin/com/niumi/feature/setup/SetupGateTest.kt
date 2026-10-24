@@ -5,9 +5,9 @@ import com.niumi.core.interop.SessionStateDto
 import org.junit.Test
 
 /**
- * SPEC_CORE_KMP §2 point 11 et §10, SPEC_ANDROID §11.1 et §12.1 : ni l'association du boîtier ni
- * le sélecteur d'applications ne sont accessibles tant qu'une session est en cours. Le credential
- * et la sélection figés à l'activation ne doivent jamais pouvoir changer sous la session.
+ * SPEC_CORE_KMP §4 et §10, SPEC_ANDROID §12.1 : le sélecteur d'applications n'est pas accessible
+ * tant qu'une session est en cours ; la sélection figée à l'activation ne doit jamais changer sous la
+ * session. Les boîtiers, eux, se modifient en session depuis l'étape 43.
  */
 class SetupGateTest {
     @Test

@@ -107,6 +107,11 @@ fun ActiveSessionScreen(
             Button(onClick = actions.onModifyOrCancel, modifier = Modifier.fillMaxWidth()) {
                 Text(text = ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON)
             }
+            // Les boîtiers se modifient en session (SPEC_CORE_KMP §2, décisions 11 et 16) : ajouter,
+            // renommer ou retirer un boîtier ne termine pas la session (étape 43).
+            TextButton(onClick = actions.onOpenBoxes, modifier = Modifier.fillMaxWidth()) {
+                Text(text = ActiveSessionTexts.OPEN_BOXES_BUTTON)
+            }
             // Consultation seule (écran 12) : ne termine ni ne modifie la session, au même titre
             // que les recours ci-dessus. Le scan du boîtier reste le seul chemin de sortie (§3).
             TextButton(onClick = actions.onOpenDiagnostic, modifier = Modifier.fillMaxWidth()) {
@@ -258,6 +263,7 @@ private fun OtherIncidents(
 fun ActiveSessionRoute(
     onModifyOrCancel: () -> Unit,
     onOpenDiagnostic: () -> Unit,
+    onOpenBoxes: () -> Unit,
     viewModel: ActiveSessionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -291,6 +297,7 @@ fun ActiveSessionRoute(
             ActiveSessionActions(
                 onModifyOrCancel = onModifyOrCancel,
                 onOpenDiagnostic = onOpenDiagnostic,
+                onOpenBoxes = onOpenBoxes,
                 onOpenRingtone = { showRingtoneSheet = true },
                 // §13 : les `Intent` de réglages sont construits par l'écran, jamais par le
                 // ViewModel ni par `DeviceReadinessChecker`. Un recours sans `Intent` n'a de toute

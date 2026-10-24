@@ -38,9 +38,6 @@ object PairingTexts {
 
     const val CONTINUE_BUTTON_LABEL = "Continuer"
 
-    const val SESSION_IN_PROGRESS =
-        "Une session est en cours. Tes boîtiers ne peuvent pas être modifiés avant sa fin."
-
     const val ADD_BUTTON_LABEL = "Ajouter un boîtier"
 
     /** Arrête la lecture ouverte par [ADD_BUTTON_LABEL], et ferme un dialogue de nom sans écrire. */

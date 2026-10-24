@@ -16,7 +16,7 @@ data class SummaryUiState(
     val display: WakeScheduleDisplay? = null,
     val blockingDisplay: WakeScheduleDisplay? = null,
     val blockedPackages: List<BlockedPackage> = emptyList(),
-    /** Lot 8 : remplace `boxId`, les noms de la liste figée, dans l'ordre de `PairedBoxStore.all()`. */
+    /** Les noms des boîtiers enregistrés, dans l'ordre de `PairedBoxStore.all()` (liste courante, étape 43). */
     val boxNames: List<String> = emptyList(),
     val isAllowed: Boolean = false,
     val isActivating: Boolean = false,

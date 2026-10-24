@@ -117,9 +117,10 @@ class RoomDirectBootMerge(
             // modifier. Sonnerie et montée comprises (Lot 7) : leur seul chemin d'écriture hors
             // activation exige le déverrouillage, donc Room les porte toujours à jour. Les
             // applications bloquées ne sont pas réécrites non plus — elles sont figées de la même
-            // façon et les réécrire ferait du bruit de CASCADE. `boxId`/`boxTokenSha256Hex` ne
-            // sont plus des colonnes d'`alarm_session` depuis le Lot 8 : `toEntity` n'en écrit
-            // aucune, et cette fusion ne touche jamais `session_box`, qui reste celle de Room.
+            // façon et les réécrire ferait du bruit de CASCADE. Aucun boîtier n'est attaché à la
+            // session depuis l'étape 43 : `paired_box` n'est jamais touchée par cette fusion.
+            // `releasedBy` et `disarmedAtEpochMillis` viennent de la projection, comme tout champ
+            // écrit par le moteur.
             database.sessionDao().upsert(
                 projection.toSnapshotDto().toEntity(
                     projection.toExtras().copy(

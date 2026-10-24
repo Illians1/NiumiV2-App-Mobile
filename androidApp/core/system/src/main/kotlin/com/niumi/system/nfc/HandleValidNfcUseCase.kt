@@ -2,11 +2,10 @@ package com.niumi.system.nfc
 
 import com.niumi.core.interop.BoxPayloadDto
 import com.niumi.core.interop.NiumiCoreFacade
-import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.nfc.BoxPayloadStatus
 import com.niumi.core.nfc.BoxVerificationStatus
-import com.niumi.database.SessionBox
+import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.ReconcileReason
@@ -27,10 +26,12 @@ import javax.inject.Singleton
  * vérificateur communs tranchent, ce cas d'usage ne fait que leur fournir le boîtier de référence
  * et traduire leur verdict en [ScanOutcome].
  *
- * **La liste de référence vient de la session, jamais de `PairedBoxStore`** (§11.3 point 3) :
- * `PairedBoxStore` n'est délibérément pas une dépendance de cette classe. Une association, un
- * retrait ou un renommage pendant une session ouvrirait sinon une sortie que l'utilisateur
- * n'avait pas au moment de s'engager (Lot 8).
+ * **La liste de référence est l'ensemble courant de [PairedBoxStore], lu au moment du scan**
+ * (§11.3 point 3 ; SPEC_CORE_KMP §2, décisions 11 et 16 ; décision Q11 du 2026-10-19) : un boîtier
+ * ajouté pendant la session la termine, un boîtier retiré n'arrête plus rien. La lecture a lieu après
+ * l'éventuelle réconciliation, au plus près de la vérification. Le scan exige un appareil
+ * déverrouillé (SPEC_ANDROID §4.4) ; avant déverrouillage, `RoomPairedBoxStore.all()` répondrait une
+ * liste vide, donc un refus, jamais une acceptation à tort.
  *
  * **S'exécute hors du `Mutex` du coordinateur**, comme `AlarmTriggerHandler` (étape 17) : ce mutex
  * est privé et non réentrant, et lire puis dispatcher est le seul motif possible. Si la révision
@@ -45,6 +46,7 @@ class HandleValidNfcUseCase
         private val coordinator: SessionCoordinator,
         private val facade: NiumiCoreFacade,
         private val eventFactory: NfcScanEventFactory,
+        private val pairedBoxStore: PairedBoxStore,
     ) : NfcScanHandler {
         /**
          * Clauses de garde séquentielles — session illisible ou absente, état non éligible, payload
@@ -74,10 +76,10 @@ class HandleValidNfcUseCase
                 }
 
             val context = eventFactory.verificationContext(session.snapshot)
-            // Contrat 1.4 (Lot 8) : `verifyBox` compare à la liste figée dans la session — vide
-            // comprise, auquel cas `NO_PAIRED_BOX_MATCH` revient sans qu'aucun credential n'ait
+            // Contrat 1.5 : `verifyBox` compare à l'ensemble enregistré au moment du scan — vide
+            // compris, auquel cas `NO_PAIRED_BOX_MATCH` revient sans qu'aucun credential n'ait
             // correspondu.
-            val credentials = session.extras.boxes.map { it.toCredential(payload.protocolVersion) }
+            val credentials = pairedBoxStore.all().map { it.credential }
             val verification = facade.verifyBox(payload, credentials, context)
             val proof = verification.proof
             if (verification.status != BoxVerificationStatus.MATCH || proof == null) {
@@ -107,18 +109,6 @@ class HandleValidNfcUseCase
             (gateway.load() as? LoadResult.Present)?.takeIf { it.snapshot.state in SCAN_SOURCE_STATES }
 
         /**
-         * `protocolVersion` est repris du payload scanné : [SessionBox] ne le porte pas, et
-         * `BoxVerifier` ne lit jamais ce champ du credential — il compare la version du *payload*
-         * à celle qu'il prend en charge. Aucune information n'est donc perdue.
-         */
-        private fun SessionBox.toCredential(protocolVersion: Int): PairedBoxCredentialDto =
-            PairedBoxCredentialDto(
-                protocolVersion = protocolVersion,
-                boxId = boxId,
-                tokenSha256Hex = tokenSha256Hex,
-            )
-
-        /**
          * Étape 38 : une URI que le parseur refuse n'est pas un Niumi Spot, sauf une version
          * inconnue — c'est un Niumi Spot, que cette version de l'app n'a pas pu enregistrer.
          */
@@ -127,7 +117,7 @@ class HandleValidNfcUseCase
 
         private fun refusalFor(status: BoxVerificationStatus): ScanOutcome =
             when (status) {
-                // §11.2 : « tag Niumi hors de la liste figée → vibration courte d'erreur, alarme
+                // §11.2 : « tag Niumi non enregistré → vibration courte d'erreur, alarme
                 // maintenue » (contrat 1.4 : un seul statut de refus, `NO_PAIRED_BOX_MATCH`).
                 BoxVerificationStatus.NO_PAIRED_BOX_MATCH -> ScanOutcome.UnknownBox
 

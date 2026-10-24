@@ -1,5 +1,6 @@
 package com.niumi.app.navigation
 
+import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionStateDto
 
 /** Où mène l'ouverture de Niumi depuis le lanceur (SPEC_ANDROID §10.4). */
@@ -29,9 +30,10 @@ sealed interface LauncherDestination {
  */
 fun launcherDestinationFor(
     state: SessionStateDto?,
+    releaseTarget: ReleaseTargetDto?,
     onboardingAcknowledged: Boolean,
 ): LauncherDestination =
-    if (requiresAlarmScreen(state)) {
+    if (requiresAlarmScreen(state, releaseTarget)) {
         LauncherDestination.AlarmScreen
     } else {
         LauncherDestination.InApp(homeDestinationFor(state, onboardingAcknowledged))
@@ -46,14 +48,22 @@ fun launcherDestinationFor(
  * l'étape 17 : après l'armement, le `NavHost` est sur `ActiveSession`, donc l'accueil n'est plus
  * composé et sa redirection ne s'exécutait jamais. La règle est globale, sa mise en œuvre doit
  * l'être aussi.
+ *
+ * [releaseTarget] départage `RELEASING` (étape 43, contrat 1.5) : vers `COMPLETED` ou `CANCELLED`, la
+ * libération suit un scan ou une sortie de secours et l'écran de réveil reste devant jusqu'à la fin ;
+ * vers `DISARMED`, c'est un désarmement avant le coucher, sans rien à scanner.
  */
-fun requiresAlarmScreen(state: SessionStateDto?): Boolean =
+fun requiresAlarmScreen(
+    state: SessionStateDto?,
+    releaseTarget: ReleaseTargetDto?,
+): Boolean =
     when (state) {
         SessionStateDto.RINGING,
         SessionStateDto.AWAITING_NFC,
         SessionStateDto.TRIGGERED_AWAITING_NFC,
-        SessionStateDto.RELEASING,
         -> true
+
+        SessionStateDto.RELEASING -> releaseTarget != ReleaseTargetDto.DISARMED
 
         // Avant la sonnerie comme après la session, l'écran 7 ou le parcours de préparation.
         SessionStateDto.PREPARING,

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.niumi.database.entity.PairedBoxEntity
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Jusqu'à dix boîtiers associés (contrat KMP 1.5), nommés, ordonnés par position (SPEC_ANDROID §11.1, Lot 8).
@@ -21,6 +22,10 @@ interface PairedBoxDao {
 
     @Query("SELECT * FROM paired_box ORDER BY position ASC")
     suspend fun all(): List<PairedBoxEntity>
+
+    /** Même ordre que [all], réémis par Room à chaque écriture dans `paired_box`. */
+    @Query("SELECT * FROM paired_box ORDER BY position ASC")
+    fun observe(): Flow<List<PairedBoxEntity>>
 
     @Query("SELECT COUNT(*) FROM paired_box")
     suspend fun count(): Int

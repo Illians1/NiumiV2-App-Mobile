@@ -14,8 +14,6 @@ import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.system.common.TimeZoneProvider
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessInput
-import com.niumi.system.session.LoadResult
-import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionSnapshotPublisher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -111,12 +109,8 @@ class IncidentDiagnosticViewModel
                 )
             }
 
-            boxes =
-                (sources.gateway.load() as? LoadResult.Present)
-                    ?.extras
-                    ?.boxes
-                    ?.map { DiagnosticBox(it.boxId, it.name) }
-                    .orEmpty()
+            // Étape 43 : les boîtiers enregistrés au moment de l'export, ceux qu'un scan accepterait.
+            boxes = sources.pairedBoxStore.all().map { DiagnosticBox(it.credential.boxId, it.name) }
             return IncidentDiagnosticUiState(
                 sessionId = snapshot.sessionId,
                 state = snapshot.state,

@@ -1,5 +1,6 @@
 package com.niumi.database.directboot
 
+import com.niumi.core.interop.ReleaseMeansDto
 import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionEffectKindDto
 import com.niumi.core.interop.SessionHealthDto
@@ -8,7 +9,7 @@ import com.niumi.database.EffectStatus
 import kotlinx.serialization.Serializable
 
 /** Version du format de projection lui-même, indépendante de [DirectBootSnapshot.Active.domainSchemaVersion]. */
-public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 4
+public const val DIRECT_BOOT_PROJECTION_SCHEMA_VERSION: Int = 5
 
 /**
  * Première version portant les champs `blocking*` (Lot 6). Seuil figé, jamais dérivé de
@@ -21,12 +22,13 @@ internal const val PROJECTION_VERSION_WITH_BLOCKING_SCHEDULE: Int = 2
 internal const val PROJECTION_VERSION_WITH_RINGTONE_CATALOG: Int = 3
 
 /**
- * Première version portant [DirectBootSnapshot.Active.boxes] (Lot 8). Seuil figé, jamais dérivé
- * de [DIRECT_BOOT_PROJECTION_SCHEMA_VERSION], même règle que les deux seuils ci-dessus : un
- * fichier antérieur se lit comme une liste d'un seul boîtier, construite depuis `boxId` et
- * `boxTokenSha256Hex`, sans nom.
+ * Première version portant [DirectBootSnapshot.Active.releasedBy] et
+ * [DirectBootSnapshot.Active.disarmedAtEpochMillis] (étape 43, contrat 1.5). Seuil figé, jamais
+ * dérivé de [DIRECT_BOOT_PROJECTION_SCHEMA_VERSION], même règle que les seuils ci-dessus : un
+ * fichier antérieur se relit sans ces deux champs, et la façade déduit `releasedBy = NFC_SCAN` de
+ * `nfcVerifiedAtEpochMillis` (SPEC_CORE_KMP §7.1).
  */
-internal const val PROJECTION_VERSION_WITH_MULTIPLE_BOXES: Int = 4
+internal const val PROJECTION_VERSION_WITH_RELEASE_MEANS: Int = 5
 
 /**
  * Projection partielle de Room dans le stockage protégé de l'appareil (SPEC_ANDROID §7.3,
@@ -57,12 +59,15 @@ internal const val PROJECTION_VERSION_WITH_MULTIPLE_BOXES: Int = 4
  * volume constant, ce qu'avait choisi toute session écrite avant. `DirectBootMapper.toExtras`
  * y réécrit la sonnerie retirée de l'APK (`LegacyRingtone`).
  *
- * **Projection v4 (Lot 8).** [boxes] remplace `boxId` et `boxTokenSha256Hex`, sans les noms — la
- * projection sert la vérification avant déverrouillage, pas l'affichage. Les deux anciens champs
- * restent dans la classe avec une valeur par défaut `""`, comme `volumeRampSeconds` l'a été, pour
- * que le format v4 reste désérialisable sans eux ; ils ne portent plus aucune valeur utile.
- * `DirectBootMapper.toSnapshotDto`/`toExtras` traduisent un fichier antérieur en une liste d'un
- * seul boîtier depuis ces deux champs. L'écriture est toujours en v4.
+ * **Projection v4 (Lot 8)** portait la liste des boîtiers figée à l'activation (`boxes`), après
+ * `boxId` et `boxTokenSha256Hex` jusqu'en v3.
+ *
+ * **Projection v5 (étape 43).** [releasedBy] et [disarmedAtEpochMillis] s'ajoutent, avec une valeur
+ * par défaut `null` pour qu'un fichier v4 reste désérialisable. Les boîtiers ne sont plus projetés :
+ * la vérification d'un scan lit l'ensemble courant de `paired_box`, sur un appareil déverrouillé
+ * (SPEC_ANDROID §4.4) ; la projection ne sert plus qu'à sonner et à reconstruire la session avant
+ * déverrouillage. Les clés `boxes`, `boxId` et `boxTokenSha256Hex` d'un fichier antérieur sont
+ * ignorées (`directBootJson.ignoreUnknownKeys`). L'écriture est toujours en v5.
  *
  * Seul [Active] est jamais sérialisé (directement, via son propre sérialiseur) : [Corrupted]
  * représente un état de lecture, jamais écrit. L'interface scellée n'est donc pas elle-même
@@ -97,12 +102,11 @@ public sealed interface DirectBootSnapshot {
         val completedAtEpochMillis: Long?,
         val cancelledAtEpochMillis: Long?,
         val failureCode: String?,
+        val releasedBy: ReleaseMeansDto? = null,
+        val disarmedAtEpochMillis: Long? = null,
         val ringtoneKey: String,
         val vibrationEnabled: Boolean,
         val volumeRampSeconds: Int? = null,
-        val boxId: String = "",
-        val boxTokenSha256Hex: String = "",
-        val boxes: List<DirectBootBox> = emptyList(),
         val blockedPackages: List<DirectBootBlockedPackage>,
         val eventReceipts: List<DirectBootReceipt>,
         val pendingEffects: List<DirectBootEffect>,
@@ -113,12 +117,6 @@ public sealed interface DirectBootSnapshot {
         val reason: String,
     ) : DirectBootSnapshot
 }
-
-@Serializable
-public data class DirectBootBox(
-    val boxId: String,
-    val tokenSha256Hex: String,
-)
 
 @Serializable
 public data class DirectBootBlockedPackage(

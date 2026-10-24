@@ -8,14 +8,18 @@ import com.niumi.system.audio.DataStoreAlarmSoundPreferences
 import com.niumi.system.audio.NiumiRingtones
 import com.niumi.system.audio.VolumeRampDurations
 import com.niumi.system.boot.fakes.FakeUnlockState
+import com.niumi.system.insight.DataStoreTimeToGetUpPreferences
+import com.niumi.system.plan.DataStoreWakePlanStore
+import com.niumi.system.plan.WakePlan
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import javax.inject.Provider
 
 /**
- * Garde de déverrouillage des deux `DataStore` en stockage chiffré par les identifiants
- * (SPEC_ANDROID §7.3, étape 19).
+ * Garde de déverrouillage des `DataStore` en stockage chiffré par les identifiants
+ * (SPEC_ANDROID §7.3, étape 19 ; planning et durée déclarée depuis l'étape 43).
  *
  * **Défaut mesuré sur appareil le 2026-09-14.** Depuis que `SystemEventsReceiver` réveille le
  * processus sur `LOCKED_BOOT_COMPLETED`, la réconciliation Direct Boot rejoue le diagnostic de §13,
@@ -97,6 +101,51 @@ class DataStoreUnlockGuardTest {
         val thrown =
             assertThrows(IllegalStateException::class.java) {
                 runBlocking { preferences.write(AlarmSoundSettings("niumi_oiseaux", 60)) }
+            }
+        assertThat(thrown).hasMessageThat().isEqualTo("DATASTORE_BEFORE_UNLOCK")
+    }
+
+    /**
+     * Étape 43 : avant déverrouillage, le planning se lit comme le défaut, interrupteur éteint. Ce
+     * n'est pas une extinction choisie : l'étape 44 ne ré-arme jamais avant `USER_UNLOCKED`.
+     */
+    @Test
+    fun theWakePlanReadsTheDefaultBeforeUnlockWithoutResolvingTheDataStore() {
+        val store = DataStoreWakePlanStore(NO_CONTEXT, locked)
+
+        val read = runBlocking { store.read() }
+        val emitted = runBlocking { store.plan.toList() }
+
+        assertThat(read).isEqualTo(WakePlan.DEFAULT)
+        assertThat(emitted).containsExactly(WakePlan.DEFAULT)
+    }
+
+    @Test
+    fun writingTheWakePlanIsRefusedBeforeUnlock() {
+        val store = DataStoreWakePlanStore(NO_CONTEXT, locked)
+
+        val thrown =
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking { store.write(WakePlan.DEFAULT.copy(enabled = true)) }
+            }
+        assertThat(thrown).hasMessageThat().isEqualTo("DATASTORE_BEFORE_UNLOCK")
+    }
+
+    @Test
+    fun theDeclaredDurationIsUnknownBeforeUnlockWithoutResolvingTheDataStore() =
+        runBlocking {
+            val preferences = DataStoreTimeToGetUpPreferences(NO_CONTEXT, locked)
+
+            assertThat(preferences.declaredMinutes()).isNull()
+        }
+
+    @Test
+    fun writingTheDeclaredDurationIsRefusedBeforeUnlock() {
+        val preferences = DataStoreTimeToGetUpPreferences(NO_CONTEXT, locked)
+
+        val thrown =
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking { preferences.setDeclaredMinutes(15) }
             }
         assertThat(thrown).hasMessageThat().isEqualTo("DATASTORE_BEFORE_UNLOCK")
     }

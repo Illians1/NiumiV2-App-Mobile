@@ -18,7 +18,7 @@ object SummaryTexts {
 
     const val CHANGE_TIME_LABEL = "Choisir une autre heure"
 
-    /** Lot 8 : « d'un de tes boîtiers », la session se termine par n'importe lequel des boîtiers figés. */
+    /** Lot 8 : « d'un de tes boîtiers », la session se termine par n'importe lequel des boîtiers enregistrés. */
     const val COMMITMENT_REMINDER = "Seul le scan d'un de tes boîtiers terminera la session."
 
     const val BLOCKED_APPS_TITLE = "Applications bloquées"

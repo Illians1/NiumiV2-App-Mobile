@@ -9,6 +9,7 @@ import com.niumi.database.migration.MIGRATION_1_2
 import com.niumi.database.migration.MIGRATION_2_3
 import com.niumi.database.migration.MIGRATION_3_4
 import com.niumi.database.migration.MIGRATION_4_5
+import com.niumi.database.migration.MIGRATION_5_6
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,7 +21,8 @@ private const val TEST_DATABASE_NAME = "niumi-migration-test.db"
  * module de test, que `MIGRATION_1_2` (étape 16) amène une base v1 peuplée en v2 sans perdre
  * son journal, et que `MIGRATION_2_3` (Lot 6) ajoute les quatre colonnes du début de blocage à
  * une base v2 portant une session `ARMED`, et que `MIGRATION_3_4` (Lot 7) réécrit la sonnerie retirée
- * de l'APK et ajoute la colonne de montée. `ExportedSchemaTest` (JVM, sans appareil) couvre le
+ * de l'APK et ajoute la colonne de montée, et que `MIGRATION_5_6` (étape 43) supprime `session_box`
+ * sans rien perdre d'autre. `ExportedSchemaTest` (JVM, sans appareil) couvre le
  * reste. Voir `ETAPE-09.md`.
  *
  * L'API `SupportSQLiteDatabase` est utilisée plutôt que celle rendant un `SQLiteConnection` : le
@@ -226,6 +228,87 @@ class NiumiDatabaseSchemaTest {
     }
 
     /**
+     * SPEC_ANDROID §7.2 (v6, étape 43). Une base v5 porte une session `ARMED` avec deux boîtiers
+     * figés dans `session_box` et les deux mêmes boîtiers dans `paired_box`, plus une session
+     * `COMPLETED` libérée par scan. Après migration : `session_box` a disparu, les deux boîtiers et
+     * leurs noms restent dans `paired_box` (seule source de la vérification désormais), les cinq
+     * tables enfants restantes gardent leurs lignes, `releasedBy` vaut `NFC_SCAN` pour la session
+     * scannée et reste nul pour la session armée, et toutes les sessions passent au schéma 3.
+     */
+    @Test
+    fun migrationFiveToSixKeepsTheArmedSessionDropsSessionBoxAndDeducesReleasedBy() {
+        migrationTestHelper.createDatabase(TEST_DATABASE_NAME, 5).use { v5 -> seedV5Sessions(v5) }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(TEST_DATABASE_NAME, 6, true, MIGRATION_5_6)
+
+        migrated.query("SELECT name FROM sqlite_master WHERE name LIKE '%session_box%'").use { cursor ->
+            assertThat(cursor.count).isEqualTo(0)
+        }
+        migrated
+            .query(
+                "SELECT id, state, revision, schemaVersion, releasedBy, disarmedAtEpochMillis " +
+                    "FROM alarm_session ORDER BY id",
+            ).use { cursor ->
+                assertThat(cursor.count).isEqualTo(2)
+                cursor.moveToFirst()
+                assertThat(cursor.getString(0)).isEqualTo("session-1")
+                assertThat(cursor.getString(1)).isEqualTo("ARMED")
+                assertThat(cursor.getLong(2)).isEqualTo(3)
+                assertThat(cursor.getInt(3)).isEqualTo(3)
+                assertThat(cursor.isNull(4)).isTrue()
+                assertThat(cursor.isNull(5)).isTrue()
+                cursor.moveToNext()
+                assertThat(cursor.getString(0)).isEqualTo("session-2")
+                assertThat(cursor.getString(1)).isEqualTo("COMPLETED")
+                assertThat(cursor.getInt(3)).isEqualTo(3)
+                assertThat(cursor.getString(4)).isEqualTo("NFC_SCAN")
+                assertThat(cursor.isNull(5)).isTrue()
+            }
+        migrated.query("SELECT boxId, name, position FROM paired_box ORDER BY position").use { cursor ->
+            val boxes =
+                generateSequence {
+                    if (cursor.moveToNext()) {
+                        cursor.getString(
+                            1,
+                        ) to cursor.getInt(2)
+                    } else {
+                        null
+                    }
+                }.toList()
+            assertThat(boxes).containsExactly("Cuisine" to 0, "Salon" to 1).inOrder()
+        }
+        assertEachChildTableKeptExactlyOneRowForSessionOne(migrated)
+        migrated.close()
+    }
+
+    private fun seedV5Sessions(v5: SupportSQLiteDatabase) {
+        listOf(
+            "'session-1', 3, 'ARMED', NULL, NULL",
+            "'session-2', 9, 'COMPLETED', 1700000005000, 1700000006000",
+        ).forEach { values ->
+            v5.execSQL(
+                "INSERT INTO alarm_session (id, revision, state, nfcVerifiedAtEpochMillis, completedAtEpochMillis, " +
+                    "schemaVersion, localDate, localTime, zoneIdAtActivation, triggerAtEpochMillis, health, " +
+                    "ringtoneKey, vibrationEnabled, createdAtEpochMillis) VALUES ($values, 2, '2026-10-16', " +
+                    "'07:00', 'Europe/Paris', 1800000000000, 'HEALTHY', 'niumi_piano', 1, 1700000000000)",
+            )
+        }
+        listOf("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" to "Cuisine", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" to "Salon")
+            .forEachIndexed { position, (boxId, name) ->
+                val token = boxId.first().toString().repeat(64)
+                v5.execSQL(
+                    "INSERT INTO paired_box (boxId, protocolVersion, tokenSha256, pairedAtEpochMillis, name, " +
+                        "position) VALUES ('$boxId', 1, '$token', 1700000002000, '$name', $position)",
+                )
+                v5.execSQL(
+                    "INSERT INTO session_box (sessionId, boxId, tokenSha256, name, position) " +
+                        "VALUES ('session-1', '$boxId', '$token', '$name', $position)",
+                )
+            }
+        seedChildRowsForSessionOne(v5)
+    }
+
+    /**
      * Point de vigilance 1 du Lot 8 : `paired_box` porte le boîtier B (remplacé hors session,
      * permis jusqu'ici), mais la session `ARMED` a figé le boîtier A. Un reçu, une ligne
      * d'outbox, une application bloquée, un incident et le pointeur actif prouvent qu'aucune
@@ -253,26 +336,35 @@ class NiumiDatabaseSchemaTest {
             "INSERT INTO paired_box (boxId, protocolVersion, tokenSha256, pairedAtEpochMillis) " +
                 "VALUES ('$boxB', 1, '" + "b".repeat(64) + "', 1700000002000)",
         )
-        v4.execSQL(
+        seedChildRowsForSessionOne(v4)
+    }
+
+    /**
+     * Un reçu, une ligne d'outbox, une application bloquée, un incident et le pointeur actif : les
+     * cinq tables enfants dont [assertEachChildTableKeptExactlyOneRowForSessionOne] vérifie qu'aucune
+     * migration ne les vide. Colonnes identiques de la v4 à la v6.
+     */
+    private fun seedChildRowsForSessionOne(db: SupportSQLiteDatabase) {
+        db.execSQL(
             "INSERT INTO session_event_receipt (eventId, sessionId, payloadSha256Hex, " +
                 "appliedRevision, receivedAtEpochMillis) VALUES ('event-1', 'session-1', '" +
                 "c".repeat(64) + "', 3, 1700000003000)",
         )
-        v4.execSQL(
+        db.execSQL(
             "INSERT INTO session_effect_outbox (effectId, sessionId, revision, kind, ordinal, " +
                 "payloadJson, status, lastError, updatedAtEpochMillis) VALUES " +
                 "('session-1:3:SCHEDULE_ALARM:0', 'session-1', 3, 'SCHEDULE_ALARM', 0, NULL, " +
                 "'SUCCEEDED', NULL, 1700000003000)",
         )
-        v4.execSQL(
+        db.execSQL(
             "INSERT INTO blocked_app (sessionId, packageName, displayNameSnapshot) " +
                 "VALUES ('session-1', 'com.example.first', 'Première application')",
         )
-        v4.execSQL(
+        db.execSQL(
             "INSERT INTO session_incident (sessionId, code, severity, occurredAtEpochMillis, platform) " +
                 "VALUES ('session-1', 'NFC_DISABLED', 'CRITICAL', 1700000004000, 'ANDROID')",
         )
-        v4.execSQL("INSERT INTO active_session_pointer (id, sessionId) VALUES (1, 'session-1')")
+        db.execSQL("INSERT INTO active_session_pointer (id, sessionId) VALUES (1, 'session-1')")
     }
 
     /**

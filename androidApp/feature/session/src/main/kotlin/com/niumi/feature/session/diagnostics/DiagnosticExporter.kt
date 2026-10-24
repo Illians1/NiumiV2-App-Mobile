@@ -16,7 +16,7 @@ private const val BOX_ID_VISIBLE_CHARS = 8
 
 private val TIMESTAMP_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-/** Un boîtier de la liste figée, pour l'export (SPEC_ANDROID §17, Lot 8) : jamais de hash. */
+/** Un boîtier enregistré au moment de l'export (SPEC_ANDROID §17, étape 43) : jamais de hash. */
 data class DiagnosticBox(
     val boxId: String,
     val name: String,
@@ -26,7 +26,7 @@ data class DiagnosticBox(
  * Ce que l'export a le droit de contenir (SPEC_ANDROID §17 : « les 200 événements locaux et les
  * résultats du contrôle de santé »).
  *
- * **Le hash du token n'y figure pas, et c'est délibéré.** `AndroidSessionExtras` porte
+ * **Le hash du token n'y figure pas, et c'est délibéré.** `PairedBoxStore` porte
  * `tokenSha256Hex` par boîtier ; le rapport ne le reprend jamais. Un secret qu'on ne transporte pas
  * ne peut pas fuiter par un format d'affichage oublié. [boxes] porte chaque `boxId` entier, tronqué
  * par l'exporteur, seul endroit où la règle des huit caractères s'applique.

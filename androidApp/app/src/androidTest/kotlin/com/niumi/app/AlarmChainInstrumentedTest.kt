@@ -13,7 +13,6 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
-import com.niumi.database.SessionBox
 import com.niumi.database.StoredDecision
 import com.niumi.database.directboot.DirectBootStore
 import com.niumi.database.logging.TechnicalEventLog
@@ -121,7 +120,6 @@ class AlarmChainInstrumentedTest {
                     effects = emptyList(),
                     androidExtras =
                         AndroidSessionExtras(
-                            boxes = listOf(SessionBox(BOX_ID, "a".repeat(64), "Boîtier 1")),
                             // Lot 7 : une sonnerie autre que celle par défaut, avec montée, pour
                             // prouver que c'est bien le réglage de la session qui joue.
                             ringtoneKey = "niumi_oiseaux",
@@ -215,7 +213,6 @@ class AlarmChainInstrumentedTest {
     private companion object {
         const val SESSION_ID = "3f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6b"
         const val EVENT_ID = "3f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6c"
-        const val BOX_ID = "3f8e9a2b-8c1d-4e5f-9a0b-1c2d3e4f5a6d"
         const val REVISION = 2L
         const val TRIGGER_DELAY_MS = 5_000L
         const val CHAIN_TIMEOUT_MS = 20_000L

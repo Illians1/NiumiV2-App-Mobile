@@ -6,6 +6,7 @@ import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
 import com.niumi.database.pairing.PairedBoxAddResult
 import com.niumi.database.pairing.PairedBoxDto
+import com.niumi.database.pairing.PairedBoxRemoveResult
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.system.apps.AppSelectionStore
 import com.niumi.system.common.TimeZoneProvider
@@ -17,6 +18,8 @@ import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.ReconcileReason
 import com.niumi.system.session.ReconcileResult
 import com.niumi.system.session.SessionCoordinator
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /** Journal d'appels partagé entre les fakes, pour prouver l'ordre des points 1 à 6 de §9.2. */
 class CallJournal {
@@ -95,8 +98,12 @@ class RecordingPairedBoxStore(
         boxes = boxes.map { if (it.credential.boxId == boxId) it.copy(name = name) else it }
     }
 
-    override suspend fun remove(boxId: String) {
+    override val points: Flow<List<PairedBoxDto>>
+        get() = flowOf(boxes)
+
+    override suspend fun remove(boxId: String): PairedBoxRemoveResult {
         boxes = boxes.filterNot { it.credential.boxId == boxId }
+        return PairedBoxRemoveResult.Removed
     }
 }
 

@@ -91,8 +91,9 @@ class PairingScreenTest {
     }
 
     @Test
-    fun fiveBoxesHideTheAddButtonAndSayWhy() {
-        setContent(PairingUiState(boxes = (1..5).map { row(it, "Boîtier $it") }))
+    fun tenBoxesHideTheAddButtonAndSayWhy() {
+        // Dix depuis l'étape 42 (`PairedBoxLimit.MAX`) : le test en citait encore cinq.
+        setContent(PairingUiState(boxes = (1..10).map { row(it, "Boîtier $it") }))
 
         composeRule.onNodeWithText(PairingTexts.LIMIT_REACHED).performScrollTo().assertExists()
         composeRule.onNode(hasContentDescription(PairingTexts.ADD_BUTTON_LABEL)).assertDoesNotExist()
@@ -197,25 +198,33 @@ class PairingScreenTest {
         composeRule.onNodeWithText("550e8400…").assertExists()
     }
 
-    /** §11.1 : la liste reste visible, aucune action ne l'est plus. */
+    /**
+     * Étape 43 (SPEC_CORE_KMP §2, décisions 11 et 16) : en session, ajout, renommage et retrait
+     * restent actifs ; seul « Continuer » disparaît (décision de Mehdi du 2026-10-24).
+     */
     @Test
-    fun aSessionInProgressShowsTheListWithEveryActionDisabled() {
+    fun aSessionInProgressKeepsEveryBoxActionButHidesContinue() {
         setContent(
             PairingUiState(
-                boxes = listOf(row(1, "Cuisine")),
+                boxes = listOf(row(1, "Salle de bain"), row(2, "Cuisine")),
                 isSessionInProgress = true,
-                message = PairingTexts.SESSION_IN_PROGRESS,
             ),
         )
 
-        composeRule.onNodeWithText(PairingTexts.SESSION_IN_PROGRESS).performScrollTo().assertExists()
-        composeRule.onAllNodesWithText(PairingTexts.SESSION_IN_PROGRESS).assertCountEquals(1)
-        composeRule.onNodeWithText("Cuisine").assertExists()
-        composeRule.onNode(hasContentDescription(PairingTexts.renameDescription("Cuisine"))).assertIsNotEnabled()
-        composeRule.onNode(hasContentDescription(PairingTexts.removeDescription("Cuisine"))).assertIsNotEnabled()
-        composeRule.onNode(hasContentDescription(PairingTexts.ADD_BUTTON_LABEL)).assertDoesNotExist()
-        composeRule.onAllNodesWithText(PairingTexts.INSTRUCTION, substring = true).assertCountEquals(0)
+        composeRule.onNode(hasContentDescription(PairingTexts.renameDescription("Cuisine"))).assertIsEnabled()
+        composeRule.onNode(hasContentDescription(PairingTexts.removeDescription("Cuisine"))).assertIsEnabled()
+        composeRule.onNode(hasContentDescription(PairingTexts.ADD_BUTTON_LABEL)).performScrollTo().assertIsEnabled()
         composeRule.onNode(hasContentDescription(PairingTexts.CONTINUE_BUTTON_LABEL)).assertDoesNotExist()
+    }
+
+    /** Décision Q22 (étape 43) : le dernier boîtier se renomme mais ne se retire pas, sans texte ajouté. */
+    @Test
+    fun aSingleBoxCanBeRenamedButNotRemoved() {
+        setContent(PairingUiState(boxes = listOf(row(1, "Cuisine"))))
+
+        composeRule.onNode(hasContentDescription(PairingTexts.renameDescription("Cuisine"))).assertIsEnabled()
+        composeRule.onNode(hasContentDescription(PairingTexts.removeDescription("Cuisine"))).assertDoesNotExist()
+        composeRule.onAllNodesWithText(PairingTexts.REMOVE_LABEL).assertCountEquals(0)
     }
 
     @Test

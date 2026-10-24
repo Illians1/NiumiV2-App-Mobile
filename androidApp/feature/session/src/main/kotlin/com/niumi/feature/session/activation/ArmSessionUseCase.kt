@@ -14,7 +14,6 @@ import com.niumi.core.interop.WakeScheduleInputDto
 import com.niumi.core.interop.WakeScheduleResultDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
-import com.niumi.database.SessionBox
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.toActivationPolicyInput
@@ -52,7 +51,7 @@ data class ActivationPreview(
     val blockingResult: BlockingScheduleResultDto?,
     val policy: ActivationPolicyResultDto?,
     val blockedPackages: List<BlockedPackage>,
-    /** Lot 8 : remplace `boxId`, un nom par boîtier associé, dans l'ordre de `PairedBoxStore.all()`. */
+    /** Un nom par boîtier enregistré, dans l'ordre de `PairedBoxStore.all()` : la liste courante (étape 43). */
     val boxNames: List<String>,
     val nowEpochMillis: Long,
 ) {
@@ -141,11 +140,10 @@ class ArmSessionUseCase
                 return ArmSessionResult.Failed(ActivationFailure.Blocked(policy.blockingReasons))
             }
 
-            // Point 5 de §9.2 côté commun (SPEC_CORE_KMP §10) : la liste des boîtiers est capturée
-            // et figée ici, à l'étape 1 de la transaction — jamais relue depuis le dépôt pendant
-            // la session (Lot 8).
-            val pairedBoxes = sources.pairedBoxStore.all()
-            if (pairedBoxes.isEmpty()) {
+            // Une activation sans boîtier enregistré est refusée. La liste n'est plus figée dans la
+            // session (étape 43, SPEC_CORE_KMP §2 décisions 11 et 16) : la vérification d'un scan
+            // relit l'ensemble courant de `PairedBoxStore`.
+            if (sources.pairedBoxStore.all().isEmpty()) {
                 return ArmSessionResult.Failed(
                     ActivationFailure.Blocked(
                         listOf(ActivationReasonDto(ActivationReasonCode.NO_PAIRED_BOX, null)),
@@ -168,7 +166,6 @@ class ArmSessionUseCase
                 )
             val extras =
                 AndroidSessionExtras(
-                    boxes = pairedBoxes.map { SessionBox(it.credential.boxId, it.credential.tokenSha256Hex, it.name) },
                     ringtoneKey = alarmSound.ringtoneKey,
                     vibrationEnabled = true,
                     volumeRampSeconds = alarmSound.volumeRampSeconds,

@@ -50,9 +50,9 @@ data class ScanToModifyUiState(
  * implémentations concurrentes ayant disparu.
  *
  * Aucune écriture directe : ni `AppSelectionStore`, ni `PairedBoxStore`, ni `SessionCoordinator`
- * ne sont touchés ici. Une modification de sélection ou de boîtier pendant une session est
- * interdite en amont (SPEC_CORE_KMP §2 point 11, §4) ; seule la libération écrit, et elle passe
- * entièrement par [scanHandler].
+ * ne sont touchés ici. La sélection ne se modifie pas pendant une session (SPEC_CORE_KMP §4) ; les
+ * boîtiers, si (décisions 11 et 16, étape 43), mais depuis leur propre écran. Ici, seule la
+ * libération écrit, et elle passe entièrement par [scanHandler].
  */
 @HiltViewModel
 class ScanToModifyViewModel

@@ -14,7 +14,7 @@ Cette spécification décrit l'application Android de Niumi. Elle doit permettre
 3. il confirme une session;
 4. les applications choisies restent bloquées pendant la session, dès l'activation ou dès l'instant de début choisi;
 5. l'alarme sonne à l'heure prévue;
-6. seul le scan de l'un des boîtiers NFC associés termine la session dans le parcours normal (jusqu'à dix boîtiers nommés depuis le contrat KMP 1.5, étape 42 ; figés à l'activation jusqu'à l'étape 43 — Lot 8, contrat KMP 1.4, décision du 2026-10-13);
+6. seul le scan de l'un des boîtiers NFC enregistrés au moment du scan termine la session dans le parcours normal (de un à dix boîtiers nommés depuis le contrat KMP 1.5, étape 42 ; modifiables en session depuis l'étape 43, décision Q11 du 2026-10-19 — le Lot 8 les figeait à l'activation);
 7. la fin de session arrête la sonnerie et débloque les applications.
 
 Le réveil, le blocage et le NFC appartiennent à une même session métier. Ils ne doivent pas être implémentés comme trois fonctions indépendantes.
@@ -58,7 +58,7 @@ Codex doit appliquer les décisions suivantes sans ajouter de variante cachée:
 - Une seule session peut être active.
 - Le moteur `NiumiCore` est l'unique autorité pour les transitions métier communes à Android et iOS.
 - Une session active ne peut pas être annulée ou modifiée depuis un bouton ordinaire.
-- Toute modification ou annulation après activation exige le scan de l'un des boîtiers figés à l'activation (Lot 8). **Une seule exception (Lot 7, décision du 2026-09-30) : la sonnerie et la montée progressive du volume.** Elles ne sont pas des termes de l'engagement — elles ne touchent ni l'heure du réveil, ni le blocage, ni la sortie par scan — et restent modifiables sans scan tant que la session est `ARMED` ; dès `RINGING`, elles sont figées (7.2, 10.2).
+- Toute modification ou annulation après activation exige le scan de l'un des boîtiers enregistrés au moment du scan (étape 43). Les boîtiers eux-mêmes ne sont pas des termes de l'engagement : ils s'ajoutent, se renomment et se retirent à tout moment, session comprise, sans en laisser moins d'un (SPEC_CORE_KMP §2, décisions 11 et 16). **Une seule exception (Lot 7, décision du 2026-09-30) : la sonnerie et la montée progressive du volume.** Elles ne sont pas des termes de l'engagement — elles ne touchent ni l'heure du réveil, ni le blocage, ni la sortie par scan — et restent modifiables sans scan tant que la session est `ARMED` ; dès `RINGING`, elles sont figées (7.2, 10.2).
 - Une annulation avant la sonnerie place la session dans l'état `CANCELLED`. Elle ne compte pas comme une session terminée au réveil.
 - L'alarme ne propose ni arrêt, ni répétition, ni délai.
 - L'alarme joue l'une des quatre sonneries empaquetées dans l'APK (« Cloche », « Énergique », « Oiseaux », « Piano »), en boucle jusqu'au scan, avec ou sans montée progressive du volume (2 min, 5 min, 10 min ou 15 min — resserré le 2026-10-08, voir 10.2). Défaut : « Piano », volume progressif sur 10 min (décision du 2026-10-23, révision de l'étape 40 ; 2 min du 2026-09-30 à cette date). Le choix est copié dans la session à l'activation (7.2, 7.3, 10.2).
@@ -360,11 +360,15 @@ releasingAtEpochMillis: Long?
 completedAtEpochMillis: Long?
 cancelledAtEpochMillis: Long?
 failureCode: String?
+releasedBy: ReleaseMeans?        (v6, contrat 1.5)
+disarmedAtEpochMillis: Long?     (v6, contrat 1.5)
 ```
 
 `failureCode` n'est renseigné que lorsqu'une session termine son activation dans l'état `FAILED`. Les incidents postérieurs à l'armement sont stockés séparément.
 
-**Lot 8 (boîtiers multiples) :** la liste des boîtiers associés (`PairedBoxEntity`) est copiée en entier dans la table enfant `session_box` à l'étape `ACTIVATION_REQUESTED` et figée pour la durée de la session, sur le modèle exact de `blocked_app`. `HandleValidNfcUseCase` vérifie toujours le scan contre cette liste figée, jamais contre `PairedBoxEntity` directement, afin qu'une association, un retrait ou un renommage postérieur à l'activation ne puisse pas changer la liste attendue d'une session en cours.
+**Boîtiers (étape 43, décision Q11 du 2026-10-19).** Aucune liste de boîtiers n'est attachée à la session : `HandleValidNfcUseCase` vérifie le scan contre `PairedBoxStore.all()`, l'ensemble courant de `PairedBoxEntity` lu au moment du scan, sur un appareil déverrouillé (4.4). Un boîtier ajouté après l'activation termine la session ; un boîtier retiré n'arrête plus rien. Le Lot 8 figeait la liste à l'activation dans une table `session_box`, supprimée en v6.
+
+`releasedBy` et `disarmedAtEpochMillis` (v6) portent le moyen de libération et l'instant du désarmement du contrat 1.5 (SPEC_CORE_KMP §7.1), écrits par le moteur comme les autres colonnes d'état.
 
 `ringtoneKey`, `vibrationEnabled` et `volumeRampSeconds` (`null` = volume constant) sont eux aussi copiés à `ACTIVATION_REQUESTED`, et aucune décision du moteur ne les réécrit : la session déjà persistée fait foi, jamais l'appelant (`RoomSessionStore.freezeFrom`). **Lot 7 :** `ringtoneKey` et `volumeRampSeconds` ont un unique chemin d'écriture hors activation, `SessionCoordinator.updateAlarmSound`, refusé hors de `ARMED` et avant déverrouillage (3, 10.2). `vibrationEnabled` n'en a aucun.
 
@@ -388,19 +392,7 @@ name: String, 1 à 30 caractères après trim()
 position: Int, ordre d'affichage, 0 en tête
 ```
 
-`SessionBoxEntity` (Lot 8), sur le modèle exact de `BlockedAppEntity` : la liste des boîtiers
-figée dans la session à l'activation.
-
-```text
-sessionId: String
-boxId: String
-tokenSha256: String hexadécimal
-name: String
-position: Int
-clé primaire composée: sessionId + boxId
-clé étrangère: sessionId → alarm_session.id, ON DELETE CASCADE
-index: sessionId
-```
+Le dépôt des boîtiers (`RoomPairedBoxStore`) tient deux invariants : de un à dix boîtiers (`PairedBoxLimit`, un onzième est refusé par `PairedBoxAddResult.LimitReached`), et jamais moins d'un — retirer le dernier est refusé par `PairedBoxRemoveResult.LastBoxKept`, sans rien écrire (décision Q22 du 2026-10-19, étape 43). `points` réémet la liste à chaque écriture, pour les écrans.
 
 `TechnicalEventEntity`:
 
@@ -451,14 +443,16 @@ dans une transaction ; elle est à `OFF` par défaut pour toute connexion et Roo
 que dans `onOpen()`, **après** les migrations. C'est cela, et non la pragma, qui évite que le
 `DROP TABLE alarm_session` ne déclenche le `CASCADE` des six tables enfants (`blocked_app`,
 `session_incident`, `session_event_receipt`, `session_effect_outbox`,
-`active_session_pointer` et, depuis cette version, `session_box`). `MIGRATION_4_5` se
+`active_session_pointer` et, dans cette version, `session_box`). `MIGRATION_4_5` se
 termine par `PRAGMA foreign_key_check` : toute violation fait échouer la migration plutôt que de
 livrer une base incohérente. Schéma v5 committé, migration testée depuis une base v4 peuplée
 d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé, avec un reçu, une
 ligne d'outbox, une application bloquée et un incident, pour prouver qu'aucune donnée n'est
 perdue par le `CASCADE` qui n'a pas lieu.
 
-**Contrat KMP 1.5 avant Room v6 (étape 41 du plan de refonte).** Le moteur commun écrit désormais des snapshots de `schemaVersion` 3, avec `releasedBy` et `disarmedAtEpochMillis`. Room v5 et la projection Direct Boot v4 n'ont pas encore ces colonnes : une session libérée par scan est relue sans `releasedBy`, et la façade le rétablit à `NFC_SCAN` dès que `nfcVerifiedAtEpochMillis` est renseigné (SPEC_CORE_KMP §7.1). Aucune session ne reste donc en `RELEASING`. Les deux colonnes arrivent avec Room v6 et la projection v5 (étape 43). Android ne produit ni `DISARM_REQUESTED` ni `DISARMED` avant l'étape 44 ; `DISARMED` est déjà classé parmi les états finaux (`SESSION_FINAL_STATES`), et l'écran de réveil sort alors vers l'accueil.
+**v6 (étape 43, contrat KMP 1.5).** `alarm_session` gagne `releasedBy TEXT` et `disarmedAtEpochMillis INTEGER`, nullables et sans clause `DEFAULT` (comme en v3), et `session_box` est supprimée. `MIGRATION_5_6` : ajouter les deux colonnes ; renseigner `releasedBy = 'NFC_SCAN'` pour chaque session dont `nfcVerifiedAtEpochMillis` est renseigné — avant le contrat 1.5, le scan était le seul moyen de libération (règle de lecture d'un snapshot v2, SPEC_CORE_KMP §7.1) — et le laisser nul sinon ; passer toutes les sessions à `schemaVersion = 3` ; `DROP TABLE session_box`. `alarm_session` n'est pas recréée : aucun `CASCADE` n'entre en jeu, les cinq tables enfants restantes gardent leurs lignes. Accepté en connaissance de cause : la liste figée n'est pas reversée dans `paired_box` ; un boîtier figé qui n'y serait plus — impossible depuis le Lot 8, qui fermait l'association en session — ne terminerait plus la session armée, conformément à la règle de l'ensemble courant. Schéma v6 committé, migration testée depuis une base v5 portant une session `ARMED` à deux boîtiers figés et une session `COMPLETED` scannée (`NiumiDatabaseSchemaTest`) : `session_box` absente, `paired_box` et ses noms intacts, `releasedBy` déduit.
+
+Android ne produit ni `DISARM_REQUESTED` ni `DISARMED` avant l'étape 44 ; `DISARMED` est déjà classé parmi les états finaux (`SESSION_FINAL_STATES`), et `RELEASING` vers `DISARMED` est clair, sans blocage en vigueur ni écran de réveil (`isBlockingInForce`, `requiresAlarmScreen`).
 
 ### 7.3 Snapshot Direct Boot
 
@@ -495,16 +489,17 @@ failureCode
 ringtoneKey
 vibrationEnabled
 volumeRampSeconds
-boxes
+releasedBy                  (v5)
+disarmedAtEpochMillis       (v5)
 blockedPackages
 eventReceipts
 pendingEffects
 ```
 
-**Lot 8 (boîtiers multiples).** `boxes` remplace `boxId` et `boxTokenSha256Hex` : une liste de
-`(boxId, tokenSha256Hex)`, sans les noms — la projection sert la vérification avant
-déverrouillage, pas l'affichage, et `DirectBootRoomMerge` conserve les extras de Room (noms
-compris) sans jamais les réécrire depuis la projection. `blockedPackages` conserve la paire
+**Boîtiers.** La projection ne porte plus aucun boîtier depuis la v5 (étape 43) : la vérification
+d'un scan lit l'ensemble courant de `paired_box`, et le scan exige un appareil déverrouillé (4.4).
+La projection ne sert donc plus qu'à sonner et à reconstruire la session avant déverrouillage.
+`blockedPackages` conserve la paire
 `(packageName, displayNameSnapshot)` de `BlockedAppEntity`, pas seulement le nom du package : le
 libellé figé à l'activation est requis par le titre de l'écran de blocage (§12.2, « L’application
 YouTube est bloquée », depuis le 2026-10-23 ; « {Nom de l'application} reste bloquée… » pour l'ancien overlay)
@@ -514,14 +509,16 @@ et doit rester disponible si le blocage doit être reconstruit avant déverrouil
 
 **Projection v3 (Lot 7).** `projectionSchemaVersion` passe à 3 avec `volumeRampSeconds`. Un fichier v1 ou v2 reste lisible : `volumeRampSeconds` s'y lit `null` (volume constant) et une `ringtoneKey` égale à `niumi_alarm` s'y lit comme la sonnerie par défaut, `niumi_piano` — même règle que `MIGRATION_3_4`, que la projection n'atteint pas avant la fusion. C'est ce qui permet à un réveil après redémarrage, avant tout déverrouillage, de sonner la sonnerie et la montée choisies.
 
-**Projection v4 (Lot 8).** `projectionSchemaVersion` passe à 4 avec `boxes`. Un fichier v1, v2 ou
-v3 — qui portait encore `boxId` et `boxTokenSha256Hex` à plat — se lit comme une liste d'un seul
-boîtier, sans nom : c'est le seul renseignement dont ce fichier a jamais eu besoin pour que le
-scan reconnaisse le boîtier d'origine avant déverrouillage. Seuil figé
-`PROJECTION_VERSION_WITH_MULTIPLE_BOXES = 4`, jamais « < version courante » (point de vigilance
-de l'étape 26). C'est ce qui permet à un boîtier scanné après un redémarrage sans déverrouillage,
-sur une mise à jour qui vient d'écrire une base v5 mais n'a pas encore fusionné la projection, de
-toujours terminer la session.
+**Projection v4 (Lot 8).** `projectionSchemaVersion` passait à 4 avec `boxes`, la liste des
+boîtiers figée à l'activation (`boxId` et `boxTokenSha256Hex` à plat jusqu'en v3).
+
+**Projection v5 (étape 43, contrat 1.5).** `projectionSchemaVersion` passe à 5 avec `releasedBy` et
+`disarmedAtEpochMillis`, et `boxes` disparaît. Un fichier v1 à v4 reste lisible : les clés `boxes`,
+`boxId` et `boxTokenSha256Hex` y sont ignorées, `releasedBy` et `disarmedAtEpochMillis` s'y lisent
+`null` — la façade déduit `NFC_SCAN` de `nfcVerifiedAtEpochMillis`, et aucune session n'était
+désarmée avant le contrat 1.5. Seuil figé `PROJECTION_VERSION_WITH_RELEASE_MEANS = 5`, jamais
+« < version courante ». `DirectBootRoomMerge` reporte ces deux champs dans Room comme tout champ
+écrit par le moteur.
 
 Ce snapshot est une projection partielle de Room, mais son enveloppe de session active contient tous les champs requis pour reconstruire un `SessionSnapshot` et appeler KMP avant déverrouillage. Chaque effet de `pendingEffects` conserve aussi son payload sérialisé afin de reprendre `RECORD_INCIDENT`. Il permet de reprogrammer et de déclencher l'alarme avant le premier déverrouillage après un redémarrage. Il ne contient aucune donnée de compte. Son écriture doit être atomique. Utiliser un fichier temporaire dans le même répertoire, puis un renommage, ou des préférences synchrones dédiées avec contrôle de version. Une réécriture à `domainRevision` égale, pour la même session, est idempotente; une révision inférieure pour cette même session est refusée. Une nouvelle session (autre `sessionId`) repart légitimement à une révision inférieure : la garde est scopée par `sessionId`, pas globale.
 
@@ -529,15 +526,17 @@ Les composants `directBootAware` ne doivent pas créer Room ou un dépôt qui ou
 
 **Ce que garantit réellement le contexte protégé par appareil (précision de l'étape 19).** La sûreté avant déverrouillage tient à deux choses: le composant est `directBootAware`, et aucun code de son chemin n'accède au stockage chiffré par les identifiants. Elle ne tient pas au `Context` porté par les adaptateurs: `AlarmManager`, `NotificationManager` et `startForegroundService` se comportent à l'identique avec l'un ou l'autre contexte, puisque seuls les appels de stockage changent de racine. Un `createDeviceProtectedStorageContext()` est donc utilisé **en permanence**, et non aiguillé selon l'état de déverrouillage, par `AlarmScheduler`, `AndroidPendingIntentFactory`, `ScanRequestNotifier`, le registrar de canaux de notification, le notificateur d'avertissement de §13.1 et `RingingController` — un seul jeu de liaisons, ce que §9.3 et §10.5 exigent sans ambiguïté et sans graphe parallèle. Les dépôts dont les données appartiennent légitimement au stockage chiffré par les identifiants (Room, `SetupPreferences`, `AppSelectionStore`) gardent le contexte d'application.
 
-**Garde de déverrouillage des `DataStore` (étape 19, mesuré sur appareil).** La règle ci-dessus ne vaut pas que pour Room: elle vaut pour **tout** dépôt en stockage chiffré par les identifiants. `AppSelectionStore` et `SetupPreferences` sont deux `DataStore` de ce type, et le diagnostic de §13 les lit — or ce diagnostic est rejoué par la réconciliation `LOCKED_BOOT` (§13.1), donc avant le premier déverrouillage.
+**Garde de déverrouillage des `DataStore` (étape 19, mesuré sur appareil).** La règle ci-dessus ne vaut pas que pour Room: elle vaut pour **tout** dépôt en stockage chiffré par les identifiants. `AppSelectionStore` et `SetupPreferences` sont deux `DataStore` de ce type (rejoints par `AlarmSoundPreferences` au Lot 7, puis par `WakePlanStore` — `niumi_wake_plan` — et `TimeToGetUpPreferences` — `niumi_time_to_get_up` — à l'étape 43), et le diagnostic de §13 les lit — or ce diagnostic est rejoué par la réconciliation `LOCKED_BOOT` (§13.1), donc avant le premier déverrouillage.
 
 Le dégât mesuré le 2026-09-14 sur Xiaomi 25080RABDG / Android 16 / HyperOS OS3.0 dépasse largement la lecture d'une valeur fausse: l'instance de `DataStore` créée dans cette fenêtre — où le répertoire n'existe pas encore (`Failed to ensure /data/user/0/… : mkdir failed: errno 126`) — **continue de servir un état vide après le déverrouillage, pour toute la durée de vie du processus**. La sélection d'applications de l'utilisateur devenait invisible et aucune nouvelle session ne pouvait être préparée tant que le processus n'était pas recréé. C'est une régression introduite par `SystemEventsReceiver` lui-même: avant lui, aucun composant Niumi ne tournait avant déverrouillage hors de la chaîne d'alarme.
 
-Les deux dépôts portent donc une garde construite sur le même patron que `RoomSessionStore`: le `Context` leur est fourni par un `Provider` qui n'est **jamais résolu** avant déverrouillage — la garde empêche l'instance de naître, elle ne se contente pas d'ignorer son résultat. Lectures neutres (sélection vide, préférences à leur valeur par défaut), écritures refusées (`DATASTORE_BEFORE_UNLOCK`). Aucune écriture n'a lieu avant déverrouillage en pratique: ces préférences ne changent que depuis l'interface.
+Ces dépôts portent donc une garde construite sur le même patron que `RoomSessionStore`: le `Context` leur est fourni par un `Provider` qui n'est **jamais résolu** avant déverrouillage — la garde empêche l'instance de naître, elle ne se contente pas d'ignorer son résultat. Lectures neutres (sélection vide, préférences à leur valeur par défaut, planning par défaut interrupteur éteint, aucune durée déclarée), écritures refusées (`DATASTORE_BEFORE_UNLOCK`). Aucune écriture n'a lieu avant déverrouillage en pratique: ces préférences ne changent que depuis l'interface. **Le planning lu avant déverrouillage n'est pas une extinction** : il est illisible, pas éteint, et aucun ré-armement n'a lieu avant `USER_UNLOCKED` (étape 44).
+
+**Planning et durée déclarée (étape 43).** `WakePlanStore` stocke le planning natif (`WakePlan` : interrupteur, jours ISO 1 à 7, réveil et coucher `HH:mm` ; défaut éteint, lundi à vendredi, 07:00, 22:30 — `design-plan/SPECIFICATION.md` §2, §9) ; le calcul de la prochaine occurrence reste commun (SPEC_CORE_KMP §8.4). Une valeur illisible retombe sur le défaut de son seul champ ; « aucun jour coché » est un planning valide. `TimeToGetUpPreferences` stocke la durée déclarée pour sortir du lit, parmi les onze valeurs de `SPECIFICATION.md` §7 (60 pour « 1 heure et + ») ; rien de déclaré se lit `null`, une valeur hors liste est refusée à l'écriture et ignorée à la lecture.
 
 Une sélection vide avant déverrouillage est sans conséquence: `APP_SELECTION` ne fait pas partie des six contrôles surveillés pendant `ARMED` (§13.1), et les applications bloquées d'une session active sont figées dans Room et dans la projection Direct Boot (§7.2, §7.3), jamais relues dans ces dépôts.
 
-**Exception documentée — `RoomPairedBoxStore.all()` (étape 13, reportée de `current()` au Lot 8).** Tous les dépôts Room refusent l'accès avant déverrouillage en levant (`ROOM_BEFORE_UNLOCK`), sauf la lecture des boîtiers associés, qui renvoie une liste vide sans jamais ouvrir la base. Raison : le diagnostic de §13 est rejoué pendant la réconciliation Direct Boot (raison `LOCKED_BOOT`, §13.1), et une levée y interromprait la reprogrammation de l'alarme. L'exception est sans effet sur la sûreté : le contrôle `PAIRED_BOX` ne fait pas partie des six contrôles surveillés pendant `ARMED` (§13.1), donc aucun incident faux n'est produit, et le contrat commun impose déjà que la vérification NFC d'une session armée utilise la liste figée à l'activation (SPEC_CORE_KMP §10), jamais le dépôt courant. L'écriture (`add`, `rename`, `remove`) conserve le refus strict : une association, un renommage ou un retrait n'ont lieu qu'à l'écran dédié, hors session, donc toujours après déverrouillage.
+**Exception documentée — `RoomPairedBoxStore.all()` (étape 13, reportée de `current()` au Lot 8).** Tous les dépôts Room refusent l'accès avant déverrouillage en levant (`ROOM_BEFORE_UNLOCK`), sauf la lecture des boîtiers associés, qui renvoie une liste vide sans jamais ouvrir la base. Raison : le diagnostic de §13 est rejoué pendant la réconciliation Direct Boot (raison `LOCKED_BOOT`, §13.1), et une levée y interromprait la reprogrammation de l'alarme. L'exception est sans effet sur la sûreté : le contrôle `PAIRED_BOX` ne fait pas partie des six contrôles surveillés pendant `ARMED` (§13.1), donc aucun incident faux n'est produit, et la vérification d'un scan, qui lit ce dépôt depuis l'étape 43, n'a lieu que sur un appareil déverrouillé (4.4) : un scan verrouillé, impossible par conception, serait refusé (`NO_PAIRED_BOX_MATCH`), jamais accepté à tort. `points` suit la même règle (une liste vide, sans ouvrir la base). L'écriture (`add`, `rename`, `remove`) conserve le refus strict : une association, un renommage ou un retrait n'ont lieu que depuis un écran, donc toujours après déverrouillage.
 
 ## 8. Calcul de l'heure de déclenchement
 
@@ -886,7 +885,7 @@ Le comportement de `CATEGORY_ALARM` sans son sous Ne pas déranger varie selon l
 
 ### 11.1 Association
 
-L'association se fait dans une activité au premier plan avec `NfcAdapter.enableReaderMode()`. Le parcours d'association est accessible uniquement en dehors d'une session active; l'écran d'association n'est pas atteignable pendant `PREPARING`, `ARMED`, `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` ou `RELEASING`, afin que le boîtier figé dans la session en cours ne puisse jamais être remplacé avant sa fin. Depuis le Lot 8, la règle couvre la liste entière : aucun ajout, retrait ni renommage pendant une session. La route quitte l'écran dès qu'une session est en cours ; l'écran garde par défense un affichage où la liste reste visible, toute action inactive, avec « Une session est en cours. Tes boîtiers ne peuvent pas être modifiés avant sa fin. » (15, écran 3).
+L'association se fait dans une activité au premier plan avec `NfcAdapter.enableReaderMode()`. **Depuis l'étape 43** (SPEC_CORE_KMP §2, décisions 11 et 16 ; décision Q11 du 2026-10-19), les boîtiers s'ajoutent, se renomment et se retirent à tout moment, session comprise : le scan est vérifié contre l'ensemble enregistré au moment du scan, un boîtier ajouté en session la termine, un boîtier retiré n'arrête plus rien. L'écran 3 actuel est atteignable en session depuis l'écran de session active (lien transitoire « Mes boîtiers », décision de Mehdi du 2026-10-24, jusqu'à l'étape 45) ; « Continuer » y est masqué. **Écart provisoire à la décision 11 (« sonnerie comprise »)** : de `RINGING` au scan, `MainActivity` impose l'écran de réveil, et aucun écran n'ajoute encore de boîtier pendant la sonnerie ; l'ajout depuis l'écran 8 arrive à l'étape 49 (décision Q23). Jusqu'à l'étape 42, l'association était fermée pendant toute session, la liste étant figée à l'activation (Lot 8).
 
 Format NDEF MVP:
 
@@ -902,8 +901,8 @@ Contraintes:
 - le payload ne contient ni utilisateur, ni mot de passe, ni port, ni fragment, ni encodage par pourcentage;
 - le payload ne dépasse pas 96 octets UTF-8 et ne contient aucun caractère de contrôle;
 - l'application stocke `SHA-256` des 16 octets décodés, et non le token en clair, dans Room;
-- le snapshot Direct Boot reçoit le même hash;
-- jusqu'à dix boîtiers nommés sont associés (Lot 8 ; cinq jusqu'à l'étape 42, `PairedBoxLimit.MAX = 10` depuis le contrat KMP 1.5) : chaque nom fait 1 à 30 caractères après
+- le snapshot Direct Boot ne porte plus de boîtier depuis la v5 (étape 43, 7.3) : le scan, toujours sur appareil déverrouillé (4.4), lit Room;
+- de un à dix boîtiers nommés sont associés (Lot 8 ; cinq jusqu'à l'étape 42, `PairedBoxLimit.MAX = 10` depuis le contrat KMP 1.5 ; jamais moins d'un depuis l'étape 43, `remove` répondant `PairedBoxRemoveResult.LastBoxKept` sans écrire pour le dernier, décision Q22) : chaque nom fait 1 à 30 caractères après
   `trim()`, un nom vide ou blanc est refusé ; c'est le dépôt qui tient cet invariant — `add` et
   `rename` passent le nom par `PairedBoxName.sanitize` avant tout accès à la base, écrivent la
   valeur nettoyée et lèvent `PAIRED_BOX_NAME_INVALID` pour un nom refusé, l'écran validant avec la
@@ -935,9 +934,9 @@ Résultats UI (étape 38 de la refonte, `design-plan/SPECIFICATION.md` §14, maq
 
 | Résultat | `ScanOutcome` | Effet |
 | --- | --- | --- |
-| tag valide, dans la liste figée de la session (`MATCH`) | `Accepted` | transmettre la `NfcVerificationProof` opaque avec `VALID_NFC_SCANNED`, puis exécuter les effets KMP ; la feuille se ferme avec `RELEASING` |
+| tag valide, d'un boîtier enregistré au moment du scan (`MATCH`) | `Accepted` | transmettre la `NfcVerificationProof` opaque avec `VALID_NFC_SCANNED`, puis exécuter les effets KMP ; la feuille se ferme avec `RELEASING` |
 | tag lu sans NDEF ni URI, ou URI refusée par le parseur commun (autre schéma, autre hôte, identifiant ou token malformé) | `NotANiumiSpot` | « Ce n’est pas un Niumi Spot. » / « Scanne un Niumi Spot que tu as enregistré. » / « Réessayer » ; vibration courte d'erreur |
-| Niumi Spot hors de la liste figée (`NO_PAIRED_BOX_MATCH`, Lot 8 — y compris un boîtier associé après l'activation, jusqu'à l'étape 43), ou d'une version de protocole non prise en charge | `UnknownBox` | « Ce Niumi Spot n’est pas enregistré. » / « Scanne un Niumi Spot que tu as enregistré. » / « Réessayer » ; vibration courte d'erreur |
+| Niumi Spot non enregistré au moment du scan (`NO_PAIRED_BOX_MATCH` — un boîtier retiré pendant la session compris ; un boîtier ajouté après l'activation est accepté depuis l'étape 43), ou d'une version de protocole non prise en charge | `UnknownBox` | « Ce Niumi Spot n’est pas enregistré. » / « Scanne un Niumi Spot que tu as enregistré. » / « Réessayer » ; vibration courte d'erreur |
 | lecture interrompue (`IOException`) ou NDEF corrompu (`FormatException`) | `Unreadable` | « Ton Niumi Spot n’a pas pu être lu. » / « Rapproche ton téléphone et réessaie. » / « Réessayer » |
 | NFC désactivé, au toucher de « Scanner » ou pendant « Prêt à scanner » | — | « Le NFC est coupé. » / « Active-le pour scanner ton Niumi Spot. » / « Ouvrir les réglages » (`Settings.ACTION_NFC_SETTINGS`) |
 | matériel absent | — | appareil non pris en charge, sans bouton de scan (10.4) |
@@ -959,7 +958,7 @@ Ordre logique:
 
 1. vérifier que l'état est `ARMED`, `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`;
 2. si l'état est `ARMED`, réconcilier l'heure et AlarmManager avant le scan;
-3. créer l'identifiant d'événement et l'horodatage, puis valider le boîtier scanné contre la liste `session_box` de la session active (jamais contre `PairedBoxEntity`), avec le parseur et le vérificateur communs, qui retournent une `NfcVerificationProof` opaque liée à la session et à la révision attendue — le `boxId` qu'elle porte est celui du boîtier de la liste qui a correspondu (Lot 8);
+3. créer l'identifiant d'événement et l'horodatage, puis valider le boîtier scanné contre l'ensemble courant `PairedBoxStore.all()`, lu à ce moment-là, sur un appareil déverrouillé (4.4 ; étape 43 — le Lot 8 lisait la liste `session_box` figée à l'activation), avec le parseur et le vérificateur communs, qui retournent une `NfcVerificationProof` opaque liée à la session et à la révision attendue — le `boxId` qu'elle porte est celui du boîtier enregistré qui a correspondu;
 4. envoyer `VALID_NFC_SCANNED` avec cette preuve;
 5. persister atomiquement `nfcVerifiedAtEpochMillis`, `releaseTarget`, `RELEASING`, le reçu et l'outbox;
 6. publier la même `domainRevision` dans le snapshot Direct Boot et Room quand Room est accessible;
@@ -978,7 +977,7 @@ Les effets requis pour `RELEASE_SUCCEEDED` sont l'annulation de l'alarme (étape
 
 Si un effet requis échoue alors que sa précondition tient toujours, envoyer `RELEASE_FAILED`, enregistrer `RELEASE_PARTIAL_FAILURE` et conserver `RELEASING`. `SessionReconciler` compare l'état natif au snapshot et reprend uniquement les effets manquants, sans réappliquer un blocage déjà retiré. L'application ne présente pas la session comme terminée avant `RELEASE_SUCCEEDED`.
 
-Si le même événement est traité de nouveau, le registre retourne le reçu sans rappeler le moteur ni répéter les effets déjà satisfaits. Si Room n'est pas accessible avant déverrouillage, le snapshot, son registre et son outbox font foi. La mise à jour Room est différée jusqu'à `USER_UNLOCKED` ou au prochain démarrage.
+Si le même événement est traité de nouveau, le registre retourne le reçu sans rappeler le moteur ni répéter les effets déjà satisfaits. Si Room n'est pas accessible avant déverrouillage, le snapshot, son registre et son outbox font foi pour la reprise des effets ; un scan, lui, n'a jamais lieu avant déverrouillage (4.4), et la liste des boîtiers vient toujours de Room (étape 43). La mise à jour Room est différée jusqu'à `USER_UNLOCKED` ou au prochain démarrage.
 
 ## 12. Blocage des applications
 
@@ -1256,7 +1255,7 @@ L'écran n'affiche qu'une action principale à la fois, en commençant par le pr
 | batterie optimisée | Les restrictions de batterie peuvent geler Niumi et désactiver le blocage sans prévenir. Autorise Niumi à fonctionner sans restriction. |
 | Niumi verrouillé dans les récents | Sur ce téléphone, « Tout effacer » dans les applications récentes arrête le blocage, sauf si Niumi y est verrouillé. Ouvre les applications récentes, appuie longuement sur Niumi et touche le cadenas. C'est à faire une seule fois. |
 
-**Boîtiers associés (Lot 8, étape 31).** Le contrôle s'intitule « Boîtiers associés » ; son action est « Associer un boîtier » en échec et « Gérer mes boîtiers » une fois satisfait (exception des étapes de parcours, ci-dessus). Satisfait, la ligne énonce le nombre plutôt que le seul intitulé : « 1 boîtier associé », « 3 boîtiers associés ». Le nombre vient de `ReadinessReport.pairedBoxCount`, celui-là même que la politique commune juge (`NO_PAIRED_BOX` sous 1, `TOO_MANY_PAIRED_BOXES` au-delà de 5).
+**Boîtiers associés (Lot 8, étape 31).** Le contrôle s'intitule « Boîtiers associés » ; son action est « Associer un boîtier » en échec et « Gérer mes boîtiers » une fois satisfait (exception des étapes de parcours, ci-dessus). Satisfait, la ligne énonce le nombre plutôt que le seul intitulé : « 1 boîtier associé », « 3 boîtiers associés ». Le nombre vient de `ReadinessReport.pairedBoxCount`, celui-là même que la politique commune juge (`NO_PAIRED_BOX` sous 1, `TOO_MANY_PAIRED_BOXES` au-delà de 10 depuis l'étape 42, 5 auparavant).
 
 **Recours système (étape 12b, précisé à l'étape 16).** Les `Intent` de réglages ne sont jamais construits par `DeviceReadinessChecker` : celui-ci ne décrit que le recours, et la traduction en `Intent` appartient à l'appelant.
 
@@ -1512,23 +1511,23 @@ Le bouton d'export est « Exporter le diagnostic ». Il ouvre un `ACTION_SEND` t
 
 **Lot 8 — boîtiers multiples (écrans 2, 3, 6, 7 et 12, étape 31).** Décisions du 2026-10-13 (conception `docs/superpowers/specs/2026-10-13-boitiers-multiples-design.md` §5), précisées le 2026-10-17.
 
-- **Écran 3 « Mes boîtiers ».** Titre « Mes boîtiers ». Liste des boîtiers associés, par position : nom, puis préfixe de huit caractères du `boxId` (« 550e8400… ») ; ni empreinte ni identifiant complet (16). Chaque ligne porte deux actions textuelles, « Renommer » et « Retirer », décrites à TalkBack « Renommer {nom} » et « Retirer {nom} » ; la liste annonce sa taille et la position de chaque ligne (sémantique de collection). « Retirer » agit sans confirmation : retirer le dernier boîtier est permis hors session, le diagnostic refusera simplement l'activation.
-- **Ajout.** Le bouton « Ajouter un boîtier » active la lecture : l'écran affiche l'instruction « Approche ton boîtier Niumi du dos de ton téléphone. » et un bouton « Annuler » qui l'arrête. Sans aucun boîtier associé, la lecture est active dès l'ouverture, comme à la première configuration (décision du 2026-10-17) ; avec au moins un boîtier, le Reader Mode n'est actif qu'après ce bouton, pour qu'un renommage ou une simple consultation ne déclenche aucun scan. Le bouton est masqué dès cinq boîtiers, remplacé par « 5 boîtiers maximum. ». Payload valide d'un boîtier nouveau : la lecture s'arrête et un dialogue « Nouveau boîtier » s'ouvre, champ « Nom » prérempli « Boîtier {n} », où `n` est le plus petit entier qu'aucun boîtier associé ne porte déjà sous ce nom (décision du 2026-10-17 : après le retrait de « Boîtier 2 » parmi trois, la proposition suivante est « Boîtier 2 », jamais un second « Boîtier 3 ») ; « Ajouter » écrit, « Annuler » n'écrit rien. Succès : « Boîtier ajouté. ». Boîtier déjà présent : « Ce boîtier est déjà associé. », sans dialogue ni écriture. Payload non Niumi, tag illisible, NFC absent ou désactivé : textes de 11.1 et 11.2 inchangés. Un scan reçu pendant qu'un dialogue est ouvert est ignoré.
+- **Écran 3 « Mes boîtiers ».** Titre « Mes boîtiers ». Liste des boîtiers associés, par position : nom, puis préfixe de huit caractères du `boxId` (« 550e8400… ») ; ni empreinte ni identifiant complet (16). Chaque ligne porte deux actions textuelles, « Renommer » et « Retirer », décrites à TalkBack « Renommer {nom} » et « Retirer {nom} » ; la liste annonce sa taille et la position de chaque ligne (sémantique de collection). « Retirer » agit sans confirmation. Depuis l'étape 43 (décision Q22 ; décision de Mehdi du 2026-10-24 pour cet écran transitoire), « Retirer » n'apparaît pas quand il ne reste qu'un boîtier, sans texte ajouté, et le dépôt refuse de toute façon le dernier (`LastBoxKept`) ; jusque-là, retirer le dernier boîtier était permis hors session. La feuille de confirmation et le texte « Tu dois garder au moins un Niumi Spot. » arrivent avec l'écran 12 › Niumi Spots (étape 48).
+- **Ajout.** Le bouton « Ajouter un boîtier » active la lecture : l'écran affiche l'instruction « Approche ton boîtier Niumi du dos de ton téléphone. » et un bouton « Annuler » qui l'arrête. Sans aucun boîtier associé, la lecture est active dès l'ouverture, comme à la première configuration (décision du 2026-10-17) ; avec au moins un boîtier, le Reader Mode n'est actif qu'après ce bouton, pour qu'un renommage ou une simple consultation ne déclenche aucun scan. Le bouton est masqué dès dix boîtiers (cinq jusqu'à l'étape 42), remplacé par « 10 boîtiers maximum. ». Payload valide d'un boîtier nouveau : la lecture s'arrête et un dialogue « Nouveau boîtier » s'ouvre, champ « Nom » prérempli « Boîtier {n} », où `n` est le plus petit entier qu'aucun boîtier associé ne porte déjà sous ce nom (décision du 2026-10-17 : après le retrait de « Boîtier 2 » parmi trois, la proposition suivante est « Boîtier 2 », jamais un second « Boîtier 3 ») ; « Ajouter » écrit, « Annuler » n'écrit rien. Succès : « Boîtier ajouté. ». Boîtier déjà présent : « Ce boîtier est déjà associé. », sans dialogue ni écriture. Payload non Niumi, tag illisible, NFC absent ou désactivé : textes de 11.1 et 11.2 inchangés. Un scan reçu pendant qu'un dialogue est ouvert est ignoré.
 - **Nom.** Dialogues « Nouveau boîtier » et « Renommer le boîtier » (« Renommer » / « Annuler »), champ « Nom » avec un compteur « {longueur}/30 ». Le bouton de confirmation reste inactif tant que `PairedBoxName.sanitize` refuse le nom (vide, blanc, plus de 30 caractères après `trim()`) : l'écran ne fait qu'empêcher l'appel, le dépôt reste l'autorité (11.1).
-- **Session en cours.** Liste visible, toute action inactive, dialogues fermés, lecture arrêtée, et « Une session est en cours. Tes boîtiers ne peuvent pas être modifiés avant sa fin. » (11.1). Le dialogue « Remplacer le boîtier actuel ? » a disparu à l'étape 30.
-- « Continuer » reste affiché dès qu'un boîtier est associé.
+- **Session en cours (étape 43).** L'écran s'ouvre depuis l'écran 7 par le lien « Mes boîtiers » (transitoire, jusqu'à l'étape 45). Ajout, renommage et retrait restent actifs ; une session qui démarre n'interrompt ni la lecture ni un dialogue. Seul « Continuer » est masqué : la suite de la mise en route n'a rien à préparer pendant une session (décision de Mehdi du 2026-10-24). Jusqu'à l'étape 42 : liste visible, toute action inactive, et « Une session est en cours. Tes boîtiers ne peuvent pas être modifiés avant sa fin. », texte supprimé. Le dialogue « Remplacer le boîtier actuel ? » a disparu à l'étape 30.
+- « Continuer » reste affiché dès qu'un boîtier est associé, hors session.
 - **Écran 2.** Contrôle « Boîtiers associés » (13). Sans objet depuis l'étape 36 de la refonte : l'écran 2 · Autorisations n'affiche plus ce contrôle, que le récapitulatif nomme s'il refuse l'activation.
 - **Écran 6.** La ligne s'intitule « Boîtiers associés » et liste les noms dans l'ordre, séparés par « , » (« Salle de bain, Cuisine »). Rappel d'engagement : « Seul le scan d'un de tes boîtiers terminera la session. »
-- **Écran 7.** Même rappel d'engagement que l'écran 6 (décision du 2026-10-17, la conception ne visait que l'écran 6).
-- **Écran 12.** Le contrôle est nommé « Boîtiers associés » ; l'export nomme chaque boîtier figé (17).
+- **Écran 7.** Même rappel d'engagement que l'écran 6 (décision du 2026-10-17, la conception ne visait que l'écran 6). Depuis l'étape 43, un lien « Mes boîtiers » ouvre l'écran 3 en session, au-dessus de « Voir le diagnostic » ; transitoire, il disparaît avec l'écran 7 à l'étape 45.
+- **Écran 12.** Le contrôle est nommé « Boîtiers associés » ; l'export nomme chaque boîtier enregistré au moment de l'export (17).
 - Les textes de scan des écrans 7, 8, 9 et 11 (« Scanne ton boîtier Niumi… ») ne changent pas : ils restent vrais avec plusieurs boîtiers. Ceux de l’écran 8 sont remplacés à l’étape 38 de la refonte (« Rejoins ton Niumi Spot », 10.4).
-- **Écran 13.** Section « Boîtiers » (seuls les boîtiers figés à l'activation terminent la session) et limite du NFC lu désactivé sur les écrans 8 et 9 juste après un redémarrage (11.2), écrites après mesure le 2026-10-18.
+- **Écran 13.** Section « Boîtiers » (n'importe quel boîtier enregistré au moment du scan termine la session, modifiable même en session, il en reste toujours au moins un — réécrite à l'étape 43) et limite du NFC lu désactivé sur les écrans 8 et 9 juste après un redémarrage (11.2), écrites après mesure le 2026-10-18.
 
 **Écrans 9 et 11 (étape 15).** L'écran 9 ne porte aucune action en dehors du scan : ni bouton d'annulation, ni confirmation, ni chemin de retour qui libérerait quoi que ce soit (3, 10.2). Son texte est :
 
 > Scanne ton boîtier Niumi pour annuler ou modifier ta session. Tes applications resteront bloquées jusqu'au scan.
 
-Un boîtier inconnu et un tag illisible ont chacun leur message et ne changent aucun état (11.2, SPEC_CORE_KMP 4). L'écran 11 n'est atteint qu'après un état final `CANCELLED`, donc après `RELEASE_SUCCEEDED` (11.3) : il peut affirmer que les applications sont débloquées sans mentir. Ses libellés sont « Session annulée » et « Préparer un nouveau réveil », ce dernier ramenant au diagnostic, entrée du parcours de préparation.
+Un boîtier inconnu et un tag illisible ont chacun leur message et ne changent aucun état (11.2, SPEC_CORE_KMP 4). Depuis l'étape 43 (texte de Mehdi du 2026-10-24), le boîtier non enregistré au moment du scan affiche « Ce Niumi Spot n'est pas connu. Rien n'a été modifié. », qui remplace « Ce boîtier n'est pas celui de ta session. Rien n'a été modifié. », devenu faux sans liste figée. L'écran 11 n'est atteint qu'après un état final `CANCELLED`, donc après `RELEASE_SUCCEEDED` (11.3) : il peut affirmer que les applications sont débloquées sans mentir. Ses libellés sont « Session annulée » et « Préparer un nouveau réveil », ce dernier ramenant au diagnostic, entrée du parcours de préparation.
 
 L'annulation par scan n'est pas fonctionnelle à l'étape 15 : `HandleValidNfcUseCase` arrive à l'étape 18. Jusque-là l'écran 9 délègue à un handler qui ignore tout scan, ce qui est le comportement attendu d'un scan non validé (SPEC_CORE_KMP 4) et n'annonce aucun succès.
 
@@ -1636,11 +1635,12 @@ Ajouter un écran de diagnostic exportable sous forme de texte après action exp
 
 **Forme de l'export (étape 16).** Le contexte d'appareil ouvre le texte ; une ligne d'événement ne le répète que s'il **diffère** de cet en-tête, ce qui n'arrive qu'après une mise à jour — sinon 200 lignes répéteraient la même constante. Le hash du token ne traverse **jamais** le modèle de données de l'export : il n'y est pas transporté, plutôt que transporté puis masqué à l'affichage — on ne divulgue pas ce qu'on ne reçoit pas.
 
-**Lot 8 (boîtiers multiples).** La ligne « Boîtier » devient une ligne par boîtier de la liste
-figée de la session, dans l'ordre de `session_box` : nom, puis `boxId` tronqué à ses huit
-premiers caractères entre parenthèses, assez pour distinguer deux boîtiers dans un échange
-d'assistance. Une session sans boîtier figé (projection ou base corrompue) n'exporte aucune
-ligne « Boîtier », jamais une ligne vide.
+**Lot 8 (boîtiers multiples), revu à l'étape 43.** La ligne « Boîtier » devient une ligne par
+boîtier enregistré au moment de l'export, dans l'ordre de `PairedBoxStore.all()` — ceux qu'un scan
+accepterait ; le Lot 8 exportait la liste figée de la session, supprimée à l'étape 43 : nom, puis
+`boxId` tronqué à ses huit premiers caractères entre parenthèses, assez pour distinguer deux
+boîtiers dans un échange d'assistance. Les boîtiers ne sont exportés qu'avec une session ; aucun
+boîtier enregistré, aucune ligne « Boîtier », jamais une ligne vide.
 
 ## 18. Gestion des erreurs
 
@@ -1722,12 +1722,13 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - blocage différé (Lot 6) : programmation, annulation et reprogrammation idempotentes du début du blocage, avec un code de requête distinct du réveil et du watchdog ; `BlockingStartHandler` (gardes de session, de révision et d'illisibilité, puis dispatch de `BLOCKING_START_ELAPSED`) ; réconciliation d'une session `ARMED` en attente de blocage (reprogrammation si l'alarme manque, `BLOCKING_START_ELAPSED` à l'heure et au-delà, `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes, y compris depuis le coordinateur Direct Boot) ; projection de blocage inactive sur `ARMED` tant que `blockingAppliedAtEpochMillis` est nul et active ensuite, en Room comme en Direct Boot ; relecture du dernier package au premier plan quand la projection devient active ; migration Room 2→3 et lecture d'une projection Direct Boot v1 comme blocage immédiat ; effets requis de l'activation selon le `blockingSchedule` ; un exécuteur lié pour chaque valeur de `SessionEffectKindDto`.
 - service de garde de session (12.5) : `BlockingGuardPolicy` (gardé exactement sur `isSessionInProgress`, phase d'après `isBlockingInForce` puis l'état, `RINGING`, `AWAITING_SCAN` et `RELEASING` de l'alarme au scan, rien sur un snapshot `null`, arrêt après relance sans session, rien sur un snapshot illisible, relecture des extras), `BlockingGuardWatcher` (une seule commande par phase, refus journalisé puis rejoué, arrêt d'un service absent non journalisé), textes de la notification propre à la garde, `BlockingGuardNotificationWatch` (retour seulement en attente de scan), canal d'importance basse, `isSessionDark` égal à `isBlockingInForce` sur tous les états;
 - boîtiers multiples (Lot 8) : `PairedBoxName.sanitize` (trim, vide ou blanc refusé, 30 gardé, 31 refusé) ; `RoomPairedBoxStore` (ajout, doublon, dixième accepté et onzième refusé depuis l'étape 42, renommage, retrait avec renumérotation des positions, ordre) sous la garde de déverrouillage (`all()` vide, écritures refusées) ; mapping aller-retour `boxes` de Room et de la projection Direct Boot, `freezeFrom` qui fige la liste comme la sonnerie ; lecture d'une projection v1, v2 ou v3 comme une liste d'un seul boîtier, sans nom ; scan qui reconnaît n'importe quel boîtier de la liste figée, y compris le dernier de cinq, et qui refuse un boîtier associé après l'activation ou une liste figée vide sans lever ; `AndroidDeviceReadinessChecker` sur 0, 1, 5 et 6 boîtiers associés.
+- ensemble courant des boîtiers (étape 43) : scan vérifié contre `PairedBoxStore.all()` — boîtier ajouté après l'activation accepté, boîtier retiré pendant la session refusé, ensemble vide refusé sans lever (`HandleValidNfcUseCaseTest`) ; `RoomPairedBoxStore.remove` qui refuse le dernier (`LastBoxKept`) et un inconnu (`Unknown`) sans écrire, `points` vide avant déverrouillage sans ouvrir la base ; mapping aller-retour de `releasedBy` et `disarmedAtEpochMillis` dans Room et la projection v5, lecture d'un fichier v3 réel et d'un v4 à `boxes` ignorée ; `RELEASING` vers `DISARMED` clair, sans blocage ni écran de réveil (`SessionStatesTest`, `BlockingGuardPolicyTest`, `LauncherDestinationTest`) ; `WakePlan` et durée déclarée (décodage champ par champ, onze durées, garde de déverrouillage dans `DataStoreUnlockGuardTest`) ; écran 3 sans verrou en session, « Continuer » masqué, dernier boîtier sans « Retirer ».
 
 `feature`:
 
 - impossibilité de confirmer si un contrôle bloquant échoue;
-- écran d'association et sélecteur d'applications inaccessibles pendant une session active;
-- scan vérifié contre la liste `session_box` figée de la session active, refusé si le dépôt de boîtiers a changé depuis l'activation (Lot 8);
+- sélecteur d'applications inaccessible pendant une session active ; écran d'association ouvert en session depuis l'étape 43, « Continuer » masqué (jusqu'à l'étape 42 : inaccessible lui aussi);
+- scan vérifié contre l'ensemble courant des boîtiers enregistrés, lu au moment du scan (étape 43 ; le Lot 8 le vérifiait contre la liste `session_box` figée à l'activation);
 - absence d'action d'arrêt sur l'écran de sonnerie : depuis l'étape 38 de la refonte, liste blanche des nœuds cliquables par état, chacun relié à une seule action qui ne touche pas la session (`AlarmScreenActionsTest`, instrumenté, qui remplace `AlarmScreenNoStopActionTest`) ; feuille de scan qui pilote le Reader Mode, échecs, retour du NFC et aucune écriture de session (`AlarmViewModelTest`) ; table des échecs (`ScanOutcomeMappingTest`, `AlarmTextsTest`);
 - retour des réglages et nouveau diagnostic;
 - messages d'erreur NFC;
@@ -1736,7 +1737,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - feuille « Sonnerie » (étape 40 de la refonte, révisée le 2026-10-23) : textes recopiés, apostrophe typographique, tutoiement, quatre libellés de durée (`RingtoneTextsTest`) ; résumé en deux parties nom/détail, détail absent sans montée, défaut « Progressive · 10 min », assainissement avant résumé (`AlarmSoundTextsTest`) ; mode préférence puis session, allumer l'interrupteur propose 600, éteindre écrit `null` (préférence et session), `volumePercent` chargé (`RingtoneViewModelTest`) ; quatre sons et quatre segments exposés en radio, interrupteur qui masque sous-ligne et barre ou propose 10 min, bulle du volume ouverte au toucher et fermée par un second toucher (le toucher extérieur reste manuel), croix qui ferme, contrôles d'accessibilité (`RingtoneSheetTest`, instrumenté) ; seules les annonces du flux d'alarme ou sans flux font relire le volume (`AlarmVolumeBroadcastsTest`), une annonce relit pourcentage et message zéro sans relire la session (`RingtoneViewModelTest`) ; interrupteur de ligne et barre segmentée (`NiumiComponentsSemanticsTest`), jetons 44 × 26 et 48/14/4/40/10 (`NiumiShapesAndDimensTest`) ;
 - écran 1 · Présentation (étape 35 de la refonte) : deux panneaux, retour du panneau 2 au panneau 1, accusé de lecture écrit une seule fois par « Configurer Niumi », ouverture d'elle-même tant que l'accusé n'est pas lu (`PresentationViewModelTest`, `PresentationScreenTest`, `HomeViewModelTest`). L'avertissement sur l'absence de secours logiciel avant la première activation, testé jusque-là, a disparu avec l'onboarding (décision du 2026-10-20, voir 3);
 - blocage différé (Lot 6) : « Maintenant » par défaut sur l'écran 5, instant de début recalculé à chaque changement et à chaque `ON_RESUME`, continuation refusée si l'instant n'est pas strictement antérieur au réveil ; `ArmSessionUseCase` transmet le `blockingSchedule` calculé, jamais l'heure saisie, et refuse `BLOCKING_START_NOT_BEFORE_TRIGGER` ; écran 6 et écran 7 selon le `blockingSchedule` et `blockingAppliedAtEpochMillis`.
-- boîtiers multiples (Lot 8) : `ArmSessionUseCase` fige tous les boîtiers associés dans l'ordre, refuse l'activation sans boîtier, ne fige pas un boîtier retiré hors session ; export du diagnostic qui liste chaque boîtier figé par son nom et huit caractères, jamais le hash ; écran 3 minimal qui ajoute un boîtier nommé et refuse un doublon sans dialogue de remplacement. Étape 31 : écran 3 complet (liste par position, nom proposé « Boîtier {n} » au plus petit `n` libre, nom refusé sans écriture, ajout, renommage, retrait, lecture active seulement après « Ajouter un boîtier » sauf sans aucun boîtier, scan ignoré pendant un dialogue, bouton masqué à cinq, actions inopérantes pendant une session) ; détail satisfait du diagnostic au singulier et au pluriel ; relecture du NFC des écrans 8 et 9 sur un état stable, qui relance la lecture sans rejournaliser `NFC_DISABLED`.
+- boîtiers multiples (Lot 8) : `ArmSessionUseCase` fige tous les boîtiers associés dans l'ordre, refuse l'activation sans boîtier, ne fige pas un boîtier retiré hors session ; export du diagnostic qui liste chaque boîtier figé par son nom et huit caractères, jamais le hash ; écran 3 minimal qui ajoute un boîtier nommé et refuse un doublon sans dialogue de remplacement. Étape 31 : écran 3 complet (liste par position, nom proposé « Boîtier {n} » au plus petit `n` libre, nom refusé sans écriture, ajout, renommage, retrait, lecture active seulement après « Ajouter un boîtier » sauf sans aucun boîtier, scan ignoré pendant un dialogue, bouton masqué à cinq, actions inopérantes pendant une session — à dix et actives en session depuis les étapes 42 et 43) ; détail satisfait du diagnostic au singulier et au pluriel ; relecture du NFC des écrans 8 et 9 sur un état stable, qui relance la lecture sans rejournaliser `NFC_DISABLED`.
 
 ### 19.2 Tests instrumentés
 
@@ -1751,7 +1752,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - migration Room 2→3 depuis une base v2 peuplée (Lot 6);
 - migration Room 3→4 depuis une base v3 peuplée d'une session en `niumi_alarm`, et modification de la sonnerie d'une session `ARMED` relue dans Room et dans la projection Direct Boot (Lot 7);
 - démarrage du service et lecture réelle d'une sonnerie autre que celle par défaut, avec montée progressive (Lot 7);
-- migration Room 4→5 depuis une base v4 peuplée d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé, avec reçu, outbox, application bloquée et incident (Lot 8) ; `RoomPairedBoxStore` (ajout, doublon, dixième accepté et onzième refusé depuis l'étape 42, renommage, retrait, ordre) ; parité Room / Direct Boot de la liste figée, noms compris côté Room.
+- migration Room 4→5 depuis une base v4 peuplée d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé, avec reçu, outbox, application bloquée et incident (Lot 8) ; `RoomPairedBoxStore` (ajout, doublon, dixième accepté et onzième refusé depuis l'étape 42, renommage, retrait, ordre) ; parité Room / Direct Boot de la liste figée, noms compris côté Room. Étape 43 : migration Room 5→6 depuis une base v5 portant une session `ARMED` à deux boîtiers figés et une session `COMPLETED` scannée (`session_box` supprimée, noms de `paired_box` conservés, `releasedBy` déduit, schéma 3) ; `RoomPairedBoxStore` (dernier refusé, inconnu, flux `points` réémis à chaque écriture) ; fusion Direct Boot qui reporte `releasedBy` et `disarmedAtEpochMillis` ; `DataStore` du planning et de la durée déclarée écrits et relus réellement.
 
 - service de garde de session (12.5) : premier plan réel avec sa notification et l'heure dans le titre, reprise de la notification de sonnerie puis de celle de la demande de scan sous leurs identifiants, sans reste de la sienne, rien de nouveau en `RELEASING`, arrêt sur demande, arrêt seul quand il est relancé sans commande et sans session (`BlockingGuardServiceInstrumentedTest`, dans `:app`, seul graphe complet).
 
@@ -1919,10 +1920,10 @@ Le MVP est accepté si tous les critères suivants sont vrais:
 - ni une base antérieure à v4, ni une projection Direct Boot antérieure à v3, ni une clé inconnue ne rendent le réveil muet (Lot 7);
 - la pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (Lot 7);
 - les limites mesurées du Lot 7 sont écrites dans l'aide et `LIMITES.md` (Lot 7);
-- le scan de n'importe lequel des boîtiers figés à l'activation termine ou annule la session ; un boîtier hors de cette liste est refusé sans effet (Lot 8);
-- jusqu'à dix boîtiers nommés sont associés (contrat KMP 1.5, étape 42) ; un onzième et un doublon sont refusés au dépôt ; aucun ajout, retrait ni renommage pendant une session (Lot 8);
-- ni une base antérieure à v5, ni une projection Direct Boot antérieure à v4 ne perdent le boîtier figé d'une session en cours (Lot 8);
-- ni l'écran, ni l'export, ni le journal n'exposent une empreinte de token ; l'export nomme chaque boîtier figé avec huit caractères de son identifiant (Lot 8);
+- le scan de n'importe lequel des boîtiers enregistrés au moment du scan termine ou annule la session ; un boîtier non enregistré, ou retiré pendant la session, est refusé sans effet (étape 43 ; Lot 8 : liste figée à l'activation);
+- de un à dix boîtiers nommés sont associés (contrat KMP 1.5, étape 42) ; un onzième, un doublon et le retrait du dernier sont refusés au dépôt ; ajout, renommage et retrait restent possibles pendant une session (étape 43);
+- ni une base antérieure à v6, ni une projection Direct Boot antérieure à v5 ne perdent une session en cours ni les boîtiers enregistrés (Lots 8 et 13);
+- ni l'écran, ni l'export, ni le journal n'exposent une empreinte de token ; l'export nomme chaque boîtier enregistré avec huit caractères de son identifiant (Lot 8, étape 43);
 - les limites mesurées du Lot 8 sont écrites dans l'aide et `LIMITES.md` (Lot 8);
 - quand le réveil sonne, aucun écran n'est imposé, verrouillé ou non ; la notification de sonnerie est lisible sur l'écran de verrouillage et ouvre l'écran de réveil une fois le téléphone déverrouillé (Lot 9);
 - une notification de sonnerie écartée revient dans les 10 s ; l'icône de Niumi mène à l'écran de réveil pendant tout état de scan (Lot 9);

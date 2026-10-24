@@ -1,5 +1,6 @@
 package com.niumi.database.mapping
 
+import com.niumi.core.domain.ReleaseMeans
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
@@ -8,7 +9,6 @@ import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
-import com.niumi.database.SessionBox
 
 /**
  * Fixtures propres à `:core:database` : les fixtures de `:shared:core` (`SessionFixtures.kt`)
@@ -56,7 +56,11 @@ internal object SessionSnapshotDtoFixtures {
         failureCode = null,
     )
 
-    /** Toutes les colonnes nullables renseignées, chacune à une valeur distincte. */
+    /**
+     * Toutes les colonnes nullables renseignées, chacune à une valeur distincte. `releasedBy` vaut
+     * `EMERGENCY_EXIT`, jamais la valeur que la façade déduirait de `nfcVerifiedAtEpochMillis` : un
+     * mapper qui l'oublierait relirait `NFC_SCAN` et l'aller-retour échouerait (contrat 1.5).
+     */
     internal fun fullyPopulatedSnapshot(
         sessionId: String = "33333333-3333-3333-3333-333333333333",
         revision: Long = 7,
@@ -76,6 +80,8 @@ internal object SessionSnapshotDtoFixtures {
         completedAtEpochMillis = 1_700_000_007_000L,
         cancelledAtEpochMillis = 1_700_000_008_000L,
         failureCode = failureCode,
+        releasedBy = ReleaseMeans.EMERGENCY_EXIT,
+        disarmedAtEpochMillis = 1_700_000_009_000L,
     )
 
     /**
@@ -111,12 +117,8 @@ internal object SessionSnapshotDtoFixtures {
         failureCode = failureCode,
     )
 
-    // Une valeur par défaut par champ d'`AndroidSessionExtras` : chaque test ne nomme que ce qu'il
-    // fait varier, ce qui vaut mieux ici que la limite de paramètres.
-    @Suppress("LongParameterList")
+    // Une valeur par défaut par champ d'`AndroidSessionExtras` : chaque test ne nomme que ce qu'il fait varier.
     internal fun extras(
-        boxes: List<SessionBox> =
-            listOf(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), "Boîtier 1")),
         ringtoneKey: String = "niumi_default",
         vibrationEnabled: Boolean = true,
         volumeRampSeconds: Int? = 120,
@@ -126,7 +128,6 @@ internal object SessionSnapshotDtoFixtures {
                 BlockedPackage("com.example.second", "Deuxième application"),
             ),
     ) = AndroidSessionExtras(
-        boxes,
         ringtoneKey,
         vibrationEnabled,
         volumeRampSeconds,

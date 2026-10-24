@@ -52,8 +52,7 @@ class RoomSessionStoreCommitTest {
     fun secondDecisionPreservesFrozenExtrasEvenIfCallerSuppliesDifferentOnes() =
         runTest {
             val sessionId = "22222222-2222-2222-2222-222222222222"
-            val originalExtras =
-                RoomTestFixtures.extras(boxes = listOf(SessionBox("original-box", "a".repeat(64), "Boîtier 1")))
+            val originalExtras = RoomTestFixtures.extras()
             store.commitDecision(
                 StoredDecision(
                     RoomTestFixtures.preparingSnapshot(sessionId, revision = 1),
@@ -65,7 +64,6 @@ class RoomSessionStoreCommitTest {
 
             val tamperedExtras =
                 RoomTestFixtures.extras(
-                    boxes = listOf(SessionBox("different-box-should-be-ignored", "b".repeat(64), "Boîtier 1")),
                     ringtoneKey = "niumi_oiseaux",
                     volumeRampSeconds = 30,
                 )
@@ -79,8 +77,6 @@ class RoomSessionStoreCommitTest {
             )
 
             val active = store.activeSession()
-            // Lot 8 : `session_box` n'est écrite qu'à la création, comme `boxes` ici.
-            assertThat(active?.extras?.boxes).isEqualTo(originalExtras.boxes)
             // Lot 7 : une décision ne réécrit jamais sonnerie ni montée — seul
             // `RoomSessionAlarmSoundStore` le peut, en `ARMED`.
             assertThat(active?.extras?.ringtoneKey).isEqualTo(originalExtras.ringtoneKey)

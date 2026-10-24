@@ -1,6 +1,7 @@
 package com.niumi.app.navigation
 
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionStateDto
 import org.junit.Test
 
@@ -22,7 +23,7 @@ class LauncherDestinationTest {
     @Test
     fun everyScanStateLeadsToTheAlarmScreen() {
         scanStates.forEach { state ->
-            assertThat(launcherDestinationFor(state, onboardingAcknowledged = true))
+            assertThat(launcherDestinationFor(state, releaseTarget = null, onboardingAcknowledged = true))
                 .isEqualTo(LauncherDestination.AlarmScreen)
         }
     }
@@ -31,16 +32,16 @@ class LauncherDestinationTest {
     @Test
     fun theStatesBeforeRingingKeepTheActiveSessionScreen() {
         listOf(SessionStateDto.PREPARING, SessionStateDto.ARMED).forEach { state ->
-            assertThat(launcherDestinationFor(state, onboardingAcknowledged = true))
+            assertThat(launcherDestinationFor(state, releaseTarget = null, onboardingAcknowledged = true))
                 .isEqualTo(LauncherDestination.InApp(NiumiRoute.ActiveSession))
         }
     }
 
     @Test
     fun withoutASessionTheSetupJourneyIsUnchanged() {
-        assertThat(launcherDestinationFor(state = null, onboardingAcknowledged = true))
+        assertThat(launcherDestinationFor(state = null, releaseTarget = null, onboardingAcknowledged = true))
             .isEqualTo(LauncherDestination.InApp(NiumiRoute.Permissions))
-        assertThat(launcherDestinationFor(state = null, onboardingAcknowledged = false))
+        assertThat(launcherDestinationFor(state = null, releaseTarget = null, onboardingAcknowledged = false))
             .isEqualTo(LauncherDestination.InApp(NiumiRoute.Presentation))
     }
 
@@ -48,16 +49,36 @@ class LauncherDestinationTest {
     fun everyFinalStateFallsBackToTheSetupJourney() {
         listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.FAILED)
             .forEach { state ->
-                assertThat(launcherDestinationFor(state, onboardingAcknowledged = true))
+                assertThat(launcherDestinationFor(state, releaseTarget = null, onboardingAcknowledged = true))
                     .isEqualTo(LauncherDestination.InApp(NiumiRoute.Permissions))
             }
+    }
+
+    /**
+     * Étape 43 (contrat 1.5) : un désarmement passe par `RELEASING` vers `DISARMED`, avant le coucher.
+     * Rien n'est à scanner : l'écran de réveil n'a pas à s'ouvrir, à la différence de `RELEASING`
+     * vers `COMPLETED` ou `CANCELLED`, qui suit un scan ou une sortie de secours.
+     */
+    @Test
+    fun releasingTowardsDisarmedNeverOpensTheAlarmScreen() {
+        assertThat(requiresAlarmScreen(SessionStateDto.RELEASING, ReleaseTargetDto.DISARMED)).isFalse()
+        assertThat(
+            launcherDestinationFor(SessionStateDto.RELEASING, ReleaseTargetDto.DISARMED, onboardingAcknowledged = true),
+        ).isEqualTo(
+            LauncherDestination.InApp(homeDestinationFor(SessionStateDto.RELEASING, onboardingAcknowledged = true)),
+        )
+        listOf(ReleaseTargetDto.COMPLETED, ReleaseTargetDto.CANCELLED).forEach { target ->
+            assertThat(requiresAlarmScreen(SessionStateDto.RELEASING, target)).isTrue()
+        }
     }
 
     /** Un état ajouté à la machine commune doit être classé explicitement. */
     @Test
     fun everyStateOfTheCommonMachineIsClassified() {
         val classified =
-            SessionStateDto.entries.associateWith { launcherDestinationFor(it, onboardingAcknowledged = true) }
+            SessionStateDto.entries.associateWith {
+                launcherDestinationFor(it, releaseTarget = null, onboardingAcknowledged = true)
+            }
 
         assertThat(classified).hasSize(SessionStateDto.entries.size)
         assertThat(classified.filterValues { it == LauncherDestination.AlarmScreen }.keys)
@@ -73,9 +94,9 @@ class LauncherDestinationTest {
     fun requiresAlarmScreenAgreesWithTheLauncherDestination() {
         (SessionStateDto.entries.map { it as SessionStateDto? } + null).forEach { state ->
             val expected =
-                launcherDestinationFor(state, onboardingAcknowledged = true) ==
+                launcherDestinationFor(state, releaseTarget = null, onboardingAcknowledged = true) ==
                     LauncherDestination.AlarmScreen
-            assertThat(requiresAlarmScreen(state)).isEqualTo(expected)
+            assertThat(requiresAlarmScreen(state, releaseTarget = null)).isEqualTo(expected)
         }
     }
 
@@ -83,7 +104,7 @@ class LauncherDestinationTest {
     @Test
     fun theInAppRouteAlwaysMatchesTheHomeDestination() {
         SessionStateDto.entries.forEach { state ->
-            val launcher = launcherDestinationFor(state, onboardingAcknowledged = true)
+            val launcher = launcherDestinationFor(state, releaseTarget = null, onboardingAcknowledged = true)
             if (launcher is LauncherDestination.InApp) {
                 assertThat(launcher.route).isEqualTo(homeDestinationFor(state, onboardingAcknowledged = true))
             }

@@ -2,6 +2,7 @@ package com.niumi.system.blocking.guard
 
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import com.niumi.core.interop.ReleaseTargetDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.system.session.LoadResult
@@ -148,7 +149,11 @@ class BlockingGuardPolicyTest {
     private fun allSnapshots(): List<SessionSnapshotDto> =
         SessionStateDto.entries.map { SessionDtoFixtures.snapshotInState(it) } +
             SessionDtoFixtures.deferredArmedSnapshot(blockingAppliedAtEpochMillis = null) +
-            SessionDtoFixtures.deferredArmedSnapshot(blockingAppliedAtEpochMillis = 1_500L)
+            SessionDtoFixtures.deferredArmedSnapshot(blockingAppliedAtEpochMillis = 1_500L) +
+            SessionDtoFixtures
+                .snapshotInState(
+                    SessionStateDto.RELEASING,
+                ).copy(releaseTarget = ReleaseTargetDto.DISARMED)
 
     private fun present(snapshot: SessionSnapshotDto): LoadResult =
         LoadResult.Present(snapshot = snapshot, extras = SessionDtoFixtures.extras(), pendingEffects = emptyList())

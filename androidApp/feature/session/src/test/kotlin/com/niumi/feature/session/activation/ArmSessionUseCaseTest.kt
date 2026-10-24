@@ -15,7 +15,6 @@ import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.core.interop.WakeScheduleStatusDto
 import com.niumi.database.BlockedPackage
 import com.niumi.database.EventReceipt
-import com.niumi.database.SessionBox
 import com.niumi.database.pairing.PairedBoxDto
 import com.niumi.feature.session.activation.fakes.CallJournal
 import com.niumi.feature.session.activation.fakes.RecordingAppSelectionStore
@@ -230,56 +229,20 @@ class ArmSessionUseCaseTest {
             assertThat(coordinator.dispatchCount).isEqualTo(0)
         }
 
+    /**
+     * Étape 43 : la liste des boîtiers n'est plus figée dans la session (SPEC_CORE_KMP §2, décisions
+     * 11 et 16) — `AndroidSessionExtras` n'a plus de champ pour elle. Elle est lue une seule fois,
+     * pour refuser une activation sans boîtier ; la vérification d'un scan relira l'ensemble courant.
+     */
     @Test
-    fun theCredentialIsReadExactlyOnceAndFrozenIntoTheExtras() =
+    fun theBoxesAreReadOnceToGuardTheActivationAndNeverCopiedIntoTheSession() =
         runTest {
             coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
 
             useCase().arm("07:00", blockingLocalTimeIso = null)
 
             assertThat(pairedBoxStore.allCallCount).isEqualTo(1)
-            assertThat(coordinator.lastExtras?.boxes).containsExactly(
-                SessionBox(credential.boxId, credential.tokenSha256Hex, pairedBox.name),
-            )
-        }
-
-    /** Lot 8 : la liste figée porte chaque boîtier dans l'ordre de `PairedBoxStore.all()`. */
-    @Test
-    fun theExtrasFreezeEveryPairedBoxInOrder() =
-        runTest {
-            val threeBoxes =
-                listOf(
-                    PairedBoxDto(PairedBoxCredentialDto(1, "box-0", "a".repeat(64)), "Cuisine"),
-                    PairedBoxDto(PairedBoxCredentialDto(1, "box-1", "b".repeat(64)), "Chambre"),
-                    PairedBoxDto(PairedBoxCredentialDto(1, "box-2", "c".repeat(64)), "Salon"),
-                )
-            pairedBoxStore.boxes = threeBoxes
-            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
-
-            useCase().arm("07:00", blockingLocalTimeIso = null)
-
-            assertThat(coordinator.lastExtras?.boxes?.map { it.boxId })
-                .containsExactlyElementsIn(threeBoxes.map { it.credential.boxId })
-                .inOrder()
-        }
-
-    /** Lot 8, point de vigilance 5 : cinq boîtiers associés, un retiré hors session, quatre figés. */
-    @Test
-    fun aBoxRemovedBeforeArmingIsNotFrozen() =
-        runTest {
-            val fiveBoxes =
-                (0..4).map { index ->
-                    PairedBoxDto(PairedBoxCredentialDto(1, "box-$index", "a".repeat(64)), "Boîtier ${index + 1}")
-                }
-            pairedBoxStore.boxes = fiveBoxes
-            pairedBoxStore.boxes = pairedBoxStore.boxes.filterNot { it.credential.boxId == "box-2" }
-            coordinator.result = DispatchResult.Applied(armedSnapshot(), requiredEffectsSucceeded = true)
-
-            useCase().arm("07:00", blockingLocalTimeIso = null)
-
-            val frozenIds = coordinator.lastExtras?.boxes?.map { it.boxId }
-            assertThat(frozenIds).hasSize(4)
-            assertThat(frozenIds).doesNotContain("box-2")
+            assertThat(coordinator.dispatchCount).isEqualTo(1)
         }
 
     /**

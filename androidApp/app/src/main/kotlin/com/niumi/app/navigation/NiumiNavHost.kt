@@ -107,10 +107,9 @@ private fun NavGraphBuilder.setupDestinations(navController: NavHostController) 
         )
     }
     composable<NiumiRoute.Pairing> {
-        PairingRoute(
-            onContinue = { navController.navigate(NiumiRoute.AppSelection) },
-            onSessionInProgress = { navController.popBackStack() },
-        )
+        // Ouvert aussi en session, depuis l'écran de session active (étape 43) : « Continuer » y
+        // est masqué, le retour ramène à la session.
+        PairingRoute(onContinue = { navController.navigate(NiumiRoute.AppSelection) })
     }
     composable<NiumiRoute.AppSelection> {
         AppSelectionRoute(
@@ -134,6 +133,8 @@ private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostCont
         ActiveSessionRoute(
             onModifyOrCancel = { navController.navigate(NiumiRoute.ScanToModify) },
             onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
+            // Lien transitoire « Mes boîtiers » (étape 43), retiré avec cet écran à l'étape 45.
+            onOpenBoxes = { navController.navigate(NiumiRoute.Pairing) },
         )
     }
     composable<NiumiRoute.ScanToModify> {

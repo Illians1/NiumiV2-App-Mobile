@@ -143,3 +143,29 @@ val MIGRATION_4_5 =
             }
         }
     }
+
+/**
+ * v5 → v6 (étape 43, contrat 1.5) : `alarm_session` gagne `releasedBy` et `disarmedAtEpochMillis`,
+ * et `session_box` disparaît — la vérification d'un scan lit l'ensemble courant de `paired_box`
+ * (SPEC_CORE_KMP §2, décisions 11 et 16 ; décision Q11 du 2026-10-19).
+ *
+ * Les deux colonnes sont nullables et ajoutées **sans clause `DEFAULT`**, comme celles de
+ * [MIGRATION_2_3] : Room n'en attend aucune, et `validateMigration` échouerait sur cette seule
+ * différence. `releasedBy` est déduit pour les sessions existantes selon la règle de lecture d'un
+ * snapshot v2 (SPEC_CORE_KMP §7.1) : `NFC_SCAN` si `nfcVerifiedAtEpochMillis` est renseigné, nul
+ * sinon — avant le contrat 1.5, le scan était le seul moyen de libération. Toutes les sessions
+ * passent ainsi au schéma de domaine 3.
+ *
+ * `alarm_session` n'est pas recréée : seul `DROP TABLE session_box` retire une table, enfant et non
+ * parente, et aucun `CASCADE` n'entre en jeu. L'index `index_session_box_sessionId` part avec elle.
+ */
+val MIGRATION_5_6 =
+    object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE alarm_session ADD COLUMN releasedBy TEXT")
+            db.execSQL("ALTER TABLE alarm_session ADD COLUMN disarmedAtEpochMillis INTEGER")
+            db.execSQL("UPDATE alarm_session SET releasedBy = 'NFC_SCAN' WHERE nfcVerifiedAtEpochMillis IS NOT NULL")
+            db.execSQL("UPDATE alarm_session SET schemaVersion = 3")
+            db.execSQL("DROP TABLE session_box")
+        }
+    }

@@ -6,7 +6,11 @@ import com.niumi.core.interop.PairedBoxCredentialDto
 import com.niumi.database.AlwaysUnlockedState
 import com.niumi.database.NiumiDatabase
 import com.niumi.database.newInMemoryDatabase
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -15,7 +19,8 @@ import javax.inject.Provider
 
 /**
  * SPEC_ANDROID §11.1 (Lot 8 ; dix au plus depuis le contrat KMP 1.5) : jusqu'à dix boîtiers
- * nommés, ordonnés par position. `all()` avant déverrouillage renvoie une liste vide plutôt que
+ * nommés, ordonnés par position, dont le dernier ne peut pas être retiré (décision Q22, étape 43).
+ * `all()` avant déverrouillage renvoie une liste vide plutôt que
  * de lever, à la différence du reste de
  * `RoomPairedBoxStore` — voir le KDoc de la classe.
  */
@@ -129,8 +134,9 @@ class RoomPairedBoxStoreTest {
             store.add(removed, "Deuxième")
             store.add(credential(boxId = "box-2"), "Troisième")
 
-            store.remove(removed.boxId)
+            val result = store.remove(removed.boxId)
 
+            assertThat(result).isEqualTo(PairedBoxRemoveResult.Removed)
             val remaining = store.all()
             assertThat(remaining.map { it.name }).containsExactly("Premier", "Troisième").inOrder()
             assertThat(database.pairedBoxDao().findById("box-0")?.position).isEqualTo(0)
@@ -146,4 +152,66 @@ class RoomPairedBoxStoreTest {
 
             assertThat(store.all().map { it.name }).containsExactly("Premier", "Deuxième", "Troisième").inOrder()
         }
+
+    /** Décision Q22 (étape 43) : il reste toujours au moins un boîtier ; le refus n'écrit rien. */
+    @Test
+    fun removingTheLastBoxIsRefusedWithLastBoxKept() =
+        runTest {
+            val only = credential()
+            store.add(only, "Cuisine")
+
+            val result = store.remove(only.boxId)
+
+            assertThat(result).isEqualTo(PairedBoxRemoveResult.LastBoxKept)
+            assertThat(store.all()).containsExactly(PairedBoxDto(only, "Cuisine"))
+        }
+
+    @Test
+    fun removingAnUnknownBoxAnswersUnknownAndWritesNothing() =
+        runTest {
+            store.add(credential(boxId = "box-0"), "Premier")
+            store.add(credential(boxId = "box-1"), "Deuxième")
+
+            val result = store.remove("box-inconnu")
+
+            assertThat(result).isEqualTo(PairedBoxRemoveResult.Unknown)
+            assertThat(store.all().map { it.name }).containsExactly("Premier", "Deuxième").inOrder()
+        }
+
+    /**
+     * Étape 43 : [RoomPairedBoxStore.points] réémet la liste à chaque ajout, renommage et retrait,
+     * dans l'ordre des positions. Room peut réémettre une même liste : chaque attente ignore les
+     * émissions intermédiaires jusqu'à la liste attendue.
+     */
+    @Test
+    fun pointsEmitsOnAddRenameAndRemove() =
+        runBlocking {
+            val seen = Channel<List<String>>(Channel.UNLIMITED)
+            val collector =
+                launch {
+                    store.points.collect { boxes ->
+                        seen.send(boxes.map { it.name })
+                    }
+                }
+
+            suspend fun awaitNames(vararg expected: String) =
+                withTimeout(FLOW_TIMEOUT_MILLIS) {
+                    while (seen.receive() != expected.toList()) Unit
+                }
+
+            awaitNames()
+            store.add(credential(boxId = "box-0"), "Cuisine")
+            awaitNames("Cuisine")
+            store.rename("box-0", "Salon")
+            awaitNames("Salon")
+            store.add(credential(boxId = "box-1"), "Entrée")
+            awaitNames("Salon", "Entrée")
+            store.remove("box-0")
+            awaitNames("Entrée")
+            collector.cancel()
+        }
+
+    private companion object {
+        const val FLOW_TIMEOUT_MILLIS = 5_000L
+    }
 }

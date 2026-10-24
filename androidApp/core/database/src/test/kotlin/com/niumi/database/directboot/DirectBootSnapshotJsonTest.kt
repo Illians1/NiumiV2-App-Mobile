@@ -1,15 +1,17 @@
 package com.niumi.database.directboot
 
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.domain.ReleaseMeans
 import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionEffectKind
 import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
 import com.niumi.core.interop.isBlockingPending
 import com.niumi.database.EffectStatus
-import com.niumi.database.SessionBox
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -45,10 +47,10 @@ class DirectBootSnapshotJsonTest {
             completedAtEpochMillis = null,
             cancelledAtEpochMillis = null,
             failureCode = null,
+            releasedBy = ReleaseMeans.EMERGENCY_EXIT,
+            disarmedAtEpochMillis = 1_700_000_003_000L,
             ringtoneKey = "niumi_default",
             vibrationEnabled = true,
-            boxId = "550e8400-e29b-41d4-a716-446655440000",
-            boxTokenSha256Hex = "a".repeat(64),
             blockedPackages = listOf(DirectBootBlockedPackage("com.example.first", "Première application")),
             eventReceipts =
                 listOf(
@@ -115,12 +117,11 @@ class DirectBootSnapshotJsonTest {
                 "completedAtEpochMillis",
                 "cancelledAtEpochMillis",
                 "failureCode",
+                "releasedBy",
+                "disarmedAtEpochMillis",
                 "ringtoneKey",
                 "vibrationEnabled",
                 "volumeRampSeconds",
-                "boxId",
-                "boxTokenSha256Hex",
-                "boxes",
                 "blockedPackages",
                 "eventReceipts",
                 "pendingEffects",
@@ -201,12 +202,12 @@ class DirectBootSnapshotJsonTest {
     }
 
     /**
-     * Lot 8, SPEC_ANDROID §7.3 : un vrai fichier v3 — écrit par le code de l'étape 28, avant ce
-     * lot, ajouté en ressource de test (`directboot/projection-v3.json`) — se lit comme une liste
-     * d'un seul boîtier, sans nom.
+     * Étape 43, SPEC_ANDROID §7.3 : un vrai fichier v3 — écrit par le code de l'étape 28, ajouté en
+     * ressource de test (`directboot/projection-v3.json`) — reste lisible malgré ses clés `boxId` et
+     * `boxTokenSha256Hex`, que la projection ne porte plus. Ni moyen de libération ni désarmement.
      */
     @Test
-    fun `a real version three file reads as a list of one box`() {
+    fun `a real version three file stays readable without its box fields`() {
         val file =
             checkNotNull(javaClass.getResourceAsStream("/directboot/projection-v3.json")) {
                 "ressource de test manquante : directboot/projection-v3.json"
@@ -215,28 +216,64 @@ class DirectBootSnapshotJsonTest {
         val decoded = json.decodeFromString(DirectBootSnapshot.Active.serializer(), file)
 
         assertThat(decoded.projectionSchemaVersion).isEqualTo(3)
-        assertThat(decoded.toExtras().boxes)
-            .containsExactly(SessionBox("550e8400-e29b-41d4-a716-446655440000", "a".repeat(64), name = ""))
+        assertThat(decoded.sessionId).isEqualTo("11111111-1111-1111-1111-111111111111")
+        assertThat(decoded.releasedBy).isNull()
+        assertThat(decoded.disarmedAtEpochMillis).isNull()
     }
 
-    /** Lot 8, SPEC_ANDROID §7.3 : l'écriture courante (v4) porte la liste complète, sans les noms. */
+    /**
+     * Étape 43, SPEC_ANDROID §7.3 : un fichier v4 — liste de boîtiers figée, sans `releasedBy` ni
+     * `disarmedAtEpochMillis` — se lit, la liste ignorée et les deux champs nuls ; la façade en
+     * déduit le moyen de libération (SPEC_CORE_KMP §7.1).
+     */
     @Test
-    fun `a version four file round trips its boxes`() {
-        val twoBoxes =
-            listOf(
-                DirectBootBox("11111111-1111-1111-1111-111111111111", "a".repeat(64)),
-                DirectBootBox("22222222-2222-2222-2222-222222222222", "b".repeat(64)),
+    fun `a version four file is read with its boxes ignored`() {
+        val encoded = json.encodeToJsonElement(DirectBootSnapshot.Active.serializer(), reference).jsonObject
+        val boxes =
+            JsonArray(
+                listOf(
+                    JsonObject(
+                        mapOf(
+                            "boxId" to JsonPrimitive("550e8400-e29b-41d4-a716-446655440000"),
+                            "tokenSha256Hex" to JsonPrimitive("a".repeat(64)),
+                        ),
+                    ),
+                ),
             )
-        val versionFour = reference.copy(boxes = twoBoxes)
+        val file =
+            JsonObject(
+                encoded - "releasedBy" - "disarmedAtEpochMillis" +
+                    ("projectionSchemaVersion" to JsonPrimitive(4)) +
+                    ("boxes" to boxes),
+            ).toString()
 
+        val decoded = json.decodeFromString(DirectBootSnapshot.Active.serializer(), file)
+
+        assertThat(decoded.projectionSchemaVersion).isEqualTo(4)
+        assertThat(decoded.releasedBy).isNull()
+        assertThat(decoded.disarmedAtEpochMillis).isNull()
+        assertThat(
+            decoded.copy(
+                projectionSchemaVersion = 5,
+                releasedBy = reference.releasedBy,
+                disarmedAtEpochMillis = reference.disarmedAtEpochMillis,
+            ),
+        ).isEqualTo(reference)
+    }
+
+    /** Étape 43 : l'écriture courante est en v5 et porte le moyen de libération et le désarmement. */
+    @Test
+    fun `the current projection is version five and round trips the release means`() {
         val decoded =
             json.decodeFromString(
                 DirectBootSnapshot.Active.serializer(),
-                json.encodeToString(DirectBootSnapshot.Active.serializer(), versionFour),
+                json.encodeToString(DirectBootSnapshot.Active.serializer(), reference),
             )
 
-        assertThat(decoded.projectionSchemaVersion).isEqualTo(4)
-        assertThat(decoded.boxes).isEqualTo(twoBoxes)
+        assertThat(DIRECT_BOOT_PROJECTION_SCHEMA_VERSION).isEqualTo(PROJECTION_VERSION_WITH_RELEASE_MEANS)
+        assertThat(decoded.projectionSchemaVersion).isEqualTo(5)
+        assertThat(decoded.releasedBy).isEqualTo(ReleaseMeans.EMERGENCY_EXIT)
+        assertThat(decoded.disarmedAtEpochMillis).isEqualTo(1_700_000_003_000L)
     }
 
     private fun kotlinx.serialization.json.JsonElement.jsonObjectKeys(): Set<String> = (this as JsonObject).keys
