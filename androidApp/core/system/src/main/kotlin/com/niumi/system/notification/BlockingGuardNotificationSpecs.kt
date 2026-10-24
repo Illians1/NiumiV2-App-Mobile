@@ -43,7 +43,7 @@ object BlockingGuardNotificationSpecs {
     fun unknownPhase(): NotificationSpec =
         spec(
             title = "Réveil programmé",
-            text = "Ta session Niumi est en cours.",
+            text = "Tes applications choisies seront bloquées jusqu'au scan de ton Niumi Spot.",
         )
 
     private fun spec(

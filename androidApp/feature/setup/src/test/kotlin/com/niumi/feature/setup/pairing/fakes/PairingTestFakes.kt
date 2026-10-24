@@ -99,7 +99,7 @@ class FakePairedBoxStore(
     override val points: Flow<List<PairedBoxDto>>
         get() = flowOf(boxes)
 
-    /** Même ordre de refus que `RoomPairedBoxStore` : inconnu d'abord, dernier boîtier ensuite (étape 43). */
+    /** Même ordre de refus que `RoomPairedBoxStore` : inconnu d'abord, dernier Niumi Spot ensuite (étape 43). */
     override suspend fun remove(boxId: String): PairedBoxRemoveResult {
         writeCallCount++
         return when {

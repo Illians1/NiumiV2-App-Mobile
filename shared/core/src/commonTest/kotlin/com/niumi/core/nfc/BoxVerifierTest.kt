@@ -34,7 +34,7 @@ class BoxVerifierTest {
         tokenSha256Hex = Sha256.hexOf(Sha256.hash(tokenBytes)),
     )
 
-    /** Cinq boîtiers distincts, tous différents de [boxId] / [tokenBytes]. */
+    /** Cinq Niumi Spots distincts, tous différents de [boxId] / [tokenBytes]. */
     private fun fiveOtherCredentials(): List<PairedBoxCredential> =
         (1..5).map { index ->
             credentialFor(

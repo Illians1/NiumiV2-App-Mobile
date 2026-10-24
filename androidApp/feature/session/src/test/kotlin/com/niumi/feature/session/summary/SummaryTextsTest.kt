@@ -32,19 +32,19 @@ class SummaryTextsTest {
     @Test
     fun theCommitmentReminderIsStatedWordForWord() {
         assertThat(SummaryTexts.COMMITMENT_REMINDER)
-            .isEqualTo("Seul le scan d'un de tes boîtiers terminera la session.")
+            .isEqualTo("Seul le scan d'un de tes Niumi Spots terminera la session.")
     }
 
-    /** §15 (Lot 8) : la ligne liste plusieurs boîtiers. */
+    /** §15 (Lot 8) : la ligne liste plusieurs Niumi Spots. */
     @Test
     fun theBoxLineIsTitledInThePlural() {
-        assertThat(SummaryTexts.BOX_TITLE).isEqualTo("Boîtiers associés")
+        assertThat(SummaryTexts.BOX_TITLE).isEqualTo("Niumi Spots associés")
     }
 
     @Test
     fun theNoPairedBoxRefusalAsksForAtLeastOneBox() {
         assertThat(SummaryTexts.blockingReason(ActivationReasonCode.NO_PAIRED_BOX))
-            .isEqualTo("Aucun boîtier n'est associé. Associe au moins un boîtier avant d'activer ta session.")
+            .isEqualTo("Aucun Niumi Spot n'est associé. Associe au moins un Niumi Spot avant d'activer ta session.")
     }
 
     @Test
@@ -99,7 +99,7 @@ class SummaryTextsTest {
     @Test
     fun theThreeJourneyCausesAreNamed() {
         assertThat(SummaryTexts.blockingReason(ActivationReasonCode.TRIGGER_NOT_IN_FUTURE)).contains("heure")
-        assertThat(SummaryTexts.blockingReason(ActivationReasonCode.NO_PAIRED_BOX)).contains("boîtier")
+        assertThat(SummaryTexts.blockingReason(ActivationReasonCode.NO_PAIRED_BOX)).contains("Niumi Spot")
         assertThat(SummaryTexts.blockingReason(ActivationReasonCode.INVALID_APP_SELECTION)).contains("applications")
     }
 

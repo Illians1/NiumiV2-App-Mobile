@@ -13,7 +13,7 @@ object ActiveSessionTexts {
 
     const val CURRENT_ZONE_TITLE = "Dans ton fuseau actuel"
 
-    const val COMMITMENT_REMINDER = "Seul le scan d'un de tes boîtiers terminera la session."
+    const val COMMITMENT_REMINDER = "Seul le scan d'un de tes Niumi Spots terminera la session."
 
     const val BLOCKED_APPS_TITLE = "Applications bloquées"
 
@@ -62,11 +62,11 @@ object ActiveSessionTexts {
     const val MODIFY_OR_CANCEL_BUTTON = "Modifier ou annuler"
 
     /**
-     * Écran 3 actuel, ouvert en session (décision de Mehdi du 2026-10-24, étape 43) : les boîtiers se
+     * Écran 3 actuel, ouvert en session (décision de Mehdi du 2026-10-24, étape 43) : les Niumi Spots se
      * modifient à tout moment, session comprise. Même libellé que le titre de l'écran ; lien
      * transitoire, retiré avec cet écran à l'étape 45.
      */
-    const val OPEN_BOXES_BUTTON = "Mes boîtiers"
+    const val OPEN_BOXES_BUTTON = "Mes Niumi Spots"
 
     /** Écran 12, en consultation : ne termine ni ne modifie la session (§15, étape 16). */
     const val OPEN_DIAGNOSTIC_BUTTON = "Voir le diagnostic"
@@ -101,11 +101,11 @@ object ActiveSessionTexts {
             }
 
             SessionStateDto.AWAITING_NFC -> {
-                "En attente du scan de ton boîtier"
+                "En attente du scan de ton Niumi Spot"
             }
 
             SessionStateDto.TRIGGERED_AWAITING_NFC -> {
-                "En attente du scan de ton boîtier"
+                "En attente du scan de ton Niumi Spot"
             }
 
             SessionStateDto.RELEASING -> {

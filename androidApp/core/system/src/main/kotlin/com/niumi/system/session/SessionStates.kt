@@ -18,7 +18,7 @@ val SESSION_FINAL_STATES: Set<SessionStateDto> =
     setOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.DISARMED, SessionStateDto.FAILED)
 
 /**
- * Les deux états où le scan du boîtier est la seule issue et où la notification de §10.5 doit être
+ * Les deux états où le scan du Niumi Spot est la seule issue et où la notification de §10.5 doit être
  * visible. Introduit à l'étape 19 : `SessionReconciler` les traitait déjà ensemble, et le
  * déclencheur de premier plan a besoin de la même règle.
  */

@@ -63,7 +63,7 @@ class AlarmTextsTest {
 
     @Test
     fun theUndrawnTextsKeepTheWordingValidatedOnTheTwentySecond() {
-        assertThat(AlarmTexts.RELEASE_LOADER).isEqualTo("Fin de la session")
+        assertThat(AlarmTexts.RELEASE_LOADER).isEqualTo("Fin du réveil")
         assertThat(AlarmTexts.NFC_ABSENT).isEqualTo("Cet appareil ne prend pas en charge le NFC.")
     }
 

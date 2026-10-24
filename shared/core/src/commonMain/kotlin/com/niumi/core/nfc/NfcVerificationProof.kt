@@ -1,7 +1,7 @@
 package com.niumi.core.nfc
 
 /**
- * Preuve opaque qu'un scan NFC correspond au boîtier associé (SPEC_CORE_KMP §6). Créée
+ * Preuve opaque qu'un scan NFC correspond au Niumi Spot associé (SPEC_CORE_KMP §6). Créée
  * uniquement par [BoxVerifier.verify], en mémoire, jamais sérialisée ni journalisée. Le
  * constructeur `internal` empêche toute construction ou réutilisation par un adaptateur natif
  * hors de `:shared:core` ; `commonTest` reste un module ami de `commonMain` et voit donc ce

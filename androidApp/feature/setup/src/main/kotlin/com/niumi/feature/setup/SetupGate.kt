@@ -7,7 +7,7 @@ import com.niumi.system.session.isSessionInProgress
  * Garde du parcours de préparation (SPEC_CORE_KMP §4 et §10, SPEC_ANDROID §12.1) : le sélecteur
  * d'applications est fermé tant qu'une session est en cours — une modification de la sélection
  * désynchroniserait le blocage appliqué de ce que l'écran affiche. Depuis l'étape 43, l'association
- * des boîtiers n'est plus fermée (SPEC_CORE_KMP §2, décisions 11 et 16) : l'écran 3 ne lit cette
+ * des Niumi Spots n'est plus fermée (SPEC_CORE_KMP §2, décisions 11 et 16) : l'écran 3 ne lit cette
  * garde que pour masquer « Continuer ».
  *
  * Fonction pure plutôt que méthode d'un ViewModel, pour être prouvée sur tous les états sans

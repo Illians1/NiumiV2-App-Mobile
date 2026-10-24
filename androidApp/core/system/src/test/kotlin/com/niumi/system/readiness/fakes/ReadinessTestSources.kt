@@ -47,12 +47,12 @@ class FakeNfcReader(
 }
 
 /**
- * Un boîtier associé par défaut : c'est l'état « tout vert » du contrôle `PAIRED_BOX` (Lot 8).
- * Mêmes refus que `RoomPairedBoxStore` : doublon, onzième boîtier, dernier boîtier retiré (étape 43).
+ * Un Niumi Spot associé par défaut : c'est l'état « tout vert » du contrôle `PAIRED_BOX` (Lot 8).
+ * Mêmes refus que `RoomPairedBoxStore` : doublon, onzième Niumi Spot, dernier Niumi Spot retiré (étape 43).
  */
 class FakePairedBoxStore(
     seed: List<PairedBoxDto> =
-        listOf(PairedBoxDto(PairedBoxCredentialDto(1, "box-1", "a".repeat(64)), "Boîtier 1")),
+        listOf(PairedBoxDto(PairedBoxCredentialDto(1, "box-1", "a".repeat(64)), "Niumi Spot 1")),
 ) : PairedBoxStore {
     private val boxes = MutableStateFlow(seed)
 
@@ -102,16 +102,16 @@ class FakePairedBoxStore(
             }
         }
 
-    /** Convenience de test, hors interface : « aucun boîtier associé ». */
+    /** Convenience de test, hors interface : « aucun Niumi Spot associé ». */
     fun clear() {
         boxes.value = emptyList()
     }
 
-    /** Convenience de test, hors interface : force un nombre de boîtiers distincts. */
+    /** Convenience de test, hors interface : force un nombre de Niumi Spots distincts. */
     fun seedCount(count: Int) {
         boxes.value =
             List(count) { index ->
-                PairedBoxDto(PairedBoxCredentialDto(1, "box-$index", "a".repeat(64)), "Boîtier ${index + 1}")
+                PairedBoxDto(PairedBoxCredentialDto(1, "box-$index", "a".repeat(64)), "Niumi Spot ${index + 1}")
             }
     }
 }

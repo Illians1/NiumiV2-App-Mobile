@@ -10,7 +10,7 @@ Tout ce qui n'est pas décidé, pas validé ou pas dessiné est rassemblé dans 
 
 Niumi est une app de réveil pour iPhone et Android. À l'heure du coucher, elle bloque les applications que l'utilisateur a choisies. Le matin, l'alarme sonne jusqu'à ce qu'il scanne un Niumi Spot : une étiquette NFC posée dans une autre pièce que sa chambre. L’étiquette s’appelait « Niumi Point » jusqu’au 24 octobre 2026 ; le nom « Niumi Spot » la remplace partout (décision du 24 octobre 2026). Le scan arrête l'alarme et débloque les applications.
 
-Une **session** va de l'heure du coucher jusqu'au scan du matin.
+Une **session** va de l'heure du coucher jusqu'au scan du matin. Ce mot nomme le concept dans les spécifications ; les textes affichés ne le disent pas et parlent du réveil, du blocage ou des applications (décision du 24 octobre 2026, qui étend aux écrans la règle des notifications du 23 octobre). Les écrans Android de l'ancien parcours, remplacés pendant la refonte, gardent le mot jusqu'à leur suppression.
 
 ## 2. Règles communes
 
@@ -239,14 +239,14 @@ L'accueil récapitule le prochain réveil et permet de modifier tout ce qui peut
 | Thème | Clair | Clair | Sombre |
 | Centre du cadran | « Réveil dans » puis « 9 h 26 » | « Réveil » puis « Désactivé » | « Réveil dans » puis « 7 h 50 » |
 | Cadran | Arc noir, poignée du coucher blanche, poignée du réveil ambre | Arc gris, deux poignées blanches | Pas de poignées. L'arc se remplit d'ambre au fil de la nuit (voir `VALEURS-DE-DESIGN.md`) |
-| Carte | Noire. « Réveil activé », « Blocage des apps dans 56 min », « 8 h 30 de sommeil », interrupteur ambre | Blanche, au trait. « Réveil désactivé », « Aucun réveil ni blocage prévu », interrupteur gris | « Blocage en cours » avec un cadenas ambre, « Applications bloquées jusqu'au scan de ton Niumi Spot », lien « Annuler la session ». Pas d'interrupteur |
+| Carte | Noire. « Réveil activé », « Blocage des apps dans 56 min », « 8 h 30 de sommeil », interrupteur ambre | Blanche, au trait. « Réveil désactivé », « Aucun réveil ni blocage prévu », interrupteur gris | « Blocage en cours » avec un cadenas ambre, « Applications bloquées jusqu'au scan de ton Niumi Spot », lien « Annuler le réveil ». Pas d'interrupteur |
 | Jours, heures, applications | Modifiables | Affichés en grisé, mais modifiables | Grisés et verrouillés, avec un cadenas sur la ligne des applications |
 | Sonnerie | Modifiable | Affichée en grisé, mais modifiable | Modifiable, non grisée |
 
 - **Réveil désactivé** est aussi l'état d'arrivée à la fin de la mise en route. Les valeurs par défaut sont affichées, tout reste modifiable, et aucun message d'aide n'est ajouté. Rien ne se bloque et rien ne sonne tant que l'interrupteur n'est pas activé.
 - **L'interrupteur général** désactive tout le planning : plus aucun réveil ni blocage tant qu'on ne le rallume pas.
 - **Pendant une session**, toucher un champ verrouillé affiche : « Modifiable après avoir scanné ton Niumi Spot. » La forme de ce message n'est pas dessinée **(ouvert)**.
-- Il n'est pas possible de modifier une session en cours. La seule action est « Annuler la session » (section 11).
+- Il n'est pas possible de modifier une session en cours. La seule action est « Annuler le réveil » (section 11).
 
 ## 10. Choix de la sonnerie
 
@@ -276,24 +276,24 @@ Contraintes vérifiées :
 - **iPhone.** Avec AlarmKit, l'alarme suit le volume « Sonnerie et alertes » du téléphone et l'app ne peut pas le régler. La seule valeur qu'une app peut lire est décrite comme le volume de sortie du système, et des développeurs signalent qu'elle n'est pas toujours à jour depuis iOS 18. Si la lecture n'est pas fiable, l'iPhone affichera la ligne sans le pourcentage **(ouvert : à tester)**.
 - **iPhone.** Un son personnalisé d'AlarmKit doit durer moins de 30 secondes. Une montée sur plusieurs minutes ne tient donc pas dans un seul fichier **(ouvert : à tester)**.
 
-## 11. Annuler la session
+## 11. Annuler le réveil
 
 Images : `21_annuler-1-le-lien-sur-l-accueil`, `22_annuler-2-scanner-ou-sortie-de-secours`, `23_annuler-3-la-feuille-de-scan`, `24_annuler-4-session-annulee-retour-au-clair`. Thème sombre, sauf la dernière.
 
 Pendant une session, l'utilisateur peut l'annuler en scannant un Niumi Spot.
 
-1. Sur l'accueil en session, il touche le lien « Annuler la session ».
+1. Sur l'accueil en session, il touche le lien « Annuler le réveil ».
 2. Une feuille monte du bas :
 
 | Élément | Contenu |
 | --- | --- |
-| Titre | Annuler la session ? |
+| Titre | Annuler le réveil ? |
 | Texte | Scanne ton Niumi Spot pour annuler. Tes applications seront débloquées et ton réveil désactivé. |
 | Bouton | Scanner le Niumi Spot |
 | Lien discret | Je n'ai pas accès à mon Niumi Spot |
 
-3. « Scanner le Niumi Spot » ouvre la feuille de scan, avec la phrase « Approche ton iPhone du Niumi Spot pour annuler la session » (« ton téléphone » sur Android).
-4. Après le scan, l'accueil revient en clair, dans l'état « Réveil désactivé », avec un message en bas de l'écran : « Session annulée. Tes applications sont débloquées et ton réveil est désactivé. »
+3. « Scanner le Niumi Spot » ouvre la feuille de scan, avec la phrase « Approche ton iPhone du Niumi Spot pour annuler le réveil » (« ton téléphone » sur Android).
+4. Après le scan, l'accueil revient en clair, dans l'état « Réveil désactivé », avec un message en bas de l'écran : « Réveil annulé. Tes applications sont débloquées. »
 
 Effets de l'annulation : le blocage est levé et l'interrupteur « Réveil activé » est éteint. Plus aucune alarme ni blocage n'est prévu tant qu'on ne le rallume pas.
 
@@ -331,10 +331,10 @@ Une feuille monte du bas, par-dessus l'accueil en session le soir, par-dessus l'
 
 | Élément | Contenu |
 | --- | --- |
-| Titre | Sortir de la session sans scanner ton Niumi Spot ? |
+| Titre | Arrêter le réveil sans scanner ton Niumi Spot ? |
 | Texte, le soir ou la nuit | Recopier un long texte remplace le scan de ton Niumi Spot. |
 | Texte, pendant l'alarme | L'alarme s'arrêtera et tes applications seront débloquées. Pour sortir, tu devras recopier un long texte. |
-| Bouton principal | Rester dans la session |
+| Bouton principal | Garder le réveil |
 | Bouton secondaire, au trait | Recopier le texte |
 | Troisième bouton, au trait, pendant l'alarme seulement | Ajouter un Niumi Spot |
 
@@ -347,25 +347,25 @@ Le bouton principal est celui qui fait rester. Sortir demande un geste volontair
 | Élément | Contenu |
 | --- | --- |
 | En haut à gauche | Lien « Annuler » |
-| En haut à droite | Compteur : « 84 sur 196 caractères » |
-| Consigne | Recopie ce texte pour sortir de la session. |
+| En haut à droite | Compteur : « 84 sur 190 caractères » |
+| Consigne | Recopie ce texte pour arrêter le réveil. |
 | Texte modèle | Affiché en entier dans un encadré, au-dessus du champ |
 | Champ de saisie | Vide au départ. Le collage est désactivé |
-| Bouton, au-dessus du clavier | Sortir de la session. Inactif tant que le texte n'est pas complet et juste |
+| Bouton, au-dessus du clavier | Arrêter le réveil. Inactif tant que le texte n'est pas complet et juste |
 | Message d'erreur | Un mot ne correspond pas. Il est signalé dans le texte. |
 
 - **Erreur.** Le premier mot qui diffère est surligné dans le texte modèle et souligné dans la saisie, et le message d'erreur s'affiche sous le champ.
 - **Comparaison.** Les majuscules, les accents, la ponctuation et les espaces en double sont ignorés.
 - **Abandon.** « Annuler » ramène à l'écran d'où l'on vient. La saisie est perdue.
-- **Le texte change à chaque sortie**, pour qu'un raccourci clavier ne suffise pas. Un seul texte est validé à ce jour (196 caractères ; les maquettes disent 197, à tort). D'autres textes neutres du même genre seront choisis plus tard **(ouvert)**. Tant qu'il est seul, le texte ne change pas d'une sortie à l'autre (décision du 24 octobre 2026) :
+- **Le texte change à chaque sortie**, pour qu'un raccourci clavier ne suffise pas. Un seul texte est validé à ce jour (190 caractères). Il a été revu le 24 octobre 2026 : « arrêter mon réveil » remplace « sortir de cette session », et le texte passe de 196 à 190 caractères (les anciennes maquettes disaient 197, à tort). D'autres textes neutres du même genre seront choisis plus tard **(ouvert)**. Tant qu'il est seul, le texte ne change pas d'une sortie à l'autre (décision du 24 octobre 2026) :
 
-> J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
+> J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis d'arrêter mon réveil sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
 
 Le même texte sert le soir et le matin : il ne doit donc mentionner ni « ce soir » ni une heure.
 
 **Après la recopie**, la session se termine comme après un scan.
 
-- Le soir ou la nuit : le blocage est levé, l'interrupteur « Réveil activé » est éteint, et l'accueil affiche le message « Session annulée. Tes applications sont débloquées et ton réveil est désactivé. »
+- Le soir ou la nuit : le blocage est levé, l'interrupteur « Réveil activé » est éteint, et l'accueil affiche le message « Réveil annulé. Tes applications sont débloquées. »
 - Le matin, pendant l'alarme : la sonnerie s'arrête et les applications sont débloquées. La session se termine comme après un scan : l'écran 11 s'affiche, sans la phrase « Bravo ! … de moins qu'avant Niumi. », et le réveil reste activé pour le lendemain (décision du 24 octobre 2026).
 - Sur iPhone, ce que fait l'alarme pendant la recopie n'est pas décidé non plus **(ouvert)**.
 
@@ -447,7 +447,7 @@ Décisions du 22 octobre 2026 (étape 38 du plan Android) :
 
 - **Le téléphone ne lit le Niumi Spot que feuille « Prêt à scanner » ouverte**, comme sur iPhone. Approcher le téléphone sans avoir touché « Scanner le Niumi Spot » ne fait rien. Une feuille d'échec ne lit pas non plus : « Réessayer » rouvre « Prêt à scanner ».
 - **Une seule consigne**, « Rejoins ton Niumi Spot », que l'alarme sonne encore ou que l'heure du réveil soit passée sans sonnerie.
-- **Après le scan**, le temps que Niumi termine la session, la feuille se ferme et seules restent la date, l'heure et un cercle de chargement, sans texte ; le lecteur d'écran dit « Fin de la session ». Le cercle n'apparaît que si l'attente dépasse 300 ms. Ce moment n'est pas dessiné.
+- **Après le scan**, le temps que Niumi termine la session, la feuille se ferme et seules restent la date, l'heure et un cercle de chargement, sans texte ; le lecteur d'écran dit « Fin du réveil ». Le cercle n'apparaît que si l'attente dépasse 300 ms. Ce moment n'est pas dessiné.
 - La feuille d'échec se ferme en touchant l'écran assombri, en la glissant vers le bas ou par le retour : sa maquette n'a pas de croix.
 - **Mise en page** : la date commence 24 points sous la marge du haut, au lieu des 60 de la maquette. Tant que le lien « Je n'ai pas accès à mon Niumi Spot » n'est pas livré, sa place reste réservée sous le bouton, pour que l'écran ne bouge pas à son arrivée.
 - **« Prêt à scanner »** s'écrit à l'encre (blanc sur la feuille sombre, noir sur la feuille claire), pas en gris : la maquette copie la fenêtre de l'iPhone, et le titre gris se lisait mal. Vaut pour toutes les feuilles de scan d'Android (écran 3, écran 10, annulation).

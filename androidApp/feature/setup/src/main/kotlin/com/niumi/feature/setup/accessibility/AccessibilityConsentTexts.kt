@@ -36,5 +36,5 @@ object AccessibilityConsentTexts {
     // aux deux endroits (voir ETAPE-05.md).
     const val SETTINGS_DESCRIPTION =
         "Observe le nom de l'application affichée pour ramener les applications bloquées " +
-            "à l'accueil pendant une session Niumi. Ne lit ni le contenu des écrans ni les saisies."
+            "à l'accueil tant qu'un réveil Niumi est programmé. Ne lit ni le contenu des écrans ni les saisies."
 }

@@ -764,7 +764,7 @@ Une interruption conserve `RELEASING`. La réconciliation reprend uniquement les
 
 Le désarmement (contrat 1.5) suit la même phase sans scan : `DISARM_REQUESTED` renseigne `releasedBy = PLAN_CHANGE`, passe à `RELEASING` avec la cible `DISARMED`, puis le coordinateur annule l'alarme et le début du blocage et envoie `RELEASE_SUCCEEDED` dès que l'annulation de l'alarme a réussi. Aucun blocage n'est à retirer : il était encore en attente.
 
-**Sortie de secours (contrat 1.5).** `EmergencyExitTexts` porte les textes à recopier. Un seul est validé (`"v1-01"`, 196 caractères avec ses apostrophes typographiques) : la liste est prête à en recevoir d'autres, mais tant qu'il est seul, le texte ne change pas d'une sortie à l'autre (D8, décision du 2026-10-24). `EmergencyTranscription.verify(textId, typed, context)` compare la saisie au texte :
+**Sortie de secours (contrat 1.5).** `EmergencyExitTexts` porte les textes à recopier. Un seul est validé (`"v1-01"`, 190 caractères avec ses apostrophes typographiques ; revu le 2026-10-24 sans changer d'identifiant, « arrêter mon réveil » remplaçant « sortir de cette session », 196 caractères auparavant) : la liste est prête à en recevoir d'autres, mais tant qu'il est seul, le texte ne change pas d'une sortie à l'autre (D8, décision du 2026-10-24). `EmergencyTranscription.verify(textId, typed, context)` compare la saisie au texte :
 
 - la saisie et le modèle sont normalisés : minuscules, lettres accentuées du français repliées (`œ` en `oe`, `æ` en `ae`), tout ce qui n'est ni lettre, ni chiffre, ni espace retiré, puis découpage sur les espaces. « J’avais », « J'avais » et « Javais » se valent, comme la majuscule automatique du clavier. `commonMain` n'offre pas de normalisation Unicode (NFD) : les accents sont repliés par une table, et les diacritiques combinants disparaissent avec la ponctuation;
 - la comparaison se fait mot à mot. Tous les mots égaux et en même nombre : `COMPLETE`. Une saisie plus courte, dont seul le dernier mot peut être le début du mot attendu : `INCOMPLETE`, saisie vide comprise. Un mot différent, ou un mot de trop : `MISMATCH`, avec `mismatchWordIndex` égal à l'index du premier mot qui diffère (le nombre de mots du modèle pour un mot de trop). Un identifiant inconnu : `UNKNOWN_TEXT`;
@@ -1186,7 +1186,7 @@ Les tests `commonTest` couvrent au minimum:
 
 ### Sortie de secours et temps gagné (contrat 1.5)
 
-- texte validé recopié mot pour mot, 196 caractères, sans « ce soir » ni chiffre ; identifiant inconnu sans texte;
+- texte validé recopié mot pour mot, 190 caractères, sans « ce soir » ni chiffre ; identifiant inconnu sans texte;
 - recopie exacte complète ; majuscules, accents précomposés ou combinants, ponctuation, apostrophe droite ou omise et espaces en double ignorés ; point final omis accepté;
 - premier mot divergent signalé à son index ; préfixe toléré pour le dernier mot seulement ; saisie vide incomplète ; mot de trop signalé après le dernier mot;
 - preuve produite sur une recopie complète avec contexte, jamais sans contexte, ni sur une saisie incomplète ou fausse, ni pour un texte inconnu;

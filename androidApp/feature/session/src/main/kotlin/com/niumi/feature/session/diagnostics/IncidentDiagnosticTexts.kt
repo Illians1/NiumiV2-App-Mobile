@@ -22,7 +22,7 @@ object IncidentDiagnosticTexts {
     const val STORAGE_FAILURE_TITLE = "Niumi ne peut plus lire son état enregistré"
 
     const val STORAGE_FAILURE_MESSAGE =
-        "Tes applications restent bloquées. Scanne ton boîtier pour terminer ta session."
+        "Tes applications restent bloquées. Scanne ton Niumi Spot pour terminer ta session."
 
     const val EXPORT_TITLE = "Niumi — diagnostic"
 
@@ -35,7 +35,7 @@ object IncidentDiagnosticTexts {
 
     const val NO_SESSION = "Aucune session active."
 
-    const val BOX_TITLE = "Boîtier"
+    const val BOX_TITLE = "Niumi Spot"
 
     const val CHECKS_TITLE = "Contrôles"
 
@@ -90,7 +90,7 @@ object IncidentDiagnosticTexts {
         when (id) {
             ReadinessCheckId.NFC_PRESENT -> "NFC présent"
             ReadinessCheckId.NFC_ENABLED -> "NFC activé"
-            ReadinessCheckId.PAIRED_BOX -> "Boîtiers associés"
+            ReadinessCheckId.PAIRED_BOX -> "Niumi Spots associés"
             ReadinessCheckId.APP_SELECTION -> "Applications choisies"
             ReadinessCheckId.EXACT_ALARM -> "Alarme exacte disponible"
             ReadinessCheckId.NOTIFICATIONS -> "Notifications autorisées"

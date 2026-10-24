@@ -37,7 +37,7 @@ class HelpScreenTest {
     }
 
     /**
-     * §3 et §10.2 : le scan du boîtier est la seule sortie de session. Un écran de consultation
+     * §3 et §10.2 : le scan du Niumi Spot est la seule sortie de session. Un écran de consultation
      * atteignable pendant une session ne doit offrir **aucune** action — c'est ce qu'un bouton
      * ajouté par mégarde ferait perdre, sans qu'aucun autre test ne s'en aperçoive.
      */

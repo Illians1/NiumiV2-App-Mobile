@@ -16,7 +16,7 @@ data class SummaryUiState(
     val display: WakeScheduleDisplay? = null,
     val blockingDisplay: WakeScheduleDisplay? = null,
     val blockedPackages: List<BlockedPackage> = emptyList(),
-    /** Les noms des boîtiers enregistrés, dans l'ordre de `PairedBoxStore.all()` (liste courante, étape 43). */
+    /** Les noms des Niumi Spots enregistrés, dans l'ordre de `PairedBoxStore.all()` (liste courante, étape 43). */
     val boxNames: List<String> = emptyList(),
     val isAllowed: Boolean = false,
     val isActivating: Boolean = false,
@@ -42,7 +42,7 @@ data class SummaryUiState(
     val isBlockingImmediate: Boolean
         get() = blockingDisplay == null
 
-    /** Noms joints pour l'affichage (« Salle de bain, Cuisine »), `null` sans boîtier (Lot 8). */
+    /** Noms joints pour l'affichage (« Salle de bain, Cuisine »), `null` sans Niumi Spot (Lot 8). */
     val boxNamesDisplay: String?
         get() = boxNames.takeIf { it.isNotEmpty() }?.joinToString(", ")
 }

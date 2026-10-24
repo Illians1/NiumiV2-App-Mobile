@@ -16,7 +16,7 @@ import javax.inject.Inject
  *
  * [storageIntegrity] rejoint le groupe à l'étape 20 : quand Room ne se lit plus, l'écran doit
  * l'afficher plutôt que rester en chargement indéfini. [pairedBoxStore] la rejoint à l'étape 43 :
- * l'export nomme les boîtiers enregistrés, la session n'en fige plus aucun — et remplace la
+ * l'export nomme les Niumi Spots enregistrés, la session n'en fige plus aucun — et remplace la
  * passerelle de session, qui ne servait qu'à lire cette liste figée.
  *
  * Aucune n'écrit : le diagnostic constate, il ne décide de rien.

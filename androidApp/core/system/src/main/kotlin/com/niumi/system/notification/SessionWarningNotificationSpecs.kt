@@ -27,7 +27,7 @@ object SessionWarningNotificationSpecs {
                 "L'accès aux alarmes exactes a été perdu. Ton réveil ne peut plus être programmé à l'heure.",
             ReadinessCheckId.NOTIFICATIONS to
                 "Les notifications de Niumi sont désactivées. Au réveil, tu devras ouvrir Niumi " +
-                "toi-même pour scanner ton boîtier.",
+                "toi-même pour scanner ton Niumi Spot.",
             ReadinessCheckId.ALARM_VOLUME to
                 "Le volume des alarmes est à zéro. Ton réveil ne sera pas audible.",
             ReadinessCheckId.DND_TOTAL_SILENCE to

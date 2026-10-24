@@ -193,7 +193,7 @@ class NiumiCoreFacadeTest {
         val texts = facade.emergencyExitTexts()
 
         assertEquals(listOf("v1-01"), texts.map { it.id })
-        assertEquals(196, texts.single().charCount)
+        assertEquals(190, texts.single().charCount)
         assertEquals(texts.single().text.length, texts.single().charCount)
     }
 

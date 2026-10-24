@@ -32,7 +32,7 @@ data class ReadinessInput(
 
 /**
  * [checks] contient les quatorze contrôles de §13, dans l'ordre du tableau. Les trois contrôles
- * de parcours (boîtier, sélection, instant de réveil) y figurent pour l'affichage, mais
+ * de parcours (Niumi Spot, sélection, instant de réveil) y figurent pour l'affichage, mais
  * [ReadinessDtoMapper] les route vers les champs dédiés d'`ActivationPolicyInputDto` plutôt que
  * vers sa liste `checks` : la politique commune les traite déjà avec des codes précis
  * (`NO_PAIRED_BOX`, `INVALID_APP_SELECTION`, `TRIGGER_NOT_IN_FUTURE`), les verser deux fois

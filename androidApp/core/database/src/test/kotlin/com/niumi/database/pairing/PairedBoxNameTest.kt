@@ -4,7 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /**
- * SPEC_ANDROID §11.1 : un nom de boîtier fait 1 à 30 caractères après `trim()`, un nom vide ou
+ * SPEC_ANDROID §11.1 : un nom de Niumi Spot fait 1 à 30 caractères après `trim()`, un nom vide ou
  * blanc est refusé (Lot 8).
  */
 class PairedBoxNameTest {

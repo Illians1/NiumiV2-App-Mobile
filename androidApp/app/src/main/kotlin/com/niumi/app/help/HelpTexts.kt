@@ -16,7 +16,7 @@ data class HelpSection(
  * la restitution, jamais une reformulation.
  *
  * Depuis l'étape 35 de la refonte (décision de Mehdi du 2026-10-20), l'aide est le seul écran à
- * porter les limites : l'onboarding qui les énonçait avant la première session a laissé la place à
+ * porter les limites : l'onboarding qui les énonçait avant le premier réveil a laissé la place à
  * l'écran 1 · Présentation, qui ne les reprend pas.
  */
 object HelpTexts {
@@ -24,7 +24,7 @@ object HelpTexts {
 
     const val INTRO =
         "Niumi te réveille et bloque les applications que tu choisis jusqu'au scan de ton " +
-            "boîtier. Voilà ce qu'il ne peut pas garantir, et pourquoi."
+            "Niumi Spot. Voilà ce qu'il ne peut pas garantir, et pourquoi."
 
     val sections: List<HelpSection> =
         listOf(
@@ -37,8 +37,8 @@ object HelpTexts {
                             "empêcher.",
                         "Le mode Ne pas déranger en silence total coupe le son et la vibration de l'alarme, et " +
                             "la notification du réveil n'apparaît pas sur l'écran de verrouillage : pour scanner, " +
-                            "déverrouille ton téléphone et ouvre Niumi toi-même. Niumi refuse d'activer une " +
-                            "session dans cet état, et ne modifie jamais ce réglage à ta place.",
+                            "déverrouille ton téléphone et ouvre Niumi toi-même. Niumi refuse d'activer ton " +
+                            "réveil dans cet état, et ne modifie jamais ce réglage à ta place.",
                         "Le service d'accessibilité peut être désactivé à tout moment dans les réglages " +
                             "Android, ce qui arrête le blocage.",
                         "Le blocage renvoie les applications choisies à l'accueil ; il ne les rend pas " +
@@ -46,34 +46,36 @@ object HelpTexts {
                             "le contourner.",
                         "Le scan demande un téléphone déverrouillé : quand ça sonne, déverrouille-le, puis " +
                             "touche la notification Niumi ou ouvre l'application.",
-                        "Il n'existe aucun secours logiciel pendant une session : ni code, ni délai, ni bouton " +
-                            "« Arrêter quand même ». Sans ton boîtier, il te reste l'arrêt forcé ou l'extinction du " +
-                            "téléphone.",
+                        "Il n'existe aucun secours logiciel une fois ton réveil activé : ni code, ni délai, ni " +
+                            "bouton « Arrêter quand même ». Sans ton Niumi Spot, il te reste l'arrêt forcé ou " +
+                            "l'extinction du téléphone.",
                         "Si une permission est retirée, le volume d'alarme coupé ou l'exemption d'énergie perdue " +
                             "après l'activation, Niumi le signale par un incident. Il ne peut pas le corriger seul.",
-                        "Pendant une session, une notification Niumi reste affichée : tu peux l'écarter, ta " +
-                            "session continue. Sur Xiaomi, « Tout effacer » dans les applications récentes arrête " +
-                            "le blocage tant que Niumi n'y est pas verrouillé : le diagnostic le demande une fois. " +
-                            "Hors session, balayer Niumi dans les applications récentes oblige à réactiver son " +
-                            "service d'accessibilité avant la session suivante : le diagnostic te le dira.",
-                        "Si Niumi est arrêté pendant une session — plantage ou arrêt forcé — le " +
+                        "Quand ton réveil est programmé, une notification Niumi reste affichée : tu peux " +
+                            "l'écarter sans rien annuler. Sur Xiaomi, « Tout effacer » dans les applications " +
+                            "récentes arrête le blocage tant que Niumi n'y est pas verrouillé : le diagnostic le " +
+                            "demande une fois. Sans réveil programmé, balayer Niumi dans les applications récentes " +
+                            "oblige à réactiver son service d'accessibilité avant le prochain réveil : le " +
+                            "diagnostic te le dira.",
+                        "Si Niumi est arrêté alors que ton réveil est programmé — plantage ou arrêt forcé — le " +
                             "blocage ne reprend pas tant que tu n'as pas réactivé le service d'accessibilité. " +
                             "Niumi te prévient dès qu'il tourne à nouveau, et un blocage différé commence alors " +
                             "en retard.",
                         "Un blocage différé commence à l'heure choisie tant que le téléphone est allumé, même " +
                             "verrouillé, en veille ou redémarré entre-temps. Si le téléphone est éteint à cette " +
-                            "heure-là, le blocage commence dès qu'il redémarre, et la session signale le retard.",
+                            "heure-là, le blocage commence dès qu'il redémarre, et Niumi signale le retard.",
                         "À l'heure de début, une application choisie déjà ouverte est renvoyée à l'accueil en " +
                             "moins d'une seconde, sans que tu aies à changer d'écran.",
                     ),
             ),
             HelpSection(
-                title = "Boîtiers",
+                title = "Niumi Spots",
                 items =
                     listOf(
-                        "N'importe quel boîtier enregistré au moment du scan termine la session. Tu peux en " +
-                            "ajouter, en retirer ou en renommer à tout moment, même pendant une session ; il en " +
-                            "reste toujours au moins un. Un boîtier retiré ne termine plus rien.",
+                        "N'importe quel Niumi Spot enregistré au moment du scan arrête le réveil et débloque tes " +
+                            "applications. Tu peux en ajouter, en retirer ou en renommer à tout moment, même quand " +
+                            "ton réveil est programmé ; il en reste toujours au moins un. Un Niumi Spot retiré " +
+                            "n'arrête plus rien.",
                     ),
             ),
             HelpSection(
@@ -87,8 +89,8 @@ object HelpTexts {
                             "reprogrammation du réveil après un redémarrage, mais il empêche Niumi de se remettre à " +
                             "jour tout seul après une mise à jour de l'application.",
                         "Une mise à jour de Niumi peut réinitialiser l'exemption d'énergie. Le diagnostic la " +
-                            "revérifie avant chaque session, et Niumi te prévient s'il la voit disparaître pendant " +
-                            "une session.",
+                            "revérifie à chaque activation de ton réveil, et Niumi te prévient s'il la voit " +
+                            "disparaître ensuite.",
                         "Juste après un redémarrage, le diagnostic peut annoncer le NFC désactivé alors qu'il " +
                             "ne l'est pas : la pile NFC du système n'a pas fini de démarrer. Rouvrir Niumi corrige " +
                             "l'affichage.",
@@ -96,7 +98,7 @@ object HelpTexts {
                             "le NFC désactivé : le message disparaît de lui-même dès que le NFC est prêt, en " +
                             "général une vingtaine de secondes après le déverrouillage, et peut revenir une ou deux " +
                             "secondes pendant que le téléphone relance son NFC. Attends qu'il ait disparu pour " +
-                            "scanner ton boîtier.",
+                            "scanner ton Niumi Spot.",
                     ),
             ),
             HelpSection(
@@ -121,7 +123,7 @@ object HelpTexts {
                         "Sur Xiaomi, si les notifications de Niumi sont masquées sur l'écran de verrouillage, la " +
                             "notification du réveil n'y apparaît pas : déverrouille ton téléphone, puis touche-la " +
                             "dans le volet ou ouvre Niumi. Le diagnostic ne peut pas voir ce réglage.",
-                        "La notification qui te demande de scanner ton boîtier peut être balayée. Depuis " +
+                        "La notification qui te demande de scanner ton Niumi Spot peut être balayée. Depuis " +
                             "Android 14, Niumi ne peut pas l'en empêcher. Elle revient dès que tu rouvres " +
                             "l'application, et l'écran de blocage te rappelle le scan.",
                         "Si un réglage casse ton réveil après l'activation, Niumi t'avertit au plus tôt, jamais " +

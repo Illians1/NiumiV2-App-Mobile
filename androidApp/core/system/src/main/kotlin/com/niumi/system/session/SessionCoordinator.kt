@@ -10,7 +10,7 @@ import com.niumi.database.AndroidSessionExtras
  * `ACTIVATION_SUCCEEDED`/`FAILED` ou `RELEASE_SUCCEEDED`/`FAILED` selon SPEC_CORE_KMP §6, §10, §12.
  *
  * [extras] porte les données Android absentes de [SessionEventDto] (sonnerie, sélection
- * d'applications ; plus aucun boîtier depuis l'étape 43) : requis uniquement pour
+ * d'applications ; plus aucun Niumi Spot depuis l'étape 43) : requis uniquement pour
  * `ACTIVATION_REQUESTED`, ignoré sinon — la session déjà persistée fait foi
  * (`RoomSessionStore.freezeFrom`).
  */

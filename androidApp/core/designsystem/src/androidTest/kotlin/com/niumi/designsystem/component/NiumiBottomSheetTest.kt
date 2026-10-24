@@ -42,11 +42,11 @@ class NiumiBottomSheetTest {
             NiumiTheme(dark = true) {
                 NiumiBottomSheet(
                     onDismiss = { dismissals++ },
-                    title = "Annuler la session ?",
+                    title = "Annuler le réveil ?",
                     closeLabel = closeLabel,
                 ) { requestClose ->
                     Text("Scanne ton Niumi Spot pour annuler.")
-                    NiumiPrimaryButton(text = "Rester dans la session", onClick = requestClose)
+                    NiumiPrimaryButton(text = "Garder le réveil", onClick = requestClose)
                     NiumiOutlinedButton(text = "Valider", onClick = { contentActions++ })
                 }
             }
@@ -59,7 +59,7 @@ class NiumiBottomSheetTest {
         showSheet(closeLabel = null)
 
         composeRule
-            .onNodeWithText("Annuler la session ?")
+            .onNodeWithText("Annuler le réveil ?")
             .assertIsDisplayed()
             .assert(isHeading())
         composeRule.onNodeWithText("Scanne ton Niumi Spot pour annuler.").assertIsDisplayed()
@@ -90,7 +90,7 @@ class NiumiBottomSheetTest {
         composeRule.onNodeWithContentDescription("Fermer").performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithContentDescription("Fermer").performClick()
-        composeRule.onNodeWithText("Rester dans la session").performClick()
+        composeRule.onNodeWithText("Garder le réveil").performClick()
         composeRule.mainClock.autoAdvance = true
         composeRule.waitForIdle()
 
@@ -130,17 +130,17 @@ class NiumiBottomSheetTest {
         assertThat(contentActions).isEqualTo(1)
     }
 
-    /** Un bouton du contenu (« Rester dans la session ») range la feuille comme la croix. */
+    /** Un bouton du contenu (« Garder le réveil ») range la feuille comme la croix. */
     @Test
     fun theContentCanCloseTheSheet() {
         showSheet(closeLabel = null)
 
-        composeRule.onNodeWithText("Rester dans la session").performClick()
+        composeRule.onNodeWithText("Garder le réveil").performClick()
         composeRule.waitForIdle()
 
         assertThat(dismissals).isEqualTo(1)
         // Rangée hors de l'écran ; c'est à l'écran appelant de la retirer de la composition.
-        composeRule.onNodeWithText("Annuler la session ?").assertIsNotDisplayed()
+        composeRule.onNodeWithText("Annuler le réveil ?").assertIsNotDisplayed()
     }
 
     @Test

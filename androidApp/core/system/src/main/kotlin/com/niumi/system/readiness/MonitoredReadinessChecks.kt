@@ -48,7 +48,7 @@ object MonitoredReadinessChecks {
 
     /**
      * Les deux contrôles qui restent surveillés après `ARMED`, parce qu'ils portent sur le
-     * blocage et que le blocage court jusqu'au scan du boîtier, dans `RINGING`, `AWAITING_NFC`,
+     * blocage et que le blocage court jusqu'au scan du Niumi Spot, dans `RINGING`, `AWAITING_NFC`,
      * `TRIGGERED_AWAITING_NFC` et `RELEASING` (SPEC_ANDROID §3) :
      * - le service d'accessibilité (étape 15), dont §12.2 exige que la désactivation pendant une
      *   session soit détectée et présentée ;

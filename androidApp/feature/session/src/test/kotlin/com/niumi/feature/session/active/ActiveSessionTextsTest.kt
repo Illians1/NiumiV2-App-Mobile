@@ -63,7 +63,7 @@ class ActiveSessionTextsTest {
     fun theScanInvitationIsStatedWordForWord() {
         assertThat(ScanToModifyTexts.INVITATION)
             .isEqualTo(
-                "Scanne ton boîtier Niumi pour annuler ou modifier ta session. " +
+                "Scanne ton Niumi Spot pour annuler ou modifier ta session. " +
                     "Tes applications resteront bloquées jusqu'au scan.",
             )
     }
@@ -89,22 +89,22 @@ class ActiveSessionTextsTest {
         assertThat(ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON).isEqualTo("Modifier ou annuler")
     }
 
-    /** Étape 43, texte de Mehdi du 2026-10-24 : un boîtier non enregistré au moment du scan. */
+    /** Étape 43, texte de Mehdi du 2026-10-24 : un Niumi Spot non enregistré au moment du scan. */
     @Test
     fun anUnknownBoxIsStatedWordForWord() {
         assertThat(ScanToModifyTexts.UNKNOWN_BOX).isEqualTo("Ce Niumi Spot n'est pas connu. Rien n'a été modifié.")
     }
 
-    /** Étape 43 : même libellé que le titre de l'écran 3 qu'il ouvre (« Mes boîtiers »). */
+    /** Étape 43 : même libellé que le titre de l'écran 3 qu'il ouvre (« Mes Niumi Spots »). */
     @Test
     fun theBoxesLinkNamesTheScreenItOpens() {
-        assertThat(ActiveSessionTexts.OPEN_BOXES_BUTTON).isEqualTo("Mes boîtiers")
+        assertThat(ActiveSessionTexts.OPEN_BOXES_BUTTON).isEqualTo("Mes Niumi Spots")
     }
 
     @Test
     fun theCommitmentReminderIsStatedWordForWord() {
         assertThat(ActiveSessionTexts.COMMITMENT_REMINDER)
-            .isEqualTo("Seul le scan d'un de tes boîtiers terminera la session.")
+            .isEqualTo("Seul le scan d'un de tes Niumi Spots terminera la session.")
     }
 
     /** §15 (étape 25) : la mention d'un incident rétabli parle du réglage, jamais de la session. */

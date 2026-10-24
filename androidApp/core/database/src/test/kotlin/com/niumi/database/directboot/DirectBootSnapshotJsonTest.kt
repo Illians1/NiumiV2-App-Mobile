@@ -222,7 +222,7 @@ class DirectBootSnapshotJsonTest {
     }
 
     /**
-     * Étape 43, SPEC_ANDROID §7.3 : un fichier v4 — liste de boîtiers figée, sans `releasedBy` ni
+     * Étape 43, SPEC_ANDROID §7.3 : un fichier v4 — liste de Niumi Spots figée, sans `releasedBy` ni
      * `disarmedAtEpochMillis` — se lit, la liste ignorée et les deux champs nuls ; la façade en
      * déduit le moyen de libération (SPEC_CORE_KMP §7.1).
      */

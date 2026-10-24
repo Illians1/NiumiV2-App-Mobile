@@ -32,7 +32,7 @@ import javax.inject.Inject
  * réveil est déjà figée, `FUTURE_TRIGGER` n'a rien à valider ici.
  *
  * [exportText] ne reçoit **jamais** `tokenSha256Hex` : seuls `boxId` et `name` traversent, par
- * boîtier (Lot 8), et l'exporteur tronque chaque `boxId` (§17).
+ * Niumi Spot (Lot 8), et l'exporteur tronque chaque `boxId` (§17).
  */
 @HiltViewModel
 class IncidentDiagnosticViewModel
@@ -109,7 +109,7 @@ class IncidentDiagnosticViewModel
                 )
             }
 
-            // Étape 43 : les boîtiers enregistrés au moment de l'export, ceux qu'un scan accepterait.
+            // Étape 43 : les Niumi Spots enregistrés au moment de l'export, ceux qu'un scan accepterait.
             boxes = sources.pairedBoxStore.all().map { DiagnosticBox(it.credential.boxId, it.name) }
             return IncidentDiagnosticUiState(
                 sessionId = snapshot.sessionId,

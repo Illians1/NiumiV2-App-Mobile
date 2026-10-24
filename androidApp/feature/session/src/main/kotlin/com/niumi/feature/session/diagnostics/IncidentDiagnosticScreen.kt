@@ -37,7 +37,7 @@ import com.niumi.system.readiness.ReadinessCheck
 /**
  * Écran 12 — diagnostic d'incident (SPEC_ANDROID §15, §17, §18).
  *
- * Écran de **consultation** : il ne porte aucune action sur la session. Le scan du boîtier reste le
+ * Écran de **consultation** : il ne porte aucune action sur la session. Le scan du Niumi Spot reste le
  * seul chemin de sortie (§3, §10.2) ; les recours, eux, vivent sur l'écran 7 (§15). La seule action
  * ici est l'export, que §17 exige explicite.
  */

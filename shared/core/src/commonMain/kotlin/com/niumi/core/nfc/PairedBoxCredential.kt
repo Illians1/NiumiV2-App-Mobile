@@ -1,7 +1,7 @@
 package com.niumi.core.nfc
 
 /**
- * Boîtier associé, tel que stocké par la plateforme native (SPEC_CORE_KMP §9.2). Ne contient
+ * Niumi Spot associé, tel que stocké par la plateforme native (SPEC_CORE_KMP §9.2). Ne contient
  * jamais le token en clair, uniquement l'empreinte SHA-256 de ses 16 octets décodés.
  */
 public data class PairedBoxCredential(

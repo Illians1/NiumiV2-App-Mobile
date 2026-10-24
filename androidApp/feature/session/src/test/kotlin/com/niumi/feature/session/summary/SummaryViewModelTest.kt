@@ -87,7 +87,7 @@ class SummaryViewModelTest {
             },
         )
     private val timeZoneProvider = RecordingTimeZoneProvider(journal, zoneId = "Europe/Paris")
-    private val pairedBox = PairedBoxDto(credential, "Boîtier 1")
+    private val pairedBox = PairedBoxDto(credential, "Niumi Spot 1")
     private val pairedBoxStore = RecordingPairedBoxStore(journal, listOf(pairedBox))
     private val appSelectionStore = RecordingAppSelectionStore(journal, selection)
     private val coordinator = RecordingSessionCoordinator(journal)

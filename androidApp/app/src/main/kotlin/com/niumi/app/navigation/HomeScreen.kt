@@ -55,7 +55,7 @@ private const val ACTIVE_SESSION_TITLE = "Une session est en cours."
 private const val STORAGE_UNREADABLE_TITLE = "État illisible"
 private const val STORAGE_UNREADABLE_MESSAGE =
     "Niumi ne peut plus lire son état enregistré. Si une session était en cours, tes applications " +
-        "restent bloquées et le scan du boîtier reste la seule sortie."
+        "restent bloquées et le scan du Niumi Spot reste la seule sortie."
 private const val STORAGE_UNREADABLE_BUTTON_LABEL = "Voir le diagnostic"
 
 /**

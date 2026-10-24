@@ -28,17 +28,17 @@ class EmergencyTranscriptionTest {
         val result = EmergencyTranscription.verify(textId, model, context = null)
 
         assertEquals(TranscriptionStatus.COMPLETE, result.status)
-        assertEquals(34, result.matchedWordCount)
+        assertEquals(32, result.matchedWordCount)
         assertNull(result.mismatchWordIndex)
-        assertEquals(196, result.expectedCharCount)
-        assertEquals(196, result.typedCharCount)
+        assertEquals(190, result.expectedCharCount)
+        assertEquals(190, result.typedCharCount)
     }
 
     @Test
     fun caseAccentsPunctuationAndDoubleSpacesAreIgnored() {
         val typed =
             "JAVAIS  decide de bloquer mes applications jusquau scan de mon niumi spot " +
-                "je choisis de sortir de cette session sans le scanner   " +
+                "je choisis darreter mon reveil sans le scanner   " +
                 "JE RECOPIE CE TEXTE EN ENTIER POUR CONFIRMER QUE CEST MON CHOIX"
 
         assertEquals(TranscriptionStatus.COMPLETE, EmergencyTranscription.verify(textId, typed, null).status)
@@ -146,8 +146,8 @@ class EmergencyTranscriptionTest {
         val result = EmergencyTranscription.verify(textId, "$model encore", null)
 
         assertEquals(TranscriptionStatus.MISMATCH, result.status)
-        assertEquals(34, result.mismatchWordIndex)
-        assertEquals(34, result.matchedWordCount)
+        assertEquals(32, result.mismatchWordIndex)
+        assertEquals(32, result.matchedWordCount)
     }
 
     @Test
@@ -180,7 +180,7 @@ class EmergencyTranscriptionTest {
         assertEquals(TranscriptionStatus.UNKNOWN_TEXT, result.status)
         assertNull(result.proof)
         assertEquals(0, result.expectedCharCount)
-        assertEquals(196, result.typedCharCount)
+        assertEquals(190, result.typedCharCount)
     }
 
     @Test

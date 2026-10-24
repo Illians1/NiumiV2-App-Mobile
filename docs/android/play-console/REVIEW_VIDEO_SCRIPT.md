@@ -19,13 +19,13 @@ Le tournage lui-même reste une action humaine, sur appareil réel, et condition
 | 1 | Écran de consentement (§12.3) | Atteint par « Autoriser » sur la tuile « Blocage des applications » de l’écran 2 (depuis l’étape 36) ; les cinq points affichés en entier, avant toute ouverture des réglages | 10 s |
 | 2 | Activation du service | Ouverture réelle de `ACTION_ACCESSIBILITY_SETTINGS`, bascule manuelle du switch système par l'utilisateur (aucun clic simulé par l'app) | 10 s |
 | 3 | Retour dans Niumi | La fenêtre de consentement se referme d’elle-même et la tuile « Blocage des applications » de l’écran 2 avance (depuis l’étape 36) | 5 s |
-| 4 | Association du boîtier | Scan NFC réel d'un tag, confirmation de l'association | 10 s |
+| 4 | Association du Niumi Spot | Scan NFC réel d'un tag, confirmation de l'association | 10 s |
 | 5 | Sélection des applications à bloquer | Le sélecteur, le choix d'au moins une application | 10 s |
 | 6 | Écran 2 · Autorisations | Toutes les tuiles sont cochées, dont « Batterie » et « Verrouiller Niumi » (§13, depuis l’étape 36) | 10 s |
 | 7 | Activation d'une session | Confirmation, retour à l'accueil « session active » | 5 s |
 | 8 | Déclenchement de l'alarme | Écran verrouillé, sonnerie audible, notification sur l'écran de verrouillage, déverrouillage, tap sur la notification, écran de réveil | 15 s |
 | 9 | Tentative d'ouverture d'une application bloquée | Retour immédiat à l'accueil et écran de blocage « L’application {Application} est bloquée » (depuis l'étape 39), texte lisible, puis toucher « Fermer » : retour à l'accueil du téléphone | 10 s |
-| 10 | Scan du boîtier associé | Alarme et blocage s'arrêtent en moins d'une seconde | 5 s |
+| 10 | Scan du Niumi Spot associé | Alarme et blocage s'arrêtent en moins d'une seconde | 5 s |
 | 11 | Session terminée | Écran de fin de session | 5 s |
 
 Durée totale visée : autour de 100 secondes, sans montage trompeur (pas de coupe qui masquerait

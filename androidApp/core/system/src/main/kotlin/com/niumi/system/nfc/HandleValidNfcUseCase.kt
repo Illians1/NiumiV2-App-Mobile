@@ -15,20 +15,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Fin ou annulation de session par scan du boîtier (SPEC_ANDROID §11.3 ; SPEC_CORE_KMP §4, §6,
+ * Fin ou annulation de session par scan du Niumi Spot (SPEC_ANDROID §11.3 ; SPEC_CORE_KMP §4, §6,
  * §9.2, §10). **Réalise les points 1 à 4 de §11.3** — éligibilité de l'état, réconciliation avant
- * scan, vérification du boîtier, envoi de `VALID_NFC_SCANNED` — et interprète le résultat. Les
+ * scan, vérification du Niumi Spot, envoi de `VALID_NFC_SCANNED` — et interprète le résultat. Les
  * points 5 à 14 (persistance atomique, exécution des effets, `RELEASE_SUCCEEDED`/`FAILED`, état
  * final, effacement du pointeur) appartiennent au coordinateur et à ses exécuteurs depuis
  * l'étape 11 : rien n'en est redit ici.
  *
  * **Ne décide jamais de la validité d'un payload** (SPEC_CORE_KMP §9.3) : le parseur et le
- * vérificateur communs tranchent, ce cas d'usage ne fait que leur fournir le boîtier de référence
+ * vérificateur communs tranchent, ce cas d'usage ne fait que leur fournir le Niumi Spot de référence
  * et traduire leur verdict en [ScanOutcome].
  *
  * **La liste de référence est l'ensemble courant de [PairedBoxStore], lu au moment du scan**
- * (§11.3 point 3 ; SPEC_CORE_KMP §2, décisions 11 et 16 ; décision Q11 du 2026-10-19) : un boîtier
- * ajouté pendant la session la termine, un boîtier retiré n'arrête plus rien. La lecture a lieu après
+ * (§11.3 point 3 ; SPEC_CORE_KMP §2, décisions 11 et 16 ; décision Q11 du 2026-10-19) : un Niumi Spot
+ * ajouté pendant la session la termine, un Niumi Spot retiré n'arrête plus rien. La lecture a lieu après
  * l'éventuelle réconciliation, au plus près de la vérification. Le scan exige un appareil
  * déverrouillé (SPEC_ANDROID §4.4) ; avant déverrouillage, `RoomPairedBoxStore.all()` répondrait une
  * liste vide, donc un refus, jamais une acceptation à tort.
@@ -50,7 +50,7 @@ class HandleValidNfcUseCase
     ) : NfcScanHandler {
         /**
          * Clauses de garde séquentielles — session illisible ou absente, état non éligible, payload
-         * rejeté, boîtier étranger — avant le dispatch. Même motif que
+         * rejeté, Niumi Spot étranger — avant le dispatch. Même motif que
          * `DefaultSessionCoordinator.dispatchLocked` et `AlarmTriggerHandler.handle` : imbriquer
          * ces refus produirait cinq niveaux d'indentation pour une suite de conditions
          * indépendantes.
@@ -94,7 +94,7 @@ class HandleValidNfcUseCase
                 is DispatchResult.Applied, is DispatchResult.Duplicate -> ScanOutcome.Accepted
 
                 // Révision périmée ou transition refusée : rien n'a bougé, et il n'y a rien à
-                // annoncer à l'utilisateur — ce n'est pas un mauvais boîtier.
+                // annoncer à l'utilisateur — ce n'est pas un mauvais Niumi Spot.
                 is DispatchResult.Rejected -> ScanOutcome.Ignored
             }
         }

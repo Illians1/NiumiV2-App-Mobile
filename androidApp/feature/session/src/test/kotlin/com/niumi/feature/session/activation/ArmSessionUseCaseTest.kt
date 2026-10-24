@@ -67,7 +67,7 @@ class ArmSessionUseCaseTest {
             boxId = "b0c1d2e3-4455-6677-8899-aabbccddeeff",
             tokenSha256Hex = "a".repeat(64),
         )
-    private val pairedBox = PairedBoxDto(credential, "Boîtier 1")
+    private val pairedBox = PairedBoxDto(credential, "Niumi Spot 1")
     private val selection =
         listOf(
             BlockedPackage("com.example.chat", "Chat"),
@@ -230,9 +230,9 @@ class ArmSessionUseCaseTest {
         }
 
     /**
-     * Étape 43 : la liste des boîtiers n'est plus figée dans la session (SPEC_CORE_KMP §2, décisions
+     * Étape 43 : la liste des Niumi Spots n'est plus figée dans la session (SPEC_CORE_KMP §2, décisions
      * 11 et 16) — `AndroidSessionExtras` n'a plus de champ pour elle. Elle est lue une seule fois,
-     * pour refuser une activation sans boîtier ; la vérification d'un scan relira l'ensemble courant.
+     * pour refuser une activation sans Niumi Spot ; la vérification d'un scan relira l'ensemble courant.
      */
     @Test
     fun theBoxesAreReadOnceToGuardTheActivationAndNeverCopiedIntoTheSession() =
@@ -426,7 +426,7 @@ class ArmSessionUseCaseTest {
             assertThat(preview.scheduleResult.status).isEqualTo(WakeScheduleStatusDto.VALID)
         }
 
-    /** Lot 8 : l'aperçu liste les noms des boîtiers associés, dans l'ordre de `PairedBoxStore.all()`. */
+    /** Lot 8 : l'aperçu liste les noms des Niumi Spots associés, dans l'ordre de `PairedBoxStore.all()`. */
     @Test
     fun thePreviewListsTheBoxNamesInOrder() =
         runTest {

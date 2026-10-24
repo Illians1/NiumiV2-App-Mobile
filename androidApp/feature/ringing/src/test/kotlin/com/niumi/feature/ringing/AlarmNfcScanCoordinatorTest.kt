@@ -13,7 +13,7 @@ import kotlinx.coroutines.yield
 import org.junit.Test
 
 /**
- * SPEC_ANDROID §11.2, §11.3 : garde de réentrance, vibration d'erreur sur boîtier inconnu,
+ * SPEC_ANDROID §11.2, §11.3 : garde de réentrance, vibration d'erreur sur Niumi Spot inconnu,
  * journalisation sans jamais exposer l'URI, le token ni son hash (§16 : le journal ne reçoit
  * ici que le type d'événement).
  */
@@ -51,7 +51,7 @@ class AlarmNfcScanCoordinatorTest {
     /**
      * `Ignored` ne laisse aucune trace : le cas d'usage le renvoie quand la session n'est pas dans
      * un état qui accepte un scan (§11.3 point 1). Rien n'a été reconnu ni refusé — ni journal, ni
-     * vibration, qui feraient croire à un mauvais boîtier.
+     * vibration, qui feraient croire à un mauvais Niumi Spot.
      */
     @Test
     fun anIgnoredOutcomeNeitherLogsNorVibrates() =

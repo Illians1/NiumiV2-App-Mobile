@@ -50,7 +50,7 @@ class RingtoneTextsTest {
     @Test
     fun theMessagesNotWrittenByTheMockupAreQuotedWordForWord() {
         assertThat(RingtoneTexts.NOT_ARMED_MESSAGE)
-            .isEqualTo("Le réveil a déjà commencé : ce choix s’appliquera à ta prochaine session.")
+            .isEqualTo("Le réveil a déjà commencé : ce choix s’appliquera à ton prochain réveil.")
         assertThat(RingtoneTexts.PREVIEW_FAILED).isEqualTo("La pré-écoute n’a pas pu démarrer.")
         assertThat(RingtoneTexts.SAVE_FAILED).isEqualTo("Ton choix n’a pas pu être enregistré.")
         assertThat(RingtoneTexts.SESSION_UPDATE_FAILED)

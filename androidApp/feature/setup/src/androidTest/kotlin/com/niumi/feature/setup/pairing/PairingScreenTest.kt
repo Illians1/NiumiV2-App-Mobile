@@ -30,7 +30,7 @@ private fun row(
 }
 
 /**
- * Écran 3 « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8, §16). Composable pur : l'état est
+ * Écran 3 « Mes Niumi Spots » (SPEC_ANDROID §11.1, §15 Lot 8, §16). Composable pur : l'état est
  * fourni, aucun clic n'est simulé.
  */
 @RunWith(AndroidJUnit4::class)
@@ -56,7 +56,7 @@ class PairingScreenTest {
         composeRule.onNode(hasContentDescription(PairingTexts.ADD_BUTTON_LABEL)).assertDoesNotExist()
     }
 
-    /** Décision du 2026-10-17 : avec des boîtiers, la lecture attend « Ajouter un boîtier ». */
+    /** Décision du 2026-10-17 : avec des Niumi Spots, la lecture attend « Ajouter un Niumi Spot ». */
     @Test
     fun outsideAScanTheAddButtonReplacesTheInstruction() {
         setContent(PairingUiState(boxes = listOf(row(1, "Cuisine"))))
@@ -93,7 +93,7 @@ class PairingScreenTest {
     @Test
     fun tenBoxesHideTheAddButtonAndSayWhy() {
         // Dix depuis l'étape 42 (`PairedBoxLimit.MAX`) : le test en citait encore cinq.
-        setContent(PairingUiState(boxes = (1..10).map { row(it, "Boîtier $it") }))
+        setContent(PairingUiState(boxes = (1..10).map { row(it, "Niumi Spot $it") }))
 
         composeRule.onNodeWithText(PairingTexts.LIMIT_REACHED).performScrollTo().assertExists()
         composeRule.onNode(hasContentDescription(PairingTexts.ADD_BUTTON_LABEL)).assertDoesNotExist()
@@ -132,11 +132,11 @@ class PairingScreenTest {
 
     @Test
     fun aPendingNameOpensTheDialogPrefilledAndCounted() {
-        setContent(PairingUiState(pendingName = "Boîtier 3"))
+        setContent(PairingUiState(pendingName = "Niumi Spot 3"))
 
         composeRule.onNodeWithText(PairingTexts.ADD_DIALOG_TITLE).assertExists()
-        composeRule.onNodeWithText("Boîtier 3").assertExists()
-        composeRule.onNodeWithText("9/30").assertExists()
+        composeRule.onNodeWithText("Niumi Spot 3").assertExists()
+        composeRule.onNodeWithText("12/30").assertExists()
         composeRule.onNodeWithText(PairingTexts.CONFIRM_ADD_LABEL).assertIsEnabled()
     }
 
@@ -217,7 +217,7 @@ class PairingScreenTest {
         composeRule.onNode(hasContentDescription(PairingTexts.CONTINUE_BUTTON_LABEL)).assertDoesNotExist()
     }
 
-    /** Décision Q22 (étape 43) : le dernier boîtier se renomme mais ne se retire pas, sans texte ajouté. */
+    /** Décision Q22 (étape 43) : le dernier Niumi Spot se renomme mais ne se retire pas, sans texte ajouté. */
     @Test
     fun aSingleBoxCanBeRenamedButNotRemoved() {
         setContent(PairingUiState(boxes = listOf(row(1, "Cuisine"))))

@@ -48,11 +48,11 @@ class IncidentDiagnosticViewModelTest {
 
     private val snapshotPublisher = SessionSnapshotPublisher()
 
-    /** Étape 43 : l'export nomme les boîtiers enregistrés, lus dans le dépôt courant. */
+    /** Étape 43 : l'export nomme les Niumi Spots enregistrés, lus dans le dépôt courant. */
     private val pairedBoxStore =
         RecordingPairedBoxStore(
             CallJournal(),
-            listOf(PairedBoxDto(PairedBoxCredentialDto(1, boxId, "a".repeat(64)), "Boîtier 1")),
+            listOf(PairedBoxDto(PairedBoxCredentialDto(1, boxId, "a".repeat(64)), "Niumi Spot 1")),
         )
     private val incidentsReader = FakeSessionIncidentsReader()
     private val technicalEventLog = ReplayingTechnicalEventLog()

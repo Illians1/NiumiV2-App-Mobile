@@ -19,7 +19,7 @@ import com.niumi.system.readiness.ReadinessCheck
  *
  * [storageFailureReason] (étape 20) : Niumi ne peut plus lire son état enregistré. L'écran doit
  * l'afficher explicitement plutôt que se figer en chargement, et rappeler que le blocage n'est
- * jamais retiré par ce chemin (§18) — le scan du boîtier reste la seule sortie.
+ * jamais retiré par ce chemin (§18) — le scan du Niumi Spot reste la seule sortie.
  */
 data class IncidentDiagnosticUiState(
     val sessionId: String? = null,

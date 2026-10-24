@@ -41,7 +41,7 @@ object AlarmTexts {
     private const val OPEN_SETTINGS = "Ouvrir les réglages"
 
     /** Lu par TalkBack sur le cercle de chargement, après un scan validé (aucun texte à l'écran). */
-    const val RELEASE_LOADER = "Fin de la session"
+    const val RELEASE_LOADER = "Fin du réveil"
 
     const val NFC_ABSENT = "Cet appareil ne prend pas en charge le NFC."
 

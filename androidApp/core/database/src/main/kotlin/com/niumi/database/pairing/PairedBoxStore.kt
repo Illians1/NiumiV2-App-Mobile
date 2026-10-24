@@ -4,7 +4,7 @@ import com.niumi.core.interop.PairedBoxCredentialDto
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Stockage des boîtiers associés, de un à dix (contrat KMP 1.5), nommés (SPEC_ANDROID §11.1,
+ * Stockage des Niumi Spots associés, de un à dix (contrat KMP 1.5), nommés (SPEC_ANDROID §11.1,
  * Lot 8 ; remplace `current`/`replace`/`clear` de l'étape 13). C'est l'ensemble **courant** :
  * modifiable à tout moment, session comprise, il est lu au moment du scan pour le vérifier
  * (SPEC_CORE_KMP §2, décisions 11 et 16). Vit dans `:core:database`, avec les autres interfaces de
@@ -37,6 +37,6 @@ public interface PairedBoxStore {
         name: String,
     )
 
-    /** Refuse le dernier boîtier ([PairedBoxRemoveResult.LastBoxKept]) : il en reste toujours au moins un. */
+    /** Refuse le dernier Niumi Spot ([PairedBoxRemoveResult.LastBoxKept]) : il en reste toujours au moins un. */
     public suspend fun remove(boxId: String): PairedBoxRemoveResult
 }

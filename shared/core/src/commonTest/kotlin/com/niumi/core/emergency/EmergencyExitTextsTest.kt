@@ -7,13 +7,14 @@ import kotlin.test.assertNull
 
 /**
  * `SPECIFICATION.md` §13 : un seul texte validé, recopié mot pour mot avec l'apostrophe
- * typographique (D13). Il compte 196 caractères : le « 197 » de la spec et des maquettes était
- * faux (décision du 2026-10-24, `ETAPE-42.md`).
+ * typographique (D13). Il compte 190 caractères depuis la révision du 2026-10-24 : « arrêter mon
+ * réveil » remplace « sortir de cette session ». L'ancien texte en comptait 196, et le « 197 » des
+ * maquettes était faux (`ETAPE-42.md`).
  */
 class EmergencyExitTextsTest {
     private val validatedText =
         "J’avais décidé de bloquer mes applications jusqu’au scan de mon Niumi Spot. " +
-            "Je choisis de sortir de cette session sans le scanner. " +
+            "Je choisis d’arrêter mon réveil sans le scanner. " +
             "Je recopie ce texte en entier pour confirmer que c’est mon choix."
 
     @Test
@@ -27,8 +28,8 @@ class EmergencyExitTextsTest {
     }
 
     @Test
-    fun theValidatedTextCountsOneHundredNinetySixCharacters() {
-        assertEquals(196, EmergencyExitTexts.charCount("v1-01"))
+    fun theValidatedTextCountsOneHundredNinetyCharacters() {
+        assertEquals(190, EmergencyExitTexts.charCount("v1-01"))
     }
 
     @Test

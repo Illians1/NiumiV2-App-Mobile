@@ -16,7 +16,7 @@ private const val BOX_ID_VISIBLE_CHARS = 8
 
 private val TIMESTAMP_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-/** Un boîtier enregistré au moment de l'export (SPEC_ANDROID §17, étape 43) : jamais de hash. */
+/** Un Niumi Spot enregistré au moment de l'export (SPEC_ANDROID §17, étape 43) : jamais de hash. */
 data class DiagnosticBox(
     val boxId: String,
     val name: String,
@@ -27,7 +27,7 @@ data class DiagnosticBox(
  * résultats du contrôle de santé »).
  *
  * **Le hash du token n'y figure pas, et c'est délibéré.** `PairedBoxStore` porte
- * `tokenSha256Hex` par boîtier ; le rapport ne le reprend jamais. Un secret qu'on ne transporte pas
+ * `tokenSha256Hex` par Niumi Spot ; le rapport ne le reprend jamais. Un secret qu'on ne transporte pas
  * ne peut pas fuiter par un format d'affichage oublié. [boxes] porte chaque `boxId` entier, tronqué
  * par l'exporteur, seul endroit où la règle des huit caractères s'applique.
  */
@@ -162,7 +162,7 @@ object DiagnosticExporter {
     /**
      * §17 : « Masquer le token, son hash complet et tout identifiant matériel. » Le `boxId` est un
      * UUID d'association, pas un secret, mais l'export est destiné à sortir de l'appareil : huit
-     * caractères suffisent à distinguer deux boîtiers dans un échange d'assistance.
+     * caractères suffisent à distinguer deux Niumi Spots dans un échange d'assistance.
      */
     private fun mask(boxId: String): String = boxId.take(BOX_ID_VISIBLE_CHARS) + "…"
 

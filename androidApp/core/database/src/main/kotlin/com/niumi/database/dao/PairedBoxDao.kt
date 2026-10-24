@@ -8,8 +8,8 @@ import com.niumi.database.entity.PairedBoxEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Jusqu'à dix boîtiers associés (contrat KMP 1.5), nommés, ordonnés par position (SPEC_ANDROID §11.1, Lot 8).
- * Le refus d'un doublon ou d'un onzième boîtier se fait au dépôt
+ * Jusqu'à dix Niumi Spots associés (contrat KMP 1.5), nommés, ordonnés par position (SPEC_ANDROID §11.1, Lot 8).
+ * Le refus d'un doublon ou d'un onzième Niumi Spot se fait au dépôt
  * ([com.niumi.database.pairing.RoomPairedBoxStore]), pas ici : ce DAO n'est que la persistance.
  */
 @Dao

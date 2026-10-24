@@ -25,7 +25,7 @@ public class NiumiCoreFacade {
     public fun parseBoxPayload(uri: String): BoxPayloadResultDto = BoxPayloadParser.parse(uri).toDto()
 
     /**
-     * Compare [payload] à la liste de boîtiers [credentials], l'ensemble enregistré au moment du scan
+     * Compare [payload] à la liste de Niumi Spots [credentials], l'ensemble enregistré au moment du scan
      * (contrat 1.5, SPEC_CORE_KMP §9.2). [context] est fourni pour un scan de fin de session ; `null` ne produit
      * aucune preuve. L'association n'appelle plus cette méthode : elle parse et déduplique au dépôt.
      */

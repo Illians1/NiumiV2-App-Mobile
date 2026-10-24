@@ -39,8 +39,8 @@ import com.niumi.database.entity.TechnicalEventEntity
  * v4 (Lot 7, sonneries) ajoute à `alarm_session` la colonne nullable `volumeRampSeconds` et réécrit
  * la sonnerie retirée de l'APK : voir [com.niumi.database.migration.MIGRATION_3_4].
  *
- * v5 (Lot 8, boîtiers multiples) ajoute `name` et `position` à `paired_box`, crée `session_box`
- * (liste des boîtiers figée à l'activation, sur le modèle de `blocked_app`) et retire `boxId` et
+ * v5 (Lot 8, Niumi Spots multiples) ajoute `name` et `position` à `paired_box`, crée `session_box`
+ * (liste des Niumi Spots figée à l'activation, sur le modèle de `blocked_app`) et retire `boxId` et
  * `boxTokenSha256Hex` d'`alarm_session`, recréée sans ces deux colonnes :
  * voir [com.niumi.database.migration.MIGRATION_4_5].
  *

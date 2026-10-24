@@ -127,7 +127,7 @@ private suspend fun toStoredSession(
 /**
  * `ringtoneKey`, `vibrationEnabled` et `volumeRampSeconds` sont figés à l'activation
  * (SPEC_ANDROID §7.2) : une session déjà présente en base fait toujours foi sur ces champs,
- * jamais l'appelant d'une décision. Les boîtiers ne sont plus figés depuis l'étape 43 (ensemble
+ * jamais l'appelant d'une décision. Les Niumi Spots ne sont plus figés depuis l'étape 43 (ensemble
  * courant, SPEC_CORE_KMP §2, décisions 11 et 16). Sonnerie et montée ont un seul autre chemin
  * d'écriture, `RoomSessionAlarmSoundStore`, hors décision (Lot 7). `blockedPackages` n'est pas
  * concerné par cette garantie à cette étape (voir ETAPE-09.md).

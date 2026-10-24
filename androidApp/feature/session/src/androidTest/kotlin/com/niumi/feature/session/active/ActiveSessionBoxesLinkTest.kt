@@ -14,8 +14,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Lien transitoire « Mes boîtiers » de l'écran de session active (décision de Mehdi du 2026-10-24,
- * étape 43) : les boîtiers se modifient en session, et l'écran 3 actuel n'était atteignable que par
+ * Lien transitoire « Mes Niumi Spots » de l'écran de session active (décision de Mehdi du 2026-10-24,
+ * étape 43) : les Niumi Spots se modifient en session, et l'écran 3 actuel n'était atteignable que par
  * la mise en route. Le lien disparaît avec l'écran à l'étape 45.
  */
 @RunWith(AndroidJUnit4::class)

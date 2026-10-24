@@ -87,7 +87,7 @@ class NiumiComponentsCaptureTest {
             Frame(dark) {
                 Text("Écran derrière la feuille", style = NiumiType.screenTitle28)
                 if (dark) {
-                    NiumiBottomSheet(onDismiss = {}, title = "Annuler la session ?") {
+                    NiumiBottomSheet(onDismiss = {}, title = "Annuler le réveil ?") {
                         Text(
                             "Scanne ton Niumi Spot pour annuler.",
                             style = NiumiType.body16,

@@ -8,6 +8,6 @@ import org.junit.Test
 class IncidentDiagnosticTextsTest {
     @Test
     fun thePairedBoxCheckIsNamedInThePlural() {
-        assertThat(IncidentDiagnosticTexts.checkLabel(ReadinessCheckId.PAIRED_BOX)).isEqualTo("Boîtiers associés")
+        assertThat(IncidentDiagnosticTexts.checkLabel(ReadinessCheckId.PAIRED_BOX)).isEqualTo("Niumi Spots associés")
     }
 }

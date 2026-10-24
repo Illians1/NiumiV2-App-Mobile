@@ -26,10 +26,10 @@ La colonne « Section » renvoie à `SPECIFICATION.md`.
 | 18 | `18_sonnerie-la-feuille` | Sonnerie · La feuille | Clair | Les deux | 10 · Sonnerie |
 | 19 | `19_sonnerie-quand-on-touche-le-volume` | Sonnerie · Quand on touche le volume | Clair | Les deux | 10 · Sonnerie |
 | 20 | `20_sonnerie-progressive-desactivee` | Sonnerie · Progressive désactivée | Clair | Les deux | 10 · Sonnerie |
-| 21 | `21_annuler-1-le-lien-sur-l-accueil` | Annuler · 1. Le lien sur l'accueil | Sombre | Les deux | 11 · Annuler la session |
-| 22 | `22_annuler-2-scanner-ou-sortie-de-secours` | Annuler · 2. Scanner ou sortie de secours | Sombre | Les deux | 11 · Annuler la session |
-| 23 | `23_annuler-3-la-feuille-de-scan` | Annuler · 3. La feuille de scan | Sombre | Les deux | 11 · Annuler la session |
-| 24 | `24_annuler-4-session-annulee-retour-au-clair` | Annuler · 4. Session annulée : retour au clair | Clair | Les deux | 11 · Annuler la session |
+| 21 | `21_annuler-1-le-lien-sur-l-accueil` | Annuler · 1. Le lien sur l'accueil | Sombre | Les deux | 11 · Annuler le réveil |
+| 22 | `22_annuler-2-scanner-ou-sortie-de-secours` | Annuler · 2. Scanner ou sortie de secours | Sombre | Les deux | 11 · Annuler le réveil |
+| 23 | `23_annuler-3-la-feuille-de-scan` | Annuler · 3. La feuille de scan | Sombre | Les deux | 11 · Annuler le réveil |
+| 24 | `24_annuler-4-session-annulee-retour-au-clair` | Annuler · 4. Réveil annulé : retour au clair | Clair | Les deux | 11 · Annuler le réveil |
 | 25 | `25_ecran-7-ecran-de-blocage` | Écran 7 · Écran de blocage | Sombre | Les deux | 12 · Écran 7 |
 | 26 | `26_ecran-8-confirmation-le-soir` | Écran 8 · Confirmation, le soir | Sombre | Les deux | 13 · Sortie de secours |
 | 27 | `27_ecran-8-confirmation-le-matin` | Écran 8 · Confirmation, le matin | Sombre | Les deux | 13 · Sortie de secours |

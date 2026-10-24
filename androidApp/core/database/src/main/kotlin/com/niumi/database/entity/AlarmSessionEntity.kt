@@ -8,7 +8,7 @@ import com.niumi.core.interop.SessionHealthDto
 import com.niumi.core.interop.SessionStateDto
 
 /**
- * Session persistée, colonnes exactes de SPEC_ANDROID §7.2. Aucune liste de boîtiers n'y est
+ * Session persistée, colonnes exactes de SPEC_ANDROID §7.2. Aucune liste de Niumi Spots n'y est
  * attachée depuis v6 (étape 43) : la vérification d'un scan lit l'ensemble courant de `paired_box`.
  * `localDate`/`localTime` reprennent le nom de colonne de §7.2, qui diffère de
  * `localDateIso`/`localTimeIso` du DTO (SPEC_CORE_KMP §7.2) : divergence absorbée par

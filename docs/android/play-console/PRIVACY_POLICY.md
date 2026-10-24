@@ -23,7 +23,7 @@ identifiant publicitaire.
 | --- | --- | --- | --- |
 | Nom de l'application affichée au premier plan | détecter quand ramener l'utilisateur à l'accueil pendant une session | non conservée, sauf la dernière occurrence dans le journal technique local (`BLOCK_APPLIED`) | jamais |
 | Liste des applications choisies par l'utilisateur pour le blocage | exécuter la session qu'il a configurée | base de données locale de l'appareil | jamais |
-| Identifiant et empreinte cryptographique (SHA-256) du boîtier NFC associé | vérifier qu'un scan provient du bon boîtier | base de données locale de l'appareil, hash uniquement, jamais le token en clair | jamais |
+| Identifiant et empreinte cryptographique (SHA-256) de chaque Niumi Spot (étiquette NFC) associé | vérifier qu'un scan provient d'un Niumi Spot enregistré | base de données locale de l'appareil, hash uniquement, jamais le token en clair | jamais |
 | Heure de réveil choisie | programmer l'alarme | base de données locale et zone protégée par appareil (Direct Boot) | jamais |
 | Journal technique (jusqu'à 200 événements) | diagnostiquer un incident, sur demande explicite de l'utilisateur | localement, effacé en continu au-delà de 200 entrées | jamais transmis automatiquement ; exportable sous forme de texte par l'utilisateur lui-même, pour son propre usage (support, diagnostic) |
 
@@ -48,7 +48,7 @@ désinstallation de Niumi supprime l'intégralité des données locales.
 ## Droits de l'utilisateur
 
 L'utilisateur peut à tout moment : consulter le journal technique et l'exporter, désactiver le
-service d'accessibilité dans les réglages Android, dissocier le boîtier, désinstaller
+service d'accessibilité dans les réglages Android, retirer un Niumi Spot, désinstaller
 l'application pour supprimer toutes ses données locales.
 
 ## Blocage d'applications : limite à connaître

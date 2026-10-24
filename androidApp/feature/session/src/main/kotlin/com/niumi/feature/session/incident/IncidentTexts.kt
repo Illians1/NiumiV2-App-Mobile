@@ -57,7 +57,7 @@ object IncidentTexts {
             }
 
             "NFC_DISABLED" -> {
-                "Le NFC est désactivé : il faudra le réactiver pour scanner ton boîtier."
+                "Le NFC est désactivé : il faudra le réactiver pour scanner ton Niumi Spot."
             }
 
             "TIME_CHANGED" -> {

@@ -21,7 +21,7 @@ object ReadinessMessages {
     fun forCheck(id: ReadinessCheckId): String =
         when (id) {
             ReadinessCheckId.NFC_PRESENT -> {
-                "Cet appareil n’a pas de puce NFC. Niumi ne peut pas fonctionner sans boîtier à scanner."
+                "Cet appareil n’a pas de puce NFC. Niumi ne peut pas fonctionner sans Niumi Spot à scanner."
             }
 
             ReadinessCheckId.NFC_ENABLED -> {
@@ -29,7 +29,7 @@ object ReadinessMessages {
             }
 
             ReadinessCheckId.PAIRED_BOX -> {
-                "Aucun boîtier n’est associé. Associe au moins un boîtier Niumi : c’est l’un d’eux " +
+                "Aucun Niumi Spot n’est associé. Associe au moins un Niumi Spot : c’est l’un d’eux " +
                     "qui terminera ta session."
             }
 
@@ -93,7 +93,7 @@ object ReadinessMessages {
         when (id) {
             ReadinessCheckId.NFC_PRESENT -> "Appareil non compatible"
             ReadinessCheckId.NFC_ENABLED -> "Ouvrir les réglages NFC"
-            ReadinessCheckId.PAIRED_BOX -> "Associer un boîtier"
+            ReadinessCheckId.PAIRED_BOX -> "Associer un Niumi Spot"
             ReadinessCheckId.APP_SELECTION -> "Choisir mes applications"
             ReadinessCheckId.EXACT_ALARM -> "Comprendre ce blocage"
             ReadinessCheckId.NOTIFICATIONS -> "Autoriser les notifications"

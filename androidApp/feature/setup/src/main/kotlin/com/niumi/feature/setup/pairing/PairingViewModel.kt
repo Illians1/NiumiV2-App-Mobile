@@ -23,10 +23,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Écran 3 « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8). Ne juge jamais lui-même de la
+ * Écran 3 « Mes Niumi Spots » (SPEC_ANDROID §11.1, §15 Lot 8). Ne juge jamais lui-même de la
  * validité d'un payload : `NiumiCoreFacade.parseBoxPayload` tranche (SPEC_CORE_KMP §9.3), et seul
  * `PairedBoxCredentialDto.fromPayload` calcule l'empreinte — le token en clair ne quitte jamais
- * `:shared:core`. Les refus d'un doublon, d'un onzième boîtier et du retrait du dernier viennent du
+ * `:shared:core`. Les refus d'un doublon, d'un onzième Niumi Spot et du retrait du dernier viennent du
  * dépôt, en résultat typé ; un nom invalide est arrêté ici par la fonction même du dépôt, `PairedBoxName.sanitize`.
  *
  * Le ViewModel ne lit de [NfcReader] que sa disponibilité : le Reader Mode lui-même se branche
@@ -46,17 +46,17 @@ class PairingViewModel
         var state by mutableStateOf(PairingUiState(nfcAvailability = nfcReader.availability))
             private set
 
-        /** Boîtier lu en attente de son nom. Hors de [state] : il porte l'empreinte du token (§16). */
+        /** Niumi Spot lu en attente de son nom. Hors de [state] : il porte l'empreinte du token (§16). */
         private var pendingCandidate: PairedBoxCredentialDto? = null
 
         init {
             viewModelScope.launch {
                 refreshBoxes()
-                // Décision du 2026-10-17 : sans aucun boîtier, la lecture est ouverte d'office,
-                // comme à la première configuration ; sinon elle attend « Ajouter un boîtier ».
+                // Décision du 2026-10-17 : sans aucun Niumi Spot, la lecture est ouverte d'office,
+                // comme à la première configuration ; sinon elle attend « Ajouter un Niumi Spot ».
                 if (state.boxes.isEmpty() && state.canAdd) state = state.copy(isScanning = true)
             }
-            // Une session en cours ne verrouille plus les boîtiers (étape 43, SPEC_CORE_KMP §2
+            // Une session en cours ne verrouille plus les Niumi Spots (étape 43, SPEC_CORE_KMP §2
             // décisions 11 et 16) : elle masque seulement « Continuer ».
             viewModelScope.launch {
                 snapshotPublisher.snapshot.collect { snapshot ->
@@ -67,7 +67,7 @@ class PairingViewModel
 
         /**
          * Recalcule la disponibilité du NFC au retour des réglages (SPEC_ANDROID §13). Perdre le
-         * lecteur efface le retour du scan précédent : « Réessaie en approchant le boîtier » sous
+         * lecteur efface le retour du scan précédent : « Réessaie en approchant le Niumi Spot » sous
          * un NFC coupé conseille une action impossible, donc un faux état (§15). Un ajout réussi,
          * lui, énonce un fait et survit.
          */
@@ -160,7 +160,7 @@ class PairingViewModel
         }
 
         /**
-         * Édition de la liste : nom d'un boîtier lu, renommage, retrait (§15, Lot 8). Regroupée à
+         * Édition de la liste : nom d'un Niumi Spot lu, renommage, retrait (§15, Lot 8). Regroupée à
          * part de la lecture NFC, qui reste dans le ViewModel : les deux tiennent ainsi chacune sous
          * le plafond `TooManyFunctions` de detekt (11), et l'écran les reçoit par [PairingActions].
          */
@@ -223,7 +223,7 @@ class PairingViewModel
 
             /**
              * Sans confirmation sur cet écran transitoire (§15 ; la feuille de confirmation arrive à
-             * l'étape 48). Le dernier boîtier n'est jamais retiré (décision Q22) : l'écran masque
+             * l'étape 48). Le dernier Niumi Spot n'est jamais retiré (décision Q22) : l'écran masque
              * « Retirer », et le dépôt répond `LastBoxKept` si l'appel passe quand même — la liste
              * relue l'affiche alors telle qu'elle est.
              */

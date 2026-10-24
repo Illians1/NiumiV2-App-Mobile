@@ -6,7 +6,7 @@ import com.niumi.core.domain.AppSelectionSummary
  * Décide si une activation est permise à partir des contrôles de préparation natifs et des règles
  * communes (SPEC_CORE_KMP §7.4, SPEC_ANDROID §13). Refuse si un contrôle `BLOCKING_*` échoue, si
  * `appSelectionCount` est hors de 1..50, si `triggerAtEpochMillis` n'est pas strictement futur, si
- * le début du blocage n'est pas strictement antérieur au réveil (§8.3), ou si aucun boîtier n'est
+ * le début du blocage n'est pas strictement antérieur au réveil (§8.3), ou si aucun Niumi Spot n'est
  * associé. Un `WARNING` seul n'empêche jamais l'activation. Contrat 1.5 : les contrôles de
  * préparation ne bloquent plus l'activation (`SPECIFICATION.md` §2, « l'interrupteur s'active
  * toujours ») ; le natif peut transmettre une liste vide, seules les règles communes s'appliquent alors.

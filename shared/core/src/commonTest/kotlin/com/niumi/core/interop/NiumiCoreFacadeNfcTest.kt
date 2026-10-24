@@ -75,7 +75,7 @@ class NiumiCoreFacadeNfcTest {
         assertNull(result.proof)
     }
 
-    /** Contrat 1.4 : la preuve porte le `boxId` du boîtier reconnu dans la liste, pas le premier. */
+    /** Contrat 1.4 : la preuve porte le `boxId` du Niumi Spot reconnu dans la liste, pas le premier. */
     @Test
     fun verifyBoxAgainstAListExposesTheProofOfTheMatchingBox() {
         val payload = facade.parseBoxPayload(canonicalUri).payload!!

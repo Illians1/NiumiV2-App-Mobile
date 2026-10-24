@@ -19,19 +19,19 @@ import com.niumi.database.pairing.PairedBoxDto
  * autorité sur le hachage (§9.2). Un hash codé en dur se désynchroniserait en silence du parseur.
  */
 object NfcScanFixtures {
-    /** Le boîtier enregistré par défaut dans les scénarios de scan, identique à `SessionDtoFixtures.BOX_ID`. */
+    /** Le Niumi Spot enregistré par défaut dans les scénarios de scan, identique à `SessionDtoFixtures.BOX_ID`. */
     const val SESSION_BOX_URI: String =
         "niumi://box/v1/${SessionDtoFixtures.BOX_ID}?token=AAAAAAAAAAAAAAAAAAAAAA"
 
-    /** Même boîtier, token différent : `NO_PAIRED_BOX_MATCH`, donc `UnknownBox`. */
+    /** Même Niumi Spot, token différent : `NO_PAIRED_BOX_MATCH`, donc `UnknownBox`. */
     const val SESSION_BOX_WRONG_TOKEN_URI: String =
         "niumi://box/v1/${SessionDtoFixtures.BOX_ID}?token=BAAAAAAAAAAAAAAAAAAAAA"
 
-    /** Un autre boîtier Niumi, valide mais non enregistré : `NO_PAIRED_BOX_MATCH`. */
+    /** Un autre Niumi Spot, valide mais non enregistré : `NO_PAIRED_BOX_MATCH`. */
     const val OTHER_BOX_URI: String =
         "niumi://box/v1/33333333-3333-3333-3333-333333333333?token=AAAAAAAAAAAAAAAAAAAAAA"
 
-    /** Lot 8 : deuxième et troisième boîtiers d'un ensemble à trois. */
+    /** Lot 8 : deuxième et troisième Niumi Spots d'un ensemble à trois. */
     const val SECOND_BOX_URI: String =
         "niumi://box/v1/44444444-4444-4444-4444-444444444444?token=AAAAAAAAAAAAAAAAAAAAAA"
     const val THIRD_BOX_URI: String =
@@ -41,7 +41,7 @@ object NfcScanFixtures {
     const val MALFORMED_URI: String = "niumi:/box/v1/pas-un-uuid"
 
     /**
-     * Boîtiers enregistrés correspondant aux [uris], dans leur ordre (étape 43 : la vérification lit
+     * Niumi Spots enregistrés correspondant aux [uris], dans leur ordre (étape 43 : la vérification lit
      * l'ensemble courant de `PairedBoxStore`). `tokenSha256Hex` vient de
      * [PairedBoxCredentialDto.fromPayload], comme à l'association réelle (SPEC_ANDROID §11.1).
      */
@@ -54,7 +54,7 @@ object NfcScanFixtures {
                 requireNotNull(facade.parseBoxPayload(uri).payload) {
                     "URI de fixture rejetée par le parseur commun : $uri"
                 }
-            PairedBoxDto(PairedBoxCredentialDto.fromPayload(payload), "Boîtier ${index + 1}")
+            PairedBoxDto(PairedBoxCredentialDto.fromPayload(payload), "Niumi Spot ${index + 1}")
         }
 }
 

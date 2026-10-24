@@ -28,13 +28,13 @@ import org.junit.Test
 private const val VALID_URI = "niumi://box/v1/550e8400-e29b-41d4-a716-446655440000?token=AAAAAAAAAAAAAAAAAAAAAA"
 private const val VALID_BOX_ID = "550e8400-e29b-41d4-a716-446655440000"
 
-// Même token que la fixture — seul le `boxId` change : un second boîtier, pas un payload invalide.
+// Même token que la fixture — seul le `boxId` change : un second Niumi Spot, pas un payload invalide.
 private const val OTHER_URI = "niumi://box/v1/00000000-0000-0000-0000-000000000000?token=AAAAAAAAAAAAAAAAAAAAAA"
 private const val OTHER_BOX_ID = "00000000-0000-0000-0000-000000000000"
 
 private fun box(
     index: Int,
-    name: String = "Boîtier $index",
+    name: String = "Niumi Spot $index",
 ): PairedBoxDto =
     PairedBoxDto(
         PairedBoxCredentialDto(1, "${index.toString().repeat(8)}-1111-1111-1111-111111111111", "a".repeat(64)),
@@ -42,7 +42,7 @@ private fun box(
     )
 
 /**
- * Écran 3 « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8). Le ViewModel ne juge jamais lui-même
+ * Écran 3 « Mes Niumi Spots » (SPEC_ANDROID §11.1, §15 Lot 8). Le ViewModel ne juge jamais lui-même
  * de la validité d'un payload — il délègue à la **vraie** `NiumiCoreFacade` (SPEC_CORE_KMP §9.3),
  * jamais à un parseur simulé — ni de celle d'un nom : `PairedBoxName.sanitize`, celle du dépôt,
  * tranche avant tout appel.
@@ -102,7 +102,7 @@ class PairingViewModelTest {
             failureCode = null,
         )
 
-    /** Scanne un boîtier neuf et valide le nom proposé. */
+    /** Scanne un Niumi Spot neuf et valide le nom proposé. */
     private fun PairingViewModel.addScanned(uri: String) {
         if (!state.isScanning) startAdding()
         onUriRead(uri)
@@ -143,14 +143,14 @@ class PairingViewModelTest {
     }
 
     @Test
-    fun aValidNewTagOpensTheNamePromptPrefilledWithBoitierN() {
+    fun aValidNewTagOpensTheNamePromptPrefilledWithNiumiSpotN() {
         store.boxes = listOf(box(1), box(2))
         val viewModel = viewModel()
         viewModel.startAdding()
 
         viewModel.onUriRead(VALID_URI)
 
-        assertThat(viewModel.state.pendingName).isEqualTo("Boîtier 3")
+        assertThat(viewModel.state.pendingName).isEqualTo("Niumi Spot 3")
         assertThat(viewModel.state.isReaderModeExpected).isFalse()
         // Rien n'est écrit avant la confirmation du nom.
         assertThat(store.writeCallCount).isEqualTo(0)
@@ -158,7 +158,7 @@ class PairingViewModelTest {
     }
 
     @Test
-    fun confirmingTheNameAddsTheBoxAndSaysBoitierAjoute() {
+    fun confirmingTheNameAddsTheBoxAndSaysNiumiSpotAjoute() {
         val viewModel = viewModel()
         viewModel.onUriRead(VALID_URI)
         viewModel.editor.onNameChanged("  Cuisine ")
@@ -208,7 +208,7 @@ class PairingViewModelTest {
     /** Lot 8 : un doublon de `boxId` est signalé, sans dialogue ni écriture. */
     @Test
     fun aTagAlreadyPairedSaysSoAndWritesNothing() {
-        store.boxes = listOf(PairedBoxDto(PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64)), "Boîtier 1"))
+        store.boxes = listOf(PairedBoxDto(PairedBoxCredentialDto(1, VALID_BOX_ID, "a".repeat(64)), "Niumi Spot 1"))
         val viewModel = viewModel()
         viewModel.startAdding()
 
@@ -246,12 +246,12 @@ class PairingViewModelTest {
         val second = viewModel.state.boxes[1].boxId
 
         viewModel.editor.startRename(second)
-        assertThat(viewModel.state.renaming?.text).isEqualTo("Boîtier 2")
+        assertThat(viewModel.state.renaming?.text).isEqualTo("Niumi Spot 2")
         viewModel.editor.onNameChanged(" Cuisine ")
         viewModel.editor.confirmRename()
 
-        assertThat(store.boxes.map { it.name }).containsExactly("Boîtier 1", "Cuisine").inOrder()
-        assertThat(viewModel.state.boxes.map { it.name }).containsExactly("Boîtier 1", "Cuisine").inOrder()
+        assertThat(store.boxes.map { it.name }).containsExactly("Niumi Spot 1", "Cuisine").inOrder()
+        assertThat(viewModel.state.boxes.map { it.name }).containsExactly("Niumi Spot 1", "Cuisine").inOrder()
         assertThat(viewModel.state.renaming).isNull()
     }
 
@@ -279,13 +279,13 @@ class PairingViewModelTest {
 
         viewModel.editor.remove(viewModel.state.boxes[1].boxId)
 
-        assertThat(store.boxes.map { it.name }).containsExactly("Boîtier 1", "Boîtier 3").inOrder()
-        assertThat(viewModel.state.boxes.map { it.name }).containsExactly("Boîtier 1", "Boîtier 3").inOrder()
+        assertThat(store.boxes.map { it.name }).containsExactly("Niumi Spot 1", "Niumi Spot 3").inOrder()
+        assertThat(viewModel.state.boxes.map { it.name }).containsExactly("Niumi Spot 1", "Niumi Spot 3").inOrder()
     }
 
     /** Décision du 2026-10-17 : le trou laissé par un retrait est comblé en premier. */
     @Test
-    fun afterRemovingBoitier2TheNextProposalIsBoitier2() {
+    fun afterRemovingNiumiSpot2TheNextProposalIsNiumiSpot2() {
         store.boxes = listOf(box(1), box(2), box(3))
         val viewModel = viewModel()
         viewModel.editor.remove(viewModel.state.boxes[1].boxId)
@@ -293,11 +293,11 @@ class PairingViewModelTest {
 
         viewModel.onUriRead(OTHER_URI)
 
-        assertThat(viewModel.state.pendingName).isEqualTo("Boîtier 2")
+        assertThat(viewModel.state.pendingName).isEqualTo("Niumi Spot 2")
     }
 
     /**
-     * Décision Q22 (étape 43) : il reste toujours au moins un boîtier. Le dépôt refuse le dernier
+     * Décision Q22 (étape 43) : il reste toujours au moins un Niumi Spot. Le dépôt refuse le dernier
      * (`LastBoxKept`) et l'écran ne propose pas de le retirer.
      */
     @Test
@@ -325,7 +325,7 @@ class PairingViewModelTest {
     }
 
     /**
-     * Étape 43 (SPEC_CORE_KMP §2, décisions 11 et 16) : en session, les boîtiers s'ajoutent, se
+     * Étape 43 (SPEC_CORE_KMP §2, décisions 11 et 16) : en session, les Niumi Spots s'ajoutent, se
      * renomment et se retirent ; seul « Continuer » disparaît, la mise en route n'ayant rien à
      * préparer pendant une session (décision de Mehdi du 2026-10-24 : l'écran sert alors à gérer la liste).
      */
@@ -348,14 +348,14 @@ class PairingViewModelTest {
         viewModel.editor.confirmRename()
         viewModel.editor.remove(viewModel.state.boxes[1].boxId)
 
-        assertThat(store.boxes.map { it.name }).containsExactly("Cuisine", "Boîtier 3").inOrder()
+        assertThat(store.boxes.map { it.name }).containsExactly("Cuisine", "Niumi Spot 3").inOrder()
         assertThat(viewModel.state.canAdd).isTrue()
         assertThat(viewModel.state.canContinue).isFalse()
     }
 
     /**
      * Mesuré sur appareil le 2026-10-24 (étape 43) : ouvert pendant une session armée, l'écran
-     * montrait « Continuer ». La lecture des boîtiers au démarrage suspend ; la session publiée
+     * montrait « Continuer ». La lecture des Niumi Spots au démarrage suspend ; la session publiée
      * pendant cette suspension était écrasée par la copie de l'état d'avant la lecture.
      */
     @Test
@@ -478,7 +478,7 @@ class PairingViewModelTest {
         viewModel.addScanned(OTHER_URI)
 
         assertThat(store.boxes.map { it.credential.boxId }).containsExactly(VALID_BOX_ID, OTHER_BOX_ID).inOrder()
-        assertThat(store.boxes.map { it.name }).containsExactly("Boîtier 1", "Boîtier 2").inOrder()
+        assertThat(store.boxes.map { it.name }).containsExactly("Niumi Spot 1", "Niumi Spot 2").inOrder()
     }
 
     /**
@@ -528,7 +528,7 @@ class PairingViewModelTest {
 
     /**
      * Mesuré sur appareil à l'étape 13 : après un tag illisible, couper le NFC laissait afficher
-     * « Réessaie en approchant le boîtier plus lentement » alors que plus aucun scan n'est
+     * « Réessaie en approchant le Niumi Spot plus lentement » alors que plus aucun scan n'est
      * possible — un conseil inapplicable, donc un faux état (§15). Le retour d'un scan précédent
      * ne survit pas à la perte du lecteur.
      */

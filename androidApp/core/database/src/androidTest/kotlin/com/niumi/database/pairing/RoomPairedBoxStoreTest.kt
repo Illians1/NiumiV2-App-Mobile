@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
 import javax.inject.Provider
 
 /**
- * SPEC_ANDROID §11.1 (Lot 8 ; dix au plus depuis le contrat KMP 1.5) : jusqu'à dix boîtiers
+ * SPEC_ANDROID §11.1 (Lot 8 ; dix au plus depuis le contrat KMP 1.5) : jusqu'à dix Niumi Spots
  * nommés, ordonnés par position, dont le dernier ne peut pas être retiré (décision Q22, étape 43).
  * `all()` avant déverrouillage renvoie une liste vide plutôt que
  * de lever, à la différence du reste de
@@ -75,9 +75,9 @@ class RoomPairedBoxStoreTest {
     @Test
     fun aTenthBoxIsAccepted() =
         runTest {
-            repeat(9) { index -> store.add(credential(boxId = "box-$index"), "Boîtier ${index + 1}") }
+            repeat(9) { index -> store.add(credential(boxId = "box-$index"), "Niumi Spot ${index + 1}") }
 
-            val result = store.add(credential(boxId = "box-9"), "Boîtier 10")
+            val result = store.add(credential(boxId = "box-9"), "Niumi Spot 10")
 
             assertThat(result).isEqualTo(PairedBoxAddResult.Added)
             assertThat(store.all()).hasSize(10)
@@ -86,9 +86,9 @@ class RoomPairedBoxStoreTest {
     @Test
     fun anEleventhBoxReturnsLimitReachedAndWritesNothing() =
         runTest {
-            repeat(10) { index -> store.add(credential(boxId = "box-$index"), "Boîtier ${index + 1}") }
+            repeat(10) { index -> store.add(credential(boxId = "box-$index"), "Niumi Spot ${index + 1}") }
 
-            val result = store.add(credential(boxId = "box-10"), "Boîtier 11")
+            val result = store.add(credential(boxId = "box-10"), "Niumi Spot 11")
 
             assertThat(result).isEqualTo(PairedBoxAddResult.LimitReached)
             assertThat(store.all()).hasSize(10)
@@ -153,7 +153,7 @@ class RoomPairedBoxStoreTest {
             assertThat(store.all().map { it.name }).containsExactly("Premier", "Deuxième", "Troisième").inOrder()
         }
 
-    /** Décision Q22 (étape 43) : il reste toujours au moins un boîtier ; le refus n'écrit rien. */
+    /** Décision Q22 (étape 43) : il reste toujours au moins un Niumi Spot ; le refus n'écrit rien. */
     @Test
     fun removingTheLastBoxIsRefusedWithLastBoxKept() =
         runTest {

@@ -44,12 +44,12 @@ import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.settingsIntentFor
 
 /**
- * Écran 3 — « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8). Composable pur et sans état, testé
+ * Écran 3 — « Mes Niumi Spots » (SPEC_ANDROID §11.1, §15 Lot 8). Composable pur et sans état, testé
  * en isolation : aucun clic n'y est simulé, seuls les textes et l'état des actions sont vérifiés.
  *
  * Liste sans carte, l'espace sépare les lignes ; nom en `titleMedium`, préfixe en `bodySmall`.
  * Depuis l'étape 33, « Continuer » et la confirmation d'un dialogue sont à l'encre (bouton
- * principal du design-plan) ; les actions de ligne, « Ajouter un boîtier » et « Annuler » prennent
+ * principal du design-plan) ; les actions de ligne, « Ajouter un Niumi Spot » et « Annuler » prennent
  * la couleur du texte ([neutralTextButton], [neutralOutlinedButton]). L'ambre ne porte jamais de
  * texte sur fond clair (`design-plan/VALEURS-DE-DESIGN.md` §2, D14). L'écran est remplacé à
  * l'étape 47. Le token n'apparaît nulle part, ni son empreinte : seul un préfixe de `boxId` est
@@ -148,7 +148,7 @@ private fun BoxRow(
             ) {
                 Text(PairingTexts.RENAME_LABEL)
             }
-            // Décision Q22 (étape 43) : il reste toujours au moins un boîtier, sans texte nouveau
+            // Décision Q22 (étape 43) : il reste toujours au moins un Niumi Spot, sans texte nouveau
             // sur cet écran transitoire (décision de Mehdi du 2026-10-24).
             if (canRemove) {
                 TextButton(
@@ -285,11 +285,11 @@ private fun neutralOutlinedButton(): ButtonColors =
  * `NfcAdapter.enableReaderMode()` exige une `Activity` au premier plan (§11.1). Il démarre sur
  * `ON_RESUME` et s'arrête sur `ON_PAUSE`, comme `AlarmActivity` — la lecture ne reste jamais
  * active quand l'écran n'est pas devant l'utilisateur. La clé `isReaderModeExpected` relance
- * l'effet quand « Ajouter un boîtier » ouvre la lecture ou qu'un dialogue la ferme : l'observateur
+ * l'effet quand « Ajouter un Niumi Spot » ouvre la lecture ou qu'un dialogue la ferme : l'observateur
  * réinscrit reçoit `ON_RESUME` si l'écran est déjà au premier plan.
  *
  * Ouvert aussi pendant une session, depuis l'écran de session active (étape 43, lien transitoire) :
- * les boîtiers se modifient à tout moment (SPEC_CORE_KMP §2, décisions 11 et 16).
+ * les Niumi Spots se modifient à tout moment (SPEC_CORE_KMP §2, décisions 11 et 16).
  */
 @Composable
 fun PairingRoute(

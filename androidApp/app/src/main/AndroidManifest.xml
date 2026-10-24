@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-        SPEC_ANDROID §14 impose required="true" : Niumi n'a aucune valeur sans boîtier NFC,
+        SPEC_ANDROID §14 impose required="true" : Niumi n'a aucune valeur sans Niumi Spot,
         l'app ne doit pas être visible sur le Play Store des appareils sans NFC.
     -->
     <uses-feature
@@ -28,7 +28,7 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!--
-        allowBackup=false : la base locale contient le hash du token du boîtier associé, et le
+        allowBackup=false : la base locale contient le hash du token du Niumi Spot associé, et le
         parcours est entièrement hors ligne (SPEC_ANDROID §16) ; aucune sauvegarde cloud n'est
         pertinente, donc pas de dataExtractionRules à fournir (DataExtractionRules).
         enableOnBackInvokedCallback=true : retour prédictif (SPEC_ANDROID §15) ; l'attribut est

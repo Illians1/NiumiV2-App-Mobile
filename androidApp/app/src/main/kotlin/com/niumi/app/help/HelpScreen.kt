@@ -20,7 +20,7 @@ import com.niumi.designsystem.ui.theme.NiumiTheme
  *
  * Écran de **consultation**, sans état ni ViewModel : son contenu est constant (voir [HelpTexts]),
  * et il ne porte aucune action. Il n'en porte pas davantage pendant une session : §3 et §10.2
- * font du scan du boîtier la seule sortie, et un bouton ici serait précisément le recours logiciel
+ * font du scan du Niumi Spot la seule sortie, et un bouton ici serait précisément le recours logiciel
  * que §4.5 exclut. Le geste Retour du système suffit, comme sur les autres écrans du dépôt.
  *
  * Page unique défilante : tout le contenu passe devant l'utilisateur dans

@@ -181,8 +181,8 @@ class NiumiDatabaseSchemaTest {
     }
 
     /**
-     * SPEC_ANDROID §7.2 (v5, Lot 8). Point de vigilance 1 du lot : `paired_box` porte le boîtier
-     * B (remplacé hors session, permis jusqu'ici), mais la session `ARMED` a figé le boîtier A.
+     * SPEC_ANDROID §7.2 (v5, Lot 8). Point de vigilance 1 du lot : `paired_box` porte le Niumi Spot
+     * B (remplacé hors session, permis jusqu'ici), mais la session `ARMED` a figé le Niumi Spot A.
      * `session_box` doit se remplir depuis `alarm_session` (A), **jamais** depuis `paired_box`
      * (qui contiendrait B). Un reçu, une ligne d'outbox, une application bloquée, un incident et le
      * pointeur de session active prouvent qu'aucune donnée n'est perdue par un `CASCADE` qui n'a
@@ -228,9 +228,9 @@ class NiumiDatabaseSchemaTest {
     }
 
     /**
-     * SPEC_ANDROID §7.2 (v6, étape 43). Une base v5 porte une session `ARMED` avec deux boîtiers
-     * figés dans `session_box` et les deux mêmes boîtiers dans `paired_box`, plus une session
-     * `COMPLETED` libérée par scan. Après migration : `session_box` a disparu, les deux boîtiers et
+     * SPEC_ANDROID §7.2 (v6, étape 43). Une base v5 porte une session `ARMED` avec deux Niumi Spots
+     * figés dans `session_box` et les deux mêmes Niumi Spots dans `paired_box`, plus une session
+     * `COMPLETED` libérée par scan. Après migration : `session_box` a disparu, les deux Niumi Spots et
      * leurs noms restent dans `paired_box` (seule source de la vérification désormais), les cinq
      * tables enfants restantes gardent leurs lignes, `releasedBy` vaut `NFC_SCAN` pour la session
      * scannée et reste nul pour la session armée, et toutes les sessions passent au schéma 3.
@@ -309,8 +309,8 @@ class NiumiDatabaseSchemaTest {
     }
 
     /**
-     * Point de vigilance 1 du Lot 8 : `paired_box` porte le boîtier B (remplacé hors session,
-     * permis jusqu'ici), mais la session `ARMED` a figé le boîtier A. Un reçu, une ligne
+     * Point de vigilance 1 du Lot 8 : `paired_box` porte le Niumi Spot B (remplacé hors session,
+     * permis jusqu'ici), mais la session `ARMED` a figé le Niumi Spot A. Un reçu, une ligne
      * d'outbox, une application bloquée, un incident et le pointeur actif prouvent qu'aucune
      * donnée n'est perdue.
      */

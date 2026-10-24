@@ -108,7 +108,7 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | 16 | 500 | « Réveil activé », « Réveil désactivé », jours cochés, pilule « Modifier », bouton de la recopie |
 | 16 | 400 | Texte courant, noms des pièces. Interligne 1,35 |
 | 15 | 500 | Bouton « Autoriser », segment de durée choisi |
-| 15 | 400 | Segments de durée, lien « Annuler la session », texte d'introduction de l'écran 2 |
+| 15 | 400 | Segments de durée, lien « Annuler le réveil », texte d'introduction de l'écran 2 |
 | 14 | 600 | Liens du bandeau de problème |
 | 14 | 400 | Phrases des tuiles, deuxième ligne des cartes, liens discrets |
 | 13 | 500 | Message d'erreur de la recopie |

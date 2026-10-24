@@ -73,12 +73,12 @@ val MIGRATION_3_4 =
     }
 
 /**
- * v4 → v5 (Lot 8, boîtiers multiples) : `paired_box` gagne `name` et `position` ; une nouvelle
- * table `session_box` fige la liste des boîtiers d'une session, sur le modèle exact de
+ * v4 → v5 (Lot 8, Niumi Spots multiples) : `paired_box` gagne `name` et `position` ; une nouvelle
+ * table `session_box` fige la liste des Niumi Spots d'une session, sur le modèle exact de
  * `blocked_app` ; `alarm_session` perd `boxId` et `boxTokenSha256Hex`, copiés dans `session_box`.
  *
  * `session_box` est peuplée **depuis `alarm_session`, jamais depuis `paired_box`** (point de
- * vigilance 1 du Lot 8) : une session armée puis un boîtier remplacé hors session (permis
+ * vigilance 1 du Lot 8) : une session armée puis un Niumi Spot remplacé hors session (permis
  * jusqu'ici) laisse les deux tables en désaccord, et seule la paire figée dans la session doit se
  * retrouver dans `session_box`.
  *

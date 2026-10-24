@@ -20,7 +20,7 @@ import com.niumi.system.notification.NiumiNotificationChannels
  * `ANDROID_FULL_SCREEN_REVOKED`, historique depuis le Lot 9 : le réglage n'a plus d'effet sur Niumi.
  *
  * **Aucune de ces actions ne touche à la session.** Elles rétablissent un sous-système ; le scan du
- * boîtier reste le seul chemin de sortie (§3, §10.2).
+ * Niumi Spot reste le seul chemin de sortie (§3, §10.2).
  */
 object IncidentRemediation {
     private val actions: Map<String, ReadinessAction> =

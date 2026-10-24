@@ -1,9 +1,9 @@
 package com.niumi.core.nfc
 
 /**
- * Résultat de la comparaison entre un payload scanné et la liste des boîtiers figés dans la
+ * Résultat de la comparaison entre un payload scanné et la liste des Niumi Spots figés dans la
  * session (SPEC_CORE_KMP §9.2, contrat 1.4). `BOX_MISMATCH` et `TOKEN_MISMATCH` ont disparu avec
- * le boîtier unique : distinguer « bon identifiant, mauvais token » n'avait de sens que face à un
+ * le Niumi Spot unique : distinguer « bon identifiant, mauvais token » n'avait de sens que face à un
  * seul credential, et c'est une information de moins qui sort du module.
  */
 public enum class BoxVerificationStatus {

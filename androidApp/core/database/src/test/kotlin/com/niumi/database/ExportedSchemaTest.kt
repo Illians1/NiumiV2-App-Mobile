@@ -163,7 +163,7 @@ class ExportedSchemaTest {
 
     /**
      * SPEC_ANDROID §7.2 (v6, étape 43) : `session_box` disparaît — la vérification d'un scan lit
-     * l'ensemble courant des boîtiers (SPEC_CORE_KMP §2, décisions 11 et 16). Le schéma v5 la garde.
+     * l'ensemble courant des Niumi Spots (SPEC_CORE_KMP §2, décisions 11 et 16). Le schéma v5 la garde.
      */
     @Test
     fun sessionBoxIsDroppedSinceVersionSix() {

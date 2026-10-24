@@ -13,7 +13,7 @@ public enum class TranscriptionStatus {
 /**
  * [mismatchWordIndex] désigne, dans le texte normalisé, le premier mot qui diffère ; il vaut le
  * nombre de mots du modèle quand la saisie le dépasse. [typedCharCount] est la longueur brute de la
- * saisie, pour le compteur « 84 sur 196 caractères ». [proof] n'existe que sur `COMPLETE` avec un
+ * saisie, pour le compteur « 84 sur 190 caractères ». [proof] n'existe que sur `COMPLETE` avec un
  * contexte.
  */
 public data class TranscriptionResult(

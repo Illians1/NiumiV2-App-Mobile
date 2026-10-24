@@ -51,7 +51,7 @@ data class ActivationPreview(
     val blockingResult: BlockingScheduleResultDto?,
     val policy: ActivationPolicyResultDto?,
     val blockedPackages: List<BlockedPackage>,
-    /** Un nom par boîtier enregistré, dans l'ordre de `PairedBoxStore.all()` : la liste courante (étape 43). */
+    /** Un nom par Niumi Spot enregistré, dans l'ordre de `PairedBoxStore.all()` : la liste courante (étape 43). */
     val boxNames: List<String>,
     val nowEpochMillis: Long,
 ) {
@@ -107,7 +107,7 @@ class ArmSessionUseCase
         }
 
         /**
-         * Clauses de garde séquentielles (horaire invalide, refus de la politique, boîtier
+         * Clauses de garde séquentielles (horaire invalide, refus de la politique, Niumi Spot
          * disparu) avant le corps principal — même motif que `DefaultSessionCoordinator.dispatch`
          * (`:core:system`) et `NfcReducer.onValidScan` (`:shared:core`). Chaque refus est une
          * issue distincte de §9.2 point 2, que fondre dans une seule sortie rendrait moins
@@ -140,7 +140,7 @@ class ArmSessionUseCase
                 return ArmSessionResult.Failed(ActivationFailure.Blocked(policy.blockingReasons))
             }
 
-            // Une activation sans boîtier enregistré est refusée. La liste n'est plus figée dans la
+            // Une activation sans Niumi Spot enregistré est refusée. La liste n'est plus figée dans la
             // session (étape 43, SPEC_CORE_KMP §2 décisions 11 et 16) : la vérification d'un scan
             // relit l'ensemble courant de `PairedBoxStore`.
             if (sources.pairedBoxStore.all().isEmpty()) {

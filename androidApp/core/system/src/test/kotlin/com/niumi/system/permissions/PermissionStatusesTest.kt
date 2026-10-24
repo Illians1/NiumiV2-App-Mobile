@@ -142,7 +142,7 @@ class PermissionStatusesTest {
 
     @Test
     fun checksWithoutATileNeverUngrantAnything() {
-        // Q1 : Ne pas déranger, volume, NFC, boîtiers, applications et heure n'ont pas de tuile.
+        // Q1 : Ne pas déranger, volume, NFC, Niumi Spots, applications et heure n'ont pas de tuile.
         val statuses =
             permissionStatusesOf(
                 report(

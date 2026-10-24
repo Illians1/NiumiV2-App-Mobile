@@ -45,7 +45,22 @@ class BlockingGuardNotificationSpecsTest {
         val spec = BlockingGuardNotificationSpecs.unknownPhase()
 
         assertThat(spec.title).isEqualTo("Réveil programmé")
-        assertThat(spec.text).isEqualTo("Ta session Niumi est en cours.")
+        assertThat(spec.text).isEqualTo("Tes applications choisies seront bloquées jusqu'au scan de ton Niumi Spot.")
+    }
+
+    /** `SPECIFICATION.md` §14 (décision du 2026-10-23) : les notifications ne disent jamais « session ». */
+    @Test
+    fun noTextSpeaksOfASession() {
+        val specs =
+            listOf(
+                BlockingGuardNotificationSpecs.beforeBlocking("07:00", "22:30"),
+                BlockingGuardNotificationSpecs.beforeBlocking(null, null),
+                BlockingGuardNotificationSpecs.blocking("07:00"),
+                BlockingGuardNotificationSpecs.blocking(null),
+                BlockingGuardNotificationSpecs.unknownPhase(),
+            )
+
+        assertThat(specs.flatMap { listOf(it.title, it.text) }.filter { "session" in it.lowercase() }).isEmpty()
     }
 
     @Test

@@ -62,13 +62,13 @@ import kotlinx.coroutines.launch
  * En-tête, deux formes relevées dans les maquettes :
  * - avec [closeLabel] (« Fermer », « Fermer sans enregistrer ») : titre et croix sur une ligne de
  *   48, 8 sous la poignée ; titre 22/600 par défaut (feuille « Sonnerie ») ;
- * - sans croix : titre 24/600 à 22 sous la poignée (« Annuler la session ? »).
+ * - sans croix : titre 24/600 à 22 sous la poignée (« Annuler le réveil ? »).
  *
  * [showHandle] à `false` : sans poignée, pour la feuille de scan, que ses maquettes (06, 20, 29 à 33)
  * dessinent sans elle ; le contenu pose alors sa propre marge du haut.
  *
  * La croix range la feuille puis appelle [onDismiss] ; [content] reçoit la même action
- * (`requestClose`) pour ses propres boutons (« Rester dans la session »). Les icônes des barres système suivent
+ * (`requestClose`) pour ses propres boutons (« Garder le réveil »). Les icônes des barres système suivent
  * `contentColor` (l'encre du thème), jamais le réglage du téléphone.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -210,7 +210,7 @@ private fun NiumiBottomSheetLightPreview() {
 @Composable
 private fun NiumiBottomSheetDarkPreview() {
     NiumiPreviewFrame(dark = true) {
-        NiumiBottomSheet(onDismiss = {}, title = "Annuler la session ?") {
+        NiumiBottomSheet(onDismiss = {}, title = "Annuler le réveil ?") {
             NiumiPrimaryButton(text = "Scanner le Niumi Spot", onClick = {})
             NiumiDiscreetLink(text = "Je n’ai pas accès à mon Niumi Spot", onClick = {})
         }

@@ -75,7 +75,7 @@ public data class ActivationPolicyInputDto(
     val appSelectionCount: Int,
     val triggerAtEpochMillis: Long,
     val nowEpochMillis: Long,
-    /** Nombre de boîtiers associés, borné par `PairedBoxLimit` (contrat 1.4 ; remplace `hasPairedBox`). */
+    /** Nombre de Niumi Spots associés, borné par `PairedBoxLimit` (contrat 1.4 ; remplace `hasPairedBox`). */
     val pairedBoxCount: Int,
     val blockingStartsAtEpochMillis: Long? = null,
 )

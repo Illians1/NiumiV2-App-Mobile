@@ -126,14 +126,14 @@ private fun NavGraphBuilder.setupDestinations(navController: NavHostController) 
  *
  * L'écran 12 est atteignable depuis l'écran 7, depuis l'accueil et depuis le tap d'un
  * avertissement (§13.1). C'est un écran de **consultation** : il n'ajoute aucune action de sortie
- * de session, le scan du boîtier restant le seul chemin (§3, §10.2).
+ * de session, le scan du Niumi Spot restant le seul chemin (§3, §10.2).
  */
 private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostController) {
     composable<NiumiRoute.ActiveSession> {
         ActiveSessionRoute(
             onModifyOrCancel = { navController.navigate(NiumiRoute.ScanToModify) },
             onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
-            // Lien transitoire « Mes boîtiers » (étape 43), retiré avec cet écran à l'étape 45.
+            // Lien transitoire « Mes Niumi Spots » (étape 43), retiré avec cet écran à l'étape 45.
             onOpenBoxes = { navController.navigate(NiumiRoute.Pairing) },
         )
     }

@@ -85,7 +85,7 @@ Par-dessus l'écran 2 (mêmes textes que la maquette 03), la fenêtre :
 - Cette information sert uniquement à renvoyer les applications choisies vers l'accueil.
 - Niumi ne lit pas le contenu des écrans ou les saisies.
 - Le service peut être désactivé dans les réglages Android.
-- Une session ne peut pas être activée si le service est inactif.
+- Sans cette autorisation, Niumi ne peut pas fonctionner.
 - Ouvrir les réglages d'accessibilité
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -337,7 +337,7 @@ Fichier : `17_ecran-6-session-en-cours-sombre`
 - 7 h 50
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
-- Annuler la session
+- Annuler le réveil
 - L
 - M
 - M
@@ -448,7 +448,7 @@ Fichier : `21_annuler-1-le-lien-sur-l-accueil`
 - 7 h 50
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
-- Annuler la session
+- Annuler le réveil
 - L
 - M
 - M
@@ -484,7 +484,7 @@ Fichier : `22_annuler-2-scanner-ou-sortie-de-secours`
 - 7 h 50
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
-- Annuler la session
+- Annuler le réveil
 - L
 - M
 - M
@@ -494,7 +494,7 @@ Fichier : `22_annuler-2-scanner-ou-sortie-de-secours`
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
-- Annuler la session ?
+- Annuler le réveil ?
 - Scanne ton Niumi Spot pour annuler. Tes applications seront débloquées et ton réveil désactivé.
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
@@ -511,7 +511,7 @@ Libellés d'accessibilité présents dans le fichier source :
 - Samedi
 - Dimanche
 - Icônes des 6 applications bloquées
-- Annuler la session ?
+- Annuler le réveil ?
 
 ## 23 · Annuler · 3. La feuille de scan
 
@@ -525,7 +525,7 @@ Fichier : `23_annuler-3-la-feuille-de-scan`
 - 7 h 50
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
-- Annuler la session
+- Annuler le réveil
 - L
 - M
 - M
@@ -536,7 +536,7 @@ Fichier : `23_annuler-3-la-feuille-de-scan`
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
 - Prêt à scanner
-- Approche ton iPhone du Niumi Spot pour annuler la session
+- Approche ton iPhone du Niumi Spot pour annuler le réveil
 - Annuler
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -553,7 +553,7 @@ Libellés d'accessibilité présents dans le fichier source :
 - Icônes des 6 applications bloquées
 - Fenêtre du système : prêt à scanner
 
-## 24 · Annuler · 4. Session annulée : retour au clair
+## 24 · Annuler · 4. Réveil annulé : retour au clair
 
 Fichier : `24_annuler-4-session-annulee-retour-au-clair`
 
@@ -574,7 +574,7 @@ Fichier : `24_annuler-4-session-annulee-retour-au-clair`
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
-- Session annulée. Tes applications sont débloquées et ton réveil est désactivé.
+- Réveil annulé. Tes applications sont débloquées.
 
 Libellés d'accessibilité présents dans le fichier source :
 
@@ -610,7 +610,7 @@ Fichier : `26_ecran-8-confirmation-le-soir`
 - 7 h 50
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
-- Annuler la session
+- Annuler le réveil
 - L
 - M
 - M
@@ -620,9 +620,9 @@ Fichier : `26_ecran-8-confirmation-le-soir`
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
-- Sortir de la session sans scanner ton Niumi Spot ?
+- Arrêter le réveil sans scanner ton Niumi Spot ?
 - Recopier un long texte remplace le scan de ton Niumi Spot.
-- Rester dans la session
+- Garder le réveil
 - Recopier le texte
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -648,9 +648,9 @@ Fichier : `27_ecran-8-confirmation-le-matin`
 - Scanne ton Niumi Spot
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
-- Sortir de la session sans scanner ton Niumi Spot ?
+- Arrêter le réveil sans scanner ton Niumi Spot ?
 - L'alarme s'arrêtera et tes applications seront débloquées. Pour sortir, tu devras recopier un long texte.
-- Rester dans la session
+- Garder le réveil
 - Recopier le texte
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -663,11 +663,11 @@ Libellés d'accessibilité présents dans le fichier source :
 Fichier : `28_ecran-9-recopie-en-cours`
 
 - Annuler
-- 84 sur 197 caractères
-- Recopie ce texte pour sortir de la session.
-- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
+- 84 sur 190 caractères
+- Recopie ce texte pour arrêter le réveil.
+- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis d'arrêter mon réveil sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
 - J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choi
-- Sortir de la session
+- Arrêter le réveil
 - Clavier du téléphone
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -679,12 +679,12 @@ Libellés d'accessibilité présents dans le fichier source :
 Fichier : `29_ecran-9-erreur-signalee`
 
 - Annuler
-- 32 sur 197 caractères
-- Recopie ce texte pour sortir de la session.
-- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
+- 32 sur 190 caractères
+- Recopie ce texte pour arrêter le réveil.
+- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis d'arrêter mon réveil sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
 - J'avais décidé de bloquer mes aplications
 - Un mot ne correspond pas. Il est signalé dans le texte.
-- Sortir de la session
+- Arrêter le réveil
 - Clavier du téléphone
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -696,11 +696,11 @@ Libellés d'accessibilité présents dans le fichier source :
 Fichier : `30_ecran-9-texte-complet-bouton-actif`
 
 - Annuler
-- 197 sur 197 caractères
-- Recopie ce texte pour sortir de la session.
-- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
-- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
-- Sortir de la session
+- 190 sur 190 caractères
+- Recopie ce texte pour arrêter le réveil.
+- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis d'arrêter mon réveil sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
+- J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis d'arrêter mon réveil sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
+- Arrêter le réveil
 - Clavier du téléphone
 
 Libellés d'accessibilité présents dans le fichier source :

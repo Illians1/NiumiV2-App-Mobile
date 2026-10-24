@@ -51,7 +51,7 @@ data class ScanToModifyUiState(
  *
  * Aucune écriture directe : ni `AppSelectionStore`, ni `PairedBoxStore`, ni `SessionCoordinator`
  * ne sont touchés ici. La sélection ne se modifie pas pendant une session (SPEC_CORE_KMP §4) ; les
- * boîtiers, si (décisions 11 et 16, étape 43), mais depuis leur propre écran. Ici, seule la
+ * Niumi Spots, si (décisions 11 et 16, étape 43), mais depuis leur propre écran. Ici, seule la
  * libération écrit, et elle passe entièrement par [scanHandler].
  */
 @HiltViewModel
@@ -169,7 +169,7 @@ class ScanToModifyViewModel
                 ScanOutcome.Ignored -> {
                     // La session n'est pas dans un état qui accepte un scan, ou le moteur a refusé
                     // la transition : rien n'a bougé et il n'y a rien à annoncer — ce n'est pas un
-                    // mauvais boîtier, donc surtout pas de vibration d'erreur.
+                    // mauvais Niumi Spot, donc surtout pas de vibration d'erreur.
                 }
             }
             state = state.copy(lastOutcome = outcome.takeIf { it != ScanOutcome.Ignored })

@@ -42,7 +42,7 @@ import com.niumi.system.readiness.openRecourse
 /**
  * Écran de session active (écran 7, SPEC_ANDROID §15), complet depuis l'étape 15. La seule action
  * est « Modifier ou annuler », qui mène au scan : ni arrêt, ni annulation directe — le scan du
- * boîtier est le seul chemin de sortie (SPEC_CORE_KMP §2, points 3 et 4 ; SPEC_ANDROID §3).
+ * Niumi Spot est le seul chemin de sortie (SPEC_CORE_KMP §2, points 3 et 4 ; SPEC_ANDROID §3).
  *
  * La ligne « Sonnerie » est la seule exception : elle ouvre la feuille Sonnerie sans passer par le
  * scan, et seulement en `ARMED` — la sonnerie n'est pas un terme de l'engagement (§3, §9).
@@ -107,13 +107,13 @@ fun ActiveSessionScreen(
             Button(onClick = actions.onModifyOrCancel, modifier = Modifier.fillMaxWidth()) {
                 Text(text = ActiveSessionTexts.MODIFY_OR_CANCEL_BUTTON)
             }
-            // Les boîtiers se modifient en session (SPEC_CORE_KMP §2, décisions 11 et 16) : ajouter,
-            // renommer ou retirer un boîtier ne termine pas la session (étape 43).
+            // Les Niumi Spots se modifient en session (SPEC_CORE_KMP §2, décisions 11 et 16) : ajouter,
+            // renommer ou retirer un Niumi Spot ne termine pas la session (étape 43).
             TextButton(onClick = actions.onOpenBoxes, modifier = Modifier.fillMaxWidth()) {
                 Text(text = ActiveSessionTexts.OPEN_BOXES_BUTTON)
             }
             // Consultation seule (écran 12) : ne termine ni ne modifie la session, au même titre
-            // que les recours ci-dessus. Le scan du boîtier reste le seul chemin de sortie (§3).
+            // que les recours ci-dessus. Le scan du Niumi Spot reste le seul chemin de sortie (§3).
             TextButton(onClick = actions.onOpenDiagnostic, modifier = Modifier.fillMaxWidth()) {
                 Text(text = ActiveSessionTexts.OPEN_DIAGNOSTIC_BUTTON)
             }
@@ -158,7 +158,7 @@ private fun CriticalIncidents(
 
 /**
  * Le recours d'un incident (§15). Il rétablit un sous-système et ne touche jamais à la session :
- * le scan du boîtier reste le seul chemin de sortie (§3, §10.2). Niumi ne réactive rien à la place
+ * le scan du Niumi Spot reste le seul chemin de sortie (§3, §10.2). Niumi ne réactive rien à la place
  * de l'utilisateur (§12.2) — le bouton ouvre le réglage, l'utilisateur décide.
  */
 @Composable

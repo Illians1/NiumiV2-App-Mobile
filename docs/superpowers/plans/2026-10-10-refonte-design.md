@@ -72,7 +72,7 @@ Valeurs copiées des sources ; chaque étape les respecte implicitement.
 | Écran 4 · Choix des applications | §8 | 4 | 37 | `AppPickerScreen` supprimé |
 | Écran 6 · Accueil, 3 états | §9 | 1 accueil, 5 heure, 6 récap, 7 session active | 45 | `HomeScreen`, `WakeTimeScreen`, `SummaryScreen`, `ActiveSessionScreen` supprimés |
 | Sonnerie (feuille) | §10 | 14 | 40 | `RingtoneScreen` → feuille |
-| Annuler la session (feuille + scan + message) | §11 | 9 scan requis, 11 annulée | 46 | `ScanToModifyScreen`, `CancelledScreen` supprimés |
+| Annuler le réveil (feuille + scan + message) | §11 | 9 scan requis, 11 annulée | 46 | `ScanToModifyScreen`, `CancelledScreen` supprimés |
 | Écran 7 · Blocage | §12 | overlay §12.2 | 39 | overlay 3 s remplacé |
 | Écrans 8/9 · Sortie de secours | §13 | — | 49 | nouveau |
 | Écran 8 pendant l'alarme · ajout d'un Niumi Spot | §13 | — | 49 | nouveau (décision du 2026-10-19 ; bouton « Ajouter un Niumi Spot », sans maquette dédiée) |
@@ -99,7 +99,7 @@ SPEC_ANDROID §15 adopte la numérotation du design-plan à l'étape 54, avec ce
 12. **`DeviceReadinessChecker`, `SessionReadinessMonitor` et la notification §13.1 ne sont jamais supprimés** : ils alimentent les trois tuiles, l'alerte et le bandeau.
 13. **Relecture NFC sur état stable** (étape 31 du plan maître) : les écrans 8 et 9 actuels font disparaître seul le faux « NFC désactivé » lu juste après un redémarrage, dès que l'adaptateur est prêt. Les étapes 38 et 46 refont ces écrans : le comportement est conservé et prouvé par `AlarmViewModelTest` et `CancelSessionViewModelTest`, y compris avec Q4 (Reader Mode seulement feuille ouverte).
 14. **`ReadinessMessages` vivait dans `:feature:setup`** : l'étape 36 l'a déplacé vers `SYS/readiness/` avant de supprimer `SETUP/readiness/*`. *Corrigé le 2026-10-20 :* la notification §13.1 n'en dépendait pas (ses textes sont dans `SessionWarningNotificationSpecs`) ; c'est le récapitulatif (`:feature:session`), qui nomme désormais le contrôle refusant l'activation, et les feuilles de l'écran 2 qui le lisent.
-15. **Textes « boîtier » hors écrans** : les Lots 8 et 9 du plan maître ont écrit « boîtier » dans les notifications de sonnerie et d'attente de scan (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), dans `ReadinessMessages`, `LIMITES.md` et l'aide. L'étape 53 les balaie avec le grep « boîtier ». *Fait le 2026-10-23 pour les deux notifications* (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), avec les textes retranchés ce jour-là dans `SPECIFICATION.md` §14 : « Ton réveil Niumi sonne » / « Scanne ton Niumi Spot pour l'arrêter et retrouver tes applis. » et « Scanne ton Niumi Spot pour retrouver tes applis. » Restent pour l'étape 53 : `ReadinessMessages`, `LIMITES.md`, l'aide et les textes des écrans.
+15. **Textes « boîtier » hors écrans** : les Lots 8 et 9 du plan maître ont écrit « boîtier » dans les notifications de sonnerie et d'attente de scan (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), dans `ReadinessMessages`, `LIMITES.md` et l'aide. L'étape 53 les balaie avec le grep « boîtier ». *Fait le 2026-10-23 pour les deux notifications* (`RingingNotificationSpecs`, `ScanRequestNotificationSpecs`), avec les textes retranchés ce jour-là dans `SPECIFICATION.md` §14 : « Ton réveil Niumi sonne » / « Scanne ton Niumi Spot pour l'arrêter et retrouver tes applis. » et « Scanne ton Niumi Spot pour retrouver tes applis. » Restent pour l'étape 53 : `ReadinessMessages`, `LIMITES.md`, l'aide et les textes des écrans. *Fait le 2026-10-24 pour le reste* (décision D22 de `POINTS-OUVERTS.md`) : tous les textes Android disent « Niumi Spot », nom proposé « Niumi Spot {n} » compris ; seuls restent « Boîtier 1 » de la migration v4 → v5 (et ses deux assertions de `NiumiDatabaseSchemaTest`) et le garde-fou de `AlarmTextsTest`. Le même jour (D23), les textes du design disent « réveil » au lieu de « session » : « Annuler le réveil », « Réveil annulé. Tes applications sont débloquées. », « Arrêter le réveil sans scanner ton Niumi Spot ? », « Garder le réveil », « Arrêter le réveil », texte à recopier de 190 caractères.
 16. **`session_box` et `AndroidSessionExtras.boxes` disparaissent à l'étape 43** (*fait le 2026-10-24*) : jusque-là, `ArmSessionUseCase`, `HandleValidNfcUseCase`, `DiagnosticReport` et le récapitulatif lisent encore la liste figée ; aucune étape antérieure n'y touche.
 
 ### Cas limites que le design n'écrit pas, à verrouiller par un test
@@ -149,7 +149,7 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 42 | D8, D3, Q10 | Autres textes à recopier ; « 1 heure et + » = 60 ; arrondi | **Tranché le 2026-10-24** : un seul texte livré dans une liste prête, sans rotation codée (le texte ne change pas tant qu'il est seul) ; 60 ; minute inférieure. Même jour : le texte compte **196** caractères, non 197 (spec et maquettes corrigées) ; la limite à dix est appliquée à Android dès l'étape 42 |
 | 43 | Q11 | Niumi Spots valides en session : ensemble courant ou figé au coucher ? | **Tranché le 2026-10-19 : ensemble courant**, lu au moment du scan ; la liste figée du Lot 8 du plan maître (`session_box`) disparaît |
 | 44 | Q12 | Sonnerie modifiable en `RINGING` ? | Non, `ARMED` seulement (comme aujourd'hui) |
-| 45 | M10, Q13 | Forme du message « Modifiable après avoir scanné… » ; point de l'heure actuelle | Message bas d'écran, même place que « Session annulée… » ; tick à la minute |
+| 45 | M10, Q13 | Forme du message « Modifiable après avoir scanné… » ; point de l'heure actuelle | Message bas d'écran, même place que « Réveil annulé… » ; tick à la minute |
 | 46 | Q14 | Ré-armement échoué après le scan du matin | Accueil « Réveil désactivé » + bandeau ou alerte ; jamais un faux « Réveil prévu » |
 | 47 | D11, M5, M6, Q15 | « Continuer » grisé sans pièce ; échecs non dessinés ; URL de la page produit | Oui ; même feuille d'échec qu'à l'écran 10 avec « Annuler » ; URL à fournir |
 | 47 | Q21 | Nom du Niumi Spot : pièce proposée ou nom libre ? | **Tranché le 2026-10-19** : quatre pièces proposées (Salle de bain, Cuisine, Salon, Entrée) et « Une autre pièce » en saisie libre ; la limite technique de 30 caractères (`PairedBoxName`) est conservée |
@@ -321,7 +321,7 @@ object NextOccurrenceCalculator { fun compute(input: NextOccurrenceInput): NextO
 // :shared:core — com.niumi.core.diagnostics : PairedBoxLimit.MAX = 10 (MIN = 1 inchangé) ; TOO_MANY_PAIRED_BOXES au-dessus de dix
 
 // :shared:core — com.niumi.core.emergency
-object EmergencyExitTexts { val ids: List<String>; fun text(id: String): String?; fun charCount(id: String): Int? }   // texte validé de 196 caractères (et non 197, 2026-10-24), id "v1-01"
+object EmergencyExitTexts { val ids: List<String>; fun text(id: String): String?; fun charCount(id: String): Int? }   // texte validé de 190 caractères depuis sa révision du 2026-10-24 (196 avant, et non 197), id "v1-01"
 enum class TranscriptionStatus { COMPLETE, INCOMPLETE, MISMATCH, UNKNOWN_TEXT }
 data class TranscriptionResult(val status: TranscriptionStatus, val matchedWordCount: Int, val mismatchWordIndex: Int?,
                                val expectedCharCount: Int, val typedCharCount: Int, val proof: EmergencyExitProof?)
@@ -738,7 +738,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Points ouverts touchés :** D2, D15, Q14.
 
 **Fichiers :**
-- `:feature:session` — créer `SESSION/home/CancelSessionSheet.kt` (titre, texte, bouton « Scanner le Niumi Spot » → `NfcScanSheet` avec la phrase « Approche ton téléphone du Niumi Spot pour annuler la session », lien de secours masqué jusqu'à l'étape 49), `CancelSessionViewModel.kt` (Reader Mode via `NfcReader` + `NfcScanHandler` existants ; relecture NFC sur état stable conservée, vigilance 13 ; succès → fermeture, message « Session annulée… »), `SESSION/success/SuccessScreen.kt`, `SuccessTexts.kt` (`standingAt(time)`, `afterAlarm(min)`, `bravo(min)`, `APPS_BACK`, `BACK_HOME`), `SuccessViewModel.kt` (lit la dernière session `COMPLETED`, `TimeToGetUpPreferences`, `computeTimeToGetUp` ; sans durée déclarée → pas de « Bravo ! »), `DS/drawing/SunriseDrawing.kt` (dégradé §2) ; supprimer `ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `CancelledTexts`, `CompletedTexts` et leurs tests.
+- `:feature:session` — créer `SESSION/home/CancelSessionSheet.kt` (titre, texte, bouton « Scanner le Niumi Spot » → `NfcScanSheet` avec la phrase « Approche ton téléphone du Niumi Spot pour annuler le réveil », lien de secours masqué jusqu'à l'étape 49), `CancelSessionViewModel.kt` (Reader Mode via `NfcReader` + `NfcScanHandler` existants ; relecture NFC sur état stable conservée, vigilance 13 ; succès → fermeture, message « Session annulée… »), `SESSION/success/SuccessScreen.kt`, `SuccessTexts.kt` (`standingAt(time)`, `afterAlarm(min)`, `bravo(min)`, `APPS_BACK`, `BACK_HOME`), `SuccessViewModel.kt` (lit la dernière session `COMPLETED`, `TimeToGetUpPreferences`, `computeTimeToGetUp` ; sans durée déclarée → pas de « Bravo ! »), `DS/drawing/SunriseDrawing.kt` (dégradé §2) ; supprimer `ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `CancelledTexts`, `CompletedTexts` et leurs tests.
 - `:feature:ringing` — `AlarmUiState.Exit` → destination `Success` (`COMPLETED`) ou `Home` (`CANCELLED`).
 - `:app` — `NiumiRoute.kt` (+ `Success` ; `ScanToModify`, `Cancelled`, `Completed` supprimées), `NiumiNavHost.kt`, `DeepLinkDestination.kt`.
 - Tests : `CancelSessionViewModelTest`, `SuccessTextsTest`, `SuccessViewModelTest` (7:04 / 4 min / 11 min ; pas de « Bravo ! » si plus lent ou sans durée), `AlarmUiStateTest`, `DeepLinkDestinationTest`.
@@ -750,7 +750,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - [ ] **Vérifier :** batterie standard ; `grep -rn "ScanToModify\|CancelledScreen\|CompletedScreen" androidApp` vide.
 - [ ] **Valider sur appareil, rédiger `ETAPE-46.md`.** SPEC_ANDROID §11.3, §15.
 
-**Tests manuels :** session en cours → « Annuler la session » → feuille → scan → accueil clair « Réveil désactivé » + message ; matin : scan → écran 11 « Debout à 7:04. », « Retour à l'accueil » → « Réveil prévu » (prochaine occurrence armée) ; sans durée déclarée (avant l'étape 50) → pas de « Bravo ! ».
+**Tests manuels :** session en cours → « Annuler le réveil » → feuille → scan → accueil clair « Réveil désactivé » + message ; matin : scan → écran 11 « Debout à 7:04. », « Retour à l'accueil » → « Réveil prévu » (prochaine occurrence armée) ; sans durée déclarée (avant l'étape 50) → pas de « Bravo ! ».
 
 **Terminé quand :** deux nuits réelles passent par l'écran 11 puis « Réveil prévu » ; l'annulation éteint l'interrupteur (constaté en base).
 
@@ -808,10 +808,10 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Fichiers :**
 - `:core:system` — modifier `AlarmAudioEngine.kt` (+ `setAttenuated(active: Boolean)`), `DefaultAlarmAudioEngine.kt` (−20 dB selon Q16, la montée continue en dessous), créer `SYS/audio/TypingAttenuation.kt` (remontée 2 s après la dernière touche), `SYS/session/EmergencyExitUseCase.kt` (`verifyEmergencyTranscription` avec contexte → `EMERGENCY_EXIT_CONFIRMED` sous le verrou).
-- `:feature:session` — créer `SESSION/emergency/EmergencyWarningSheet.kt` (deux textes selon l'origine ; « Rester dans la session » principal ; « Recopier le texte » au trait ; origine `ALARM` seulement : troisième bouton au trait « Ajouter un Niumi Spot », sous « Recopier le texte », qui ouvre `PointPairing(ALARM)`), `EmergencyTranscriptionScreen.kt` (« Annuler », compteur « N sur 197 caractères », consigne, texte modèle avec mot surligné, champ sans collage, message d'erreur, bouton « Sortir de la session » au-dessus du clavier), `EmergencyTexts.kt`, `EmergencyExitViewModel.kt` (texte choisi parmi `emergencyExitTexts()`, vérification à chaque frappe, atténuation si origine alarme).
+- `:feature:session` — créer `SESSION/emergency/EmergencyWarningSheet.kt` (deux textes selon l'origine ; « Garder le réveil » principal ; « Recopier le texte » au trait ; origine `ALARM` seulement : troisième bouton au trait « Ajouter un Niumi Spot », sous « Recopier le texte », qui ouvre `PointPairing(ALARM)`), `EmergencyTranscriptionScreen.kt` (« Annuler », compteur « N sur 197 caractères », consigne, texte modèle avec mot surligné, champ sans collage, message d'erreur, bouton « Sortir de la session » au-dessus du clavier), `EmergencyTexts.kt`, `EmergencyExitViewModel.kt` (texte choisi parmi `emergencyExitTexts()`, vérification à chaque frappe, atténuation si origine alarme).
 - `:feature:ringing` — `AlarmScreen.kt` et `NfcScanSheet` : lien « Je n'ai pas accès à mon Niumi Spot » visible ; `CancelSessionSheet.kt` idem.
 - `:app` — route `EmergencyExit(origin)` ; depuis `AlarmActivity`, l'écran 9 et le parcours `PointPairing(ALARM)` s'ouvrent dans `AlarmActivity` (l'app doit rester au premier plan) ; au retour du mode `ALARM`, l'écran 10 rouvre la feuille de scan (`openScanSheet()`) et le point qui vient d'être ajouté est accepté (ensemble courant, étape 43).
-- Tests : `EmergencyTextsTest`, `EmergencyExitViewModelTest` (« 84 sur 197 caractères » ; premier mot divergent ; bouton actif seulement `COMPLETE` ; « Annuler » perd la saisie ; collage refusé ; rotation conserve la saisie), `TypingAttenuationTest`, `EmergencyExitUseCaseTest`, `AlarmScreenActionsTest` étendu (le lien et l'option d'ajout ne dispatchent rien à la session), `PointPairingViewModelTest` (mode `ALARM`).
+- Tests : `EmergencyTextsTest`, `EmergencyExitViewModelTest` (« 84 sur 190 caractères » ; premier mot divergent ; bouton actif seulement `COMPLETE` ; « Annuler » perd la saisie ; collage refusé ; rotation conserve la saisie), `TypingAttenuationTest`, `EmergencyExitUseCaseTest`, `AlarmScreenActionsTest` étendu (le lien et l'option d'ajout ne dispatchent rien à la session), `PointPairingViewModelTest` (mode `ALARM`).
 
 **Produit :** la sortie de secours, le soir et le matin, avec l'atténuation pendant la frappe.
 
@@ -819,7 +819,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - [ ] **Vérifier :** batterie standard ; `./gradlew :feature:ringing:connectedDebugAndroidTest`.
 - [ ] **Valider sur appareil, rédiger `ETAPE-49.md`.** SPEC_ANDROID §3, §4.5 (réécrits : la sortie de secours existe, prouvée par la recopie), §10.2 (atténuation), §15 ; `LIMITES.md` et `PRIVACY_POLICY.md` relus (plus de « aucun secours »).
 
-**Tests manuels :** soir : lien → écran 8 → « Rester » ; puis « Recopier » → recopie avec faute → mot signalé → correction → « Sortir » → accueil clair, message ; matin pendant l'alarme : la sonnerie baisse pendant la frappe, remonte à l'arrêt, s'arrête à la validation → écran 11 selon D2 ; matin, second essai : « Je n'ai pas accès… » → écran 8 → option d'ajout → scan d'un tag Niumi neuf → pièce → retour écran 10, feuille de scan ouverte → scan du nouveau point → écran 11.
+**Tests manuels :** soir : lien → écran 8 → « Garder le réveil » ; puis « Recopier » → recopie avec faute → mot signalé → correction → « Arrêter le réveil » → accueil clair, message ; matin pendant l'alarme : la sonnerie baisse pendant la frappe, remonte à l'arrêt, s'arrête à la validation → écran 11 selon D2 ; matin, second essai : « Je n'ai pas accès… » → écran 8 → option d'ajout → scan d'un tag Niumi neuf → pièce → retour écran 10, feuille de scan ouverte → scan du nouveau point → écran 11.
 
 **Terminé quand :** `releasedBy = EMERGENCY_EXIT` en base après une sortie (constaté) ; aucun texte du dépôt n'affirme plus l'absence de secours ; un Niumi Spot ajouté pendant la sonnerie arrête l'alarme (constaté).
 
@@ -952,7 +952,7 @@ Une case cochée signifie « prouvé », jamais « implémenté ».
 - [ ] Le thème suit l'état de la session, jamais le téléphone (étape 33, constaté).
 - [ ] Un planning allumé arme la prochaine occurrence ; une modification avant le coucher ne demande pas de scan ; après le coucher, seul le scan ou la sortie de secours libère (étapes 41, 44, 45, 55).
 - [ ] N'importe quel Niumi Spot enregistré au moment du scan arrête l'alarme, y compris ajouté pendant la session ou pendant la sonnerie ; il en reste toujours au moins un, dix au plus (étapes 42, 43, 47, 48, 49, 55).
-- [ ] La sortie de secours exige la recopie exacte du texte de 197 caractères et compte comme un scan (étapes 42, 49, 55).
+- [ ] La sortie de secours exige la recopie exacte du texte de 190 caractères et compte comme un scan (étapes 42, 49, 55).
 - [ ] L'écran 11 affiche le temps gagné seulement s'il est positif (étapes 46, 50).
 - [ ] Les specs décrivent l'app livrée ; aucun écran supprimé n'y survit ; SPEC_IOS reflète le contrat 1.5 (étape 54).
 - [ ] Chaque point de `POINTS-OUVERTS.md` touché par une étape est soit tranché (annoté), soit laissé de côté et signalé (toutes étapes).

@@ -34,7 +34,7 @@ object RingtoneTexts {
     const val STOP_PREVIEW_DESCRIPTION = "Arrêter l’écoute"
 
     /** La session a quitté `ARMED` entre l'ouverture de la feuille et le changement (§15). */
-    const val NOT_ARMED_MESSAGE = "Le réveil a déjà commencé : ce choix s’appliquera à ta prochaine session."
+    const val NOT_ARMED_MESSAGE = "Le réveil a déjà commencé : ce choix s’appliquera à ton prochain réveil."
 
     const val PREVIEW_FAILED = "La pré-écoute n’a pas pu démarrer."
     const val SAVE_FAILED = "Ton choix n’a pas pu être enregistré."

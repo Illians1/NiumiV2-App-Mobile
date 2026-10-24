@@ -12,7 +12,7 @@ publicité.
 
 `NiumiBlockingAccessibilityService` est le mécanisme qui empêche l'utilisateur d'utiliser les
 applications qu'il a lui-même choisi de bloquer pendant une session de réveil Niumi, tant qu'il
-n'a pas scanné le boîtier NFC associé. C'est une fonctionnalité centrale du produit, pas un
+n'a pas scanné l'un de ses Niumi Spots, des étiquettes NFC associées. C'est une fonctionnalité centrale du produit, pas un
 usage accessoire.
 
 ## 2. Pourquoi une autre API ne suffit pas
@@ -137,7 +137,7 @@ doit rester identique au texte ci-dessus — source :
 [`strings.xml`](../../../androidApp/feature/session/src/main/res/values/strings.xml)) :
 
 > « Observe le nom de l'application affichée pour ramener les applications bloquées à l'accueil
-> pendant une session Niumi. Ne lit ni le contenu des écrans ni les saisies. »
+> tant qu'un réveil Niumi est programmé. Ne lit ni le contenu des écrans ni les saisies. »
 
 ## 7. Limite à ne jamais masquer (SPEC_ANDROID §4.3, §23)
 

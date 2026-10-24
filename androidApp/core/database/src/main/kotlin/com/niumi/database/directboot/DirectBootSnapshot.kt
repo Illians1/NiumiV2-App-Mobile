@@ -59,11 +59,11 @@ internal const val PROJECTION_VERSION_WITH_RELEASE_MEANS: Int = 5
  * volume constant, ce qu'avait choisi toute session écrite avant. `DirectBootMapper.toExtras`
  * y réécrit la sonnerie retirée de l'APK (`LegacyRingtone`).
  *
- * **Projection v4 (Lot 8)** portait la liste des boîtiers figée à l'activation (`boxes`), après
+ * **Projection v4 (Lot 8)** portait la liste des Niumi Spots figée à l'activation (`boxes`), après
  * `boxId` et `boxTokenSha256Hex` jusqu'en v3.
  *
  * **Projection v5 (étape 43).** [releasedBy] et [disarmedAtEpochMillis] s'ajoutent, avec une valeur
- * par défaut `null` pour qu'un fichier v4 reste désérialisable. Les boîtiers ne sont plus projetés :
+ * par défaut `null` pour qu'un fichier v4 reste désérialisable. Les Niumi Spots ne sont plus projetés :
  * la vérification d'un scan lit l'ensemble courant de `paired_box`, sur un appareil déverrouillé
  * (SPEC_ANDROID §4.4) ; la projection ne sert plus qu'à sonner et à reconstruire la session avant
  * déverrouillage. Les clés `boxes`, `boxId` et `boxTokenSha256Hex` d'un fichier antérieur sont

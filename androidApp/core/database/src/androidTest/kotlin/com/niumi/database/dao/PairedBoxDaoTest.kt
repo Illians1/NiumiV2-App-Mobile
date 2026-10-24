@@ -11,7 +11,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Association complète à l'étape 13, boîtiers multiples au Lot 8 ; ici, seule la persistance brute est vérifiée. */
+/**
+ * Association complète à l'étape 13, Niumi Spots multiples au Lot 8 ; ici, seule la persistance brute est
+ * vérifiée.
+ */
 @RunWith(AndroidJUnit4::class)
 class PairedBoxDaoTest {
     private lateinit var database: NiumiDatabase

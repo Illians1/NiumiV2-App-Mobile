@@ -27,13 +27,13 @@ import org.junit.Test
 
 /**
  * SPEC_ANDROID §11.3, points 1 à 4 : éligibilité de l'état, réconciliation avant scan, vérification
- * du boîtier contre l'**ensemble courant** de `PairedBoxStore` lu au moment du scan (étape 43,
+ * du Niumi Spot contre l'**ensemble courant** de `PairedBoxStore` lu au moment du scan (étape 43,
  * SPEC_CORE_KMP §2 décisions 11 et 16), construction de l'événement porteur de la preuve. Les points
  * 5 à 14 appartiennent au coordinateur et à ses exécuteurs, déjà couverts depuis l'étape 11 ; ce
  * test vérifie ce que le cas d'usage ajoute et comment il interprète le [DispatchResult].
  */
 class HandleValidNfcUseCaseTest {
-    /** Ensemble courant : le boîtier de [NfcScanFixtures.SESSION_BOX_URI], seul, sauf mention contraire. */
+    /** Ensemble courant : le Niumi Spot de [NfcScanFixtures.SESSION_BOX_URI], seul, sauf mention contraire. */
     private val pairedBoxStore = FakePairedBoxStore(NfcScanFixtures.pairedBoxes(NiumiCoreFacade()))
 
     /**
@@ -50,7 +50,7 @@ class HandleValidNfcUseCaseTest {
             pairedBoxStore = pairedBoxStore,
         )
 
-    /** Les extras ne portent plus aucun boîtier : l'ensemble de référence est [pairedBoxStore]. */
+    /** Les extras ne portent plus aucun Niumi Spot : l'ensemble de référence est [pairedBoxStore]. */
     @Suppress("UnusedReceiverParameter")
     private fun TestCoordinatorHarness.sessionExtras() = SessionDtoFixtures.extras()
 
@@ -221,9 +221,9 @@ class HandleValidNfcUseCaseTest {
             assertThat(coordinator.reconcileReasons).containsExactly(ReconcileReason.BEFORE_SCAN)
         }
 
-    // --- 3. Vérification contre l'ensemble courant des boîtiers (§11.3 point 3, étape 43) -------
+    // --- 3. Vérification contre l'ensemble courant des Niumi Spots (§11.3 point 3, étape 43) -------
 
-    /** Un boîtier Niumi valide mais jamais enregistré ne termine rien. */
+    /** Un Niumi Spot valide mais jamais enregistré ne termine rien. */
     @Test
     fun aTagOfAnUnregisteredBoxIsRefused() =
         runTest {
@@ -248,7 +248,7 @@ class HandleValidNfcUseCaseTest {
             assertThat(harness.storedState()).isEqualTo(SessionStateDto.RINGING)
         }
 
-    /** N'importe lequel des boîtiers enregistrés suffit à terminer la session. */
+    /** N'importe lequel des Niumi Spots enregistrés suffit à terminer la session. */
     @Test
     fun aTagMatchingTheSecondOfThreeRegisteredBoxesEndsTheSession() =
         runTest {
@@ -276,7 +276,7 @@ class HandleValidNfcUseCaseTest {
         }
 
     /**
-     * Cas limite 6 du plan de refonte : un boîtier enregistré **après** l'activation — depuis les
+     * Cas limite 6 du plan de refonte : un Niumi Spot enregistré **après** l'activation — depuis les
      * réglages ou pendant la sonnerie — termine la session. La liste figée du contrat 1.4 disparaît.
      */
     @Test
@@ -293,7 +293,7 @@ class HandleValidNfcUseCaseTest {
             assertThat(harness.finalState()).isEqualTo(SessionStateDto.COMPLETED)
         }
 
-    /** Cas limite 6 : un boîtier retiré pendant la session n'arrête plus rien ; les autres, si. */
+    /** Cas limite 6 : un Niumi Spot retiré pendant la session n'arrête plus rien ; les autres, si. */
     @Test
     fun aTagOfABoxRemovedDuringTheSessionIsRefused() =
         runTest {
@@ -410,7 +410,7 @@ class HandleValidNfcUseCaseTest {
     /**
      * §11.3, dernier alinéa : « le registre retourne le reçu sans rappeler le moteur ». Du point de
      * vue du scan, l'événement a bien été pris en compte — répondre `Ignored` ferait vibrer
-     * l'appareil comme pour un boîtier étranger.
+     * l'appareil comme pour un Niumi Spot étranger.
      */
     @Test
     fun aDuplicateDispatchStillCountsAsAccepted() =

@@ -18,12 +18,12 @@ object SummaryTexts {
 
     const val CHANGE_TIME_LABEL = "Choisir une autre heure"
 
-    /** Lot 8 : « d'un de tes boîtiers », la session se termine par n'importe lequel des boîtiers enregistrés. */
-    const val COMMITMENT_REMINDER = "Seul le scan d'un de tes boîtiers terminera la session."
+    /** Lot 8 : « d'un de tes Niumi Spots », la session se termine par n'importe lequel des Niumi Spots. */
+    const val COMMITMENT_REMINDER = "Seul le scan d'un de tes Niumi Spots terminera la session."
 
     const val BLOCKED_APPS_TITLE = "Applications bloquées"
 
-    const val BOX_TITLE = "Boîtiers associés"
+    const val BOX_TITLE = "Niumi Spots associés"
 
     /** Ligne « Blocage des applications » du Lot 6 (§15, écran 6). */
     const val BLOCKING_TITLE = "Blocage des applications"
@@ -83,7 +83,7 @@ object SummaryTexts {
             }
 
             ActivationReasonCode.NO_PAIRED_BOX -> {
-                "Aucun boîtier n'est associé. Associe au moins un boîtier avant d'activer ta session."
+                "Aucun Niumi Spot n'est associé. Associe au moins un Niumi Spot avant d'activer ta session."
             }
 
             ActivationReasonCode.INVALID_APP_SELECTION -> {

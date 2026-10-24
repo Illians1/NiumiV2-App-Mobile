@@ -117,7 +117,7 @@ class RoomDirectBootMerge(
             // modifier. Sonnerie et montée comprises (Lot 7) : leur seul chemin d'écriture hors
             // activation exige le déverrouillage, donc Room les porte toujours à jour. Les
             // applications bloquées ne sont pas réécrites non plus — elles sont figées de la même
-            // façon et les réécrire ferait du bruit de CASCADE. Aucun boîtier n'est attaché à la
+            // façon et les réécrire ferait du bruit de CASCADE. Aucun Niumi Spot n'est attaché à la
             // session depuis l'étape 43 : `paired_box` n'est jamais touchée par cette fusion.
             // `releasedBy` et `disarmedAtEpochMillis` viennent de la projection, comme tout champ
             // écrit par le moteur.
