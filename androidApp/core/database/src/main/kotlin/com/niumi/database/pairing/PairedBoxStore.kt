@@ -3,7 +3,7 @@ package com.niumi.database.pairing
 import com.niumi.core.interop.PairedBoxCredentialDto
 
 /**
- * Stockage des boîtiers associés, jusqu'à cinq, nommés (SPEC_ANDROID §11.1, Lot 8 ; remplace
+ * Stockage des boîtiers associés, jusqu'à dix (contrat KMP 1.5), nommés (SPEC_ANDROID §11.1, Lot 8 ; remplace
  * `current`/`replace`/`clear` de l'étape 13). Vit dans `:core:database`, avec les autres
  * interfaces de dépôt (`SessionStore`, `DirectBootStore`, `TechnicalEventLog`) : le plan MVP
  * place son implémentation Room (`RoomPairedBoxStore`) dans ce module, qui ne peut pas dépendre

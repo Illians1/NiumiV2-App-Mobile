@@ -8,6 +8,7 @@ import com.niumi.core.domain.SessionEffectKind
 import com.niumi.core.domain.SessionEventKind
 import com.niumi.core.domain.SessionHealth
 import com.niumi.core.domain.SessionState
+import com.niumi.core.emergency.EmergencyExitProof
 import com.niumi.core.nfc.NfcVerificationProof
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -115,6 +116,7 @@ public data class SessionSnapshotDto(
  * plan) : [NfcVerificationProof] n'a ni constructeur public ni forme sérialisable. `@Transient`
  * exige une valeur par défaut : `null` ici, jamais utilisée en dehors d'une (dé)sérialisation
  * explicite de ce DTO, qui ne fait pas partie de son usage normal à la frontière `interop`.
+ * [emergencyProof] (contrat 1.5) suit la même règle, en dernier pour ne casser aucun appelant.
  */
 @Serializable
 public data class SessionEventDto(
@@ -127,6 +129,7 @@ public data class SessionEventDto(
     @Transient val nfcProof: NfcVerificationProof? = null,
     val failureCode: String?,
     val incident: SessionIncidentDto?,
+    @Transient val emergencyProof: EmergencyExitProof? = null,
 )
 
 /** Charge d'effet (SPEC_CORE_KMP §6), miroir de [com.niumi.core.domain.SessionEffectPayload]. */

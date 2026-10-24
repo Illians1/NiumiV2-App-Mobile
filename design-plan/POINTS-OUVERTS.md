@@ -15,13 +15,13 @@ Cinq listes :
 | N° | Sujet | Question |
 | --- | --- | --- |
 | D1 | Écran 7, iPhone | Garde-t-on le bouton « Ouvrir Niumi » ? Sur iPhone, un bouton de l'écran de blocage peut seulement le fermer. Le seul contournement connu est une notification que l'utilisateur touche |
-| D2 | Sortie de secours, le matin | Après la recopie pendant l'alarme, quel écran s'affiche : l'écran 11, ou l'accueil avec un message ? Et le réveil reste-t-il activé pour le lendemain ? Le journal donne deux pistes qui ne mènent pas au même endroit : « Elle compte comme un scan et a le même effet », et « Après la recopie, la session est annulée, comme après un scan. L'accueil affiche le message « Session annulée… » », sans distinguer le soir du matin |
-| D3 | Écran 3 bis | « 1 heure et + » compte-t-il pour 60 minutes dans le calcul ? C'est une proposition, jamais confirmée |
+| D2 | ~~Sortie de secours, le matin~~ | **Tranché le 24 octobre 2026** (étape 42 du plan Android) : la recopie pendant l'alarme termine la session comme un scan. L'écran 11 s'affiche, sans la phrase « Bravo ! … de moins qu'avant Niumi. », et le réveil reste activé pour le lendemain. Le soir, la recopie annule la session et éteint l'interrupteur, comme écrit au §13 |
+| D3 | ~~Écran 3 bis~~ | **Tranché le 24 octobre 2026** : « 1 heure et + » compte pour 60 minutes dans le calcul. Le temps mis à se lever est arrondi à la minute inférieure |
 | D4 | Écran 3 bis | Quelle durée est présélectionnée à l'ouverture de la roue ? La maquette montre 15 min |
 | D5 | ~~Accueil, ligne « Sonnerie »~~ | **Tranché le 23 octobre 2026** (étape 40 du plan Android) : oui, quand la sonnerie progressive est sur « Non », la ligne n'affiche que le nom du son |
 | D6 | ~~Feuille de sonnerie~~ | **Tranché le 23 octobre 2026** : la sous-ligne « Volume max en… » (« Monte jusqu’au volume du téléphone en… » depuis le 24 octobre) disparaît quand l'interrupteur « Sonnerie progressive » est éteint, et la barre des durées avec elle (maquette 20, dessinée le même jour en remplacement de la pastille « Non ») |
 | D7 | ~~Sonnerie~~ | **Tranché le 23 octobre 2026, sur Android** : les quatre sons déjà empaquetés (Cloche, Énergique, Oiseaux, Piano), sans cinquième son ; les noms des maquettes (Aube, Carillon, Oiseaux, Classique, Insistante) restent des exemples |
-| D8 | Sortie de secours | Quels autres textes à recopier ? Un seul est validé, et le texte doit changer à chaque sortie |
+| D8 | Sortie de secours | Quels autres textes à recopier ? Un seul est validé, et le texte doit changer à chaque sortie. *Décidé le 24 octobre 2026 (étape 42 du plan Android) : un seul texte est livré, dans une liste prête à en recevoir d'autres ; tant qu'il est seul, il ne change pas d'une sortie à l'autre. Il compte 196 caractères, et non 197 comme l'écrivaient la spécification et les maquettes. Les autres textes restent à choisir* |
 | D9 | ~~Bouton inactif en clair~~ | **Tranché le 19 octobre 2026** : fond `#E8E8E4` et texte `#5C5C60` (style de l'écran 2), partout. Le style de l'écran 4 (`#C6C6C2`, texte blanc) n'est pas repris |
 | D10 | ~~Écran 2, NFC~~ | **Tranché le 20 octobre 2026** : pas de tuile NFC. Le NFC est signalé à l'association, au moment du scan et par le bandeau de l'accueil |
 | D11 | Écran 3, choix de la pièce | « Continuer » est-il grisé tant qu'aucune pièce n'est choisie ? Rien n'est dit |
@@ -134,6 +134,6 @@ Le journal des décisions (`annexes/journal-des-decisions.md`) contient des pass
 | E8 | Sonnerie | Plusieurs paragraphes parlent d'un curseur de volume réglable | Pas de curseur : une ligne « Volume du téléphone » et sa valeur (9 octobre) |
 | E9 | Palette | Le début de la section dit qu'aucune palette n'est choisie | Clair hors session, sombre pendant la session (8 et 9 octobre) |
 | E10 | Écran 11 | « Le point ambre du logo se lève comme un soleil » | Même dessin, avec le soleil en dégradé (9 octobre) |
-| E11 | Sortie de secours, le matin | « L'accueil affiche le message « Session annulée… » », sans distinguer le soir du matin | Ce message est retenu pour le soir seulement. Le matin reste ouvert : voir D2 |
+| E11 | Sortie de secours, le matin | « L'accueil affiche le message « Session annulée… » », sans distinguer le soir du matin | Ce message est retenu pour le soir seulement. Le matin : voir D2, tranché le 24 octobre 2026 (écran 11) |
 | E12 | Écran 2, tuile « Alarme » sur Android | « L'affichage plein écran peut être retiré par l'utilisateur » | Retiré : Niumi n'utilise plus l'affichage plein écran (18 octobre, voir T11) |
 | E13 | Toutes les sections | Numéros de maquettes cités par `SPECIFICATION.md` (« Images : »), `TEXTES-DES-MAQUETTES.md`, `VALEURS-DE-DESIGN.md`, le plan Android et SPEC_ANDROID | Le dossier `maquettes/` a été entièrement renuméroté le 23 octobre 2026 (61 maquettes, `INDEX.md` fait foi). Seules les références de la sonnerie (18 à 20) ont été mises à jour ce jour-là ; le reste suit l'ancienne numérotation jusqu'à une passe complète |

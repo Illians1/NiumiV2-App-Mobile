@@ -15,7 +15,7 @@ private const val NAME_INVALID_MESSAGE = "PAIRED_BOX_NAME_INVALID"
 /**
  * Implémentation Room de [PairedBoxStore] (SPEC_ANDROID §11.1, étape 13, Lot 8). Chaque écriture
  * se fait dans une seule transaction : [add] compte les boîtiers avant d'insérer, pour qu'un
- * doublon ou un sixième boîtier ne laisse jamais de ligne partielle ; [remove] renumérote les
+ * doublon ou un onzième boîtier ne laisse jamais de ligne partielle ; [remove] renumérote les
  * positions restantes pour qu'elles restent contiguës à partir de 0. C'est le dépôt qui tient
  * l'invariant de §7.2 sur `name` (1 à 30 caractères après `trim()`) : [add] et [rename] passent le
  * nom par [PairedBoxName.sanitize] avant tout accès à la base et écrivent la valeur nettoyée ; un

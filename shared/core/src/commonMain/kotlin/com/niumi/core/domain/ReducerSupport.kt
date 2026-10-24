@@ -1,5 +1,6 @@
 package com.niumi.core.domain
 
+import com.niumi.core.emergency.EmergencyExitProof
 import com.niumi.core.nfc.NfcVerificationProof
 
 /** États finaux de la machine (SPEC_CORE_KMP §5), partagés entre les réducteurs par famille. */
@@ -71,3 +72,35 @@ internal fun NfcVerificationProof.matchesEvent(event: SessionEvent): Boolean =
         eventId == event.eventId &&
         expectedRevision == event.expectedRevision &&
         verifiedAtEpochMillis == event.occurredAtEpochMillis
+
+/** Même contrôle que [NfcVerificationProof.matchesEvent], pour la preuve de recopie (contrat 1.5). */
+internal fun EmergencyExitProof.matchesEvent(event: SessionEvent): Boolean =
+    sessionId == event.sessionId &&
+        eventId == event.eventId &&
+        expectedRevision == event.expectedRevision &&
+        verifiedAtEpochMillis == event.occurredAtEpochMillis
+
+/**
+ * Effets d'une libération prouvée vers `RELEASING` (SPEC_CORE_KMP §6), communs au scan valide et à
+ * la sortie de secours : publier, annuler l'alarme, annuler le début d'un blocage différé, arrêter
+ * la sonnerie, effacer la demande de scan, retirer le blocage.
+ *
+ * `CANCEL_BLOCKING_START` n'est produit que pour un blocage différé : une alarme de début n'existe
+ * que si `SCHEDULE_BLOCKING_START` l'a demandée, et une session immédiate n'en a jamais. Écart à la
+ * lettre de la table SPEC_CORE_KMP §6, documenté dans cette même section et validé avec
+ * l'utilisateur le 2026-09-16 (voir `ETAPE-22.md`).
+ */
+internal fun provenReleaseEffects(releasing: SessionSnapshot): List<SessionEffect> {
+    val builder =
+        SessionEffectBuilder(releasing.sessionId, releasing.revision)
+            .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
+            .add(SessionEffectKind.CANCEL_ALARM)
+    if (!releasing.blockingSchedule.isImmediate) {
+        builder.add(SessionEffectKind.CANCEL_BLOCKING_START)
+    }
+    return builder
+        .add(SessionEffectKind.STOP_RINGING)
+        .add(SessionEffectKind.CLEAR_SCAN_REQUEST)
+        .add(SessionEffectKind.REMOVE_BLOCKING)
+        .build()
+}

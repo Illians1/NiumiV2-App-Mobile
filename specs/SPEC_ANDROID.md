@@ -14,7 +14,7 @@ Cette spécification décrit l'application Android de Niumi. Elle doit permettre
 3. il confirme une session;
 4. les applications choisies restent bloquées pendant la session, dès l'activation ou dès l'instant de début choisi;
 5. l'alarme sonne à l'heure prévue;
-6. seul le scan de l'un des boîtiers NFC associés termine la session dans le parcours normal (jusqu'à cinq boîtiers nommés, figés à l'activation — Lot 8, contrat KMP 1.4, décision du 2026-10-13);
+6. seul le scan de l'un des boîtiers NFC associés termine la session dans le parcours normal (jusqu'à dix boîtiers nommés depuis le contrat KMP 1.5, étape 42 ; figés à l'activation jusqu'à l'étape 43 — Lot 8, contrat KMP 1.4, décision du 2026-10-13);
 7. la fin de session arrête la sonnerie et débloque les applications.
 
 Le réveil, le blocage et le NFC appartiennent à une même session métier. Ils ne doivent pas être implémentés comme trois fonctions indépendantes.
@@ -903,12 +903,12 @@ Contraintes:
 - le payload ne dépasse pas 96 octets UTF-8 et ne contient aucun caractère de contrôle;
 - l'application stocke `SHA-256` des 16 octets décodés, et non le token en clair, dans Room;
 - le snapshot Direct Boot reçoit le même hash;
-- jusqu'à cinq boîtiers nommés sont associés (Lot 8) : chaque nom fait 1 à 30 caractères après
+- jusqu'à dix boîtiers nommés sont associés (Lot 8 ; cinq jusqu'à l'étape 42, `PairedBoxLimit.MAX = 10` depuis le contrat KMP 1.5) : chaque nom fait 1 à 30 caractères après
   `trim()`, un nom vide ou blanc est refusé ; c'est le dépôt qui tient cet invariant — `add` et
   `rename` passent le nom par `PairedBoxName.sanitize` avant tout accès à la base, écrivent la
   valeur nettoyée et lèvent `PAIRED_BOX_NAME_INVALID` pour un nom refusé, l'écran validant avec la
   même fonction avant d'appeler ; le dépôt refuse aussi un `boxId` déjà présent (« Ce boîtier est
-  déjà associé. ») et un sixième boîtier (« 5 boîtiers maximum. »), tous deux en résultat typé,
+  déjà associé. ») et un onzième boîtier (« 10 boîtiers maximum. », texte transitoire jusqu'à l'étape 47), tous deux en résultat typé,
   sans écriture — l'écran ne fait qu'afficher le refus.
 
 Le tag MVP reste clonable par une personne qui lit puis recopie son contenu. La protection contre le clonage exige un tag cryptographique capable de produire une preuve dynamique. Elle appartient à une version ultérieure du produit.
@@ -1721,7 +1721,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - sonneries et volume progressif (Lot 7) : catalogue et clé par défaut ; courbe de montée (−40 dB au départ, −20 dB à mi-parcours, 0 dB à la durée, bornée avant et après) ; moteur audio qui crée le lecteur à l'amplitude initiale, la réajuste toutes les 250 ms jusqu'à la durée, reprend une montée déjà entamée à l'amplitude du temps écoulé et annule la rampe à l'arrêt ; `RingingSoundResolver` sur les trois cas de 10.2 ; `updateAlarmSound` accepté en `ARMED` et refusé ailleurs, hors catalogue ou avant déverrouillage ; migration Room 3→4 et lecture d'une projection Direct Boot v1 ou v2 ; pré-écoute distincte du moteur de sonnerie ; en-tête de chaque fichier de sonnerie (PCM 16 bits, mono, 44,1 kHz) ; boucle sans blanc (2026-10-15) : `PcmWav` lit chaque fichier du catalogue et refuse tout autre format (stéréo, 8 bits, autre fréquence, flottant, en-tête tronqué, bloc `data` plus long que le fichier), `FallbackAlarmPlayerFactory` passe au lecteur `MediaPlayer` avec la même demande quand l'`AudioTrack` est refusé, `isGaplessLoop` suit le lecteur courant, `AUDIO_LOOP_FALLBACK` écrit avant `RINGING_STARTED` et jamais sur une relance ; depuis l'étape 40, `VolumeRampDurations.sanitized()` (valeur gardée, hors liste ramenée à la plus proche, égalité vers la plus courte) et `alarmVolumePercent()` (`AlarmVolumeSource.alarmStreamPercent()`, arrondi, `null` si le maximum n'est pas positif) ;
 - blocage différé (Lot 6) : programmation, annulation et reprogrammation idempotentes du début du blocage, avec un code de requête distinct du réveil et du watchdog ; `BlockingStartHandler` (gardes de session, de révision et d'illisibilité, puis dispatch de `BLOCKING_START_ELAPSED`) ; réconciliation d'une session `ARMED` en attente de blocage (reprogrammation si l'alarme manque, `BLOCKING_START_ELAPSED` à l'heure et au-delà, `MISSED_BLOCKING_START_WINDOW` au-delà de 15 minutes, y compris depuis le coordinateur Direct Boot) ; projection de blocage inactive sur `ARMED` tant que `blockingAppliedAtEpochMillis` est nul et active ensuite, en Room comme en Direct Boot ; relecture du dernier package au premier plan quand la projection devient active ; migration Room 2→3 et lecture d'une projection Direct Boot v1 comme blocage immédiat ; effets requis de l'activation selon le `blockingSchedule` ; un exécuteur lié pour chaque valeur de `SessionEffectKindDto`.
 - service de garde de session (12.5) : `BlockingGuardPolicy` (gardé exactement sur `isSessionInProgress`, phase d'après `isBlockingInForce` puis l'état, `RINGING`, `AWAITING_SCAN` et `RELEASING` de l'alarme au scan, rien sur un snapshot `null`, arrêt après relance sans session, rien sur un snapshot illisible, relecture des extras), `BlockingGuardWatcher` (une seule commande par phase, refus journalisé puis rejoué, arrêt d'un service absent non journalisé), textes de la notification propre à la garde, `BlockingGuardNotificationWatch` (retour seulement en attente de scan), canal d'importance basse, `isSessionDark` égal à `isBlockingInForce` sur tous les états;
-- boîtiers multiples (Lot 8) : `PairedBoxName.sanitize` (trim, vide ou blanc refusé, 30 gardé, 31 refusé) ; `RoomPairedBoxStore` (ajout, doublon, sixième, renommage, retrait avec renumérotation des positions, ordre) sous la garde de déverrouillage (`all()` vide, écritures refusées) ; mapping aller-retour `boxes` de Room et de la projection Direct Boot, `freezeFrom` qui fige la liste comme la sonnerie ; lecture d'une projection v1, v2 ou v3 comme une liste d'un seul boîtier, sans nom ; scan qui reconnaît n'importe quel boîtier de la liste figée, y compris le dernier de cinq, et qui refuse un boîtier associé après l'activation ou une liste figée vide sans lever ; `AndroidDeviceReadinessChecker` sur 0, 1, 5 et 6 boîtiers associés.
+- boîtiers multiples (Lot 8) : `PairedBoxName.sanitize` (trim, vide ou blanc refusé, 30 gardé, 31 refusé) ; `RoomPairedBoxStore` (ajout, doublon, dixième accepté et onzième refusé depuis l'étape 42, renommage, retrait avec renumérotation des positions, ordre) sous la garde de déverrouillage (`all()` vide, écritures refusées) ; mapping aller-retour `boxes` de Room et de la projection Direct Boot, `freezeFrom` qui fige la liste comme la sonnerie ; lecture d'une projection v1, v2 ou v3 comme une liste d'un seul boîtier, sans nom ; scan qui reconnaît n'importe quel boîtier de la liste figée, y compris le dernier de cinq, et qui refuse un boîtier associé après l'activation ou une liste figée vide sans lever ; `AndroidDeviceReadinessChecker` sur 0, 1, 5 et 6 boîtiers associés.
 
 `feature`:
 
@@ -1751,7 +1751,7 @@ Ne jamais remplacer silencieusement une alarme exacte par une alarme inexacte.
 - migration Room 2→3 depuis une base v2 peuplée (Lot 6);
 - migration Room 3→4 depuis une base v3 peuplée d'une session en `niumi_alarm`, et modification de la sonnerie d'une session `ARMED` relue dans Room et dans la projection Direct Boot (Lot 7);
 - démarrage du service et lecture réelle d'une sonnerie autre que celle par défaut, avec montée progressive (Lot 7);
-- migration Room 4→5 depuis une base v4 peuplée d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé, avec reçu, outbox, application bloquée et incident (Lot 8) ; `RoomPairedBoxStore` (ajout, doublon, sixième, renommage, retrait, ordre) ; parité Room / Direct Boot de la liste figée, noms compris côté Room.
+- migration Room 4→5 depuis une base v4 peuplée d'une session `ARMED` dont `paired_box` est en désaccord avec le boîtier figé, avec reçu, outbox, application bloquée et incident (Lot 8) ; `RoomPairedBoxStore` (ajout, doublon, dixième accepté et onzième refusé depuis l'étape 42, renommage, retrait, ordre) ; parité Room / Direct Boot de la liste figée, noms compris côté Room.
 
 - service de garde de session (12.5) : premier plan réel avec sa notification et l'heure dans le titre, reprise de la notification de sonnerie puis de celle de la demande de scan sous leurs identifiants, sans reste de la sienne, rien de nouveau en `RELEASING`, arrêt sur demande, arrêt seul quand il est relancé sans commande et sans session (`BlockingGuardServiceInstrumentedTest`, dans `:app`, seul graphe complet).
 
@@ -1920,7 +1920,7 @@ Le MVP est accepté si tous les critères suivants sont vrais:
 - la pré-écoute ne passe ni par le service ni par le moteur de sonnerie, et s'arrête en quittant l'écran (Lot 7);
 - les limites mesurées du Lot 7 sont écrites dans l'aide et `LIMITES.md` (Lot 7);
 - le scan de n'importe lequel des boîtiers figés à l'activation termine ou annule la session ; un boîtier hors de cette liste est refusé sans effet (Lot 8);
-- jusqu'à cinq boîtiers nommés sont associés ; un sixième et un doublon sont refusés au dépôt ; aucun ajout, retrait ni renommage pendant une session (Lot 8);
+- jusqu'à dix boîtiers nommés sont associés (contrat KMP 1.5, étape 42) ; un onzième et un doublon sont refusés au dépôt ; aucun ajout, retrait ni renommage pendant une session (Lot 8);
 - ni une base antérieure à v5, ni une projection Direct Boot antérieure à v4 ne perdent le boîtier figé d'une session en cours (Lot 8);
 - ni l'écran, ni l'export, ni le journal n'exposent une empreinte de token ; l'export nomme chaque boîtier figé avec huit caractères de son identifiant (Lot 8);
 - les limites mesurées du Lot 8 sont écrites dans l'aide et `LIMITES.md` (Lot 8);

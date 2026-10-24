@@ -755,5 +755,21 @@
     "expectedViolations": [
       "INVALID_STATE_TRANSITION"
     ]
+  },
+  {
+    "name": "emergency_exit_without_proof_is_refused",
+    "snapshot": "ringing",
+    "event": {
+      "kind": "EMERGENCY_EXIT_CONFIRMED",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "occurredAtEpochMillis": 1800000002000,
+      "expectedRevision": 3
+    },
+    "expectedState": "RINGING",
+    "expectedEffects": [],
+    "expectedViolations": [
+      "MISSING_EMERGENCY_PROOF"
+    ]
   }
 ]

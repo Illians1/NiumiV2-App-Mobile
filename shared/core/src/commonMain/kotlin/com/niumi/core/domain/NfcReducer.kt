@@ -72,21 +72,6 @@ internal object NfcReducer {
                 releasingAtEpochMillis = event.occurredAtEpochMillis,
                 releasedBy = ReleaseMeans.NFC_SCAN,
             )
-        val builder =
-            SessionEffectBuilder(newSnapshot.sessionId, newSnapshot.revision)
-                .add(SessionEffectKind.PUBLISH_PLATFORM_SNAPSHOT)
-                .add(SessionEffectKind.CANCEL_ALARM)
-        // `CANCEL_BLOCKING_START` n'est produit que pour un blocage différé : une alarme de début
-        // n'existe que si `SCHEDULE_BLOCKING_START` l'a demandée, et une session immédiate n'en a
-        // jamais. Écart à la lettre de la table SPEC_CORE_KMP §6, documenté dans cette même section
-        // et validé avec l'utilisateur le 2026-09-16 (voir `ETAPE-22.md`).
-        if (!newSnapshot.blockingSchedule.isImmediate) {
-            builder.add(SessionEffectKind.CANCEL_BLOCKING_START)
-        }
-        builder
-            .add(SessionEffectKind.STOP_RINGING)
-            .add(SessionEffectKind.CLEAR_SCAN_REQUEST)
-            .add(SessionEffectKind.REMOVE_BLOCKING)
-        return SessionDecision(newSnapshot, builder.build(), emptyList())
+        return SessionDecision(newSnapshot, provenReleaseEffects(newSnapshot), emptyList())
     }
 }

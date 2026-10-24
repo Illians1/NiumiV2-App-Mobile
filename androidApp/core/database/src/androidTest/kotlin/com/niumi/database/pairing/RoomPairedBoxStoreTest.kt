@@ -14,8 +14,9 @@ import org.junit.runner.RunWith
 import javax.inject.Provider
 
 /**
- * SPEC_ANDROID §11.1 (Lot 8) : jusqu'à cinq boîtiers nommés, ordonnés par position. `all()` avant
- * déverrouillage renvoie une liste vide plutôt que de lever, à la différence du reste de
+ * SPEC_ANDROID §11.1 (Lot 8 ; dix au plus depuis le contrat KMP 1.5) : jusqu'à dix boîtiers
+ * nommés, ordonnés par position. `all()` avant déverrouillage renvoie une liste vide plutôt que
+ * de lever, à la différence du reste de
  * `RoomPairedBoxStore` — voir le KDoc de la classe.
  */
 @RunWith(AndroidJUnit4::class)
@@ -67,14 +68,25 @@ class RoomPairedBoxStoreTest {
         }
 
     @Test
-    fun aSixthBoxReturnsLimitReachedAndWritesNothing() =
+    fun aTenthBoxIsAccepted() =
         runTest {
-            repeat(5) { index -> store.add(credential(boxId = "box-$index"), "Boîtier ${index + 1}") }
+            repeat(9) { index -> store.add(credential(boxId = "box-$index"), "Boîtier ${index + 1}") }
 
-            val result = store.add(credential(boxId = "box-5"), "Boîtier 6")
+            val result = store.add(credential(boxId = "box-9"), "Boîtier 10")
+
+            assertThat(result).isEqualTo(PairedBoxAddResult.Added)
+            assertThat(store.all()).hasSize(10)
+        }
+
+    @Test
+    fun anEleventhBoxReturnsLimitReachedAndWritesNothing() =
+        runTest {
+            repeat(10) { index -> store.add(credential(boxId = "box-$index"), "Boîtier ${index + 1}") }
+
+            val result = store.add(credential(boxId = "box-10"), "Boîtier 11")
 
             assertThat(result).isEqualTo(PairedBoxAddResult.LimitReached)
-            assertThat(store.all()).hasSize(5)
+            assertThat(store.all()).hasSize(10)
         }
 
     @Test

@@ -35,13 +35,14 @@ public class SessionEngine {
             SessionEventKind.VALID_NFC_SCANNED,
             SessionEventKind.INVALID_NFC_SCANNED,
             SessionEventKind.DISARM_REQUESTED,
+            SessionEventKind.EMERGENCY_EXIT_CONFIRMED,
             SessionEventKind.RELEASE_SUCCEEDED,
             SessionEventKind.RELEASE_FAILED,
             -> reduceRelease(snapshot, event)
         }
     }
 
-    // Familles qui mènent à `RELEASING` ou en sortent (scan, désarmement, nettoyage) : aiguillage
+    // Familles qui mènent à `RELEASING` ou en sortent (scan, désarmement, sortie de secours, nettoyage) : aiguillage
     // séparé depuis le contrat 1.5, le treizième événement portant `reduce` au-delà du seuil de
     // complexité de detekt (`ETAPE-41.md`).
     private fun reduceRelease(
@@ -52,6 +53,7 @@ public class SessionEngine {
             SessionEventKind.VALID_NFC_SCANNED -> NfcReducer.onValidScan(snapshot, event)
             SessionEventKind.INVALID_NFC_SCANNED -> NfcReducer.onInvalidScan(snapshot, event)
             SessionEventKind.DISARM_REQUESTED -> DisarmReducer.onDisarmRequested(snapshot, event)
+            SessionEventKind.EMERGENCY_EXIT_CONFIRMED -> EmergencyReducer.onConfirmed(snapshot, event)
             SessionEventKind.RELEASE_SUCCEEDED -> ReleaseReducer.onSucceeded(snapshot, event)
             SessionEventKind.RELEASE_FAILED -> ReleaseReducer.onFailed(snapshot, event)
             else -> error("aiguillé vers reduceRelease par erreur : ${event.kind}")

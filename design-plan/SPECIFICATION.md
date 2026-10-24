@@ -174,7 +174,7 @@ Niumi demande à l'utilisateur combien de temps il met aujourd'hui pour sortir d
 
 - La question est obligatoire : on ne peut pas la passer.
 - La valeur se corrige ensuite dans Réglages, Aide, rubrique « Temps gagné ».
-- « 1 heure et + » compte pour 60 minutes dans le calcul **(ouvert : proposition à confirmer)**.
+- « 1 heure et + » compte pour 60 minutes dans le calcul (décision du 24 octobre 2026).
 - La maquette montre « 15 min » au milieu. La valeur présélectionnée n'a pas été décidée **(ouvert)**.
 
 ## 8. Écran 4 · Choix des applications
@@ -347,7 +347,7 @@ Le bouton principal est celui qui fait rester. Sortir demande un geste volontair
 | Élément | Contenu |
 | --- | --- |
 | En haut à gauche | Lien « Annuler » |
-| En haut à droite | Compteur : « 84 sur 197 caractères » |
+| En haut à droite | Compteur : « 84 sur 196 caractères » |
 | Consigne | Recopie ce texte pour sortir de la session. |
 | Texte modèle | Affiché en entier dans un encadré, au-dessus du champ |
 | Champ de saisie | Vide au départ. Le collage est désactivé |
@@ -357,7 +357,7 @@ Le bouton principal est celui qui fait rester. Sortir demande un geste volontair
 - **Erreur.** Le premier mot qui diffère est surligné dans le texte modèle et souligné dans la saisie, et le message d'erreur s'affiche sous le champ.
 - **Comparaison.** Les majuscules, les accents, la ponctuation et les espaces en double sont ignorés.
 - **Abandon.** « Annuler » ramène à l'écran d'où l'on vient. La saisie est perdue.
-- **Le texte change à chaque sortie**, pour qu'un raccourci clavier ne suffise pas. Un seul texte est validé à ce jour (197 caractères). D'autres textes neutres du même genre seront choisis plus tard **(ouvert)** :
+- **Le texte change à chaque sortie**, pour qu'un raccourci clavier ne suffise pas. Un seul texte est validé à ce jour (196 caractères ; les maquettes disent 197, à tort). D'autres textes neutres du même genre seront choisis plus tard **(ouvert)**. Tant qu'il est seul, le texte ne change pas d'une sortie à l'autre (décision du 24 octobre 2026) :
 
 > J'avais décidé de bloquer mes applications jusqu'au scan de mon Niumi Spot. Je choisis de sortir de cette session sans le scanner. Je recopie ce texte en entier pour confirmer que c'est mon choix.
 
@@ -366,7 +366,7 @@ Le même texte sert le soir et le matin : il ne doit donc mentionner ni « ce so
 **Après la recopie**, la session se termine comme après un scan.
 
 - Le soir ou la nuit : le blocage est levé, l'interrupteur « Réveil activé » est éteint, et l'accueil affiche le message « Session annulée. Tes applications sont débloquées et ton réveil est désactivé. »
-- Le matin, pendant l'alarme : la sonnerie s'arrête et les applications sont débloquées. L'écran affiché ensuite n'est pas tranché **(ouvert)**. Le journal dit à la fois que la sortie de secours « compte comme un scan et a le même effet », ce qui mènerait à l'écran 11, et qu'après la recopie « l'accueil affiche le message « Session annulée… » », sans distinguer le soir du matin.
+- Le matin, pendant l'alarme : la sonnerie s'arrête et les applications sont débloquées. La session se termine comme après un scan : l'écran 11 s'affiche, sans la phrase « Bravo ! … de moins qu'avant Niumi. », et le réveil reste activé pour le lendemain (décision du 24 octobre 2026).
 - Sur iPhone, ce que fait l'alarme pendant la recopie n'est pas décidé non plus **(ouvert)**.
 
 **Android, le matin.** La sonnerie baisse tant que la saisie avance et remonte si elle s'arrête.

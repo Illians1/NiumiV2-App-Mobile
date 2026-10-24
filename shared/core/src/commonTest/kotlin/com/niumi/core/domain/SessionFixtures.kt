@@ -1,5 +1,6 @@
 package com.niumi.core.domain
 
+import com.niumi.core.emergency.EmergencyExitProof
 import com.niumi.core.nfc.NfcVerificationProof
 
 // Horodatages de référence, tous distincts et strictement croissants dans l'ordre du parcours
@@ -469,6 +470,46 @@ internal object NfcScanEventFixtures {
     private fun proofMatching(event: SessionEvent) =
         NfcVerificationProof(
             boxId = BOX_ID,
+            sessionId = event.sessionId,
+            eventId = event.eventId,
+            expectedRevision = requireNotNull(event.expectedRevision),
+            verifiedAtEpochMillis = event.occurredAtEpochMillis,
+        )
+}
+
+/**
+ * Sortie de secours confirmée (contrat 1.5). Comme pour [NfcScanEventFixtures], la preuve est
+ * dérivée de l'événement qui la porte ; `withoutProof` sert aux refus `MISSING_EMERGENCY_PROOF`.
+ */
+internal object EmergencyExitEventFixtures {
+    internal const val TEXT_ID = "v1-01"
+
+    internal fun emergencyExitConfirmedEvent(
+        expectedRevision: Long,
+        occurredAtEpochMillis: Long,
+        sessionId: String = SESSION_ID,
+        proofOverride: EmergencyExitProof? = null,
+        withoutProof: Boolean = false,
+    ): SessionEvent {
+        val shape =
+            SessionEvent(
+                eventId = EVENT_ID_2,
+                sessionId = sessionId,
+                kind = SessionEventKind.EMERGENCY_EXIT_CONFIRMED,
+                occurredAtEpochMillis = occurredAtEpochMillis,
+                expectedRevision = expectedRevision,
+                activationRequest = null,
+                nfcProof = null,
+                failureCode = null,
+                incident = null,
+            )
+        if (withoutProof) return shape
+        return shape.copy(emergencyProof = proofOverride ?: proofMatching(shape))
+    }
+
+    internal fun proofMatching(event: SessionEvent) =
+        EmergencyExitProof(
+            textId = TEXT_ID,
             sessionId = event.sessionId,
             eventId = event.eventId,
             expectedRevision = requireNotNull(event.expectedRevision),

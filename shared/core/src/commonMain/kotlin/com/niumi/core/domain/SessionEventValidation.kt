@@ -7,6 +7,30 @@ private fun violation(
     message: String,
 ) = DomainViolation(code, message)
 
+/** Charge requise sur son seul événement : absente → [missingCode], présente ailleurs → inattendue. */
+private fun presenceViolations(
+    required: Boolean,
+    present: Boolean,
+    missingCode: String,
+    label: String,
+    eventName: String,
+): List<DomainViolation> =
+    when {
+        required && !present -> {
+            listOf(violation(missingCode, "$label requis pour $eventName."))
+        }
+
+        !required && present -> {
+            listOf(
+                violation(ViolationCode.UNEXPECTED_EVENT_PAYLOAD, "$label inattendu hors $eventName."),
+            )
+        }
+
+        else -> {
+            emptyList()
+        }
+    }
+
 /**
  * Contrôles indépendants de l'état source : forme des identifiants, horodatage, révision attendue,
  * présence ou absence de chaque charge selon [SessionEventKind] (SPEC_CORE_KMP §6, §7.3, §7.4). La
@@ -24,7 +48,7 @@ internal object SessionEventValidation {
             sessionViolations(snapshot, event) +
             revisionViolations(snapshot, event) +
             activationRequestViolations(event) +
-            nfcProofPresenceViolations(event) +
+            proofPresenceViolations(event) +
             failureCodeViolations(event) +
             incidentViolations(event)
 
@@ -142,22 +166,25 @@ internal object SessionEventValidation {
         }
     }
 
-    private fun nfcProofPresenceViolations(event: SessionEvent): List<DomainViolation> {
-        val isNfcScan = event.kind == SessionEventKind.VALID_NFC_SCANNED
-        return when {
-            isNfcScan && event.nfcProof == null -> {
-                listOf(violation(ViolationCode.MISSING_NFC_PROOF, "nfcProof requis pour VALID_NFC_SCANNED."))
-            }
-
-            !isNfcScan && event.nfcProof != null -> {
-                listOf(violation(ViolationCode.UNEXPECTED_EVENT_PAYLOAD, "nfcProof inattendu hors VALID_NFC_SCANNED."))
-            }
-
-            else -> {
-                emptyList()
-            }
-        }
-    }
+    /**
+     * Chaque preuve opaque n'est attendue que sur son événement : `nfcProof` sur
+     * `VALID_NFC_SCANNED`, `emergencyProof` sur `EMERGENCY_EXIT_CONFIRMED` (contrat 1.5).
+     */
+    private fun proofPresenceViolations(event: SessionEvent): List<DomainViolation> =
+        presenceViolations(
+            required = event.kind == SessionEventKind.VALID_NFC_SCANNED,
+            present = event.nfcProof != null,
+            missingCode = ViolationCode.MISSING_NFC_PROOF,
+            label = "nfcProof",
+            eventName = "VALID_NFC_SCANNED",
+        ) +
+            presenceViolations(
+                required = event.kind == SessionEventKind.EMERGENCY_EXIT_CONFIRMED,
+                present = event.emergencyProof != null,
+                missingCode = ViolationCode.MISSING_EMERGENCY_PROOF,
+                label = "emergencyProof",
+                eventName = "EMERGENCY_EXIT_CONFIRMED",
+            )
 
     private fun failureCodeViolations(event: SessionEvent): List<DomainViolation> {
         val isFailure = event.kind == SessionEventKind.ACTIVATION_FAILED

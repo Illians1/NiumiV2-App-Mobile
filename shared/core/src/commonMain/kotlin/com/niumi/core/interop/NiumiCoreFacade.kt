@@ -2,6 +2,9 @@ package com.niumi.core.interop
 
 import com.niumi.core.diagnostics.ActivationPolicy
 import com.niumi.core.domain.SessionEngine
+import com.niumi.core.emergency.EmergencyExitTexts
+import com.niumi.core.emergency.EmergencyTranscription
+import com.niumi.core.insight.TimeToGetUpCalculator
 import com.niumi.core.nfc.BoxPayloadParser
 import com.niumi.core.nfc.BoxVerifier
 import com.niumi.core.schedule.BlockingScheduleCalculator
@@ -22,8 +25,8 @@ public class NiumiCoreFacade {
     public fun parseBoxPayload(uri: String): BoxPayloadResultDto = BoxPayloadParser.parse(uri).toDto()
 
     /**
-     * Compare [payload] à la liste des boîtiers figés dans la session, [credentials] (contrat 1.4,
-     * SPEC_CORE_KMP §9.2). [context] est fourni pour un scan de fin de session ; `null` ne produit
+     * Compare [payload] à la liste de boîtiers [credentials], l'ensemble enregistré au moment du scan
+     * (contrat 1.5, SPEC_CORE_KMP §9.2). [context] est fourni pour un scan de fin de session ; `null` ne produit
      * aucune preuve. L'association n'appelle plus cette méthode : elle parse et déduplique au dépôt.
      */
     public fun verifyBox(
@@ -72,4 +75,30 @@ public class NiumiCoreFacade {
      */
     public fun computeNextOccurrence(input: NextOccurrenceInputDto): NextOccurrenceResultDto =
         NextOccurrenceCalculator.compute(input.toDomain()).toDto()
+
+    /**
+     * Textes de la sortie de secours (contrat 1.5, SPEC_CORE_KMP §12, §14). Un seul texte validé
+     * aujourd'hui (D8) ; la liste est prête pour d'autres.
+     */
+    public fun emergencyExitTexts(): List<EmergencyExitTextDto> =
+        EmergencyExitTexts.ids.mapNotNull { id ->
+            EmergencyExitTexts.text(id)?.let { text ->
+                EmergencyExitTextDto(id = id, text = text, charCount = text.length)
+            }
+        }
+
+    /**
+     * Compare une recopie au texte modèle (contrat 1.5, SPEC_CORE_KMP §12). [context] est fourni par
+     * le coordinateur pour la confirmation de sortie, comme pour [verifyBox] ; `null` (saisie en
+     * cours) ne produit aucune preuve.
+     */
+    public fun verifyEmergencyTranscription(
+        input: EmergencyTranscriptionInputDto,
+        context: NfcVerificationContextDto?,
+    ): EmergencyTranscriptionResultDto =
+        EmergencyTranscription.verify(input.textId, input.typed, context?.toDomain()).toDto()
+
+    /** Temps mis à se lever et minutes gagnées de l'écran 11 (contrat 1.5, `SPECIFICATION.md` §15). */
+    public fun computeTimeToGetUp(input: TimeToGetUpInputDto): TimeToGetUpResultDto =
+        TimeToGetUpCalculator.compute(input.toDomain()).toDto()
 }

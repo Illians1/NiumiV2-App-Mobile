@@ -4,8 +4,8 @@ package com.niumi.core.domain
  * Codes de violation communs (SPEC_CORE_KMP §7.3, « au minimum les codes suivants »).
  * `INVALID_APP_SELECTION` est un ajout de l'étape 7 : §7.4 refuse une activation dont `count` est
  * hors de 1..50 mais aucun des 13 codes d'origine ne couvrait ce refus. Voir `ETAPE-07.md`. Les
- * trois suivants sont ajoutés par le contrat 1.3 pour le blocage différé (§5.2), le dernier par le
- * contrat 1.5 pour le désarmement demandé à ou après le coucher.
+ * trois suivants sont ajoutés par le contrat 1.3 pour le blocage différé (§5.2), les deux derniers
+ * par le contrat 1.5 pour le désarmement demandé à ou après le coucher et la sortie de secours.
  */
 public object ViolationCode {
     public const val UNKNOWN_SESSION: String = "UNKNOWN_SESSION"
@@ -26,4 +26,5 @@ public object ViolationCode {
     public const val BLOCKING_START_NOT_REACHED: String = "BLOCKING_START_NOT_REACHED"
     public const val BLOCKING_ALREADY_APPLIED: String = "BLOCKING_ALREADY_APPLIED"
     public const val BLOCKING_START_ALREADY_ELAPSED: String = "BLOCKING_START_ALREADY_ELAPSED"
+    public const val MISSING_EMERGENCY_PROOF: String = "MISSING_EMERGENCY_PROOF"
 }

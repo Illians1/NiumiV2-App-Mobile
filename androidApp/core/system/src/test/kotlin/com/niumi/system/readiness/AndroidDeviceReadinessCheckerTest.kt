@@ -95,22 +95,23 @@ class AndroidDeviceReadinessCheckerTest {
         }
 
     @Test
-    fun fiveOrFewerPairedBoxesPassTheCheckSixDoesNot() =
+    fun tenOrFewerPairedBoxesPassTheCheckElevenDoesNot() =
         runTest {
+            // Contrat KMP 1.5 : de un à dix Niumi Spots (`PairedBoxLimit.MAX = 10`).
             val sources = ReadinessTestSources()
 
             sources.pairedBoxStore.seedCount(1)
             assertThat(report(sources).check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.PASSED)
 
-            sources.pairedBoxStore.seedCount(5)
-            val fiveBoxes = report(sources)
-            assertThat(fiveBoxes.check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.PASSED)
-            assertThat(fiveBoxes.pairedBoxCount).isEqualTo(5)
+            sources.pairedBoxStore.seedCount(10)
+            val tenBoxes = report(sources)
+            assertThat(tenBoxes.check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.PASSED)
+            assertThat(tenBoxes.pairedBoxCount).isEqualTo(10)
 
-            sources.pairedBoxStore.seedCount(6)
-            val sixBoxes = report(sources)
-            assertThat(sixBoxes.check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.FAILED)
-            assertThat(sixBoxes.pairedBoxCount).isEqualTo(6)
+            sources.pairedBoxStore.seedCount(11)
+            val elevenBoxes = report(sources)
+            assertThat(elevenBoxes.check(ReadinessCheckId.PAIRED_BOX).outcome).isEqualTo(ReadinessOutcome.FAILED)
+            assertThat(elevenBoxes.pairedBoxCount).isEqualTo(11)
         }
 
     @Test

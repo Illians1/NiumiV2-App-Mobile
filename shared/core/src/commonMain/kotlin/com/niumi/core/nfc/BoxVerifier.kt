@@ -1,10 +1,11 @@
 package com.niumi.core.nfc
 
 /**
- * Compare un payload NFC scanné à la liste des boîtiers figés dans la session (SPEC_CORE_KMP
- * §9.2, §6, contrat 1.4) : `MATCH` au premier credential dont le `boxId` est égal **et** dont
- * l'empreinte correspond, `NO_PAIRED_BOX_MATCH` sinon, liste vide comprise. Le `boxId` n'est pas
- * secret et se compare normalement ; l'empreinte du token se compare en temps constant.
+ * Compare un payload NFC scanné à la liste de boîtiers transmise par le coordinateur, l'ensemble
+ * enregistré au moment du scan depuis le contrat 1.5 (SPEC_CORE_KMP §9.2, §6) : `MATCH` au premier
+ * credential dont le `boxId` est égal **et** dont l'empreinte correspond, `NO_PAIRED_BOX_MATCH`
+ * sinon, liste vide comprise. Le `boxId` n'est pas secret et se compare normalement ; l'empreinte du
+ * token se compare en temps constant.
  */
 public object BoxVerifier {
     private const val SUPPORTED_PROTOCOL_VERSION = 1

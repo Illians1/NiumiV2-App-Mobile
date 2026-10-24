@@ -26,7 +26,7 @@ import javax.inject.Inject
  * Écran 3 « Mes boîtiers » (SPEC_ANDROID §11.1, §15 Lot 8). Ne juge jamais lui-même de la
  * validité d'un payload : `NiumiCoreFacade.parseBoxPayload` tranche (SPEC_CORE_KMP §9.3), et seul
  * `PairedBoxCredentialDto.fromPayload` calcule l'empreinte — le token en clair ne quitte jamais
- * `:shared:core`. Les refus d'un doublon et d'un sixième boîtier viennent du dépôt, en résultat
+ * `:shared:core`. Les refus d'un doublon et d'un onzième boîtier viennent du dépôt, en résultat
  * typé ; un nom invalide est arrêté ici par la fonction même du dépôt, `PairedBoxName.sanitize`.
  *
  * Le ViewModel ne lit de [NfcReader] que sa disponibilité : le Reader Mode lui-même se branche

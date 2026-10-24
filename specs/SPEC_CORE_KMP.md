@@ -1,7 +1,7 @@
 # Niumi Core KMP: spécification métier commune
 
 Statut: contrat proposé pour le MVP Android et iOS
-Version du contrat: 1.5 en cours (planning récurrent et désarmement, 24 octobre 2026 ; la limite à dix Niumi Spots et la sortie de secours complèteront 1.5 à l'étape 42 du plan de refonte) ; 1.4 (boîtiers multiples, 13 octobre 2026) ; 1.3 du 15 septembre 2026 ; 1.2 du 2 septembre 2026
+Version du contrat: 1.5 (planning récurrent, désarmement, un à dix Niumi Spots, sortie de secours et temps gagné, 24 octobre 2026, étapes 41 et 42 du plan de refonte) ; 1.4 (boîtiers multiples, 13 octobre 2026) ; 1.3 du 15 septembre 2026 ; 1.2 du 2 septembre 2026
 Date de référence: 2 septembre 2026
 Plateformes: Android natif et iOS natif
 Module partagé: Kotlin Multiplatform
@@ -35,22 +35,22 @@ Les décisions suivantes s'appliquent aux deux applications:
 
 1. Une seule session Niumi peut être active sur un appareil.
 2. Une session active fonctionne sans réseau pour le réveil, le blocage, le scan et la fin de session.
-3. Une session ne se termine qu'après validation locale de l'un des boîtiers associés (contrat 1.4 : plusieurs boîtiers, décision 16).
+3. Une session ne se termine qu'après validation locale de l'un des boîtiers enregistrés au moment du scan (décision 16), ou par la sortie de secours prouvée (décision 13).
 4. Avant le coucher, le planning se modifie sans scan : la session en attente est désarmée (`DISARMED`), puis le planning en arme une nouvelle. À partir du coucher et avant le réveil, une modification ou une annulation exige le scan ; le résultat final est alors `CANCELLED`. Contrat 1.5, décision du 2026-10-24 : le coucher est l'instant `blockingStartsAtEpochMillis`, que le blocage ait déjà été demandé ou non (section 5.2).
 5. Pendant ou après le réveil, un scan valide mène à `COMPLETED` après nettoyage des sous-systèmes.
 6. L'arrêt du son fourni par iOS ne termine pas la session et ne retire pas les blocages.
-7. Android ne fournit aucun bouton logiciel d'arrêt dans le parcours Niumi.
+7. Android ne fournit aucun bouton logiciel d'arrêt dans le parcours Niumi. La sortie de secours (décision 13) n'en est pas un : c'est une libération prouvée par la recopie d'un long texte, qui suit la même phase `RELEASING` qu'un scan (section 12).
 8. Le passage à un état final se fait seulement après une phase `RELEASING` réussie.
 9. Le réveil conserve l'instant calculé lors de l'activation. Un changement de fuseau ne déplace pas cet instant. *Décision du 2026-10-24 (Q9, contrat 1.5) : avant le coucher, un changement de fuseau fait désarmer la session en attente et réarmer la suivante à l'heure locale du nouveau fuseau, comme toute modification du planning (décision 4) ; après le coucher, l'instant est conservé. Le désarmement et la prochaine occurrence existent dans le moteur ; leur déclenchement par le coordinateur Android arrive à l'étape 44 du plan de refonte.*
 10. Le même tag NFC physique doit être reconnu par Android et iOS.
-11. Les boîtiers vérifiés pour terminer une session sont ceux associés au moment de l'activation, figés en liste dans la session. Ajouter, retirer ou renommer un boîtier, ou changer la sélection d'applications, est interdit tant qu'une session est active.
+11. Les boîtiers s'ajoutent, se renomment et se suppriment à tout moment, session et sonnerie comprises, de un à dix ; la vérification d'un scan porte sur l'ensemble enregistré au moment du scan (décision 16). Changer la sélection d'applications reste interdit tant qu'une session est active. Contrat 1.5, décision du 2026-10-19 ; le coordinateur Android l'applique à l'étape 43 du plan de refonte et lit jusque-là la liste figée à l'activation.
 12. L'utilisateur sélectionne entre 1 et 50 applications.
-13. Le MVP ne propose aucun secours logiciel immédiat si le boîtier ou le NFC est indisponible.
+13. La sortie de secours est le seul secours logiciel : la recopie complète d'un long texte remplace le scan d'un boîtier, le soir comme le matin. Elle est prouvée par `EmergencyExitProof` (section 12). Le moteur l'accepte depuis les mêmes états que le scan, sauf avant le coucher, où le planning se désarme (décision 4). Le matin, la session se termine (`COMPLETED`) ; le soir, elle est annulée (`CANCELLED`). Contrat 1.5 (décision D2 du 2026-10-24), remplace l'ancienne décision qui excluait tout secours logiciel.
 14. Un état qui attend le scan sans présentation d'alarme active demande explicitement ce scan à l'utilisateur, sous réserve de l'exception iOS documentée en section 11.2.
 15. Le blocage commence à l'activation, ou à un instant de début choisi par l'utilisateur et strictement antérieur au réveil. L'alarme est programmée dès l'activation dans les deux cas. Décision validée le 2026-09-15 (contrat 1.3). Contrat 1.5 : avant le début d'un blocage différé (le coucher), la session peut aussi être désarmée sans scan par un changement de planning (point 4) ; un scan valide l'annule toujours vers `CANCELLED`. À partir du début du blocage, seul le scan la libère.
-16. L'utilisateur associe de un à cinq boîtiers (`PairedBoxLimit`, section 9.2), chacun nommé par lui. Le scan de n'importe lequel des boîtiers figés à l'activation termine ou annule la session ; un boîtier associé après l'activation ne la termine pas. Décision validée le 2026-10-13 (contrat 1.4). Ce que l'on accepte en le décidant : un second boîtier gardé près du lit permet de contourner le réveil — la vérification n'a jamais protégé l'utilisateur contre lui-même, seulement contre un tag étranger (9.2 : un tag NDEF reste clonable). *Révision décidée le 2026-10-19 pour le contrat 1.5 (`docs/superpowers/plans/2026-10-10-refonte-design.md`, étape 42) : les boîtiers s'ajouteront, se renommeront et se supprimeront en session, de un à dix, et n'importe quel boîtier enregistré au moment du scan terminera la session. Les décisions 11 et 16 seront réécrites à cette étape ; le code suit encore la règle ci-dessus.*
+16. L'utilisateur enregistre de un à dix boîtiers (`PairedBoxLimit`, section 9.2), chacun nommé par lui ; il en reste toujours au moins un. Le scan de n'importe lequel des boîtiers enregistrés au moment du scan termine ou annule la session, y compris un boîtier ajouté après l'activation ; un boîtier supprimé n'arrête plus rien. Décision du 2026-10-19 (contrat 1.5), qui révise celle du 2026-10-13 (contrat 1.4 : un à cinq boîtiers, liste figée à l'activation). Ce que l'on accepte en le décidant : un second boîtier gardé près du lit permet de contourner le réveil — la vérification n'a jamais protégé l'utilisateur contre lui-même, seulement contre un tag étranger (9.2 : un tag NDEF reste clonable). Le moteur vérifie la liste que le coordinateur lui transmet ; la lecture de l'ensemble courant est native (Android : étape 43 du plan de refonte).
 
-L'absence de secours logiciel est une contrainte produit assumée. L'activation vérifie que le NFC est disponible et qu'au moins un boîtier associé a été validé; l'application ne présente ni délai, ni code, ni bouton de déblocage comme solution de récupération.
+La sortie de secours est le seul secours logiciel, et elle coûte un geste volontaire : recopier en entier un texte de près de deux cents caractères. L'application ne présente ni délai, ni code, ni bouton de déblocage. La politique commune exige au moins un boîtier enregistré (`NO_PAIRED_BOX`) ; les contrôles de préparation natifs, dont le NFC, ne bloquent plus l'activation (section 10, contrat 1.5).
 
 ## 3. Périmètre du module partagé
 
@@ -68,6 +68,8 @@ Le module `:shared:core` contient:
 - le parseur strict du payload NFC;
 - la vérification d'un boîtier à partir d'une empreinte locale;
 - les limites communes de sélection d'applications;
+- les textes de la sortie de secours et la vérification de leur recopie (section 12, contrat 1.5);
+- le calcul du temps gagné affiché après le réveil (section 12, contrat 1.5);
 - les niveaux de diagnostic et les incidents communs;
 - les DTO exposés à Swift;
 - les tests métier et les jeux de données de référence.
@@ -95,10 +97,11 @@ Le moteur commun doit refuser toute transition qui enfreint un invariant.
 - `FAILED` est réservé à une activation qui n'a jamais abouti.
 - Une session déjà armée ne passe pas à `FAILED` à cause d'un incident technique.
 - Un NFC invalide ne modifie ni l'état, ni le blocage, ni le son.
-- Les boîtiers vérifiés pour une session sont ceux figés au moment de l'activation. Le coordinateur natif ne substitue jamais la liste courante du dépôt à celle capturée pour la session; tout ajout, retrait ou renommage pendant une session active est refusé en amont, avant tout appel au moteur.
+- Les boîtiers vérifiés pour un scan sont ceux enregistrés au moment du scan (contrat 1.5, décision 16) : le coordinateur natif transmet au vérificateur la liste courante de son dépôt. *Android lit encore la liste figée à l'activation jusqu'à l'étape 43 du plan de refonte.*
 - `VALID_NFC_SCANNED` reçu depuis `ARMED` à ou après `triggerAtEpochMillis` est refusé avec la violation `TRIGGER_ALREADY_ELAPSED`. Le coordinateur doit produire `TRIGGER_ELAPSED` avant tout scan dans ce cas, conformément à la section 5.1.
 - `releasedBy` est renseigné avant l'entrée dans `RELEASING` ; `nfcVerifiedAt` existe si et seulement si `releasedBy == NFC_SCAN` ; la cible `DISARMED` n'est atteinte que par `releasedBy == PLAN_CHANGE` (contrat 1.5, remplace « `nfcVerifiedAt` doit exister avant l'entrée dans `RELEASING` »).
 - `DISARM_REQUESTED` n'est accepté que depuis `ARMED`, blocage en attente, strictement avant `blockingStartsAtEpochMillis` : du coucher au scan, rien ne se désarme.
+- `EMERGENCY_EXIT_CONFIRMED` n'est accepté qu'avec une `EmergencyExitProof` liée à l'événement, depuis `ARMED` blocage demandé avant `triggerAtEpochMillis`, `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` ; jamais depuis `ARMED` blocage en attente (contrat 1.5).
 - `COMPLETED`, `CANCELLED` et `DISARMED` ne sont atteints qu'après réussite du nettoyage.
 - Le blocage reste demandé dans `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC`, et dans `ARMED` dès que `blockingAppliedAtEpochMillis` est renseigné. Dans `ARMED`, l'état seul ne dit pas si le blocage est demandé : ce champ le dit (section 7.5). Une session ne quitte jamais `ARMED` vers `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` sans que le blocage ait été demandé : le moteur l'applique lui-même dans la transition si le début du blocage n'a pas encore été traité (section 5.1, repli du moteur).
 - `blockingStartsAtEpochMillis`, lorsqu'il existe, est strictement antérieur à `triggerAtEpochMillis`, et figé à l'activation au même titre que l'instant du réveil (décision 9).
@@ -137,7 +140,7 @@ enum class ReleaseMeans {
 }
 ```
 
-`DISARMED` (contrat 1.5) est l'état final d'une session désarmée sans scan avant son coucher par un changement de planning ; il précède un ré-armement. Il est distinct de `CANCELLED`, qui suit un scan avant le réveil. `ReleaseMeans` dit comment la session a été libérée : `EMERGENCY_EXIT` est réservé à la sortie de secours, introduite à l'étape 42 du plan de refonte ; aucun événement ne le produit encore.
+`DISARMED` (contrat 1.5) est l'état final d'une session désarmée sans scan avant son coucher par un changement de planning ; il précède un ré-armement. Il est distinct de `CANCELLED`, qui suit un scan avant le réveil. `ReleaseMeans` dit comment la session a été libérée : `EMERGENCY_EXIT` est renseigné par `EMERGENCY_EXIT_CONFIRMED`, la sortie de secours prouvée par recopie (section 12).
 
 ```mermaid
 stateDiagram-v2
@@ -154,6 +157,10 @@ stateDiagram-v2
     AWAITING_NFC --> RELEASING: NFC valide
     TRIGGERED_AWAITING_NFC --> RELEASING: NFC valide
     ARMED --> RELEASING: Désarmement avant le coucher
+    ARMED --> RELEASING: Sortie de secours, blocage demandé
+    RINGING --> RELEASING: Sortie de secours
+    AWAITING_NFC --> RELEASING: Sortie de secours
+    TRIGGERED_AWAITING_NFC --> RELEASING: Sortie de secours
     RELEASING --> COMPLETED: Nettoyage réussi
     RELEASING --> CANCELLED: Nettoyage réussi
     RELEASING --> DISARMED: Nettoyage réussi
@@ -174,6 +181,8 @@ stateDiagram-v2
 | `ARMED`, avant `triggerAtEpochMillis` | `VALID_NFC_SCANNED` | `RELEASING` | `CANCELLED` |
 | `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `VALID_NFC_SCANNED` | `RELEASING` | `COMPLETED` |
 | `ARMED`, blocage en attente, avant `blockingStartsAtEpochMillis` | `DISARM_REQUESTED` | `RELEASING`, `releasedBy = PLAN_CHANGE` | `DISARMED` |
+| `ARMED`, blocage demandé, avant `triggerAtEpochMillis` | `EMERGENCY_EXIT_CONFIRMED` (preuve) | `RELEASING`, `releasedBy = EMERGENCY_EXIT` | `CANCELLED` |
+| `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC` | `EMERGENCY_EXIT_CONFIRMED` (preuve) | `RELEASING`, `releasedBy = EMERGENCY_EXIT` | `COMPLETED` |
 | `RELEASING` | `RELEASE_FAILED` | `RELEASING` | inchangée |
 | `RELEASING` | `RELEASE_SUCCEEDED` | cible enregistrée | inchangée |
 | état actif | `INCIDENT_REPORTED` | état inchangé | inchangée |
@@ -186,6 +195,8 @@ stateDiagram-v2
 **Repli du moteur.** `ALARM_FIRED`, `ALARM_SOUND_STOPPED` et `TRIGGER_ELAPSED` reçus depuis `ARMED` alors que le blocage n'a pas encore été demandé renseignent eux-mêmes `blockingAppliedAtEpochMillis` et ajoutent `APPLY_BLOCKING` à leurs effets, avant la sonnerie ou la demande de scan. Le coordinateur natif doit produire `BLOCKING_START_ELAPSED` à l'heure ; ce repli garantit l'invariant de la section 4 si l'alarme de début a été manquée, sans jamais rendre le réveil muet par un refus.
 
 `DISARM_REQUESTED` (contrat 1.5) est produit par le coordinateur natif quand le planning change avant le coucher. Il ne porte aucune charge. Le blocage n'ayant pas encore été demandé, ses effets se limitent à publier, annuler l'alarme et annuler le début du blocage ; `RELEASE_SUCCEEDED` mène ensuite à `DISARMED` et renseigne `disarmedAtEpochMillis`. La décision commune 8 tient : l'état final n'est atteint qu'après la phase `RELEASING`.
+
+`EMERGENCY_EXIT_CONFIRMED` (contrat 1.5) est produit par le coordinateur natif quand la recopie du texte de secours est complète ; il porte une `EmergencyExitProof` (section 6). Ses effets sont ceux de `VALID_NFC_SCANNED`, et `nfcVerifiedAtEpochMillis` reste nul. Comme pour un scan, le coordinateur produit d'abord `TRIGGER_ELAPSED` si l'heure contractuelle est passée sans alarme observée : le matin, la session se termine (`COMPLETED`) ; le soir, elle est annulée (`CANCELLED`), décision D2 du 2026-10-24.
 
 `ALARM_SOUND_STOPPED` existe pour la contrainte iOS. Android ne doit pas produire cet événement dans le parcours normal. La transition depuis `ARMED` couvre le cas où iOS fournit l'événement d'arrêt avant que l'application ait observé `ALARM_FIRED`; celle depuis `TRIGGERED_AWAITING_NFC` absorbe un fait d'arrêt reçu tardivement sans régression.
 
@@ -204,6 +215,9 @@ Les cas suivants produisent une `DomainViolation` sans effet natif:
 - `DISARM_REQUESTED` hors de `ARMED`, avec la violation `INVALID_STATE_TRANSITION`;
 - `DISARM_REQUESTED` pour une session dont le blocage est déjà demandé (blocage immédiat ou début déjà traité), avec la violation `BLOCKING_ALREADY_APPLIED`;
 - `DISARM_REQUESTED` à ou après `blockingStartsAtEpochMillis`, même si `BLOCKING_START_ELAPSED` n'a pas encore été traité, avec la violation `BLOCKING_START_ALREADY_ELAPSED` (décision du 2026-10-24 : du coucher au scan, tout est verrouillé ; l'instant de début étant strictement antérieur au réveil, ce refus couvre aussi toute demande après le réveil);
+- `EMERGENCY_EXIT_CONFIRMED` sans preuve, avec la violation `MISSING_EMERGENCY_PROOF` ; avec une preuve qui ne correspond pas à l'événement, avec `UNEXPECTED_EVENT_PAYLOAD`;
+- `EMERGENCY_EXIT_CONFIRMED` depuis `ARMED` blocage en attente (avant le coucher, le planning se désarme), depuis `PREPARING`, `RELEASING` ou un état final, avec la violation `INVALID_STATE_TRANSITION`;
+- `EMERGENCY_EXIT_CONFIRMED` depuis `ARMED` à ou après `triggerAtEpochMillis`, avec la violation `TRIGGER_ALREADY_ELAPSED`, comme le scan;
 - `ACTIVATION_REQUESTED` dont le `blockingSchedule` est incohérent (champs partiellement renseignés) ou dont `startsAtEpochMillis` n'est pas strictement antérieur à `triggerAtEpochMillis`, avec la violation `INVALID_BLOCKING_SCHEDULE`;
 - événement dont le `sessionId` ne correspond pas à la session active;
 - horodatage ou identifiant mal formé;
@@ -248,7 +262,8 @@ enum class SessionEventKind {
     RELEASE_SUCCEEDED,
     RELEASE_FAILED,
     INCIDENT_REPORTED,
-    DISARM_REQUESTED
+    DISARM_REQUESTED,
+    EMERGENCY_EXIT_CONFIRMED
 }
 
 data class SessionEvent(
@@ -260,7 +275,8 @@ data class SessionEvent(
     val activationRequest: ActivationRequest?,
     val nfcProof: NfcVerificationProof?,
     val failureCode: String?,
-    val incident: SessionIncident?
+    val incident: SessionIncident?,
+    val emergencyProof: EmergencyExitProof? = null
 )
 
 class NfcVerificationProof internal constructor(
@@ -278,6 +294,14 @@ data class NfcVerificationContext(
     val occurredAtEpochMillis: Long
 )
 
+class EmergencyExitProof internal constructor(
+    val textId: String,
+    val sessionId: String,
+    val eventId: String,
+    val expectedRevision: Long,
+    val verifiedAtEpochMillis: Long
+)
+
 data class ActivationRequest(
     val wakeSchedule: WakeSchedule,
     val appSelection: AppSelectionSummary,
@@ -285,9 +309,11 @@ data class ActivationRequest(
 )
 ```
 
-`expectedRevision` est obligatoire sauf pour `ACTIVATION_REQUESTED`. `activationRequest` est obligatoire uniquement pour `ACTIVATION_REQUESTED`. `nfcProof` est obligatoire uniquement pour `VALID_NFC_SCANNED`; le moteur refuse une preuve absente, mal formée, qui ne provient pas de `verifyBox()`, dont `sessionId`, `eventId`, `expectedRevision` ou `verifiedAtEpochMillis` ne correspondent pas à l'événement. `failureCode` est obligatoire uniquement pour `ACTIVATION_FAILED`. `incident` est obligatoire pour `RELEASE_FAILED` et `INCIDENT_REPORTED`; il est facultatif pour `TRIGGER_ELAPSED`, afin d'y joindre `MISSED_TRIGGER_WINDOW`, et pour `BLOCKING_START_ELAPSED`, afin d'y joindre `MISSED_BLOCKING_START_WINDOW`. Les autres événements doivent laisser ces champs à `null`.
+`expectedRevision` est obligatoire sauf pour `ACTIVATION_REQUESTED`. `activationRequest` est obligatoire uniquement pour `ACTIVATION_REQUESTED`. `nfcProof` est obligatoire uniquement pour `VALID_NFC_SCANNED`; le moteur refuse une preuve absente, mal formée, qui ne provient pas de `verifyBox()`, dont `sessionId`, `eventId`, `expectedRevision` ou `verifiedAtEpochMillis` ne correspondent pas à l'événement. `emergencyProof` (contrat 1.5) est obligatoire uniquement pour `EMERGENCY_EXIT_CONFIRMED`, avec les mêmes contrôles que `nfcProof` (violation `MISSING_EMERGENCY_PROOF` si elle manque). `failureCode` est obligatoire uniquement pour `ACTIVATION_FAILED`. `incident` est obligatoire pour `RELEASE_FAILED` et `INCIDENT_REPORTED`; il est facultatif pour `TRIGGER_ELAPSED`, afin d'y joindre `MISSED_TRIGGER_WINDOW`, et pour `BLOCKING_START_ELAPSED`, afin d'y joindre `MISSED_BLOCKING_START_WINDOW`. Les autres événements doivent laisser ces champs à `null`.
 
-`NfcVerificationProof` est une valeur opaque créée uniquement par `NiumiCoreFacade.verifyBox()` après comparaison du payload NFC à la liste des boîtiers figés dans la session ; elle porte le `boxId` du boîtier reconnu. Le coordinateur fournit à cette vérification le `sessionId`, le nouvel `eventId`, la `expectedRevision` et l'horodatage qui sera placé dans l'événement. La preuve est ainsi liée à une seule transition. Elle est transmise en mémoire à `reduce()`, n'est ni sérialisable, ni journalisée, ni placée dans le reçu d'événement. Les adaptateurs natifs ne peuvent pas construire ou réutiliser cette preuve pour un autre événement.
+`NfcVerificationProof` est une valeur opaque créée uniquement par `NiumiCoreFacade.verifyBox()` après comparaison du payload NFC à la liste de boîtiers transmise par le coordinateur (l'ensemble enregistré au moment du scan, contrat 1.5) ; elle porte le `boxId` du boîtier reconnu. Le coordinateur fournit à cette vérification le `sessionId`, le nouvel `eventId`, la `expectedRevision` et l'horodatage qui sera placé dans l'événement. La preuve est ainsi liée à une seule transition. Elle est transmise en mémoire à `reduce()`, n'est ni sérialisable, ni journalisée, ni placée dans le reçu d'événement. Les adaptateurs natifs ne peuvent pas construire ou réutiliser cette preuve pour un autre événement.
+
+`EmergencyExitProof` (contrat 1.5) suit les mêmes règles. Elle est créée uniquement par `NiumiCoreFacade.verifyEmergencyTranscription()` sur une recopie complète, avec le même contexte que le scan (`NfcVerificationContext`), et porte l'identifiant du texte recopié. Elle n'est ni sérialisée, ni journalisée, ni placée dans le reçu d'événement.
 
 Les effets décrivent ce que le coordinateur natif doit exécuter. Ils ne contiennent aucun appel système.
 
@@ -335,6 +361,7 @@ data class IncidentEffectPayload(
 | `ALARM_SOUND_STOPPED` ou `TRIGGER_ELAPSED` | publier, appliquer le blocage s'il n'a pas encore été demandé, présenter la demande de scan, puis enregistrer l'incident s'il existe |
 | `VALID_NFC_SCANNED` | publier `RELEASING`, annuler l'alarme, annuler le début du blocage (blocage différé seulement), arrêter la sonnerie, retirer la demande de scan, retirer le blocage |
 | `DISARM_REQUESTED` | publier `RELEASING`, annuler l'alarme, annuler le début du blocage |
+| `EMERGENCY_EXIT_CONFIRMED` | les effets de `VALID_NFC_SCANNED`, dans le même ordre |
 | `RELEASE_FAILED` | enregistrer l'incident, publier |
 | `RELEASE_SUCCEEDED` | publier l'état final, effacer le pointeur actif |
 | `INCIDENT_REPORTED` | enregistrer l'incident, publier |
@@ -467,9 +494,10 @@ INVALID_BLOCKING_SCHEDULE
 BLOCKING_START_NOT_REACHED
 BLOCKING_ALREADY_APPLIED
 BLOCKING_START_ALREADY_ELAPSED
+MISSING_EMERGENCY_PROOF
 ```
 
-`INVALID_BLOCKING_SCHEDULE`, `BLOCKING_START_NOT_REACHED` et `BLOCKING_ALREADY_APPLIED` : ajoutés au contrat 1.3 (blocage différé, section 5.2). `BLOCKING_START_ALREADY_ELAPSED` : ajouté au contrat 1.5, pour un désarmement demandé à ou après le coucher (section 5.2).
+`INVALID_BLOCKING_SCHEDULE`, `BLOCKING_START_NOT_REACHED` et `BLOCKING_ALREADY_APPLIED` : ajoutés au contrat 1.3 (blocage différé, section 5.2). `BLOCKING_START_ALREADY_ELAPSED` : ajouté au contrat 1.5, pour un désarmement demandé à ou après le coucher (section 5.2). `MISSING_EMERGENCY_PROOF` : ajouté au contrat 1.5, pour une sortie de secours sans preuve (section 5.2).
 
 `INVALID_APP_SELECTION` : ajouté à l'étape 7 de l'implémentation Android. La section 7.4 refuse une
 activation dont `count` est hors de 1..50, mais aucun des treize codes d'origine ne couvrait ce
@@ -492,7 +520,7 @@ Les codes communs initiaux sont, avec leur gravité par défaut:
 | `RELEASE_PARTIAL_FAILURE` | `DEGRADED` |
 | `SNAPSHOT_CORRUPTED` | `CRITICAL` |
 
-Chaque plateforme peut ajouter des codes préfixés par `ANDROID_` ou `IOS_`, avec leur propre gravité par défaut documentée dans leur spécification. Le module commun ne contient pas les textes affichés à l'utilisateur.
+Chaque plateforme peut ajouter des codes préfixés par `ANDROID_` ou `IOS_`, avec leur propre gravité par défaut documentée dans leur spécification. Le module commun ne contient pas les textes affichés à l'utilisateur. Seule exception, assumée (contrat 1.5) : les textes à recopier de la sortie de secours, éléments de protocole contre lesquels la recopie est vérifiée (section 12).
 
 `MISSED_BLOCKING_START_WINDOW` (contrat 1.3) est un `WARNING` et non un `DEGRADED`, contrairement à `MISSED_TRIGGER_WINDOW` : le blocage finit par s'appliquer et le réveil n'est pas touché. Il reste consigné et affiché, parce qu'une session qui annonçait « blocage à 22:30 » et l'a appliqué à 23:10 ne doit pas prétendre le contraire.
 
@@ -624,7 +652,7 @@ data class PairedBoxCredential(
 
 L'application stocke, pour chaque boîtier associé, le `boxId` canonique et l'empreinte SHA-256 des 16 octets décodés. Elle compare les empreintes en temps constant. Elle ne journalise jamais le token, sa forme encodée ou son empreinte complète.
 
-**Plusieurs boîtiers (contrat 1.4, décision 16).** L'application conserve une liste ordonnée de un à cinq credentials — `PairedBoxLimit.MIN = 1`, `PairedBoxLimit.MAX = 5`, constante commune au même titre que les bornes 1–50 de la sélection d'applications — chacun accompagné d'un nom choisi par l'utilisateur, donnée de plateforme hors du module commun. Un `boxId` déjà présent n'est pas ajouté une seconde fois. La vérification d'un scan compare le payload à chaque credential de la liste figée dans la session :
+**Plusieurs boîtiers (contrat 1.4, révisé par 1.5, décision 16).** L'application conserve une liste ordonnée de un à dix credentials — `PairedBoxLimit.MIN = 1`, `PairedBoxLimit.MAX = 10` (cinq au contrat 1.4), constante commune au même titre que les bornes 1–50 de la sélection d'applications — chacun accompagné d'un nom choisi par l'utilisateur, donnée de plateforme hors du module commun. Un `boxId` déjà présent n'est pas ajouté une seconde fois. La vérification d'un scan compare le payload à chaque credential de la liste transmise par le coordinateur, c'est-à-dire l'ensemble enregistré au moment du scan (contrat 1.5) :
 
 ```kotlin
 object BoxVerifier {
@@ -687,7 +715,7 @@ Si une étape échoue:
 
 L'engagement n'est pris qu'après `ACTIVATION_SUCCEEDED`. Pour un blocage différé, le blocage lui-même n'est demandé qu'à `BLOCKING_START_ELAPSED`. Contrat 1.5 : jusqu'au coucher, un changement de planning désarme la session sans scan (`DISARM_REQUESTED`, décision 4) ; à partir du coucher, le scan est la seule sortie.
 
-À l'étape 1, le coordinateur natif capture aussi la liste courante des `PairedBoxCredential` du dépôt, avec leurs noms, et la fige dans la session. Toute vérification NFC ultérieure pour cette session utilise exclusivement cette liste figée, jamais le dépôt courant : un boîtier associé après l'activation ne termine pas la session en cours. Le parcours d'association et le sélecteur d'applications sont désactivés tant qu'une session est active, afin que cette liste et la sélection ne puissent pas changer sous la session. Une liste vide à l'étape 1 refuse l'activation (`NO_PAIRED_BOX`), plus de cinq boîtiers aussi (`TOO_MANY_PAIRED_BOXES`, section 14).
+À l'étape 1, le coordinateur natif compte les `PairedBoxCredential` du dépôt : une liste vide refuse l'activation (`NO_PAIRED_BOX`), plus de dix boîtiers aussi (`TOO_MANY_PAIRED_BOXES`, section 14). Contrat 1.5 (décision 16) : la liste n'est plus figée dans la session ; chaque vérification lit l'ensemble enregistré au moment du scan, et le parcours d'association reste ouvert pendant la session. Le sélecteur d'applications reste désactivé tant qu'une session est active. *Android fige encore la liste à l'activation et ferme l'association en session jusqu'à l'étape 43 du plan de refonte.*
 
 ## 11. Déclenchement, arrêt sonore et scan
 
@@ -713,9 +741,9 @@ iOS : le mécanisme natif pressenti est une planification `DeviceActivitySchedul
 
 ## 12. Libération atomique
 
-À la réception d'un scan valide, le moteur:
+À la réception d'un scan valide, ou d'une sortie de secours prouvée (contrat 1.5), le moteur:
 
-1. renseigne `nfcVerifiedAtEpochMillis`;
+1. renseigne `releasedBy` (`NFC_SCAN` ou `EMERGENCY_EXIT`) et, pour un scan seulement, `nfcVerifiedAtEpochMillis`;
 2. passe à `RELEASING`;
 3. choisit `CANCELLED` si l'état source était `ARMED` avant l'heure contractuelle;
 4. choisit `COMPLETED` si l'état source était `RINGING`, `AWAITING_NFC` ou `TRIGGERED_AWAITING_NFC`;
@@ -735,6 +763,17 @@ Le coordinateur natif exécute ensuite:
 Une interruption conserve `RELEASING`. La réconciliation reprend uniquement les effets manquants et ne réapplique pas un blocage déjà retiré. Une erreur de nettoyage produit `RELEASE_PARTIAL_FAILURE`, conserve les effets incomplets dans l'outbox et ne transforme pas la session en état final.
 
 Le désarmement (contrat 1.5) suit la même phase sans scan : `DISARM_REQUESTED` renseigne `releasedBy = PLAN_CHANGE`, passe à `RELEASING` avec la cible `DISARMED`, puis le coordinateur annule l'alarme et le début du blocage et envoie `RELEASE_SUCCEEDED` dès que l'annulation de l'alarme a réussi. Aucun blocage n'est à retirer : il était encore en attente.
+
+**Sortie de secours (contrat 1.5).** `EmergencyExitTexts` porte les textes à recopier. Un seul est validé (`"v1-01"`, 196 caractères avec ses apostrophes typographiques) : la liste est prête à en recevoir d'autres, mais tant qu'il est seul, le texte ne change pas d'une sortie à l'autre (D8, décision du 2026-10-24). `EmergencyTranscription.verify(textId, typed, context)` compare la saisie au texte :
+
+- la saisie et le modèle sont normalisés : minuscules, lettres accentuées du français repliées (`œ` en `oe`, `æ` en `ae`), tout ce qui n'est ni lettre, ni chiffre, ni espace retiré, puis découpage sur les espaces. « J’avais », « J'avais » et « Javais » se valent, comme la majuscule automatique du clavier. `commonMain` n'offre pas de normalisation Unicode (NFD) : les accents sont repliés par une table, et les diacritiques combinants disparaissent avec la ponctuation;
+- la comparaison se fait mot à mot. Tous les mots égaux et en même nombre : `COMPLETE`. Une saisie plus courte, dont seul le dernier mot peut être le début du mot attendu : `INCOMPLETE`, saisie vide comprise. Un mot différent, ou un mot de trop : `MISMATCH`, avec `mismatchWordIndex` égal à l'index du premier mot qui diffère (le nombre de mots du modèle pour un mot de trop). Un identifiant inconnu : `UNKNOWN_TEXT`;
+- `typedCharCount` est la longueur brute de la saisie, pour le compteur affiché ; `expectedCharCount` celle du texte;
+- la preuve n'est produite que sur `COMPLETE` avec un contexte, comme `verifyBox`.
+
+Le coordinateur vérifie la saisie sans contexte pendant la frappe, puis avec le contexte de l'événement `EMERGENCY_EXIT_CONFIRMED` qu'il s'apprête à produire.
+
+**Temps gagné (contrat 1.5).** `TimeToGetUpCalculator` reçoit l'instant de la sonnerie, celui de la libération et la durée déclarée à l'écran 3 bis. Le temps écoulé est arrondi à la minute inférieure, et une libération antérieure à la sonnerie compte pour zéro (Q10). Les minutes gagnées valent la durée déclarée moins le temps écoulé, seulement si le résultat est strictement positif, sinon `null`. « 1 heure et + » compte pour 60 minutes (D3) ; la plateforme transmet cette valeur. Les deux décisions datent du 2026-10-24.
 
 Si un effet requis ne peut plus jamais réussir parce que sa précondition a disparu, par exemple un blocage déjà retiré par le système après révocation d'une autorisation, le coordinateur applique la règle d'échappement de la section 6 plutôt que de bloquer indéfiniment `RELEASING`.
 
@@ -806,8 +845,21 @@ class NiumiCoreFacade {
     fun computeNextOccurrence(
         input: NextOccurrenceInputDto
     ): NextOccurrenceResultDto
+
+    fun emergencyExitTexts(): List<EmergencyExitTextDto>
+
+    fun verifyEmergencyTranscription(
+        input: EmergencyTranscriptionInputDto,
+        context: NfcVerificationContextDto?
+    ): EmergencyTranscriptionResultDto
+
+    fun computeTimeToGetUp(
+        input: TimeToGetUpInputDto
+    ): TimeToGetUpResultDto
 }
 ```
+
+`emergencyExitTexts`, `verifyEmergencyTranscription` et `computeTimeToGetUp` : neuvième à onzième méthodes, ajoutées par le contrat 1.5 (section 12). Elles ne changent pas le schéma 3 : aucun champ persisté n'est ajouté, et `emergencyProof` n'est jamais sérialisé.
 
 `computeNextOccurrence` : huitième méthode, ajoutée par le contrat 1.5 (section 8.4). Elle rend réveil et coucher prêts pour une activation, ou le statut qui empêche d'armer.
 
@@ -907,6 +959,16 @@ data class NextOccurrenceDto(val wakeSchedule: WakeScheduleDto, val blockingSche
 data class NextOccurrenceResultDto(val status: NextOccurrenceStatusDto, val occurrence: NextOccurrenceDto?)
 
 // SessionSnapshotDto (contrat 1.5) : + releasedBy: ReleaseMeansDto? = null, + disarmedAtEpochMillis: Long? = null
+// SessionEventDto (contrat 1.5) : + emergencyProof: EmergencyExitProof? = null (jamais sérialisé)
+
+// Contrat 1.5 (section 12)
+data class EmergencyExitTextDto(val id: String, val text: String, val charCount: Int)
+data class EmergencyTranscriptionInputDto(val textId: String, val typed: String)
+enum class TranscriptionStatusDto { COMPLETE, INCOMPLETE, MISMATCH, UNKNOWN_TEXT }
+data class EmergencyTranscriptionResultDto(val status: TranscriptionStatusDto, val matchedWordCount: Int, val mismatchWordIndex: Int?,
+                                           val expectedCharCount: Int, val typedCharCount: Int, val proof: EmergencyExitProof?)
+data class TimeToGetUpInputDto(val alarmAtEpochMillis: Long, val releasedAtEpochMillis: Long, val declaredMinutes: Int)
+data class TimeToGetUpResultDto(val elapsedMinutes: Int, val savedMinutes: Int?)
 ```
 
 `ActivationReasonDto.code` ne porte jamais de texte affiché à l'utilisateur (§7.3) : uniquement un
@@ -932,7 +994,7 @@ Contraintes d'interopérabilité:
 
 Les types Kotlin plus expressifs peuvent rester internes si la façade les convertit en DTO simples.
 
-Lorsqu'un appel de scan avec contexte réussit, `BoxVerificationResultDto` expose la `NfcVerificationProof` opaque à transmettre immédiatement dans `SessionEventDto` ; elle porte le `boxId` du credential reconnu dans la liste. Le contexte contient la session, l'événement, la révision attendue et l'horodatage. Une vérification sans session passe `null` et ne reçoit aucune preuve ; l'association elle-même n'appelle plus `verifyBox` (contrat 1.4) : elle parse le payload, en dérive le credential et laisse le dépôt natif refuser un doublon ou un sixième boîtier. Le type ne possède pas d'initialiseur public côté Swift et n'est jamais stocké.
+Lorsqu'un appel de scan avec contexte réussit, `BoxVerificationResultDto` expose la `NfcVerificationProof` opaque à transmettre immédiatement dans `SessionEventDto` ; elle porte le `boxId` du credential reconnu dans la liste. Le contexte contient la session, l'événement, la révision attendue et l'horodatage. Une vérification sans session passe `null` et ne reçoit aucune preuve ; l'association elle-même n'appelle plus `verifyBox` (contrat 1.4) : elle parse le payload, en dérive le credential et laisse le dépôt natif refuser un doublon ou un onzième boîtier. Le type ne possède pas d'initialiseur public côté Swift et n'est jamais stocké. `EmergencyTranscriptionResultDto.proof` (contrat 1.5) suit la même règle : à transmettre immédiatement dans `SessionEventDto.emergencyProof`.
 
 `ActivationPolicyInputDto.pairedBoxCount: Int` remplace `hasPairedBox: Boolean` (contrat 1.4). La politique refuse l'activation avec `NO_PAIRED_BOX` sous `PairedBoxLimit.MIN` et avec `TOO_MANY_PAIRED_BOXES` au-dessus de `PairedBoxLimit.MAX` (section 9.2).
 
@@ -1083,7 +1145,8 @@ Les tests `commonTest` couvrent au minimum:
 - lecture d'un snapshot de version 1 comme blocage immédiat déjà demandé;
 - désarmement (contrat 1.5) : `DISARM_REQUESTED` depuis `ARMED` en attente avant le coucher mène à `RELEASING` vers `DISARMED` avec `releasedBy = PLAN_CHANGE` et les effets publier, annuler l'alarme, annuler le début du blocage ; refusé blocage déjà demandé (`BLOCKING_ALREADY_APPLIED`), à ou après le coucher même début non traité, et après le réveil (`BLOCKING_START_ALREADY_ELAPSED`), hors de `ARMED` (`INVALID_STATE_TRANSITION`) ; `RELEASE_SUCCEEDED` mène à `DISARMED` et renseigne `disarmedAtEpochMillis`;
 - `releasedBy = NFC_SCAN` renseigné par `VALID_NFC_SCANNED` ; `RELEASE_SUCCEEDED` refusé sur un `RELEASING` sans `releasedBy`, ou dont `nfcVerifiedAt`, `releasedBy` et la cible se contredisent;
-- lecture d'un snapshot sans `releasedBy` : `NFC_SCAN` s'il porte `nfcVerifiedAtEpochMillis`, nul sinon, quelle que soit `schemaVersion`.
+- lecture d'un snapshot sans `releasedBy` : `NFC_SCAN` s'il porte `nfcVerifiedAtEpochMillis`, nul sinon, quelle que soit `schemaVersion`;
+- sortie de secours (contrat 1.5) : `EMERGENCY_EXIT_CONFIRMED` depuis `ARMED` blocage demandé avant le réveil mène à `RELEASING` vers `CANCELLED`, depuis `RINGING`, `AWAITING_NFC` et `TRIGGERED_AWAITING_NFC` vers `COMPLETED`, avec `releasedBy = EMERGENCY_EXIT`, sans `nfcVerifiedAt` et avec les effets du scan ; refusée sans preuve (`MISSING_EMERGENCY_PROOF`), avec la preuve d'un autre événement ou portée par un autre événement (`UNEXPECTED_EVENT_PAYLOAD`), depuis `ARMED` en attente ou un état final (`INVALID_STATE_TRANSITION`), depuis `ARMED` à ou après le réveil (`TRIGGER_ALREADY_ELAPSED`) ; `RELEASE_SUCCEEDED` conserve `releasedBy`.
 
 ### Date et heure
 
@@ -1117,9 +1180,17 @@ Les tests `commonTest` couvrent au minimum:
 - reprise de `RECORD_INCIDENT` après interruption avec son code, sa gravité, son horodatage et sa plateforme;
 - aucune fin sans `releasedBy` cohérent : `nfcVerifiedAt` pour un scan, `PLAN_CHANGE` pour un désarmement (contrat 1.5, remplace « aucune fin sans `nfcVerifiedAt` »);
 - aucun besoin de réseau pour une décision critique;
-- vérification effectuée contre la liste de boîtiers figée à l'activation, refusée pour tout credential hors de cette liste;
-- 0, 1, 5 et 6 boîtiers associés (`NO_PAIRED_BOX`, accepté, accepté, `TOO_MANY_PAIRED_BOXES`);
+- vérification effectuée contre la liste de boîtiers transmise par le coordinateur, refusée pour tout credential hors de cette liste;
+- 0, 1, 10 et 11 boîtiers enregistrés (`NO_PAIRED_BOX`, accepté, accepté, `TOO_MANY_PAIRED_BOXES`, contrat 1.5);
 - liste de contrôles de préparation vide acceptée, règles communes toujours appliquées (contrat 1.5).
+
+### Sortie de secours et temps gagné (contrat 1.5)
+
+- texte validé recopié mot pour mot, 196 caractères, sans « ce soir » ni chiffre ; identifiant inconnu sans texte;
+- recopie exacte complète ; majuscules, accents précomposés ou combinants, ponctuation, apostrophe droite ou omise et espaces en double ignorés ; point final omis accepté;
+- premier mot divergent signalé à son index ; préfixe toléré pour le dernier mot seulement ; saisie vide incomplète ; mot de trop signalé après le dernier mot;
+- preuve produite sur une recopie complète avec contexte, jamais sans contexte, ni sur une saisie incomplète ou fausse, ni pour un texte inconnu;
+- temps gagné : 7:00 à 7:04 avec 15 minutes déclarées donne 4 et 11 ; aucun gain si l'on est plus lent ou aussi rapide ; minute inférieure (7:04:59 donne 4) ; libération avant la sonnerie comptée zéro ; 60 minutes déclarées pour « 1 heure et + ».
 
 Des fixtures communes décrivent les entrées et résultats attendus. Les tests natifs utilisent aussi ces fixtures pour valider leurs conversions.
 
@@ -1156,7 +1227,7 @@ Une fonctionnalité commune n'est terminée que si:
 | 1.2 Points à revoir | Modifier | Retirer le changement d'heure des décisions ouvertes. Adopter la règle commune. Remplacer la décision NFC par le protocole avec token. |
 | 2. Résultat attendu | Compléter | Ajouter l'annulation ou la modification avant réveil après scan NFC. Ajouter la limite de 50 comme règle commune. |
 | 4.1 Arrêt sonore | Modifier | Remplacer `releasePending` par `RELEASING` dans le vocabulaire métier. Conserver `AWAITING_NFC` après Stop. |
-| 4.6 Procédure de secours | Fixer | Choisir l'absence de secours logiciel immédiat pour le MVP, comme sur Android. Documenter les réglages système qui restent disponibles. |
+| 4.6 Procédure de secours | Fixer (contrat 1.5) | La sortie de secours par recopie remplace l'absence de secours : textes, vérification de la recopie et preuve viennent de KMP. Ce que fait l'alarme pendant la recopie reste ouvert (`design-plan/SPECIFICATION.md` §13). |
 | 4.7 Fabrication NFC | Modifier | Fixer un UUID de boîtier et un token aléatoire de 16 octets. Ajouter le contrôle qualité de ces deux valeurs. |
 | 5. Choix techniques | Compléter | Ajouter `NiumiCore` en Kotlin Multiplatform et l'intégration directe Xcode. |
 | 7. Architecture du code | Modifier | Remplacer les modèles et le réducteur Swift dupliqués par les DTO et la façade KMP. Garder les protocoles système Swift. |
@@ -1191,6 +1262,9 @@ Une fonctionnalité commune n'est terminée que si:
 | 9. Machine à états | Compléter (contrat 1.5) | Ajouter `DISARMED`, `ARMED -> RELEASING -> DISARMED` sur `DISARM_REQUESTED` avant le coucher, refusé à partir du coucher. |
 | 11. Calcul de la date | Compléter (contrat 1.5) | Calculer la prochaine occurrence d'un planning par `computeNextOccurrence` ; jamais de calcul de jour ou de coucher en Swift. |
 | 15. Fin de session | Compléter (contrat 1.5) | Distinguer `releasedBy` ; désarmement : annuler l'alarme AlarmKit et le début des shields, sans retirer de shield. |
+| 9. Machine à états | Compléter (contrat 1.5) | Ajouter `EMERGENCY_EXIT_CONFIRMED` depuis les états du scan, sauf `ARMED` en attente : `CANCELLED` le soir, `COMPLETED` le matin. |
+| 14. Association et lecture NFC | Compléter (contrat 1.5) | Un à dix Niumi Spots, modifiables en session ; vérifier contre l'ensemble enregistré au moment du scan. |
+| 15. Fin de session | Compléter (contrat 1.5) | Sortie de secours : vérifier la recopie par `verifyEmergencyTranscription`, puis produire `EMERGENCY_EXIT_CONFIRMED` avec la preuve ; mêmes effets qu'un scan. Temps gagné par `computeTimeToGetUp`. |
 
 ## 20. Points qui restent dépendants des POC
 

@@ -74,6 +74,7 @@ internal fun SessionEventDto.toDomain(): SessionEvent =
         nfcProof = nfcProof,
         failureCode = failureCode,
         incident = incident?.toDomain(),
+        emergencyProof = emergencyProof,
     )
 
 internal fun SessionEvent.toDto(): SessionEventDto =
@@ -87,4 +88,5 @@ internal fun SessionEvent.toDto(): SessionEventDto =
         nfcProof = nfcProof,
         failureCode = failureCode,
         incident = incident?.toDto(),
+        emergencyProof = emergencyProof,
     )

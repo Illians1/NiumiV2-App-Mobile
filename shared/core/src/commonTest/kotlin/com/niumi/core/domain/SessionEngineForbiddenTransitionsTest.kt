@@ -1,5 +1,6 @@
 package com.niumi.core.domain
 
+import com.niumi.core.domain.EmergencyExitEventFixtures.emergencyExitConfirmedEvent
 import com.niumi.core.domain.NfcScanEventFixtures.validNfcScannedEvent
 import com.niumi.core.domain.SessionActivationEventFixtures.activationFailedEvent
 import com.niumi.core.domain.SessionActivationEventFixtures.activationRequestedEvent
@@ -59,6 +60,13 @@ private val ALLOWED_PAIRS: Set<Pair<SessionState?, SessionEventKind>> =
         add(SessionState.RINGING to SessionEventKind.VALID_NFC_SCANNED)
         add(SessionState.AWAITING_NFC to SessionEventKind.VALID_NFC_SCANNED)
         add(SessionState.TRIGGERED_AWAITING_NFC to SessionEventKind.VALID_NFC_SCANNED)
+        // Contrat 1.5 : la sortie de secours prouvée, comme le scan, sauf depuis `ARMED` en attente
+        // (refus prouvé par `SessionEngineEmergencyExitTest` ; le snapshot `ARMED` de cette table
+        // a son blocage appliqué).
+        add(SessionState.ARMED to SessionEventKind.EMERGENCY_EXIT_CONFIRMED)
+        add(SessionState.RINGING to SessionEventKind.EMERGENCY_EXIT_CONFIRMED)
+        add(SessionState.AWAITING_NFC to SessionEventKind.EMERGENCY_EXIT_CONFIRMED)
+        add(SessionState.TRIGGERED_AWAITING_NFC to SessionEventKind.EMERGENCY_EXIT_CONFIRMED)
         add(SessionState.RELEASING to SessionEventKind.RELEASE_FAILED)
         add(SessionState.RELEASING to SessionEventKind.RELEASE_SUCCEEDED)
         ACTIVE_STATES.forEach { add(it to SessionEventKind.INCIDENT_REPORTED) }
@@ -163,6 +171,13 @@ class SessionEngineForbiddenTransitionsTest {
 
             SessionEventKind.DISARM_REQUESTED -> {
                 disarmRequestedEvent(expectedRevision = revision)
+            }
+
+            SessionEventKind.EMERGENCY_EXIT_CONFIRMED -> {
+                emergencyExitConfirmedEvent(
+                    expectedRevision = revision,
+                    occurredAtEpochMillis = TRIGGER_AT_EPOCH_MILLIS - 1_000L,
+                )
             }
         }
 }

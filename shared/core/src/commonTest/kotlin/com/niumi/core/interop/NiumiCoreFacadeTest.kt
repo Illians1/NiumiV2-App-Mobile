@@ -4,7 +4,12 @@ import com.niumi.core.diagnostics.ActivationPolicy
 import com.niumi.core.diagnostics.ActivationPolicyInput
 import com.niumi.core.diagnostics.ReadinessCheckInput
 import com.niumi.core.diagnostics.ReadinessSeverity
+import com.niumi.core.domain.ReleaseMeans
+import com.niumi.core.domain.ReleaseTarget
 import com.niumi.core.domain.SessionEventKind
+import com.niumi.core.domain.SessionSnapshotFixtures
+import com.niumi.core.domain.SessionState
+import com.niumi.core.emergency.TranscriptionStatus
 import com.niumi.core.schedule.BlockingScheduleStatus
 import com.niumi.core.schedule.NextOccurrenceStatus
 import com.niumi.core.schedule.TriggerDelayOutcome
@@ -13,6 +18,7 @@ import com.niumi.core.schedule.WakeScheduleInput
 import com.niumi.core.schedule.WakeScheduleStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -180,6 +186,77 @@ class NiumiCoreFacadeTest {
         assertNull(
             facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, days = emptySet())).occurrence,
         )
+    }
+
+    @Test
+    fun emergencyExitTextsListsTheValidatedTextWithItsLength() {
+        val texts = facade.emergencyExitTexts()
+
+        assertEquals(listOf("v1-01"), texts.map { it.id })
+        assertEquals(196, texts.single().charCount)
+        assertEquals(texts.single().text.length, texts.single().charCount)
+    }
+
+    @Test
+    fun aCompleteTranscriptionThroughTheFacadeReleasesTheMorningSession() {
+        // Parcours complet à la frontière : recopie vérifiée avec contexte, puis réduction de
+        // l'événement qui porte la preuve (D2 : le matin, COMPLETED).
+        val ringing = SessionSnapshotFixtures.ringingSnapshot().toDto()
+        val eventId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        val occurredAt = TRIGGER_AT_EPOCH_MILLIS + 120_000L
+        val context = NfcVerificationContextDto(ringing.sessionId, eventId, ringing.revision, occurredAt)
+        val text = facade.emergencyExitTexts().single()
+
+        val transcription =
+            facade.verifyEmergencyTranscription(EmergencyTranscriptionInputDto(text.id, text.text), context)
+        val decision =
+            facade.reduce(
+                ringing,
+                SessionEventDto(
+                    eventId = eventId,
+                    sessionId = ringing.sessionId,
+                    kind = SessionEventKind.EMERGENCY_EXIT_CONFIRMED,
+                    occurredAtEpochMillis = occurredAt,
+                    expectedRevision = ringing.revision,
+                    activationRequest = null,
+                    failureCode = null,
+                    incident = null,
+                    emergencyProof = assertNotNull(transcription.proof),
+                ),
+            )
+
+        assertEquals(TranscriptionStatus.COMPLETE, transcription.status)
+        assertTrue(decision.violations.isEmpty())
+        val snapshot = requireNotNull(decision.snapshot)
+        assertEquals(SessionState.RELEASING, snapshot.state)
+        assertEquals(ReleaseTarget.COMPLETED, snapshot.releaseTarget)
+        assertEquals(ReleaseMeans.EMERGENCY_EXIT, snapshot.releasedBy)
+    }
+
+    @Test
+    fun verifyEmergencyTranscriptionRelaysRefusalsWithoutThrowing() {
+        assertEquals(
+            TranscriptionStatus.UNKNOWN_TEXT,
+            facade.verifyEmergencyTranscription(EmergencyTranscriptionInputDto("v9-99", "texte"), null).status,
+        )
+        val mismatch = facade.verifyEmergencyTranscription(EmergencyTranscriptionInputDto("v1-01", "Javis"), null)
+        assertEquals(TranscriptionStatus.MISMATCH, mismatch.status)
+        assertEquals(0, mismatch.mismatchWordIndex)
+        assertNull(mismatch.proof)
+    }
+
+    @Test
+    fun computeTimeToGetUpDelegatesToTheCalculator() {
+        val result =
+            facade.computeTimeToGetUp(
+                TimeToGetUpInputDto(
+                    TRIGGER_AT_EPOCH_MILLIS,
+                    TRIGGER_AT_EPOCH_MILLIS + 4 * 60_000L,
+                    declaredMinutes = 15,
+                ),
+            )
+
+        assertEquals(TimeToGetUpResultDto(elapsedMinutes = 4, savedMinutes = 11), result)
     }
 
     private fun nextOccurrenceInput(

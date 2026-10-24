@@ -1,5 +1,6 @@
 package com.niumi.core.interop
 
+import com.niumi.core.domain.EmergencyExitEventFixtures
 import com.niumi.core.domain.NfcScanEventFixtures
 import com.niumi.core.domain.ReleaseMeans
 import com.niumi.core.domain.ReleaseTarget
@@ -17,7 +18,7 @@ import kotlin.test.assertTrue
 
 /**
  * Aller-retour `domaine → dto → domaine` pour chacun des dix états de SPEC_CORE_KMP §5 et pour
- * un événement représentatif de chacun des treize [com.niumi.core.domain.SessionEventKind]
+ * un événement représentatif de chacun des quatorze [com.niumi.core.domain.SessionEventKind]
  * (SPEC_CORE_KMP §13 : « les plateformes doivent avoir un test de mapping aller-retour »).
  */
 class DtoRoundTripTest {
@@ -201,6 +202,32 @@ class DtoRoundTripTest {
             )
 
         assertEventRoundTrips(event)
+    }
+
+    @Test
+    fun emergencyExitConfirmedEventRoundTripsIncludingProofByReference() {
+        val event =
+            EmergencyExitEventFixtures.emergencyExitConfirmedEvent(
+                expectedRevision = 3,
+                occurredAtEpochMillis = 1_800_000_002_000L,
+            )
+
+        assertEventRoundTrips(event)
+        assertTrue(event.toDto().emergencyProof === event.emergencyProof)
+    }
+
+    @Test
+    fun serializedEventNeverExposesTheEmergencyProof() {
+        val event =
+            EmergencyExitEventFixtures.emergencyExitConfirmedEvent(
+                expectedRevision = 3,
+                occurredAtEpochMillis = 1_800_000_002_000L,
+            )
+
+        val json = Json.encodeToString(SessionEventDto.serializer(), event.toDto())
+
+        assertFalse(json.contains("proof", ignoreCase = true))
+        assertFalse(json.contains(EmergencyExitEventFixtures.TEXT_ID))
     }
 
     @Test

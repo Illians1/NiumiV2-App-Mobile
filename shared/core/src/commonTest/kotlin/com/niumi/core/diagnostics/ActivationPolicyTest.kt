@@ -187,7 +187,7 @@ class ActivationPolicyTest {
         )
     }
 
-    // Contrat 1.4 : de un à cinq boîtiers (`PairedBoxLimit`), comme 1 à 50 applications.
+    // Contrat 1.5 : de un à dix Niumi Spots (`PairedBoxLimit`), comme 1 à 50 applications.
     @Test
     fun pairedBoxCountZeroIsRefusedWithNoPairedBox() {
         val result = ActivationPolicy.evaluate(input(pairedBoxCount = 0))
@@ -205,13 +205,14 @@ class ActivationPolicyTest {
     }
 
     @Test
-    fun pairedBoxCountFiveIsAccepted() {
-        assertEquals(true, ActivationPolicy.evaluate(input(pairedBoxCount = PairedBoxLimit.MAX)).allowed)
+    fun pairedBoxCountTenIsAccepted() {
+        assertEquals(10, PairedBoxLimit.MAX)
+        assertEquals(true, ActivationPolicy.evaluate(input(pairedBoxCount = 10)).allowed)
     }
 
     @Test
-    fun pairedBoxCountSixIsRefusedWithTooManyPairedBoxes() {
-        val result = ActivationPolicy.evaluate(input(pairedBoxCount = PairedBoxLimit.MAX + 1))
+    fun pairedBoxCountElevenIsRefusedWithTooManyPairedBoxes() {
+        val result = ActivationPolicy.evaluate(input(pairedBoxCount = 11))
 
         assertFalseAllowed(result)
         assertEquals(

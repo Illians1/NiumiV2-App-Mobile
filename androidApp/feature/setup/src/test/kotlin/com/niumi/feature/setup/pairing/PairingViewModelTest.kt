@@ -192,8 +192,16 @@ class PairingViewModelTest {
     }
 
     @Test
-    fun fiveBoxesHideAddAndShowTheMaximumMessage() {
-        store.boxes = (1..5).map { box(it) }
+    fun nineBoxesStillAllowAdding() {
+        store.boxes = (1..9).map { box(it) }
+
+        assertThat(viewModel().state.canAdd).isTrue()
+    }
+
+    @Test
+    fun tenBoxesHideAddAndShowTheMaximumMessage() {
+        // Contrat KMP 1.5 : dix Niumi Spots au plus (`PairedBoxLimit.MAX`).
+        store.boxes = (1..10).map { box(it) }
         val viewModel = viewModel()
 
         viewModel.startAdding()

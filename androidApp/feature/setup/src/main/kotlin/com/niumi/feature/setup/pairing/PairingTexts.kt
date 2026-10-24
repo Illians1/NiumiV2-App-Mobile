@@ -28,8 +28,11 @@ object PairingTexts {
     /** Lot 8 : remplace le dialogue de remplacement — un boîtier déjà associé n'est pas réassocié. */
     const val ALREADY_PAIRED = "Ce boîtier est déjà associé."
 
-    /** Affiché à la place de [ADD_BUTTON_LABEL] dès cinq boîtiers (`PairedBoxLimit.MAX`). */
-    const val LIMIT_REACHED = "5 boîtiers maximum."
+    /**
+     * Affiché à la place de [ADD_BUTTON_LABEL] dès dix boîtiers (`PairedBoxLimit.MAX`, contrat KMP
+     * 1.5). Texte transitoire : l'écran disparaît à l'étape 47.
+     */
+    const val LIMIT_REACHED = "10 boîtiers maximum."
 
     const val BOX_ADDED = "Boîtier ajouté."
 
