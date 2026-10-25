@@ -424,4 +424,105 @@ object NiumiDimens {
     val bubbleTailInsetFromEnd = 22.dp
     val bubbleGap = 8.dp
     val bubbleElevation = 8.dp
+
+    // Accueil (écran 6, étape 45 ; maquettes 15 à 20, VALEURS-DE-DESIGN.md §5).
+
+    /** Zone du cadran : 366 de large, qui déborde de 12 sur les marges de l'écran (maquettes). */
+    val dialWidth = 366.dp
+    val dialOverflow = 12.dp
+
+    /** Rayon de l'anneau et épaisseur du trait (maquettes). */
+    val dialRadius = 112.dp
+    val dialStroke = 28.dp
+
+    /**
+     * Bande réservée aux étiquettes au-dessus et au-dessous de l'anneau, et écart minimal entre une
+     * étiquette et l'anneau (décisions de Mehdi du 2026-10-25, après essais : les 32 et 6 de la
+     * maquette ne laissaient pas de place à une poignée tout en haut ou tout en bas ; 44 et 6 étaient
+     * trop larges). Une étiquette mesure environ 39 (13 et 17 en IBM Plex Sans) ; plus grande, avec
+     * une police agrandie, elle glisse sur le côté (`DialLabelLayout`).
+     */
+    val dialLabelBand = 40.dp
+    val dialLabelGap = 4.dp
+
+    /** Hauteur de la zone (340, contre 290 dans les maquettes) et centre de l'anneau (170, contre 158). */
+    val dialHeight = (dialRadius + dialStroke / 2 + dialLabelGap + dialLabelBand) * 2
+    val dialCenterY = dialHeight / 2
+
+    /** Poignées (rayon 10) et point de l'heure actuelle (rayon 4). */
+    val dialHandleRadius = 10.dp
+    val dialNowDotRadius = 4.dp
+
+    /**
+     * Flèche vers le point de l'heure actuelle, à l'intérieur de l'anneau (décision de Mehdi du
+     * 2026-10-25 après essai, absente des maquettes) : triangle de 8 de long et 8 de base, pointe à
+     * 4 du bord intérieur de l'anneau.
+     */
+    val dialNowArrowLength = 8.dp
+    val dialNowArrowWidth = 8.dp
+    val dialNowArrowGap = 4.dp
+
+    /** Distance au centre du cadran à laquelle un toucher saisit une poignée, plus large qu'elle. */
+    val dialHandleGrabRadius = 24.dp
+
+    /** Centre : libellé (« Réveil dans ») au-dessus de la valeur (« 9 h 26 »). */
+    val dialCenterLabelGap = 2.dp
+
+    /**
+     * Haut d'écran → cadran → carte d'état → onglets → pastilles → lignes. Réglés après essai sur
+     * appareil (décisions de Mehdi du 2026-10-25) : le cadran, élément principal, descend de 32 sous la
+     * marge d'écran (collé à la barre d'état sinon) ; les autres espaces, 18, 30, 14 et 34 dans les
+     * maquettes 16 et 18, sont resserrés pour « réduire le vide ».
+     */
+    val homeDialTop = 32.dp
+    val homeCardTop = 12.dp
+    val homeTabsTop = 8.dp
+    val homeDaysTop = 0.dp
+    val homeRowsTop = 20.dp
+
+    /** Ligne « Applications bloquées » et ligne « Sonnerie » : 86 et 78 dans les maquettes, resserrées de même. */
+    val homeAppsRowHeight = 76.dp
+    val homeRingtoneRowHeight = 64.dp
+    val homeAppsIconsGap = 8.dp
+    val homeAppIconGap = 6.dp
+    val homeRowTrailingGap = 6.dp
+
+    /** Icône des réglages : 44 × 44 à 14 du bord droit (maquettes 15 à 20). */
+    val homeSettingsInset = 14.dp
+
+    /** Cadenas de la carte « Blocage en cours ». */
+    val homeLockIcon = 18.dp
+
+    /** Lien « Annuler le réveil » de la carte en session : 44 de haut, texte centré. */
+    val homeLinkPadding = 10.dp
+
+    /**
+     * Onglets texte (« Ponctuel / Quotidien », « Coucher / Réveil ») : 32 de haut, trait de 2 ; 16
+     * d'écart (28 dans les maquettes, resserrés le 2026-10-25 après essai).
+     */
+    val tabHeight = 32.dp
+    val tabGap = 16.dp
+    val tabUnderline = 2.dp
+
+    /** Sélecteur d'heure (maquettes 19, 20) : fenêtre à 20 des bords, marges 20 / 24 / 24. */
+    val timePickerHorizontalMargin = 20.dp
+    val timePickerPadding = PaddingValues(start = 24.dp, top = 20.dp, end = 24.dp, bottom = 24.dp)
+    val timePickerWheelsTop = 16.dp
+    val timePickerSentenceTop = 14.dp
+    val timePickerButtonTop = 16.dp
+
+    /** Roue : cinq rangées visibles, rangée choisie de 56 entre deux traits de 1,5, colonnes de 90 à 8 d'écart. */
+    val wheelRowHeight = 42.dp
+    val wheelSelectedHeight = 56.dp
+    val wheelLine = 1.5.dp
+    val wheelColumnWidth = 90.dp
+    val wheelColumnGap = 8.dp
+
+    /** Le « : » des roues remonte légèrement pour se centrer sur les chiffres. */
+    val wheelColonLift = (-2).dp
+
+    /** Bulle de message en bas d'écran (forme de la maquette 27) : 16 des bords, marges 14 × 16, coins 16. */
+    val toastHorizontalMargin = 16.dp
+    val toastPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+    val toastElevation = 10.dp
 }

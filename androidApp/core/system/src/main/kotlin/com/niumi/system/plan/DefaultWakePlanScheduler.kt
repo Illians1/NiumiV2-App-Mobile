@@ -3,7 +3,6 @@ package com.niumi.system.plan
 import com.niumi.core.domain.ViolationCode
 import com.niumi.core.interop.NextOccurrenceInputDto
 import com.niumi.core.interop.NextOccurrenceResultDto
-import com.niumi.core.interop.NextOccurrenceStatusDto
 import com.niumi.core.interop.NiumiCoreFacade
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
@@ -161,7 +160,8 @@ class DefaultWakePlanScheduler(
     /**
      * `COMPLETED` (scan ou recopie du matin) ou `DISARMED` repris par le réconciliateur : l'occurrence
      * suivante est armée (`design-plan/SPECIFICATION.md` §15). `CANCELLED` (annulation, recopie du
-     * soir) : l'interrupteur est éteint (§11, §13). Le pointeur de la session finie est effacé d'abord
+     * soir), ou réveil ponctuel terminé (aucun jour coché, décision du 2026-10-25) : l'interrupteur est
+     * éteint (§11, §13). Le pointeur de la session finie est effacé d'abord
      * s'il est encore là, sans quoi le moteur refuserait l'activation (point de vigilance 8).
      */
     private suspend fun onFinished(
@@ -178,7 +178,7 @@ class DefaultWakePlanScheduler(
                 emptyList()
             }
 
-            snapshot.state == SessionStateDto.CANCELLED -> {
+            snapshot.state == SessionStateDto.CANCELLED || snapshot.isOneOffConsumed(plan) -> {
                 sources.planStore.write(plan.copy(enabled = false))
                 sources.armingStatus.reportOk()
                 listOf(ReconcileAction.PlanSwitchedOff)
@@ -253,11 +253,6 @@ class DefaultWakePlanScheduler(
             next == null -> {
                 sources.armingStatus.reportOk()
                 PlanApplyResult.Disabled
-            }
-
-            next.status == NextOccurrenceStatusDto.NO_DAY_ENABLED -> {
-                sources.armingStatus.reportOk()
-                PlanApplyResult.NoDayEnabled
             }
 
             occurrence == null -> {
@@ -380,6 +375,10 @@ private fun ReconcileReason.toPlanChangeReason(): PlanChangeReason =
         else -> PlanChangeReason.PROCESS_START
     }
 
+/** Réveil ponctuel (aucun jour coché) mené à son terme : il ne se répète pas. Un désarmement n'en consomme aucun. */
+private fun SessionSnapshotDto.isOneOffConsumed(plan: WakePlan): Boolean =
+    state == SessionStateDto.COMPLETED && plan.enabledIsoDays.isEmpty()
+
 private fun SessionSnapshotDto.isPendingArmed(): Boolean = state == SessionStateDto.ARMED && isBlockingPending
 
 /** La dernière session finie pendant la passe : refermée par la reprise de l'outbox, ou pointeur effacé. */
@@ -422,7 +421,11 @@ private suspend fun guarded(
         onFailure()
     }
 
-private fun NiumiCoreFacade.nextOccurrence(
+/**
+ * Prochaine occurrence de [plan] (SPEC_CORE_KMP §8.4), sans l'interrupteur, qui reste natif. Publique
+ * depuis l'étape 45 : l'accueil l'affiche tant qu'aucune session n'est encore armée.
+ */
+fun NiumiCoreFacade.nextOccurrence(
     plan: WakePlan,
     zoneId: String,
     nowEpochMillis: Long,

@@ -5,8 +5,6 @@ import com.niumi.system.setup.SetupPreferences
 /** Préférences de mise en route en mémoire ; compte les acquittements de la présentation (écrans 1 et 2). */
 class FakeSetupPreferences(
     private var onboardingAcknowledged: Boolean = true,
-    private var lastWakeTimeIsoValue: String? = null,
-    private var lastBlockingStartTimeIsoValue: String? = null,
 ) : SetupPreferences {
     var acknowledgeCallCount = 0
         private set
@@ -18,16 +16,12 @@ class FakeSetupPreferences(
         onboardingAcknowledged = true
     }
 
-    override suspend fun lastWakeTimeIso(): String? = lastWakeTimeIsoValue
+    var setupCompleted = false
 
-    override suspend fun lastBlockingStartTimeIso(): String? = lastBlockingStartTimeIsoValue
+    override suspend fun isSetupCompleted(): Boolean = setupCompleted
 
-    override suspend fun setLastBlockingStartTimeIso(value: String?) {
-        lastBlockingStartTimeIsoValue = value
-    }
-
-    override suspend fun setLastWakeTimeIso(value: String) {
-        lastWakeTimeIsoValue = value
+    override suspend fun markSetupCompleted() {
+        setupCompleted = true
     }
 
     var notificationRequested = false

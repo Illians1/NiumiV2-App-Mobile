@@ -10,11 +10,13 @@ import com.niumi.system.blocking.guard.BlockingGuardPhase
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.BlockingGuardNotificationFactory
 import com.niumi.system.notification.BlockingGuardNotificationSpecs
+import com.niumi.system.notification.GuardMoment
 import com.niumi.system.notification.NiumiNotificationIds
 import com.niumi.system.notification.NotificationSpec
 import com.niumi.system.notification.RingingNotificationFactory
 import com.niumi.system.notification.ScanRequestNotificationFactory
 import com.niumi.system.notification.ScanRequestPendingIntentSpecs
+import com.niumi.system.notification.relativeDayLabel
 
 /**
  * La notification que [BlockingGuardService] tient au premier plan, phase par phase
@@ -34,6 +36,7 @@ internal class BlockingGuardNotifications(
     private val ringingFactory: RingingNotificationFactory,
     private val scanRequestFactory: ScanRequestNotificationFactory,
     private val pendingIntentFactory: AndroidPendingIntentFactory,
+    private val now: () -> Long,
 ) {
     fun idFor(command: BlockingGuardCommand?): Int =
         when (command?.phase) {
@@ -70,17 +73,16 @@ internal class BlockingGuardNotifications(
 
     private fun specFor(command: BlockingGuardCommand?): NotificationSpec {
         if (command == null) return BlockingGuardNotificationSpecs.unknownPhase()
-        val wakeTime = timeLabel(command.wakeAtEpochMillis, command.zoneId)
         return when (command.phase) {
             BlockingGuardPhase.BEFORE_BLOCKING -> {
                 BlockingGuardNotificationSpecs.beforeBlocking(
-                    wakeTimeLabel = wakeTime,
-                    blockingTimeLabel = command.blockingStartsAtEpochMillis?.let { timeLabel(it, command.zoneId) },
+                    wake = momentOf(command.wakeAtEpochMillis, command.zoneId),
+                    blocking = command.blockingStartsAtEpochMillis?.let { momentOf(it, command.zoneId) },
                 )
             }
 
             BlockingGuardPhase.BLOCKING -> {
-                BlockingGuardNotificationSpecs.blocking(wakeTime)
+                BlockingGuardNotificationSpecs.blocking(timeLabel(command.wakeAtEpochMillis, command.zoneId))
             }
 
             // Seul `RELEASING` sans notification déjà posée arrive ici (relance du processus juste
@@ -99,4 +101,11 @@ internal class BlockingGuardNotifications(
         epochMillis: Long,
         zoneId: String,
     ): String? = WakeScheduleFormatter.formatTime(epochMillis, zoneId, DateFormat.is24HourFormat(context))
+
+    /** L'heure et, s'il n'est pas aujourd'hui, le jour (décision du 2026-10-25). */
+    private fun momentOf(
+        epochMillis: Long,
+        zoneId: String,
+    ): GuardMoment? =
+        timeLabel(epochMillis, zoneId)?.let { GuardMoment(it, relativeDayLabel(epochMillis, zoneId, now())) }
 }

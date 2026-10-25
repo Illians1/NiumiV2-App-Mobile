@@ -14,10 +14,10 @@ import com.niumi.database.logging.DeviceContext
 import com.niumi.database.logging.TechnicalEventEntry
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.database.pairing.PairedBoxDto
-import com.niumi.feature.session.activation.fakes.CallJournal
-import com.niumi.feature.session.activation.fakes.RecordingPairedBoxStore
 import com.niumi.feature.session.active.fakes.FakeSessionIncidentsReader
-import com.niumi.feature.session.wake.fakes.FakeTimeZoneProvider
+import com.niumi.feature.session.fakes.CallJournal
+import com.niumi.feature.session.fakes.FakeTimeZoneProvider
+import com.niumi.feature.session.fakes.RecordingPairedBoxStore
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck

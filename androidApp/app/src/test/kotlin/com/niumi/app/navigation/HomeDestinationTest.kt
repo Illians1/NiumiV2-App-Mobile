@@ -2,79 +2,55 @@ package com.niumi.app.navigation
 
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.interop.SessionStateDto
+import com.niumi.system.session.SESSION_FINAL_STATES
 import org.junit.Test
 
 /**
- * SPEC_ANDROID §10.4 : « Ouvrir Niumi depuis le lanceur pendant une session active mène toujours
- * à l'écran correspondant à l'état, jamais à l'accueil : c'est la seconde garantie d'accès au
- * scan. » La règle est isolée dans une fonction pure pour être prouvée sans rendu Compose.
+ * Destination de l'ouverture de Niumi (étape 45 ; `design-plan/SPECIFICATION.md` §3) : l'accueil
+ * dès que la mise en route est finie, et toujours pendant une session (seconde garantie d'accès à
+ * l'annulation et au scan, SPEC_ANDROID §10.4) ; sinon la mise en route, là où elle en est. Un
+ * stockage illisible mène au diagnostic avant tout (§15, étape 20).
  */
 class HomeDestinationTest {
     @Test
-    fun everyNonFinalStateLeadsToTheActiveSessionScreen() {
-        val nonFinalStates =
-            SessionStateDto.entries.filterNot {
-                it == SessionStateDto.COMPLETED ||
-                    it == SessionStateDto.CANCELLED ||
-                    it == SessionStateDto.DISARMED ||
-                    it == SessionStateDto.FAILED
-            }
+    fun aFinishedSetupOpensTheHome() {
+        assertThat(homeDestinationFor(state = null, onboardingAcknowledged = true, setupCompleted = true))
+            .isEqualTo(NiumiRoute.Home)
+    }
 
-        // Exhaustivité : un état ajouté à la machine commune doit être classé explicitement.
-        assertThat(nonFinalStates).hasSize(SessionStateDto.entries.size - 4)
-        nonFinalStates.forEach { state ->
-            assertThat(homeDestinationFor(state, onboardingAcknowledged = true))
-                .isEqualTo(NiumiRoute.ActiveSession)
-            assertThat(homeDestinationFor(state, onboardingAcknowledged = false))
-                .isEqualTo(NiumiRoute.ActiveSession)
+    @Test
+    fun everyNonFinalStateOpensTheHomeEvenBeforeTheEndOfTheSetup() {
+        SessionStateDto.entries.filterNot { it in SESSION_FINAL_STATES }.forEach { state ->
+            assertThat(homeDestinationFor(state, onboardingAcknowledged = false, setupCompleted = false))
+                .isEqualTo(NiumiRoute.Home)
         }
     }
 
     @Test
-    fun everyFinalStateFallsBackToTheSetupJourney() {
-        listOf(SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.DISARMED, SessionStateDto.FAILED)
-            .forEach { state ->
-                assertThat(homeDestinationFor(state, onboardingAcknowledged = true))
-                    .isEqualTo(NiumiRoute.Permissions)
-            }
-    }
-
-    @Test
-    fun noSessionAndNoAcknowledgementLeadsToThePresentation() {
-        assertThat(homeDestinationFor(state = null, onboardingAcknowledged = false))
-            .isEqualTo(NiumiRoute.Presentation)
-    }
-
-    @Test
-    fun noSessionWithAnAcknowledgementLeadsStraightToThePermissions() {
-        assertThat(homeDestinationFor(state = null, onboardingAcknowledged = true))
+    fun anUnfinishedSetupResumesAtThePermissionsOnceThePresentationIsRead() {
+        assertThat(homeDestinationFor(state = null, onboardingAcknowledged = true, setupCompleted = false))
+            .isEqualTo(NiumiRoute.Permissions)
+        assertThat(homeDestinationFor(SessionStateDto.CANCELLED, onboardingAcknowledged = true, setupCompleted = false))
             .isEqualTo(NiumiRoute.Permissions)
     }
 
     @Test
-    fun anUnacknowledgedPresentationNeverSkipsAheadOfADiagnostic() {
-        assertThat(homeDestinationFor(SessionStateDto.COMPLETED, onboardingAcknowledged = false))
+    fun anUnreadPresentationComesFirst() {
+        assertThat(homeDestinationFor(state = null, onboardingAcknowledged = false, setupCompleted = false))
             .isEqualTo(NiumiRoute.Presentation)
     }
 
-    /**
-     * SPEC_ANDROID §18, §20 : une persistance illisible prime sur tout le reste — ni l'état d'une
-     * session en cours ni l'accusé de la présentation ne sont fiables si Niumi ne peut plus les lire.
-     */
     @Test
     fun anUnreadableStorageSendsTheUserToTheIncidentDiagnosticBeforeAnythingElse() {
-        assertThat(
-            homeDestinationFor(SessionStateDto.ARMED, onboardingAcknowledged = true, storageUnreadable = true),
-        ).isEqualTo(NiumiRoute.IncidentDiagnostic)
-        assertThat(
-            homeDestinationFor(state = null, onboardingAcknowledged = false, storageUnreadable = true),
-        ).isEqualTo(NiumiRoute.IncidentDiagnostic)
-    }
-
-    @Test
-    fun theRedirectionDisappearsAsSoonAsStorageIsReadableAgain() {
-        assertThat(
-            homeDestinationFor(SessionStateDto.ARMED, onboardingAcknowledged = true, storageUnreadable = false),
-        ).isEqualTo(NiumiRoute.ActiveSession)
+        listOf(null, SessionStateDto.ARMED).forEach { state ->
+            assertThat(
+                homeDestinationFor(
+                    state,
+                    onboardingAcknowledged = true,
+                    setupCompleted = true,
+                    storageUnreadable = true,
+                ),
+            ).isEqualTo(NiumiRoute.IncidentDiagnostic)
+        }
     }
 }

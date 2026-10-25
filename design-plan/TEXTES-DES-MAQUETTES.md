@@ -6,6 +6,8 @@ Quand une maquette montre une feuille par-dessus un écran, les textes de l'écr
 
 Les textes dont la validation n'est pas certaine sont listés dans `POINTS-OUVERTS.md`, section 2.
 
+Numérotation du 25 octobre 2026 (64 maquettes, `maquettes/INDEX.md` fait foi) : les maquettes 18 à 20 sont nouvelles, les anciennes 18 à 61 sont devenues 21 à 64. Les sources régénérées ce jour-là ramènent d'anciens textes dans les maquettes 05, 17, 24 à 27 et 29 à 33 ; ce relevé garde les textes décidés (D23) et signale chaque écart dans la section concernée.
+
 ## 01 · Écran 1 · Panneau 1
 
 Fichier : `01_ecran-1-panneau-1`
@@ -87,6 +89,8 @@ Par-dessus l'écran 2 (mêmes textes que la maquette 03), la fenêtre :
 - Le service peut être désactivé dans les réglages Android.
 - Sans cette autorisation, Niumi ne peut pas fonctionner.
 - Ouvrir les réglages d'accessibilité
+
+La source régénérée le 25 octobre 2026 remplace la dernière phrase de la fenêtre par « Une session ne peut pas être activée si le service est inactif. ». C'est une régression : l'app garde « Sans cette autorisation, Niumi ne peut pas fonctionner. » (D23, `POINTS-OUVERTS.md` §5, E14).
 
 Libellés d'accessibilité présents dans le fichier source :
 
@@ -266,6 +270,8 @@ Fichier : `15_ecran-6-reveil-desactive-arrivee-apres-l-ecran-4`
 - Désactivé
 - Réveil désactivé
 - Aucun réveil ni blocage prévu
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -302,6 +308,8 @@ Fichier : `16_ecran-6-reveil-prevu`
 - Réveil activé
 - Blocage des apps dans 56 min
 - 8 h 30 de sommeil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -338,6 +346,8 @@ Fichier : `17_ecran-6-session-en-cours-sombre`
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
 - Annuler le réveil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -347,6 +357,8 @@ Fichier : `17_ecran-6-session-en-cours-sombre`
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
+
+La source régénérée le 25 octobre 2026 écrit « Annuler la session ». C'est une régression : D23 (24 octobre 2026) fixe « Annuler le réveil », que l'app garde (`POINTS-OUVERTS.md` §5, E14).
 
 Libellés d'accessibilité présents dans le fichier source :
 
@@ -361,9 +373,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Dimanche
 - Icônes des 6 applications bloquées
 
-## 18 · Sonnerie · La feuille
+## 18 · Écran 6 · Réveil prévu, alarme unique
 
-Fichier : `18_sonnerie-la-feuille` (maquettes de la sonnerie redessinées et renumérotées le 23 octobre 2026 ; les autres entrées de ce relevé gardent l'ancienne numérotation jusqu'à une passe complète, voir `POINTS-OUVERTS.md` E13)
+Fichier : `18_ecran-6-reveil-prevu-alarme-unique` (ajoutée le 25 octobre 2026 : aucun jour coché, onglet « Ponctuel » choisi)
 
 - Coucher
 - 22:30
@@ -374,6 +386,106 @@ Fichier : `18_sonnerie-la-feuille` (maquettes de la sonnerie redessinées et ren
 - Réveil activé
 - Blocage des apps dans 56 min
 - 8 h 30 de sommeil
+- Ponctuel
+- Quotidien
+- L
+- M
+- M
+- J
+- V
+- S
+- D
+- Applications bloquées 6
+- Sonnerie Carillon Progressive · 2 min
+
+Libellés d'accessibilité présents dans le fichier source :
+
+- Réglages
+- Réveil activé
+- Lundi
+- Mardi
+- Mercredi
+- Jeudi
+- Vendredi
+- Samedi
+- Dimanche
+- Icônes des 6 applications bloquées
+
+## 19 · Écran 6 · Sélecteur d'heure, onglet Coucher
+
+Fichier : `19_ecran-6-selecteur-d-heure-onglet-coucher` (ajoutée le 25 octobre 2026)
+
+Par-dessus l'accueil (mêmes textes que la maquette 16, jours du lundi au vendredi cochés), la fenêtre :
+
+- Coucher
+- Réveil
+- 20
+- 21
+- 22
+- 23
+- 0
+- :
+- 28
+- 29
+- 30
+- 31
+- 32
+- 8 h 30 de sommeil avant le réveil de 7:00
+- Valider
+
+Les nombres des roues sont des valeurs : heures de 0 à 23 sans zéro devant, minutes de « 00 » à « 59 ».
+
+Libellés d'accessibilité présents dans le fichier source :
+
+- Heure de coucher
+- Fermer
+
+Textes de l'app absents des maquettes (décisions du 25 octobre 2026, à valider par Mehdi, `POINTS-OUVERTS.md` §2) : « 24 h de blocage jusqu’au réveil de 7:00 » à la place de la phrase quand les deux heures sont identiques ; libellés d'accessibilité « Heures » et « Minutes » pour les deux roues.
+
+## 20 · Écran 6 · Sélecteur d'heure, onglet Réveil
+
+Fichier : `20_ecran-6-selecteur-d-heure-onglet-reveil` (ajoutée le 25 octobre 2026)
+
+Par-dessus l'accueil (mêmes textes que la maquette 16), la fenêtre :
+
+- Coucher
+- Réveil
+- 5
+- 6
+- 7
+- 8
+- 9
+- :
+- 58
+- 59
+- 00
+- 01
+- 02
+- 8 h 30 de sommeil après le coucher de 22:30
+- Valider
+
+Libellés d'accessibilité présents dans le fichier source :
+
+- Heure de réveil
+- Fermer
+
+Textes de l'app absents des maquettes (même statut) : « 24 h de blocage depuis le coucher de 22:30 » quand les deux heures sont identiques ; sur l'accueil, « 24 h de blocage » à la place de « 8 h 30 de sommeil » sur la carte, « Choisir l’heure » (action du cadran pour le lecteur d'écran) et « Icône de l’application bloquée » (ligne « Applications bloquées » avec une seule application).
+
+## 21 · Sonnerie · La feuille
+
+Fichier : `21_sonnerie-la-feuille` (maquettes de la sonnerie redessinées et renumérotées le 23 octobre 2026, puis de 18-20 à 21-23 le 25 octobre 2026)
+
+- Coucher
+- 22:30
+- Réveil
+- 7:00
+- Réveil dans
+- 9 h 26
+- Réveil activé
+- Blocage des apps dans 56 min
+- 8 h 30 de sommeil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -422,23 +534,25 @@ Libellés d'accessibilité présents dans le fichier source :
 - Sonnerie progressive
 - Sonnerie progressive : durée pour atteindre le volume maximal
 
-## 19 · Sonnerie · Quand on touche le volume
+## 22 · Sonnerie · Quand on touche le volume
 
-Fichier : `19_sonnerie-quand-on-touche-le-volume`
+Fichier : `22_sonnerie-quand-on-touche-le-volume`
 
-Mêmes textes que la maquette 18, plus la bulle :
+Mêmes textes que la maquette 21, plus la bulle :
 
 - Il se règle dans les réglages de ton téléphone.
 
-## 20 · Sonnerie · Progressive désactivée
+## 23 · Sonnerie · Progressive désactivée
 
-Fichier : `20_sonnerie-progressive-desactivee`
+Fichier : `23_sonnerie-progressive-desactivee`
 
-Mêmes textes que la maquette 18, sans « Monte jusqu’au volume du téléphone en 2 min » ni les durées : la ligne « Sonnerie progressive » reste, interrupteur éteint.
+Mêmes textes que la maquette 21, sans « Monte jusqu’au volume du téléphone en 2 min » ni les durées : la ligne « Sonnerie progressive » reste, interrupteur éteint.
 
-## 21 · Annuler · 1. Le lien sur l'accueil
+## 24 · Annuler · 1. Le lien sur l'accueil
 
-Fichier : `21_annuler-1-le-lien-sur-l-accueil`
+Fichier : `24_annuler-1-le-lien-sur-l-accueil`
+
+La source régénérée le 25 octobre 2026 écrit « Annuler la session » : régression, ce relevé garde le texte de D23 (`POINTS-OUVERTS.md` §5, E14). Même remarque pour les maquettes 25 à 27 et 29 à 33 ci-dessous.
 
 - Coucher
 - 22:30
@@ -449,6 +563,8 @@ Fichier : `21_annuler-1-le-lien-sur-l-accueil`
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
 - Annuler le réveil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -472,9 +588,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Dimanche
 - Icônes des 6 applications bloquées
 
-## 22 · Annuler · 2. Scanner ou sortie de secours
+## 25 · Annuler · 2. Scanner ou sortie de secours
 
-Fichier : `22_annuler-2-scanner-ou-sortie-de-secours`
+Fichier : `25_annuler-2-scanner-ou-sortie-de-secours`
+
+Source du 25 octobre 2026 : « Annuler la session » et « Annuler la session ? » (régression, D23).
 
 - Coucher
 - 22:30
@@ -485,6 +603,8 @@ Fichier : `22_annuler-2-scanner-ou-sortie-de-secours`
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
 - Annuler le réveil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -513,9 +633,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Icônes des 6 applications bloquées
 - Annuler le réveil ?
 
-## 23 · Annuler · 3. La feuille de scan
+## 26 · Annuler · 3. La feuille de scan
 
-Fichier : `23_annuler-3-la-feuille-de-scan`
+Fichier : `26_annuler-3-la-feuille-de-scan`
+
+Source du 25 octobre 2026 : « Annuler la session » et « Approche ton iPhone du Niumi Spot pour annuler la session » (régression, D23).
 
 - Coucher
 - 22:30
@@ -526,6 +648,8 @@ Fichier : `23_annuler-3-la-feuille-de-scan`
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
 - Annuler le réveil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -553,9 +677,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Icônes des 6 applications bloquées
 - Fenêtre du système : prêt à scanner
 
-## 24 · Annuler · 4. Réveil annulé : retour au clair
+## 27 · Annuler · 4. Réveil annulé : retour au clair
 
-Fichier : `24_annuler-4-session-annulee-retour-au-clair`
+Fichier : `27_annuler-4-session-annulee-retour-au-clair`
+
+Source du 25 octobre 2026 : titre « Annuler · 4. Session annulée : retour au clair » et message « Session annulée. Tes applications sont débloquées et ton réveil est désactivé. » (régression, D23 et E3).
 
 - Coucher
 - 22:30
@@ -565,6 +691,8 @@ Fichier : `24_annuler-4-session-annulee-retour-au-clair`
 - Désactivé
 - Réveil désactivé
 - Aucun réveil ni blocage prévu
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -589,18 +717,20 @@ Libellés d'accessibilité présents dans le fichier source :
 - Dimanche
 - Icônes des 6 applications bloquées
 
-## 25 · Écran 7 · Écran de blocage
+## 28 · Écran 7 · Écran de blocage
 
-Fichier : `25_ecran-7-ecran-de-blocage`
+Fichier : `28_ecran-7-ecran-de-blocage`
 
 - Cette application est bloquée
 - Elle reviendra après avoir scanné ton Niumi Spot.
 - Fermer
 - Ouvrir Niumi
 
-## 26 · Écran 8 · Confirmation, le soir
+## 29 · Écran 8 · Confirmation, le soir
 
-Fichier : `26_ecran-8-confirmation-le-soir`
+Fichier : `29_ecran-8-confirmation-le-soir`
+
+Source du 25 octobre 2026 : « Annuler la session », « Sortir de la session sans scanner ton Niumi Spot ? » et « Rester dans la session » (régression, D23).
 
 - Coucher
 - 22:30
@@ -611,6 +741,8 @@ Fichier : `26_ecran-8-confirmation-le-soir`
 - Blocage en cours
 - Applications bloquées jusqu'au scan de ton Niumi Spot
 - Annuler le réveil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -639,9 +771,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Icônes des 6 applications bloquées
 - Sortie de secours
 
-## 27 · Écran 8 · Confirmation, le matin
+## 30 · Écran 8 · Confirmation, le matin
 
-Fichier : `27_ecran-8-confirmation-le-matin`
+Fichier : `30_ecran-8-confirmation-le-matin`
+
+Source du 25 octobre 2026 : « Sortir de la session sans scanner ton Niumi Spot ? » et « Rester dans la session » (régression, D23).
 
 - Vendredi 2 octobre
 - 7:00
@@ -658,9 +792,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Un téléphone approché d'un Niumi Spot
 - Sortie de secours
 
-## 28 · Écran 9 · Recopie en cours
+## 31 · Écran 9 · Recopie en cours
 
-Fichier : `28_ecran-9-recopie-en-cours`
+Fichier : `31_ecran-9-recopie-en-cours`
+
+Sources 31 à 33 du 25 octobre 2026 : « Recopie ce texte pour sortir de la session. », le texte à recopier d'avant sa révision (« …Je choisis de sortir de cette session sans le scanner… »), le compteur « sur 197 caractères » et le bouton « Sortir de la session » (régression, D8, D23 et E2).
 
 - Annuler
 - 84 sur 190 caractères
@@ -674,9 +810,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Ta saisie
 
-## 29 · Écran 9 · Erreur signalée
+## 32 · Écran 9 · Erreur signalée
 
-Fichier : `29_ecran-9-erreur-signalee`
+Fichier : `32_ecran-9-erreur-signalee`
 
 - Annuler
 - 32 sur 190 caractères
@@ -691,9 +827,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Ta saisie
 
-## 30 · Écran 9 · Texte complet, bouton actif
+## 33 · Écran 9 · Texte complet, bouton actif
 
-Fichier : `30_ecran-9-texte-complet-bouton-actif`
+Fichier : `33_ecran-9-texte-complet-bouton-actif`
 
 - Annuler
 - 190 sur 190 caractères
@@ -707,9 +843,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Ta saisie
 
-## 31 · Écran 10 · Le réveil sonne
+## 34 · Écran 10 · Le réveil sonne
 
-Fichier : `31_ecran-10-le-reveil-sonne`
+Fichier : `34_ecran-10-le-reveil-sonne`
 
 - Vendredi 2 octobre
 - 7:00
@@ -721,9 +857,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Un téléphone approché d'un Niumi Spot
 
-## 32 · Écran 10 · La feuille de scan, iPhone et Android
+## 35 · Écran 10 · La feuille de scan, iPhone et Android
 
-Fichier : `32_ecran-10-la-feuille-de-scan-iphone-et-android`
+Fichier : `35_ecran-10-la-feuille-de-scan-iphone-et-android`
 
 - Vendredi 2 octobre
 - 7:00
@@ -739,9 +875,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Un téléphone approché d'un Niumi Spot
 - Fenêtre du système : prêt à scanner
 
-## 33 · Écran 10 · Échec : pas un Niumi Spot
+## 36 · Écran 10 · Échec : pas un Niumi Spot
 
-Fichier : `33_ecran-10-echec-pas-un-niumi-spot`
+Fichier : `36_ecran-10-echec-pas-un-niumi-spot`
 
 - Vendredi 2 octobre
 - 7:00
@@ -758,9 +894,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Un téléphone approché d'un Niumi Spot
 - Échec du scan
 
-## 34 · Écran 10 · Échec : Niumi Spot non enregistré
+## 37 · Écran 10 · Échec : Niumi Spot non enregistré
 
-Fichier : `34_ecran-10-echec-niumi-spot-non-enregistre`
+Fichier : `37_ecran-10-echec-niumi-spot-non-enregistre`
 
 - Vendredi 2 octobre
 - 7:00
@@ -777,9 +913,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Un téléphone approché d'un Niumi Spot
 - Échec du scan
 
-## 35 · Écran 10 · Échec : lecture ratée
+## 38 · Écran 10 · Échec : lecture ratée
 
-Fichier : `35_ecran-10-echec-lecture-ratee`
+Fichier : `38_ecran-10-echec-lecture-ratee`
 
 - Vendredi 2 octobre
 - 7:00
@@ -796,9 +932,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Un téléphone approché d'un Niumi Spot
 - Échec du scan
 
-## 36 · Écran 10 · Échec : NFC coupé (Android)
+## 39 · Écran 10 · Échec : NFC coupé (Android)
 
-Fichier : `36_ecran-10-echec-nfc-coupe-android`
+Fichier : `39_ecran-10-echec-nfc-coupe-android`
 
 - Vendredi 2 octobre
 - 7:00
@@ -815,9 +951,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Un téléphone approché d'un Niumi Spot
 - Échec du scan
 
-## 37 · Écran 10 · iPhone seulement : l'alarme va reprendre
+## 40 · Écran 10 · iPhone seulement : l'alarme va reprendre
 
-Fichier : `37_ecran-10-iphone-seulement-l-alarme-va-reprendre`
+Fichier : `40_ecran-10-iphone-seulement-l-alarme-va-reprendre`
 
 - Vendredi 2 octobre
 - 7:00
@@ -830,9 +966,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Un téléphone approché d'un Niumi Spot
 
-## 38 · Écran 10 · iPhone seulement : temps de scan écoulé
+## 41 · Écran 10 · iPhone seulement : temps de scan écoulé
 
-Fichier : `38_ecran-10-iphone-seulement-temps-de-scan-ecoule`
+Fichier : `41_ecran-10-iphone-seulement-temps-de-scan-ecoule`
 
 - Vendredi 2 octobre
 - 7:00
@@ -849,9 +985,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Un téléphone approché d'un Niumi Spot
 - Échec du scan
 
-## 39 · Écran 11 · Réussite : retour au clair
+## 42 · Écran 11 · Réussite : retour au clair
 
-Fichier : `39_ecran-11-reussite-retour-au-clair`
+Fichier : `42_ecran-11-reussite-retour-au-clair`
 
 - Debout à 7:04.
 - 4 minutes après la sonnerie.
@@ -859,9 +995,9 @@ Fichier : `39_ecran-11-reussite-retour-au-clair`
 - Tes applications sont de nouveau accessibles.
 - Retour à l'accueil
 
-## 40 · Écran 12 · Réglages
+## 43 · Écran 12 · Réglages
 
-Fichier : `40_ecran-12-reglages`
+Fichier : `43_ecran-12-reglages`
 
 - Réglages
 - Niumi Spots 2
@@ -873,9 +1009,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour à l'accueil
 
-## 41 · Réglages · Aide
+## 44 · Réglages · Aide
 
-Fichier : `41_reglages-aide`
+Fichier : `44_reglages-aide`
 
 - Aide
 - Fonctionnement
@@ -887,9 +1023,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour aux réglages
 
-## 42 · Aide · Une rubrique (Fonctionnement)
+## 45 · Aide · Une rubrique (Fonctionnement)
 
-Fichier : `42_aide-une-rubrique-fonctionnement`
+Fichier : `45_aide-une-rubrique-fonctionnement`
 
 - Fonctionnement
 - Le soir
@@ -903,9 +1039,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour à l'aide
 
-## 43 · Aide · Temps gagné
+## 46 · Aide · Temps gagné
 
-Fichier : `43_aide-temps-gagne`
+Fichier : `46_aide-temps-gagne`
 
 - Temps gagné
 - Après chaque réveil, Niumi compare le temps que tu as mis à te lever avec celui que tu mettais avant.
@@ -917,9 +1053,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour à l'aide
 
-## 44 · Réglages · À propos
+## 47 · Réglages · À propos
 
-Fichier : `44_reglages-a-propos`
+Fichier : `47_reglages-a-propos`
 
 - Version 1.0
 - Mentions légales
@@ -930,9 +1066,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour aux réglages
 
-## 45 · Écran 12 · Réglages (sombre)
+## 48 · Écran 12 · Réglages (sombre)
 
-Fichier : `45_ecran-12-reglages-sombre`
+Fichier : `48_ecran-12-reglages-sombre`
 
 - Réglages
 - Niumi Spots 2
@@ -944,9 +1080,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour à l'accueil
 
-## 46 · Réglages · Aide (sombre)
+## 49 · Réglages · Aide (sombre)
 
-Fichier : `46_reglages-aide-sombre`
+Fichier : `49_reglages-aide-sombre`
 
 - Aide
 - Fonctionnement
@@ -958,9 +1094,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour aux réglages
 
-## 47 · Aide · Une rubrique (sombre)
+## 50 · Aide · Une rubrique (sombre)
 
-Fichier : `47_aide-une-rubrique-sombre`
+Fichier : `50_aide-une-rubrique-sombre`
 
 - Fonctionnement
 - Le soir
@@ -974,9 +1110,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour à l'aide
 
-## 48 · Aide · Temps gagné (sombre)
+## 51 · Aide · Temps gagné (sombre)
 
-Fichier : `48_aide-temps-gagne-sombre`
+Fichier : `51_aide-temps-gagne-sombre`
 
 - Temps gagné
 - Après chaque réveil, Niumi compare le temps que tu as mis à te lever avec celui que tu mettais avant.
@@ -988,9 +1124,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour à l'aide
 
-## 49 · Réglages · À propos (sombre)
+## 52 · Réglages · À propos (sombre)
 
-Fichier : `49_reglages-a-propos-sombre`
+Fichier : `52_reglages-a-propos-sombre`
 
 - Version 1.0
 - Mentions légales
@@ -1001,9 +1137,9 @@ Libellés d'accessibilité présents dans le fichier source :
 
 - Retour aux réglages
 
-## 50 · Niumi Spots · La liste
+## 53 · Niumi Spots · La liste
 
-Fichier : `50_niumi-spots-la-liste`
+Fichier : `53_niumi-spots-la-liste`
 
 - Niumi Spots
 - Salle de bain
@@ -1017,9 +1153,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Actions pour le Niumi Spot : Salle de bain
 - Actions pour le Niumi Spot : Cuisine
 
-## 51 · Niumi Spots · Confirmation de suppression
+## 54 · Niumi Spots · Confirmation de suppression
 
-Fichier : `51_niumi-spots-confirmation-de-suppression`
+Fichier : `54_niumi-spots-confirmation-de-suppression`
 
 - Niumi Spots
 - Salle de bain
@@ -1038,9 +1174,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Actions pour le Niumi Spot : Cuisine
 - Supprimer un Niumi Spot
 
-## 52 · Niumi Spots · Dernier Niumi Spot
+## 55 · Niumi Spots · Dernier Niumi Spot
 
-Fichier : `52_niumi-spots-dernier-niumi-spot`
+Fichier : `55_niumi-spots-dernier-niumi-spot`
 
 - Niumi Spots
 - Salle de bain
@@ -1054,9 +1190,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Retour aux réglages
 - Actions pour le Niumi Spot : Salle de bain
 
-## 53 · Niumi Spots · Renommer la pièce
+## 56 · Niumi Spots · Renommer la pièce
 
-Fichier : `53_niumi-spots-renommer-la-piece`
+Fichier : `56_niumi-spots-renommer-la-piece`
 
 - Niumi Spots
 - Salle de bain
@@ -1079,9 +1215,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Renommer la pièce
 - Pièce du Niumi Spot
 
-## 54 · Niumi Spots · La liste (sombre)
+## 57 · Niumi Spots · La liste (sombre)
 
-Fichier : `54_niumi-spots-la-liste-sombre`
+Fichier : `57_niumi-spots-la-liste-sombre`
 
 - Niumi Spots
 - Salle de bain
@@ -1095,9 +1231,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Actions pour le Niumi Spot : Salle de bain
 - Actions pour le Niumi Spot : Cuisine
 
-## 55 · Niumi Spots · Confirmation de suppression (sombre)
+## 58 · Niumi Spots · Confirmation de suppression (sombre)
 
-Fichier : `55_niumi-spots-confirmation-de-suppression-sombre`
+Fichier : `58_niumi-spots-confirmation-de-suppression-sombre`
 
 - Niumi Spots
 - Salle de bain
@@ -1116,9 +1252,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Actions pour le Niumi Spot : Cuisine
 - Supprimer un Niumi Spot
 
-## 56 · Niumi Spots · Dernier Niumi Spot (sombre)
+## 59 · Niumi Spots · Dernier Niumi Spot (sombre)
 
-Fichier : `56_niumi-spots-dernier-niumi-spot-sombre`
+Fichier : `59_niumi-spots-dernier-niumi-spot-sombre`
 
 - Niumi Spots
 - Salle de bain
@@ -1132,9 +1268,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Retour aux réglages
 - Actions pour le Niumi Spot : Salle de bain
 
-## 57 · Niumi Spots · Renommer la pièce (sombre)
+## 60 · Niumi Spots · Renommer la pièce (sombre)
 
-Fichier : `57_niumi-spots-renommer-la-piece-sombre`
+Fichier : `60_niumi-spots-renommer-la-piece-sombre`
 
 - Niumi Spots
 - Salle de bain
@@ -1157,9 +1293,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Renommer la pièce
 - Pièce du Niumi Spot
 
-## 58 · Bandeau · NFC coupé (Android)
+## 61 · Bandeau · NFC coupé (Android)
 
-Fichier : `58_bandeau-nfc-coupe-android`
+Fichier : `61_bandeau-nfc-coupe-android`
 
 - Le scan du Niumi Spot ne fonctionnera pas : le NFC est coupé.
 - Activer le NFC
@@ -1172,6 +1308,8 @@ Fichier : `58_bandeau-nfc-coupe-android`
 - Réveil activé
 - Blocage des apps dans 56 min
 - 8 h 30 de sommeil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -1195,9 +1333,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Dimanche
 - Icônes des 6 applications bloquées
 
-## 59 · Bandeau · Aucun Niumi Spot (au cas où)
+## 62 · Bandeau · Aucun Niumi Spot (au cas où)
 
-Fichier : `59_bandeau-aucun-niumi-spot-au-cas-ou`
+Fichier : `62_bandeau-aucun-niumi-spot-au-cas-ou`
 
 - Aucun Niumi Spot n'est associé.
 - Associer un Niumi Spot
@@ -1210,6 +1348,8 @@ Fichier : `59_bandeau-aucun-niumi-spot-au-cas-ou`
 - Réveil activé
 - Blocage des apps dans 56 min
 - 8 h 30 de sommeil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -1233,9 +1373,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Dimanche
 - Icônes des 6 applications bloquées
 
-## 60 · Alerte · Une autorisation retirée
+## 63 · Alerte · Une autorisation retirée
 
-Fichier : `60_alerte-une-autorisation-retiree`
+Fichier : `63_alerte-une-autorisation-retiree`
 
 - Coucher
 - 22:30
@@ -1246,6 +1386,8 @@ Fichier : `60_alerte-une-autorisation-retiree`
 - Réveil activé
 - Blocage des apps dans 56 min
 - 8 h 30 de sommeil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M
@@ -1274,9 +1416,9 @@ Libellés d'accessibilité présents dans le fichier source :
 - Icônes des 6 applications bloquées
 - Il manque une autorisation
 
-## 61 · Alerte · Plusieurs autorisations retirées
+## 64 · Alerte · Plusieurs autorisations retirées
 
-Fichier : `61_alerte-plusieurs-autorisations-retirees`
+Fichier : `64_alerte-plusieurs-autorisations-retirees`
 
 - Coucher
 - 22:30
@@ -1287,6 +1429,8 @@ Fichier : `61_alerte-plusieurs-autorisations-retirees`
 - Réveil activé
 - Blocage des apps dans 56 min
 - 8 h 30 de sommeil
+- Ponctuel
+- Quotidien
 - L
 - M
 - M

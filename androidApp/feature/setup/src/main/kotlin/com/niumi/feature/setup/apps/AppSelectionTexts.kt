@@ -12,6 +12,9 @@ import com.niumi.core.domain.AppSelectionSummary
  * autorité de la règle (SPEC_CORE_KMP §2 point 12).
  */
 object AppSelectionTexts {
+    /** Flèche de retour quand l'écran est rouvert depuis l'accueil (étape 45, M11). */
+    const val BACK = "Retour"
+
     const val TITLE = "Quelles applications veux-tu bloquer ?"
 
     const val BODY = "Elles seront inaccessibles de l’heure du coucher jusqu’au scan de ton Niumi Spot."

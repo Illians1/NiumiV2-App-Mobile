@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Cadenas d'une rangée verrouillée (maquettes 03, 15) : arceau et corps, trait de 1,8.
-    Le cadenas ambre de la carte « Blocage en cours » (trait de 2,6, VALEURS §2 et §5) est un
-    autre dessin, livré avec l'accueil (étape 45).
+    Le cadenas ambre de la carte « Blocage en cours » (trait de 2,6) est ic_lock_bold.
     Tracé recopié de la source HTML de la maquette (viewBox 24 × 24, trait seul, bouts ronds).
     Noir dans le fichier : le composant teinte l'icône (encre en clair, blanc cassé en sombre,
     VALEURS-DE-DESIGN.md §2). Icône de navigation ou d'action : jamais ambre (VALEURS §2,

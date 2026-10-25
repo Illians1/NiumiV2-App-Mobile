@@ -3,13 +3,17 @@ package com.niumi.core.schedule
 import com.niumi.core.domain.BlockingSchedule
 import com.niumi.core.domain.WakeSchedule
 
-/** Issue du calcul de la prochaine occurrence (SPEC_CORE_KMP §8.4). */
+/**
+ * Issue du calcul de la prochaine occurrence (SPEC_CORE_KMP §8.4). [EMPTY_PERIOD] : le changement
+ * d'heure de printemps confond le coucher et le réveil, la période serait vide. Depuis le
+ * 2026-10-25, aucun jour coché n'est plus un refus (réveil ponctuel) et deux heures identiques
+ * forment une période de 24 h.
+ */
 public enum class NextOccurrenceStatus {
     VALID,
-    NO_DAY_ENABLED,
     INVALID_TIME,
     UNKNOWN_ZONE,
-    BEDTIME_EQUALS_WAKE,
+    EMPTY_PERIOD,
 }
 
 /**

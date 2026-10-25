@@ -82,6 +82,24 @@
       "graisse": 500,
       "interlettrage": -1
     },
+    "valeurRoueHeure": {
+      "taille": 34,
+      "graisse": 600,
+      "interlettrage": -1
+    },
+    "voisineRoueHeure": {
+      "taille": 22,
+      "graisse": 400
+    },
+    "eloigneeRoueHeure": {
+      "taille": 18,
+      "graisse": 400
+    },
+    "ongletAccueil": {
+      "taille": 14,
+      "graisse": 400,
+      "graisseChoisie": 500
+    },
     "titreReussite": {
       "taille": 40,
       "graisse": 600,
@@ -267,8 +285,9 @@
       "arc": "#FAFAF8",
       "rempli": "#E9A23B du coucher jusqu'au point de l'heure actuelle",
       "fonduDevantLePoint": {
-        "degres": 34,
-        "courbe": "demi-cosinus"
+        "degres": 12,
+        "courbe": "droite",
+        "note": "34 degrés en demi-cosinus dans les maquettes ; raccourci et redressé le 25 octobre 2026 après essai sur appareil, le début du fondu paraissant loin du point"
       },
       "pointHeureActuelle": {
         "couleur": "#0E0E10",

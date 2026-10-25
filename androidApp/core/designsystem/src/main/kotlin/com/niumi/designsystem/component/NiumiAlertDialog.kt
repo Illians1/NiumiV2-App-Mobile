@@ -66,6 +66,32 @@ fun NiumiAlertDialog(
     onSecondary: () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    NiumiDialogHost(onDismiss = onDismiss) {
+        AlertSurface(
+            title = title,
+            icon = icon,
+            closeLabel = closeLabel,
+            onClose = onDismiss,
+            primary = primary,
+            onPrimary = onPrimary,
+            secondaryLink = secondaryLink,
+            onSecondary = onSecondary,
+            modifier = modifier,
+            content = content,
+        )
+    }
+}
+
+/**
+ * Fenêtre centrée sur le voile du thème (`veil`), sans l'assombrissement du système : toucher le
+ * voile ou revenir en arrière appelle [onDismiss]. Partagée par la fenêtre d'alerte et le sélecteur
+ * d'heure de l'accueil (étape 45).
+ */
+@Composable
+internal fun NiumiDialogHost(
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
     val palette = LocalNiumiPalette.current
     Dialog(
         onDismissRequest = onDismiss,
@@ -86,18 +112,7 @@ fun NiumiAlertDialog(
                     .pointerInput(onDismiss) { detectTapGestures { onDismiss() } },
             contentAlignment = Alignment.Center,
         ) {
-            AlertSurface(
-                title = title,
-                icon = icon,
-                closeLabel = closeLabel,
-                onClose = onDismiss,
-                primary = primary,
-                onPrimary = onPrimary,
-                secondaryLink = secondaryLink,
-                onSecondary = onSecondary,
-                modifier = modifier,
-                content = content,
-            )
+            content()
         }
     }
 }

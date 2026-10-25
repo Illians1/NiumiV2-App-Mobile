@@ -19,13 +19,15 @@ private val ISO_DAYS = 1..7
 
 /**
  * Calcule la prochaine occurrence d'un planning récurrent (SPEC_CORE_KMP §8.4) : le premier jour
- * coché, à partir d'aujourd'hui, dont l'instant de réveil est strictement futur ; le coucher la
- * veille si son heure est plus tardive que celle du réveil, sinon le jour même (`SPECIFICATION.md`
- * §2). Les heures locales sont résolues par [WakeScheduleCalculator], dont les règles de changement
- * d'heure (§8.1, points 3 et 4) s'appliquent donc au réveil comme au coucher.
+ * coché, à partir d'aujourd'hui, dont l'instant de réveil est strictement futur ; aucun jour coché
+ * vaut tous les jours (réveil « ponctuel », décision du 2026-10-25). Le coucher a lieu la veille si
+ * son heure est plus tardive que celle du réveil ou lui est égale (période de 24 h, même décision),
+ * sinon le jour même (`SPECIFICATION.md` §2). Les heures locales sont résolues par
+ * [WakeScheduleCalculator], dont les règles de changement d'heure (§8.1, points 3 et 4) s'appliquent
+ * donc au réveil comme au coucher.
  */
 public object NextOccurrenceCalculator {
-    // Quatre refus (zone, heures, période vide, aucun jour) en clauses de garde, même motif que
+    // Trois refus (zone, heures, période vide) en clauses de garde, même motif que
     // `WakeScheduleCalculator.compute`.
     @Suppress("ReturnCount")
     public fun compute(input: NextOccurrenceInput): NextOccurrenceResult {
@@ -34,10 +36,13 @@ public object NextOccurrenceCalculator {
         val wakeTime = WakeScheduleCalculator.resolveLocalTime(plan.wakeTimeIso)
         val bedtime = WakeScheduleCalculator.resolveLocalTime(plan.bedtimeIso)
         if (wakeTime == null || bedtime == null) return refused(NextOccurrenceStatus.INVALID_TIME)
-        if (wakeTime == bedtime) return refused(NextOccurrenceStatus.BEDTIME_EQUALS_WAKE)
-        // Une valeur hors de la semaine ISO ne désigne aucun jour : ignorée plutôt que refusée.
-        val days = plan.enabledIsoDays.filter { it in ISO_DAYS }.toSet()
-        if (days.isEmpty()) return refused(NextOccurrenceStatus.NO_DAY_ENABLED)
+        // Une valeur hors de la semaine ISO ne désigne aucun jour : ignorée plutôt que refusée. Aucun
+        // jour coché : réveil ponctuel, n'importe quel jour convient.
+        val days =
+            plan.enabledIsoDays
+                .filter { it in ISO_DAYS }
+                .toSet()
+                .ifEmpty { ISO_DAYS.toSet() }
 
         val now = Instant.fromEpochMilliseconds(input.nowEpochMillis)
         val today = now.toLocalDateTime(zone).date
@@ -51,10 +56,10 @@ public object NextOccurrenceCalculator {
                 .map { it to WakeScheduleCalculator.resolveInstant(LocalDateTime(it, wakeTime), zone) }
                 .first { (_, instant) -> instant > now }
 
-        val bedtimeDate = if (bedtime > wakeTime) wakeDate.minus(1, DateTimeUnit.DAY) else wakeDate
+        val bedtimeDate = if (bedtime >= wakeTime) wakeDate.minus(1, DateTimeUnit.DAY) else wakeDate
         val bedtimeAt = WakeScheduleCalculator.resolveInstant(LocalDateTime(bedtimeDate, bedtime), zone)
         // Q8, décision du 2026-10-24 : le trou de printemps peut confondre deux heures distinctes.
-        if (bedtimeAt >= wakeAt) return refused(NextOccurrenceStatus.BEDTIME_EQUALS_WAKE)
+        if (bedtimeAt >= wakeAt) return refused(NextOccurrenceStatus.EMPTY_PERIOD)
 
         val startsImmediately = bedtimeAt <= now
         val occurrence =

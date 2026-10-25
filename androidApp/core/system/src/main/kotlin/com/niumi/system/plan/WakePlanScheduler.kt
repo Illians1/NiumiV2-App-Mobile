@@ -11,7 +11,9 @@ interface WakePlanScheduler {
      * Enregistre [plan] et l'applique :
      * - session en attente (avant le coucher) : désarmée, puis la prochaine occurrence est armée ;
      * - du coucher au scan : [PlanApplyResult.LockedBySession], rien n'est enregistré ;
-     * - interrupteur éteint : désarmement seul ; aucun jour coché : désarmement seul, interrupteur gardé.
+     * - interrupteur éteint : désarmement seul ;
+     * - aucun jour coché : réveil ponctuel à la prochaine heure de réveil, éteint après le scan du
+     *   matin ; heures identiques : période de 24 h (décisions du 2026-10-25).
      */
     suspend fun apply(
         plan: WakePlan,

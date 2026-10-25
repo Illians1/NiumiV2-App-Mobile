@@ -16,10 +16,10 @@ Une **session** va de l'heure du coucher jusqu'au scan du matin. Ce mot nomme le
 
 | Sujet | Règle |
 | --- | --- |
-| Réveil | Récurrent, aux jours choisis, à une heure unique |
-| Coucher | Le blocage démarre seul à l'heure du coucher. Si l'heure du coucher est plus tardive que l'heure du réveil, le coucher a lieu la veille du réveil. Sinon, il a lieu le jour même |
+| Réveil | Récurrent, aux jours choisis, à une heure unique. Sans aucun jour coché, il est **ponctuel** : il sonne une seule fois, à la prochaine heure de réveil (aujourd'hui si elle est encore à venir, sinon le lendemain, quel que soit le jour), puis l'interrupteur s'éteint après le scan du matin ou la recopie du matin. « Quotidien » coche les sept jours (décisions de Mehdi du 2026-10-25, section 9) |
+| Coucher | Le blocage démarre seul à l'heure du coucher. Si l'heure du coucher est plus tardive que l'heure du réveil, le coucher a lieu la veille du réveil. Sinon, il a lieu le jour même. Deux heures identiques forment une période de 24 h : le coucher a lieu la veille, à la même heure. Aucun écart minimal n'est imposé : une minute d'écart au sélecteur d'heure, 5 min au cadran, ou aucune (24 h) (décision de Mehdi du 2026-10-25, qui remplace les 15 minutes d'écart du 2026-10-24) |
 | Rappel | Notification 30 minutes avant le coucher, sans bouton |
-| Avant le coucher | Tout se modifie. Un réveil s'annule en décochant le jour. Un interrupteur général désactive tout le planning |
+| Avant le coucher | Tout se modifie. Un réveil s'annule en décochant le jour ; décocher le dernier jour coché rend le réveil ponctuel, il ne le supprime pas (décision de Mehdi du 2026-10-25). Un interrupteur général désactive tout le planning |
 | Du coucher au scan | Heures, jours et applications sont verrouillés. La sonnerie et les Niumi Spots restent modifiables (décision du 19 octobre 2026). Un scan avant l'alarme annule la session |
 | Fin normale | Scan, le matin, d'un Niumi Spot enregistré. N'importe lequel convient |
 | Sortie de secours | Un long texte à recopier remplace le scan. Elle compte comme un scan |
@@ -29,11 +29,11 @@ Autres règles :
 
 - **Tutoiement.** Tous les textes tutoient l'utilisateur.
 - **Même fonctionnement sur iPhone et Android, autant que possible.** Exemple : la feuille de scan de l'iPhone ne peut pas contenir de lien, donc le lien « Je n'ai pas accès à mon Niumi Spot » est placé avant le scan sur les deux. Les différences voulues sont signalées dans chaque écran.
-- **Fonctionnement par période.** Niumi raisonne par période, du coucher au réveil. L'interrupteur s'active toujours et aucune heure n'est refusée. Si l'on se trouve déjà dans la période au moment où l'on active l'interrupteur ou où l'on déplace une poignée du cadran, le blocage commence tout de suite, sans confirmation, et l'accueil passe en « Blocage en cours » jusqu'au scan du matin. Exemple : il est 23:00 et la période va de 22:30 à 7:00 ; activer l'interrupteur lance le blocage aussitôt.
+- **Fonctionnement par période.** Niumi raisonne par période, du coucher au réveil. L'interrupteur s'active toujours et aucune heure n'est refusée. Si l'on se trouve déjà dans la période au moment où l'on active l'interrupteur ou où l'on déplace une poignée du cadran, le blocage commence tout de suite, sans confirmation, et l'accueil passe en « Blocage en cours » jusqu'au scan du matin. Exemple : il est 23:00 et la période va de 22:30 à 7:00 ; activer l'interrupteur lance le blocage aussitôt. Une période de 24 h est toujours en cours en ponctuel : le blocage commence aussitôt. En Quotidien, elle bloque en permanence, puisque la période suivante commence au scan du matin : conséquence assumée par Mehdi (décision du 2026-10-25).
 - **Clair ou sombre.** L'app est claire quand aucune session n'est en cours, sombre pendant une session. Elle ne suit pas le réglage du téléphone. Détail dans `VALEURS-DE-DESIGN.md`.
 - **Valeurs par défaut.** Lundi à vendredi, réveil à 7:00, coucher à 22:30.
 - **Exemple utilisé dans les maquettes.** Réveil à 7:00, coucher à 22:30, 6 applications, Niumi Spots dans la salle de bain et la cuisine.
-- **Écriture des heures et des durées.** « 22:30 », « 7:00 » (sans zéro devant), « 9 h 26 », « 56 min », « 8 h 30 de sommeil ».
+- **Écriture des heures et des durées.** « 22:30 », « 7:00 » (sans zéro devant), « 9 h 26 », « 56 min », « 8 h 30 de sommeil ». Une période de 24 h s'écrit « 24 h de blocage », jamais « 24 h 00 de sommeil » (texte non dessiné, à valider par Mehdi, `POINTS-OUVERTS.md` §2). À partir d'un jour, un compte à rebours (« Réveil dans … », « Blocage des apps dans … ») s'écrit en jours et en heures entières, sans les minutes : « 1 j », « 1 j 4 h », « 2 j 4 h », « 6 j ». Un compte à rebours de 24 h pile, comme une période de 24 h réglée à l'heure même du réveil, se lit « 1 j ». Jamais « 52 h 10 » ni « 24 h 00 » (décision de Mehdi du 2026-10-25, après essai sur appareil ; texte non dessiné, à valider, `POINTS-OUVERTS.md` §2). Les notifications suivent la même règle des heures, sans zéro devant (section 17).
 
 ## 3. Le parcours
 
@@ -48,11 +48,13 @@ Mise en route, une seule fois :
 
 L'écran 5 (premier planning) a été supprimé. Son numéro n'est pas réutilisé.
 
+La mise en route est finie quand l'utilisateur touche « Continuer » sur l'écran 4. Elle ne se refait pas par le retour, et Niumi s'ouvre ensuite directement sur l'accueil. Une mise en route interrompue reprend à la présentation, ou à l'écran 2 si la présentation a été lue (décisions de Mehdi du 2026-10-25).
+
 Ensuite, chaque jour :
 
 - Avant le coucher : accueil « Réveil prévu » (clair).
 - Du coucher au réveil : accueil « Session en cours » (sombre). Une application bloquée affiche l'écran 7.
-- Au réveil : écran 10, puis écran 11 après le scan, puis retour à l'accueil.
+- Au réveil : écran 10, puis écran 11 après le scan, puis retour à l'accueil. Après un réveil ponctuel, l'interrupteur est éteint : l'accueil est en « Réveil désactivé ».
 - Avant l'alarme : annulation de la session par scan (section 11).
 - À tout moment de la session : sortie de secours (écrans 8 et 9).
 
@@ -97,7 +99,7 @@ Comportement :
 - Une fois l'autorisation donnée, la tuile affiche une coche, à l'encre dans une pastille ambre (décision du 22 octobre 2026). Dans la maquette, la coche remplace à la fois « Autoriser » et « ? » : le guide n'est donc plus accessible depuis une tuile accordée **(ouvert : à confirmer)**.
 - « Continuer » reste grisé tant qu'il en manque une. Toutes sont obligatoires, notifications comprises.
 - Sur un écran trop petit pour toutes les tuiles, la liste défile au-dessus de « Continuer », qui reste en place à 16 points au moins de la dernière tuile. Les tuiles cachées sous le bouton s'estompent dans le fond pour montrer qu'il reste à faire défiler (décisions du 22 octobre 2026, absentes de la maquette 03).
-- **Différence Android (décision du 21 octobre 2026).** Deux tuiles de plus, entre « Blocage des applications » et « Notifications » : « Batterie » et « Verrouiller Niumi ». Sans elles, le téléphone arrête Niumi pendant la nuit et le blocage cesse sans prévenir (mesures sur HyperOS). La tuile « Verrouiller Niumi » n'apparaît que sur les téléphones qui ont ce verrou. Ces tuiles et leurs icônes ne sont pas dessinées. Sur Android, les explications qui précèdent un réglage (consentement du blocage, verrou) s'ouvrent dans une fenêtre centrée de la forme de l'alerte d'autorisations (image 57), fermée par une croix ou par un toucher à côté (décision du 21 octobre 2026). Mise en page fixée le 22 octobre 2026 : croix ronde au coin, icône de la tuile dans un rond gris, titre centré, texte aligné à gauche, bouton. La tuile du verrou s'appelle « Verrouiller Niumi » depuis le même jour.
+- **Différence Android (décision du 21 octobre 2026).** Deux tuiles de plus, entre « Blocage des applications » et « Notifications » : « Batterie » et « Verrouiller Niumi ». Sans elles, le téléphone arrête Niumi pendant la nuit et le blocage cesse sans prévenir (mesures sur HyperOS). La tuile « Verrouiller Niumi » n'apparaît que sur les téléphones qui ont ce verrou. Ces tuiles et leurs icônes ne sont pas dessinées. Sur Android, les explications qui précèdent un réglage (consentement du blocage, verrou) s'ouvrent dans une fenêtre centrée de la forme de l'alerte d'autorisations (image 63), fermée par une croix ou par un toucher à côté (décision du 21 octobre 2026). Mise en page fixée le 22 octobre 2026 : croix ronde au coin, icône de la tuile dans un rond gris, titre centré, texte aligné à gauche, bouton. La tuile du verrou s'appelle « Verrouiller Niumi » depuis le même jour.
 - En cas de refus, il ne se passe rien de particulier : la tuile n'est simplement pas affichée comme accordée.
 - Si une autorisation est retirée plus tard, c'est l'alerte d'autorisations qui prévient l'utilisateur (section 17).
 - Cet écran se rouvre depuis Réglages, ligne « Autorisations », pour revoir ou réparer les autorisations.
@@ -211,46 +213,95 @@ Décisions du 22 octobre 2026 :
 
 Sur iPhone, Niumi ne reçoit que des valeurs opaques : il peut afficher l'icône et le nom de chaque choix et compter les choix, mais pas lire les noms.
 
-« Continuer » mène à l'accueil, dans l'état « Réveil désactivé ». Ce même écran sert ensuite depuis l'accueil pour modifier la sélection ; le retour vers l'accueil n'y est pas dessiné **(ouvert)**.
+« Continuer » mène à l'accueil, dans l'état « Réveil désactivé ». Ce même écran sert ensuite depuis l'accueil, ligne « Applications bloquées », pour modifier la sélection. Le retour vers l'accueil n'y est pas dessiné ; M11, tranché le 25 octobre 2026 (décision de Mehdi) : ouvert depuis l'accueil, l'écran porte une flèche de retour en haut à gauche, et « Continuer », la flèche et le retour du téléphone ramènent à l'accueil. La sélection y est modifiable tant que le blocage n'a pas commencé ; du coucher au scan, la ligne est verrouillée (section 9).
 
 Points à vérifier, détaillés dans `POINTS-OUVERTS.md` : limite de 50 applications sur iPhone, compteur quand une catégorie est choisie. L'autorisation de lister les applications sur Android est résolue (T9).
 
 ## 9. Écran 6 · Accueil
 
-Images : `15_ecran-6-reveil-desactive-arrivee-apres-l-ecran-4`, `16_ecran-6-reveil-prevu`, `17_ecran-6-session-en-cours-sombre`.
+Images : `15_ecran-6-reveil-desactive-arrivee-apres-l-ecran-4`, `16_ecran-6-reveil-prevu`, `17_ecran-6-session-en-cours-sombre`, `18_ecran-6-reveil-prevu-alarme-unique`, `19_ecran-6-selecteur-d-heure-onglet-coucher`, `20_ecran-6-selecteur-d-heure-onglet-reveil` (maquettes 15 à 17 mises à jour et 18 à 20 ajoutées le 25 octobre 2026). La maquette 17 régénérée ce jour-là écrit « Annuler la session » : c'est une régression, l'app garde « Annuler le réveil » (D23, `POINTS-OUVERTS.md` §5).
 
 L'accueil récapitule le prochain réveil et permet de modifier tout ce qui peut l'être. Il a trois états.
 
 ### Ce que contient l'écran, de haut en bas
 
 1. **L'icône des réglages**, en haut à droite. Pas de nom d'application. Elle ouvre l'écran 12.
-2. **Un cadran de 24 heures**, avec « Coucher 22:30 » et « Réveil 7:00 » écrits à l'extérieur, et au centre un libellé et une valeur. Deux poignées, une pour le coucher et une pour le réveil, se déplacent sur le cadran pour régler les heures. Un petit point marque l'heure actuelle.
+2. **Un cadran de 24 heures**, avec « Coucher 22:30 » et « Réveil 7:00 » écrits à l'extérieur, et au centre un libellé et une valeur. Deux poignées, une pour le coucher et une pour le réveil, se déplacent sur le cadran pour régler les heures. Un toucher bref ouvre le sélecteur d'heure. Un petit point marque l'heure actuelle. Ajouts du 2026-10-25 (décision de Mehdi du 2026-10-25, après essai sur appareil) : une petite flèche, à l'intérieur de l'anneau, pointe vers ce point ; sur l'arc de la nuit, le point est blanc, sinon il disparaissait sur l'arc gris de « Réveil désactivé ». Les deux étiquettes ne recouvrent jamais l'anneau, ni l'une l'autre, ni l'icône des réglages : faute de place, elles glissent le long de l'anneau en gardant l'ordre de leurs poignées. Valeurs dans `VALEURS-DE-DESIGN.md` §5.
 3. **Une carte d'état**, avec l'interrupteur général.
-4. **Sept pastilles**, une par jour : L M M J V S D. Toucher une pastille coche ou décoche le jour.
-5. **La ligne « Applications bloquées »** : les icônes des applications, puis « +N » quand elles ne tiennent plus sur la ligne ; à droite, le nombre et un chevron. Elle ouvre l'écran 4.
-6. **La ligne « Sonnerie »** : à droite, le nom du son et, dessous, « Progressive · 2 min », puis un chevron. Elle ouvre le choix de la sonnerie (section 10).
+4. **Deux onglets, « Ponctuel » et « Quotidien »**, centrés au-dessus des pastilles (ajoutés le 25 octobre 2026, maquette 18).
+5. **Sept pastilles**, une par jour : L M M J V S D. Toucher une pastille coche ou décoche le jour.
+6. **La ligne « Applications bloquées »** : les icônes des applications, puis « +N » quand elles ne tiennent plus sur la ligne ; à droite, le nombre et un chevron. Elle ouvre l'écran 4.
+7. **La ligne « Sonnerie »** : à droite, le nom du son et, dessous, « Progressive · 2 min », puis un chevron. Elle ouvre le choix de la sonnerie (section 10). Dans l'app, aucun trait sous cette dernière ligne (décision de Mehdi du 2026-10-25, après essai sur appareil).
+
+Dans l'app, le cadran descend un peu sous le haut de l'écran et les espaces entre les éléments sont plus serrés que dans les maquettes ; l'écran défile sur les petits écrans (décision de Mehdi du 2026-10-25, après essai sur appareil : « réduire le vide » ; valeurs dans `VALEURS-DE-DESIGN.md` §4).
+
+Le planning (interrupteur, jours, heures) commande le cadran, la carte, les onglets et les pastilles. La session en cours commande le verrouillage et le thème.
 
 ### Les trois états
 
 | | Réveil prévu | Réveil désactivé | Session en cours |
 | --- | --- | --- | --- |
-| Image | 14 | 13 | 15 |
+| Image | 16, et 18 en ponctuel | 15 | 17 |
 | Quand | Interrupteur activé, avant l'heure du coucher | Interrupteur éteint | De l'heure du coucher jusqu'au scan |
 | Thème | Clair | Clair | Sombre |
 | Centre du cadran | « Réveil dans » puis « 9 h 26 » | « Réveil » puis « Désactivé » | « Réveil dans » puis « 7 h 50 » |
-| Cadran | Arc noir, poignée du coucher blanche, poignée du réveil ambre | Arc gris, deux poignées blanches | Pas de poignées. L'arc se remplit d'ambre au fil de la nuit (voir `VALEURS-DE-DESIGN.md`) |
-| Carte | Noire. « Réveil activé », « Blocage des apps dans 56 min », « 8 h 30 de sommeil », interrupteur ambre | Blanche, au trait. « Réveil désactivé », « Aucun réveil ni blocage prévu », interrupteur gris | « Blocage en cours » avec un cadenas ambre, « Applications bloquées jusqu'au scan de ton Niumi Spot », lien « Annuler le réveil ». Pas d'interrupteur |
+| Cadran | Arc noir, poignée du coucher blanche, poignée du réveil ambre | Arc gris, deux poignées blanches | Pas de poignées. L'arc se remplit d'ambre au fil de la nuit ; devant le point de l'heure actuelle, l'ambre s'efface sur 48 minutes (12°), plus court que dans la maquette (voir `VALEURS-DE-DESIGN.md` §5) |
+| Carte | Noire. « Réveil activé », « Blocage des apps dans 56 min », « 8 h 30 de sommeil » (« 24 h de blocage » pour deux heures identiques), interrupteur ambre | Blanche, au trait. « Réveil désactivé », « Aucun réveil ni blocage prévu », interrupteur gris | « Blocage en cours » avec un cadenas ambre, « Applications bloquées jusqu'au scan de ton Niumi Spot », lien « Annuler le réveil ». Pas d'interrupteur |
+| Onglets | « Ponctuel » ou « Quotidien » souligné à l'encre selon les jours cochés, aucun pour des jours libres | Affichés en grisé, mais modifiables | Grisés et verrouillés |
 | Jours, heures, applications | Modifiables | Affichés en grisé, mais modifiables | Grisés et verrouillés, avec un cadenas sur la ligne des applications |
 | Sonnerie | Modifiable | Affichée en grisé, mais modifiable | Modifiable, non grisée |
 
 - **Réveil désactivé** est aussi l'état d'arrivée à la fin de la mise en route. Les valeurs par défaut sont affichées, tout reste modifiable, et aucun message d'aide n'est ajouté. Rien ne se bloque et rien ne sonne tant que l'interrupteur n'est pas activé.
 - **L'interrupteur général** désactive tout le planning : plus aucun réveil ni blocage tant qu'on ne le rallume pas.
-- **Pendant une session**, toucher un champ verrouillé affiche : « Modifiable après avoir scanné ton Niumi Spot. » La forme de ce message n'est pas dessinée **(ouvert)**.
+- **Interrupteur allumé, mais aucun réveil n'a pu être programmé** (Q14, décision de Mehdi du 25 octobre 2026, jusqu'à la fenêtre d'erreur de l'étape 52 du plan Android) : la carte reste noire avec « Réveil activé » et l'interrupteur allumé, mais sa deuxième ligne dit « Aucun réveil ni blocage prévu » ; le centre du cadran affiche « Réveil » sans compte à rebours. L'accueil ne montre jamais un faux « Réveil prévu ». Cet état n'est pas dessiné.
+- **Le point de l'heure actuelle et les comptes à rebours** (« Réveil dans », « Blocage des apps dans ») avancent à chaque minute (Q13, décision du 25 octobre 2026). À partir d'un jour, les comptes à rebours s'écrivent « 1 j 4 h » (section 2) : avec des jours cochés, le prochain réveil peut être à plusieurs jours.
+- **Pendant une session**, toucher un champ verrouillé (heure, jour, onglet, ligne des applications) affiche : « Modifiable après avoir scanné ton Niumi Spot. » Forme décidée le 25 octobre 2026 (M10, décision de Mehdi) : une bulle encre en bas de l'écran, de la forme du message de la maquette 27 mais sans coche, lue par le lecteur d'écran dès qu'elle paraît ; elle disparaît après 4 secondes ou au toucher suivant.
 - Il n'est pas possible de modifier une session en cours. La seule action est « Annuler le réveil » (section 11).
+
+### Ponctuel et Quotidien
+
+Image : `18_ecran-6-reveil-prevu-alarme-unique`. Décisions de Mehdi du 25 octobre 2026.
+
+| Onglet souligné | Jours cochés | Réveil |
+| --- | --- | --- |
+| Ponctuel | Aucun | Une seule fois, à la prochaine heure de réveil : aujourd'hui si elle est encore à venir, sinon le lendemain, quel que soit le jour. Après le scan du matin (ou la recopie du matin), l'interrupteur s'éteint |
+| Quotidien | Les sept | Tous les jours |
+| Aucun | Certains seulement (jours libres, par exemple du lundi au vendredi, maquette 16) | Les jours cochés |
+
+- Toucher « Quotidien » coche les sept jours. Toucher « Ponctuel » les décoche tous.
+- Cocher ou décocher une pastille depuis l'un des deux onglets passe en jours libres, sauf quand on décoche le dernier jour : le réveil devient ponctuel. « Aucun jour coché » n'est donc jamais une erreur (D17, tranché le 25 octobre 2026).
+- Les onglets s'écrivent en 14, au texte secondaire, l'onglet choisi en 500 à l'encre et souligné (`VALEURS-DE-DESIGN.md` §3, §4).
+
+### Le sélecteur d'heure
+
+Images : `19_ecran-6-selecteur-d-heure-onglet-coucher`, `20_ecran-6-selecteur-d-heure-onglet-reveil`. Décisions de Mehdi du 25 octobre 2026.
+
+Une fenêtre centrée par-dessus l'accueil assombri.
+
+| Élément | Contenu |
+| --- | --- |
+| Croix | En haut à droite, « Fermer » |
+| Onglets | « Coucher » et « Réveil », l'onglet ouvert souligné. Passer d'un onglet à l'autre garde le choix en cours |
+| Roues | Une roue des heures, de 0 à 23 sans zéro devant, et une roue des minutes, de « 00 » à « 59 », séparées par « : ». La valeur du milieu, en gros entre deux traits, est la réponse ; les roues tournent sans fin |
+| Phrase | Suit le choix en direct. Onglet Coucher : « 8 h 30 de sommeil avant le réveil de 7:00 ». Onglet Réveil : « 8 h 30 de sommeil après le coucher de 22:30 ». Pour deux heures identiques : « 24 h de blocage jusqu'au réveil de 7:00 » ou « 24 h de blocage depuis le coucher de 22:30 » (textes non dessinés, à valider par Mehdi) |
+| Bouton | Valider : enregistre les deux heures |
+
+- Toucher la poignée du coucher ouvre l'onglet Coucher ; toucher ailleurs sur le cadran, poignée du réveil comprise, ouvre l'onglet Réveil.
+- La croix, un toucher sur l'accueil assombri et le retour du téléphone ferment la fenêtre sans rien changer.
+- Toutes les heures sont acceptées, à la minute près ; deux heures identiques forment une période de 24 h (section 2).
+- Le titre de la fenêtre, pour le lecteur d'écran, est « Heure de coucher » ou « Heure de réveil » ; les roues s'annoncent « Heures » et « Minutes » (ces deux libellés, absents des maquettes, sont à valider par Mehdi).
+
+### Les gestes du cadran
+
+- **Glisser** : poser le doigt sur une poignée et bouger la déplace dès le premier mouvement, sans appui long, de 5 en 5 minutes. L'heure enregistrée est celle du relâchement.
+- La poignée glissée ne passe jamais par-dessus l'autre. Du côté de la nuit, elle s'arrête au dernier cran avant elle ; du côté du jour, elle peut la rejoindre, ce qui fait une période de 24 h.
+- **Toucher bref** : relâcher sans avoir bougé ouvre le sélecteur d'heure (ci-dessus).
+- Pour le lecteur d'écran, chaque poignée est un réglage qui avance ou recule de 5 minutes, et une action « Choisir l'heure » ouvre le sélecteur (libellé à valider par Mehdi).
+- Pendant une session, il n'y a pas de poignées : toucher le cadran affiche la bulle « Modifiable après avoir scanné ton Niumi Spot. ».
 
 ## 10. Choix de la sonnerie
 
-Images : `18_sonnerie-la-feuille`, `19_sonnerie-quand-on-touche-le-volume`, `20_sonnerie-progressive-desactivee` (maquettes redessinées le 23 octobre 2026 : l'ancienne pastille « Non » est devenue un interrupteur). Thème clair dans les maquettes.
+Images : `21_sonnerie-la-feuille`, `22_sonnerie-quand-on-touche-le-volume`, `23_sonnerie-progressive-desactivee` (maquettes redessinées le 23 octobre 2026 : l'ancienne pastille « Non » est devenue un interrupteur ; renumérotées de 18-20 à 21-23 le 25 octobre 2026). Thème clair dans les maquettes.
 
 Une feuille monte du bas par-dessus l'accueil quand on touche la ligne « Sonnerie ». Elle reste accessible pendant une session ; sa version sombre n'est pas dessinée : sur Android, c'est la même feuille sous la palette sombre, comme la feuille de scan (M7, tranché le 23 octobre 2026).
 
@@ -278,7 +329,7 @@ Contraintes vérifiées :
 
 ## 11. Annuler le réveil
 
-Images : `21_annuler-1-le-lien-sur-l-accueil`, `22_annuler-2-scanner-ou-sortie-de-secours`, `23_annuler-3-la-feuille-de-scan`, `24_annuler-4-session-annulee-retour-au-clair`. Thème sombre, sauf la dernière.
+Images : `24_annuler-1-le-lien-sur-l-accueil`, `25_annuler-2-scanner-ou-sortie-de-secours`, `26_annuler-3-la-feuille-de-scan`, `27_annuler-4-session-annulee-retour-au-clair`. Thème sombre, sauf la dernière. Les sources régénérées le 25 octobre 2026 disent de nouveau « session » (« Annuler la session », « Session annulée… ») : c'est une régression, les textes ci-dessous font foi (D23, `POINTS-OUVERTS.md` §5).
 
 Pendant une session, l'utilisateur peut l'annuler en scannant un Niumi Spot.
 
@@ -303,7 +354,7 @@ Cette étape intermédiaire est identique sur iPhone et sur Android. Elle existe
 
 ## 12. Écran 7 · Écran de blocage
 
-Image : `25_ecran-7-ecran-de-blocage`. Thème sombre.
+Image : `28_ecran-7-ecran-de-blocage`. Thème sombre.
 
 Il s'affiche quand l'utilisateur ouvre une application bloquée.
 
@@ -321,7 +372,7 @@ Il s'affiche quand l'utilisateur ouvre une application bloquée.
 
 ## 13. Écrans 8 et 9 · Sortie de secours
 
-Images : `26_ecran-8-confirmation-le-soir`, `27_ecran-8-confirmation-le-matin`, `28_ecran-9-recopie-en-cours`, `29_ecran-9-erreur-signalee`, `30_ecran-9-texte-complet-bouton-actif`. Thème sombre.
+Images : `29_ecran-8-confirmation-le-soir`, `30_ecran-8-confirmation-le-matin`, `31_ecran-9-recopie-en-cours`, `32_ecran-9-erreur-signalee`, `33_ecran-9-texte-complet-bouton-actif`. Thème sombre. Les sources régénérées le 25 octobre 2026 disent de nouveau « session » et reprennent l'ancien texte à recopier : c'est une régression, les textes ci-dessous font foi (D23, `POINTS-OUVERTS.md` §5).
 
 La sortie de secours remplace le scan d'un Niumi Spot, au prix d'un long texte à recopier. Elle s'ouvre par le lien « Je n'ai pas accès à mon Niumi Spot », présent sur la feuille d'annulation, sur l'écran de réveil et sur les feuilles d'échec du scan.
 
@@ -366,14 +417,14 @@ Le même texte sert le soir et le matin : il ne doit donc mentionner ni « ce so
 **Après la recopie**, la session se termine comme après un scan.
 
 - Le soir ou la nuit : le blocage est levé, l'interrupteur « Réveil activé » est éteint, et l'accueil affiche le message « Réveil annulé. Tes applications sont débloquées. »
-- Le matin, pendant l'alarme : la sonnerie s'arrête et les applications sont débloquées. La session se termine comme après un scan : l'écran 11 s'affiche, sans la phrase « Bravo ! … de moins qu'avant Niumi. », et le réveil reste activé pour le lendemain (décision du 24 octobre 2026).
+- Le matin, pendant l'alarme : la sonnerie s'arrête et les applications sont débloquées. La session se termine comme après un scan : l'écran 11 s'affiche, sans la phrase « Bravo ! … de moins qu'avant Niumi. », et le réveil reste activé pour le lendemain (décision du 24 octobre 2026), sauf un réveil ponctuel, dont l'interrupteur s'éteint (décision de Mehdi du 25 octobre 2026).
 - Sur iPhone, ce que fait l'alarme pendant la recopie n'est pas décidé non plus **(ouvert)**.
 
 **Android, le matin.** La sonnerie baisse tant que la saisie avance et remonte si elle s'arrête.
 
 ## 14. Écran 10 · Réveil
 
-Images : `31_ecran-10-le-reveil-sonne` à `38_ecran-10-iphone-seulement-temps-de-scan-ecoule`. Thème sombre.
+Images : `34_ecran-10-le-reveil-sonne` à `41_ecran-10-iphone-seulement-temps-de-scan-ecoule`. Thème sombre.
 
 L'écran ne dit qu'une chose : va scanner ton Niumi Spot. Il n'a aucun bouton d'arrêt ni de report. Pendant que l'alarme sonne, c'est lui qui s'affiche, pas l'accueil, dès que Niumi est ouvert — par la notification ou par son icône. L'écran n'est pas imposé par-dessus le verrouillage (décision du 18 octobre 2026).
 
@@ -390,13 +441,13 @@ La consigne était « Scanne ton Niumi Spot » dans les maquettes. Elle est remp
 
 L'écran n'indique pas la pièce, car plusieurs Niumi Spots peuvent être enregistrés. Le lien ouvre la sortie de secours.
 
-### La feuille de scan (image 29)
+### La feuille de scan (image 35)
 
 « Scanner le Niumi Spot » ouvre la feuille « Prêt à scanner », la même qu'à l'écran 3 : « Approche ton iPhone du Niumi Spot » sur iPhone, « Approche ton téléphone du Niumi Spot » sur Android, et le bouton « Annuler ».
 
 Sur iPhone, cette feuille est celle du système. Son apparence pendant une session, claire ou sombre, est à regarder sur un appareil **(ouvert)**.
 
-### Les échecs du scan (images 30 à 33)
+### Les échecs du scan (images 36 à 39)
 
 Une feuille du bas affiche un titre, une phrase d'aide, un bouton et le lien « Je n'ai pas accès à mon Niumi Spot ».
 
@@ -411,7 +462,7 @@ Aucun de ces cas n'arrête l'alarme ni ne débloque les applications.
 
 Sur iPhone, la feuille de scan du système ne peut pas contenir de bouton. Niumi affiche donc sa propre feuille d'échec après la fermeture de celle du système.
 
-### iPhone seulement : la feuille se ferme après 60 secondes (image 35)
+### iPhone seulement : la feuille se ferme après 60 secondes (image 41)
 
 Sur iPhone, une lecture NFC dure 60 secondes au plus, et l'app doit rester au premier plan. Si l'utilisateur touche « Scanner le Niumi Spot » depuis son lit et met plus d'une minute à atteindre son Niumi Spot, la feuille se ferme d'elle-même. Niumi affiche alors, dans la feuille d'échec :
 
@@ -425,7 +476,7 @@ Ce message sert pour tous les scans de l'iPhone qui dépassent 60 secondes : le 
 
 Il n'a pas été vérifié si l'iPhone permet de rouvrir la feuille sans geste de l'utilisateur **(ouvert : à tester)**.
 
-### iPhone seulement : l'alarme va reprendre (image 34)
+### iPhone seulement : l'alarme va reprendre (image 40)
 
 Sur iPhone, l'alarme qui sonne est d'abord présentée par le système, avec une commande d'arrêt et un bouton qui ouvre Niumi. Cette commande ne peut pas être retirée, et les boutons physiques arrêtent aussi la sonnerie en cours. Niumi relance donc l'alarme tant que le scan n'a pas eu lieu. L'arrêt ne termine pas la session et les applications restent bloquées.
 
@@ -456,7 +507,7 @@ Quand l'alarme sonne, Niumi affiche une notification « Ton réveil Niumi sonne 
 
 ## 15. Écran 11 · Réussite
 
-Image : `39_ecran-11-reussite-retour-au-clair`. Thème clair : la session est finie.
+Image : `42_ecran-11-reussite-retour-au-clair`. Thème clair : la session est finie.
 
 Il confirme que le scan a marché et que les applications sont revenues. Il reste affiché jusqu'à ce que l'utilisateur le ferme.
 
@@ -471,12 +522,12 @@ Il confirme que le scan a marché et que les applications sont revenues. Il rest
 
 - Dans l'exemple : l'alarme a sonné à 7:00 et le scan a eu lieu à 7:04.
 - La comparaison s'affiche seulement si l'utilisateur s'est levé plus vite que la durée déclarée à l'écran 3 bis. Dans l'exemple : 15 minutes déclarées, levé en 4 minutes, donc 11 minutes de moins. Sinon, rien ne s'affiche à la place.
-- « Retour à l'accueil » ramène à l'accueil, dans l'état « Réveil prévu ».
+- « Retour à l'accueil » ramène à l'accueil, dans l'état « Réveil prévu ». Après un réveil ponctuel, l'interrupteur s'est éteint : l'accueil est en « Réveil désactivé » (section 2, décision de Mehdi du 25 octobre 2026).
 - Il n'y a pas de lien depuis cet écran vers la rubrique « Temps gagné ».
 
 ## 16. Écran 12 · Réglages
 
-Images : `40_ecran-12-reglages` à `44_reglages-a-propos` et `50_niumi-spots-la-liste` à `53_niumi-spots-renommer-la-piece` en clair ; `45` à `49` et `54` à `57` en sombre.
+Images : `43_ecran-12-reglages` à `47_reglages-a-propos` et `53_niumi-spots-la-liste` à `56_niumi-spots-renommer-la-piece` en clair ; `48` à `52` et `57` à `60` en sombre.
 
 Les réglages regroupent ce qu'on configure une fois. Tout ce qui décrit la prochaine nuit reste sur l'accueil. Ils s'ouvrent aussi pendant une session : ils sont alors sombres, avec les mêmes mises en page et les mêmes textes. L'écran 2, la roue de « Temps gagné » et le parcours d'ajout d'un Niumi Spot n'ont pas de version sombre dessinée **(ouvert)**.
 
@@ -509,9 +560,9 @@ Chaque page a une flèche de retour en haut à gauche.
 
 Quatre rubriques : Fonctionnement, Niumi Spot perdu, Sortie de secours, Temps gagné.
 
-- **Une page de rubrique** a un titre et des paragraphes, chacun sous un intertitre. « Fonctionnement » reprend les phrases des écrans 1 et 11 sous « Le soir », « Le matin » et « Après le scan » (image 39).
+- **Une page de rubrique** a un titre et des paragraphes, chacun sous un intertitre. « Fonctionnement » reprend les phrases des écrans 1 et 11 sous « Le soir », « Le matin » et « Après le scan » (image 45).
 - **Niumi Spot perdu** et **Sortie de secours** ne sont pas écrites **(ouvert)**.
-- **Temps gagné** (image 40) : le texte « Après chaque réveil, Niumi compare le temps que tu as mis à te lever avec celui que tu mettais avant. », puis une carte « Temps pour sortir du lit avant Niumi » avec la valeur (« 15 min ») et le bouton « Modifier », qui ouvre la roue de l'écran 3 bis. La valeur reste modifiable pendant une session.
+- **Temps gagné** (image 46) : le texte « Après chaque réveil, Niumi compare le temps que tu as mis à te lever avec celui que tu mettais avant. », puis une carte « Temps pour sortir du lit avant Niumi » avec la valeur (« 15 min ») et le bouton « Modifier », qui ouvre la roue de l'écran 3 bis. La valeur reste modifiable pendant une session.
 
 ### À propos
 
@@ -540,18 +591,20 @@ Avant l'alarme, c'est une notification discrète : sans son, sans vibration, san
 
 | Moment | Titre | Texte |
 | --- | --- | --- |
-| Avant le coucher | Réveil programmé à 07:00 | Tes applications choisies seront bloquées à partir de 22:30. |
-| Après le coucher | Réveil prévu à 07:00 | Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Spot. |
+| Avant le coucher | Réveil lundi à 7:00 | Tes applications choisies seront bloquées à partir de 22:30. |
+| Après le coucher | Réveil prévu à 7:00 | Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Spot. |
 
 À l'alarme, elle laisse la place à la notification de l'alarme : « Ton réveil Niumi sonne » pendant la sonnerie, ou « Ton réveil Niumi est passé » si l'alarme n'a pas sonné. Une seule notification Niumi est alors visible. Elle revient une dizaine de secondes après avoir été écartée, jusqu'au scan.
 
 Revu le 22 octobre 2026 : la notification parle du réveil, le blocage est dit dans le texte, et une seule notification reste affichée de l'alarme au scan.
 
+Revu le 25 octobre 2026 (décision de Mehdi du 2026-10-25, après essai sur appareil) : avec le planning, un réveil peut être programmé jusqu'à sept jours à l'avance, et « Réveil programmé à 00:30 » restait affiché six jours sans dire lequel. La notification reste affichée dès la programmation (c'est elle qui protège Niumi), mais elle dit le jour du réveil et celui du blocage, chacun dans le fuseau de la programmation : rien le jour même (« Réveil à 7:00 », « … seront bloquées à partir de 22:30. »), le jour de la semaine en minuscules sinon, jamais « demain », qui deviendrait faux après minuit (« Réveil lundi à 7:00 », « Réveil dimanche à 0:30 », « Tes applications choisies seront bloquées samedi à partir de 11:45. »). Les heures s'écrivent sans zéro devant (« 7:00 », section 2). Textes non dessinés, à valider (`POINTS-OUVERTS.md` §2).
+
 Elle n'est pas dessinée : c'est une notification standard d'Android, avec l'icône de Niumi.
 
 ### Bandeau de problème
 
-Images : `58_bandeau-nfc-coupe-android`, `59_bandeau-aucun-niumi-spot-au-cas-ou`.
+Images : `61_bandeau-nfc-coupe-android`, `62_bandeau-aucun-niumi-spot-au-cas-ou`.
 
 Un bandeau noir tout en haut de l'accueil, avec un symbole d'avertissement, une phrase et un lien souligné. Il reste affiché tant que le problème existe. Le cadran et l'icône des réglages descendent d'autant. Un seul bandeau à la fois, le plus grave d'abord.
 
@@ -564,7 +617,7 @@ Le second cas ne devrait pas arriver, puisque l'association est obligatoire au d
 
 ### Alerte d'autorisations
 
-Images : `60_alerte-une-autorisation-retiree`, `61_alerte-plusieurs-autorisations-retirees`.
+Images : `63_alerte-une-autorisation-retiree`, `64_alerte-plusieurs-autorisations-retirees`.
 
 Si une autorisation est retirée après l'installation, une fenêtre s'affiche à chaque ouverture de l'application, centrée par-dessus l'accueil.
 

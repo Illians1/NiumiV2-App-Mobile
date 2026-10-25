@@ -14,18 +14,19 @@ import android.app.Notification
  * l'utilisateur n'ait choisi lui-même.
  *
  * Les heures sont nulles quand le service, relancé par le système, n'a pas encore relu la
- * session : le texte se passe alors de l'heure plutôt que d'en inventer une.
+ * session : le texte se passe alors de l'heure plutôt que d'en inventer une. Un réveil armé des jours
+ * à l'avance dit son jour (décision de Mehdi du 2026-10-25 : « Réveil dimanche à 0:30 »).
  */
 object BlockingGuardNotificationSpecs {
     /** Session armée, blocage différé pas encore appliqué. */
     fun beforeBlocking(
-        wakeTimeLabel: String?,
-        blockingTimeLabel: String?,
+        wake: GuardMoment?,
+        blocking: GuardMoment?,
     ): NotificationSpec =
         spec(
-            title = wakeTimeLabel?.let { "Réveil programmé à $it" } ?: "Réveil programmé",
+            title = wake?.let { "Réveil${it.dayPart} à ${it.time}" } ?: "Réveil programmé",
             text =
-                blockingTimeLabel?.let { "Tes applications choisies seront bloquées à partir de $it." }
+                blocking?.let { "Tes applications choisies seront bloquées${it.dayPart} à partir de ${it.time}." }
                     ?: "Tes applications choisies seront bloquées au coucher.",
         )
 
@@ -45,6 +46,9 @@ object BlockingGuardNotificationSpecs {
             title = "Réveil programmé",
             text = "Tes applications choisies seront bloquées jusqu'au scan de ton Niumi Spot.",
         )
+
+    /** « dimanche » glissé dans la phrase, rien le jour même. */
+    private val GuardMoment.dayPart: String get() = day?.let { " $it" }.orEmpty()
 
     private fun spec(
         title: String,

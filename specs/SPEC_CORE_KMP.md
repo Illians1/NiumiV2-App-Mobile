@@ -1,7 +1,7 @@
 # Niumi Core KMP: spécification métier commune
 
 Statut: contrat proposé pour le MVP Android et iOS
-Version du contrat: 1.5 (planning récurrent, désarmement, un à dix Niumi Spots, sortie de secours et temps gagné, 24 octobre 2026, étapes 41 et 42 du plan de refonte) ; 1.4 (boîtiers multiples, 13 octobre 2026) ; 1.3 du 15 septembre 2026 ; 1.2 du 2 septembre 2026
+Version du contrat: 1.5 (planning récurrent, désarmement, un à dix Niumi Spots, sortie de secours et temps gagné, 24 octobre 2026, étapes 41 et 42 du plan de refonte ; section 8.4 amendée le 25 octobre 2026 à l'étape 45 : réveil ponctuel, période de 24 h, `EMPTY_PERIOD`) ; 1.4 (boîtiers multiples, 13 octobre 2026) ; 1.3 du 15 septembre 2026 ; 1.2 du 2 septembre 2026
 Date de référence: 2 septembre 2026
 Plateformes: Android natif et iOS natif
 Module partagé: Kotlin Multiplatform
@@ -586,27 +586,29 @@ Après `ACTIVATION_SUCCEEDED`, `startsAtEpochMillis` est immuable : un changemen
 
 ### 8.4 Prochaine occurrence d'un planning
 
-Contrat 1.5. Un planning récurrent porte les jours de réveil cochés (numérotation ISO, 1 = lundi … 7 = dimanche), une heure de réveil et une heure de coucher. Le calcul est commun ; l'interrupteur général et le stockage du planning restent natifs.
+Contrat 1.5. Un planning récurrent porte les jours de réveil cochés (numérotation ISO, 1 = lundi … 7 = dimanche), une heure de réveil et une heure de coucher. Le calcul est commun ; l'interrupteur général et le stockage du planning restent natifs. *Amendé le 2026-10-25 (décisions de Mehdi, étape 45 du plan de refonte) : un ensemble de jours vide est un réveil ponctuel, deux heures identiques forment une période de 24 h ; `NO_DAY_ENABLED` et `BEDTIME_EQUALS_WAKE` sont retirés, `EMPTY_PERIOD` les remplace pour le seul trou de printemps.*
 
 ```kotlin
-data class WakePlan(val enabledIsoDays: Set<Int>, val wakeTimeIso: String, val bedtimeIso: String)
+data class WakePlan(val enabledIsoDays: Set<Int>, val wakeTimeIso: String, val bedtimeIso: String) // jours vides = ponctuel
 data class NextOccurrenceInput(val plan: WakePlan, val zoneId: String, val nowEpochMillis: Long)
-enum class NextOccurrenceStatus { VALID, NO_DAY_ENABLED, INVALID_TIME, UNKNOWN_ZONE, BEDTIME_EQUALS_WAKE }
+enum class NextOccurrenceStatus { VALID, INVALID_TIME, UNKNOWN_ZONE, EMPTY_PERIOD }
 data class NextOccurrence(val wakeSchedule: WakeSchedule, val blockingSchedule: BlockingSchedule, val blockingStartsImmediately: Boolean)
 data class NextOccurrenceResult(val status: NextOccurrenceStatus, val occurrence: NextOccurrence?)
 ```
 
 Règles :
 
-1. fuseau inconnu → `UNKNOWN_ZONE` ; heure de réveil ou de coucher illisible → `INVALID_TIME` ; heures identiques → `BEDTIME_EQUALS_WAKE` (l'interface impose 15 minutes d'écart ; le moteur refuse par sécurité une période vide, décision Q8 du 2026-10-24) ;
-2. les valeurs hors de 1..7 sont ignorées ; aucun jour valide → `NO_DAY_ENABLED` (ce que l'accueil affiche alors relève de la plateforme, point D17 de `design-plan/POINTS-OUVERTS.md`) ;
-3. pour chaque jour civil d'aujourd'hui à dans sept jours, dans le fuseau reçu, dont le jour ISO est coché, l'heure de réveil est résolue selon la section 8.1 (points 3 et 4) ; la première occurrence strictement future est retenue, jamais un réveil déjà passé aujourd'hui ;
-4. le coucher a lieu la veille du réveil si son heure est plus tardive que celle du réveil, sinon le jour même (`design-plan/SPECIFICATION.md` §2), avec les mêmes règles de changement d'heure ;
-5. si le changement d'heure ramène le coucher à un instant égal ou postérieur au réveil (trou de printemps), → `BEDTIME_EQUALS_WAKE` plutôt qu'un planning que l'activation refuserait (`INVALID_BLOCKING_SCHEDULE`) ;
+1. fuseau inconnu → `UNKNOWN_ZONE` ; heure de réveil ou de coucher illisible → `INVALID_TIME`. Deux heures identiques ne sont pas un refus : elles forment une période de 24 h (règle 4). *Jusqu'au 2026-10-25, elles répondaient `BEDTIME_EQUALS_WAKE`, l'interface imposant 15 minutes d'écart (Q8 du 2026-10-24) ; Q8 révisé : une minute d'écart au sélecteur, 5 min au cadran, égalité acceptée* ;
+2. les valeurs hors de 1..7 sont ignorées ; un ensemble vide, ou sans aucun jour valide, vaut **tous les jours** : c'est le réveil ponctuel (`design-plan/SPECIFICATION.md` §2, D17 tranché le 2026-10-25). *Jusqu'au 2026-10-25, ce cas répondait `NO_DAY_ENABLED`* ;
+3. pour chaque jour civil d'aujourd'hui à dans sept jours, dans le fuseau reçu, dont le jour ISO est coché (n'importe lequel pour un réveil ponctuel), l'heure de réveil est résolue selon la section 8.1 (points 3 et 4) ; la première occurrence strictement future est retenue, jamais un réveil déjà passé aujourd'hui. Un réveil ponctuel sonne donc aujourd'hui si l'heure est encore à venir, sinon le lendemain ;
+4. le coucher a lieu la veille du réveil si son heure est plus tardive que celle du réveil **ou lui est égale** (période de 24 h, depuis le 2026-10-25), sinon le jour même (`design-plan/SPECIFICATION.md` §2), avec les mêmes règles de changement d'heure. Pour un réveil ponctuel, une période de 24 h est toujours déjà en cours (règle 6) : le blocage est immédiat ;
+5. si le changement d'heure ramène le coucher à un instant égal ou postérieur au réveil alors que leurs heures locales diffèrent (trou de printemps), → `EMPTY_PERIOD` plutôt qu'un planning que l'activation refuserait (`INVALID_BLOCKING_SCHEDULE`). *Ce statut s'appelait `BEDTIME_EQUALS_WAKE` jusqu'au 2026-10-25* ;
 6. si le coucher est déjà atteint, la période est en cours : `blockingStartsImmediately = true` et `blockingSchedule` vaut le blocage immédiat ; sinon `blockingSchedule` porte la date, l'heure et l'instant du coucher ;
 7. `wakeSchedule.localTimeIso` est l'intention saisie et `zoneIdAtActivation` le fuseau reçu.
 
 Le résultat se convertit directement en `ActivationRequest`. Une fois la session armée, ses instants sont immuables (section 8.2) ; un changement de planning ou de fuseau avant le coucher passe par le désarmement puis une nouvelle occurrence (décisions 4 et 9).
+
+**Fin d'un réveil ponctuel (native, décision de Mehdi du 2026-10-25).** Le moteur ne connaît pas l'interrupteur : c'est la plateforme qui l'éteint quand une session se termine en `COMPLETED` (scan ou recopie du matin) alors que le planning n'a aucun jour coché, au lieu d'armer l'occurrence suivante. Une session `DISARMED` ne consomme pas le réveil ponctuel : il est réarmé. Android l'applique depuis l'étape 45 (`DefaultWakePlanScheduler`, SPEC_ANDROID §9.2) ; l'iPhone doit appliquer la même règle (SPEC_IOS §15).
 
 ## 9. Protocole NFC commun
 
@@ -954,7 +956,7 @@ data class ActivationPolicyResultDto(
 // Contrat 1.5 (section 8.4)
 data class WakePlanDto(val enabledIsoDays: Set<Int>, val wakeTimeIso: String, val bedtimeIso: String)
 data class NextOccurrenceInputDto(val plan: WakePlanDto, val zoneId: String, val nowEpochMillis: Long)
-enum class NextOccurrenceStatusDto { VALID, NO_DAY_ENABLED, INVALID_TIME, UNKNOWN_ZONE, BEDTIME_EQUALS_WAKE }
+enum class NextOccurrenceStatusDto { VALID, INVALID_TIME, UNKNOWN_ZONE, EMPTY_PERIOD } // alias de NextOccurrenceStatus ; amendé le 2026-10-25 (section 8.4)
 data class NextOccurrenceDto(val wakeSchedule: WakeScheduleDto, val blockingSchedule: BlockingScheduleDto, val blockingStartsImmediately: Boolean)
 data class NextOccurrenceResultDto(val status: NextOccurrenceStatusDto, val occurrence: NextOccurrenceDto?)
 
@@ -1157,7 +1159,7 @@ Les tests `commonTest` couvrent au minimum:
 - changement de fuseau après activation sans changement de l'instant;
 - retards de 0, 15 et plus de 15 minutes, avec `TRIGGER_ELAPSED` et `MISSED_TRIGGER_WINDOW` au-delà de 15 minutes; cette fenêtre de grâce est la politique Android, testée ici pour le calcul mais sans équivalent iOS;
 - début du blocage : plus tard le même jour, bascule au jour suivant, heure inexistante au printemps, heure répétée à l'automne, instant égal ou postérieur au réveil refusé (`NOT_BEFORE_TRIGGER`), `localTimeIso` nul résolu en blocage immédiat, fuseau inchangé après activation;
-- prochaine occurrence (contrat 1.5) : jeudi soir → vendredi matin avec coucher jeudi ; vendredi soir → lundi avec coucher dimanche ; coucher après minuit le jour même du réveil ; période en cours et coucher atteint à la milliseconde → blocage immédiat ; heure de réveil passée un jour coché → jour coché suivant, jusqu'au même jour la semaine suivante ; aucun jour ou jours hors bornes → `NO_DAY_ENABLED` ; heures égales, ou confondues par le trou de printemps → `BEDTIME_EQUALS_WAKE` ; heure inexistante au printemps et répétée à l'automne ; heure et fuseau invalides.
+- prochaine occurrence (contrat 1.5) : jeudi soir → vendredi matin avec coucher jeudi ; vendredi soir → lundi avec coucher dimanche ; coucher après minuit le jour même du réveil ; période en cours et coucher atteint à la milliseconde → blocage immédiat ; heure de réveil passée un jour coché → jour coché suivant, jusqu'au même jour la semaine suivante ; heure inexistante au printemps et répétée à l'automne ; heure et fuseau invalides. *Amendé le 2026-10-25 (section 8.4)* : aucun jour → réveil ponctuel aujourd'hui si l'heure est à venir, sinon le lendemain, week-end compris ; jours hors bornes seuls → ponctuel ; heures égales → période de 24 h, coucher la veille à la même heure, avec ou sans jour coché, blocage toujours immédiat en ponctuel ; heures distinctes confondues par le trou de printemps → `EMPTY_PERIOD`. Fixtures partagées `shared/core/src/commonTest/resources/fixtures/wake_plans.json` mises à jour le même jour (`no_checked_day_is_a_one_off_alarm_at_the_next_wake_time`, `bedtime_equal_to_wake_is_a_twenty_four_hour_period`, `bedtime_and_wake_merged_by_spring_gap_are_reported_as_an_empty_period`).
 
 ### NFC
 
@@ -1261,7 +1263,9 @@ Une fonctionnalité commune n'est terminée que si:
 | 8. NiumiSessionRecord | Compléter (contrat 1.5) | Ajouter `releasedBy` et `disarmedAt` ; lire un enregistrement sans `releasedBy` comme libéré par scan s'il porte `nfcVerifiedAt`. |
 | 9. Machine à états | Compléter (contrat 1.5) | Ajouter `DISARMED`, `ARMED -> RELEASING -> DISARMED` sur `DISARM_REQUESTED` avant le coucher, refusé à partir du coucher. |
 | 11. Calcul de la date | Compléter (contrat 1.5) | Calculer la prochaine occurrence d'un planning par `computeNextOccurrence` ; jamais de calcul de jour ou de coucher en Swift. |
+| 11. Calcul de la date | Compléter (contrat 1.5 amendé le 2026-10-25) | Aucun jour coché = réveil ponctuel, heures identiques = 24 h ; plus de `NO_DAY_ENABLED` ni de `BEDTIME_EQUALS_WAKE`, `EMPTY_PERIOD` pour le trou de printemps. |
 | 15. Fin de session | Compléter (contrat 1.5) | Distinguer `releasedBy` ; désarmement : annuler l'alarme AlarmKit et le début des shields, sans retirer de shield. |
+| 15. Fin de session | Compléter (contrat 1.5 amendé le 2026-10-25) | Après `COMPLETED` d'un réveil ponctuel (aucun jour coché), éteindre l'interrupteur au lieu d'armer l'occurrence suivante ; règle native, comme sur Android. |
 | 9. Machine à états | Compléter (contrat 1.5) | Ajouter `EMERGENCY_EXIT_CONFIRMED` depuis les états du scan, sauf `ARMED` en attente : `CANCELLED` le soir, `COMPLETED` le matin. |
 | 14. Association et lecture NFC | Compléter (contrat 1.5) | Un à dix Niumi Spots, modifiables en session ; vérifier contre l'ensemble enregistré au moment du scan. |
 | 15. Fin de session | Compléter (contrat 1.5) | Sortie de secours : vérifier la recopie par `verifyEmergencyTranscription`, puis produire `EMERGENCY_EXIT_CONFIRMED` avec la preuve ; mêmes effets qu'un scan. Temps gagné par `computeTimeToGetUp`. |

@@ -126,19 +126,38 @@ class WakePlanSchedulerTest {
             assertThat(harness.activeSnapshot()?.blockingAppliedAtEpochMillis).isNotNull()
         }
 
-    /** D17 : le moteur répond `NO_DAY_ENABLED` ; la session en attente est désarmée, l'interrupteur gardé. */
+    /**
+     * « Ponctuel » (décision de Mehdi du 2026-10-25, qui règle D17) : aucun jour coché arme la
+     * prochaine heure de réveil, quel que soit le jour.
+     */
     @Test
-    fun noDayCheckedDisarmsAndArmsNothing() =
+    fun noDayCheckedArmsAOneOffAlarmAtTheNextWakeTime() =
         runTest {
             val harness = PlanTestHarness()
             harness.scheduler.apply(WEEKDAYS_PLAN, PlanChangeReason.SWITCH)
+            val weekly = harness.activeSnapshot()!!
 
             val result = harness.scheduler.apply(WEEKDAYS_PLAN.copy(enabledIsoDays = emptySet()), PlanChangeReason.DAYS)
 
-            assertThat(result).isEqualTo(PlanApplyResult.NoDayEnabled)
-            assertThat(harness.activeSnapshot()).isNull()
-            assertThat(harness.finalStatesBySession().single().second).isEqualTo(SessionStateDto.DISARMED)
+            assertThat(result).isInstanceOf(PlanApplyResult.Armed::class.java)
+            val oneOff = harness.activeSnapshot()!!
+            assertThat(oneOff.sessionId).isNotEqualTo(weekly.sessionId)
+            assertThat(oneOff.wakeSchedule.triggerAtEpochMillis).isEqualTo(fridaySeven)
             assertThat(harness.planStore.current.enabled).isTrue()
+        }
+
+    /** Décision du 2026-10-25 : deux heures identiques bloquent 24 h, jusqu'au réveil. */
+    @Test
+    fun aBedtimeEqualToTheWakeTimeArmsATwentyFourHourPeriod() =
+        runTest {
+            val harness = PlanTestHarness(plan = WEEKDAYS_PLAN.copy(enabled = false))
+
+            val result = harness.scheduler.apply(WEEKDAYS_PLAN.copy(bedtimeIso = "07:00"), PlanChangeReason.SWITCH)
+
+            assertThat(result).isInstanceOf(PlanApplyResult.Armed::class.java)
+            val armed = harness.activeSnapshot()!!
+            assertThat(armed.wakeSchedule.triggerAtEpochMillis).isEqualTo(fridaySeven)
+            assertThat(armed.blockingAppliedAtEpochMillis).isNotNull()
         }
 
     @Test

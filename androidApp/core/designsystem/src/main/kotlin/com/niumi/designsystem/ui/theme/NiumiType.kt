@@ -27,7 +27,7 @@ object NiumiType {
     val instruction30 = style(30, FontWeight.SemiBold, lineHeight = 34.5.sp, letterSpacing = (-0.5).sp)
 
     /** 30/500 — « Désactivé » au centre du cadran. */
-    val dialDisabled30 = style(30, FontWeight.Medium)
+    val dialDisabled30 = style(30, FontWeight.Medium, letterSpacing = (-0.5).sp)
 
     /** 28/600 — titres d'écran, écran 2 compris (D19). Interligne 1,15, interlettrage −0,5. */
     val screenTitle28 = style(28, FontWeight.SemiBold, lineHeight = 32.2.sp, letterSpacing = (-0.5).sp)
@@ -70,6 +70,15 @@ object NiumiType {
 
     /** 15/400 — pastilles de durée, lien « Annuler le réveil », texte d’introduction de l’écran 2. */
     val chip15 = style(15, FontWeight.Normal)
+
+    /** Onglets « Ponctuel / Quotidien » de l'accueil (maquette 18), 500 quand l'onglet est choisi. */
+    val tab14 = style(14, FontWeight.Normal)
+    val tabSelected14 = style(14, FontWeight.Medium)
+
+    /** Roues du sélecteur d'heure (maquettes 19, 20) : valeur choisie, voisines, éloignées. */
+    val wheelSelected34 = style(34, FontWeight.SemiBold, letterSpacing = (-1).sp)
+    val wheelNear22 = style(22, FontWeight.Normal)
+    val wheelFar18 = style(18, FontWeight.Normal)
 
     /** 15/500 — pastille de durée choisie, bouton « Autoriser ». */
     val chipSelected15 = style(15, FontWeight.Medium)

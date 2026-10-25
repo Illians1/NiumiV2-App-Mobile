@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Dernier armement tenté depuis le planning (décision Q14 du 2026-10-24). */
 sealed interface PlanArmingState {
-    /** Aucun échec en cours : armé, ou rien à armer (interrupteur éteint, aucun jour coché). */
+    /** Aucun échec en cours : armé, ou rien à armer (interrupteur éteint). */
     data object Ok : PlanArmingState
 
     /** Le planning est allumé mais rien n'a pu être armé : l'accueil ne doit pas montrer « Réveil prévu ». */

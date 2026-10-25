@@ -55,14 +55,14 @@ private fun isIsoTime(value: String): Boolean =
         false
     }
 
-/** Jours ISO triés, séparés par des virgules ; l'ensemble vide s'écrit `""` (aucun jour coché, D17). */
+/** Jours ISO triés, séparés par des virgules ; l'ensemble vide s'écrit `""` (aucun jour coché : réveil ponctuel). */
 internal fun encodeIsoDays(days: Set<Int>): String = days.sorted().joinToString(",")
 
 /**
  * Traduit ce que le `DataStore` contient littéralement en [WakePlan], hors de toute dépendance
  * Android pour rester testable en JVM. Champ par champ : une valeur absente ou illisible retombe sur
  * celle de [WakePlan.DEFAULT], sans emporter le reste du planning. `""` pour les jours se lit
- * « aucun jour coché », jamais comme une absence.
+ * « aucun jour coché » (réveil ponctuel, décision du 2026-10-25), jamais comme une absence.
  */
 internal fun decodeWakePlan(
     enabled: Boolean?,

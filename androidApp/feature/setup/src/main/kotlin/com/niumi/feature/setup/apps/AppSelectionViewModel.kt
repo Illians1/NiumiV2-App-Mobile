@@ -8,12 +8,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.niumi.core.domain.AppSelectionSummary
 import com.niumi.database.BlockedPackage
-import com.niumi.feature.setup.isSetupEditable
+import com.niumi.feature.setup.isAppSelectionEditable
 import com.niumi.system.apps.AppSelectionStore
 import com.niumi.system.apps.InstalledApp
 import com.niumi.system.apps.InstalledAppsSource
+import com.niumi.system.plan.PlanChangeReason
 import com.niumi.system.session.SessionSnapshotPublisher
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.text.Normalizer
 import javax.inject.Inject
@@ -38,6 +40,7 @@ class AppSelectionViewModel
         private val installedAppsSource: InstalledAppsSource,
         private val appSelectionStore: AppSelectionStore,
         snapshotPublisher: SessionSnapshotPublisher,
+        private val planning: AppSelectionPlanning,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         var state by mutableStateOf(AppSelectionUiState())
@@ -51,11 +54,11 @@ class AppSelectionViewModel
 
         init {
             viewModelScope.launch { load() }
-            // Garde de `SetupGate` : la sélection d'une session en cours ne change pas
-            // (SPEC_CORE_KMP §2 point 11) ; la route se retire de la pile.
+            // Décision 11 amendée le 2026-10-24 (étape 45) : la sélection se modifie jusqu'au coucher,
+            // puis reste verrouillée jusqu'au scan ; la route se retire alors de la pile.
             viewModelScope.launch {
                 snapshotPublisher.snapshot.collect { snapshot ->
-                    onSessionStateChanged(!isSetupEditable(snapshot?.state))
+                    onSessionStateChanged(!isAppSelectionEditable(snapshot))
                 }
             }
         }
@@ -110,12 +113,33 @@ class AppSelectionViewModel
                 try {
                     appSelectionStore.replace(chosen.map { BlockedPackage(it.packageName, it.label) })
                     savedPackages = chosen.mapTo(mutableSetOf()) { it.packageName }
+                    planning.rearmAfterSelection()
                     // La page se ferme d'elle-même en voyant `isSaved`, puis appelle [dismissPage].
                     justSaved = true
                 } finally {
                     validating = false
                     refresh()
                 }
+            }
+        }
+
+        /**
+         * « Continuer » de la mise en route : l'accueil s'ouvrira désormais directement (étape 45,
+         * `design-plan/SPECIFICATION.md` §3). [onDone] est appelé même si l'écriture échoue : la
+         * mise en route reste déductible des Niumi Spots et des applications (`SetupCompletion`).
+         */
+        fun completeSetup(onDone: () -> Unit) {
+            viewModelScope.launch {
+                try {
+                    planning.setupPreferences.markSetupCompleted()
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") _: Exception,
+                ) {
+                    // La mise en route reste déductible des Niumi Spots et des applications.
+                }
+                onDone()
             }
         }
 

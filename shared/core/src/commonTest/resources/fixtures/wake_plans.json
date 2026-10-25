@@ -102,16 +102,22 @@
     "expectedBlockingStartsImmediately": false
   },
   {
-    "name": "no_checked_day_is_reported",
+    "name": "no_checked_day_is_a_one_off_alarm_at_the_next_wake_time",
     "enabledIsoDays": [],
     "wakeTimeIso": "07:00",
     "bedtimeIso": "22:30",
     "zoneId": "Europe/Paris",
     "nowEpochMillis": 1789063200000,
-    "expectedStatus": "NO_DAY_ENABLED"
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-09-11",
+    "expectedTriggerAtEpochMillis": 1789102800000,
+    "expectedBlockingLocalDateIso": "2026-09-10",
+    "expectedBlockingLocalTimeIso": "22:30",
+    "expectedBlockingStartsAtEpochMillis": 1789072200000,
+    "expectedBlockingStartsImmediately": false
   },
   {
-    "name": "bedtime_equal_to_wake_is_reported",
+    "name": "bedtime_equal_to_wake_is_a_twenty_four_hour_period",
     "enabledIsoDays": [
       1,
       2,
@@ -123,7 +129,10 @@
     "bedtimeIso": "07:00",
     "zoneId": "Europe/Paris",
     "nowEpochMillis": 1789063200000,
-    "expectedStatus": "BEDTIME_EQUALS_WAKE"
+    "expectedStatus": "VALID",
+    "expectedWakeLocalDateIso": "2026-09-11",
+    "expectedTriggerAtEpochMillis": 1789102800000,
+    "expectedBlockingStartsImmediately": true
   },
   {
     "name": "non_existent_wake_time_in_spring_gap_resolves_to_first_valid_instant",
@@ -143,7 +152,7 @@
     "expectedBlockingStartsImmediately": false
   },
   {
-    "name": "bedtime_and_wake_merged_by_spring_gap_are_reported_as_equal",
+    "name": "bedtime_and_wake_merged_by_spring_gap_are_reported_as_an_empty_period",
     "enabledIsoDays": [
       7
     ],
@@ -151,7 +160,7 @@
     "bedtimeIso": "02:15",
     "zoneId": "Europe/Paris",
     "nowEpochMillis": 1774724400000,
-    "expectedStatus": "BEDTIME_EQUALS_WAKE"
+    "expectedStatus": "EMPTY_PERIOD"
   },
   {
     "name": "repeated_wake_time_in_autumn_overlap_resolves_to_first_occurrence",

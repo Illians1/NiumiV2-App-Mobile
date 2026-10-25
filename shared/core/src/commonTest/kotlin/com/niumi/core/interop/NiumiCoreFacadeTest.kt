@@ -176,15 +176,11 @@ class NiumiCoreFacadeTest {
         val now = 1_789_063_200_000L
 
         assertEquals(
-            NextOccurrenceStatus.NO_DAY_ENABLED,
-            facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, days = emptySet())).status,
-        )
-        assertEquals(
             NextOccurrenceStatus.UNKNOWN_ZONE,
             facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, zoneId = "Not/AZone")).status,
         )
         assertNull(
-            facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, days = emptySet())).occurrence,
+            facade.computeNextOccurrence(nextOccurrenceInput(nowEpochMillis = now, zoneId = "Not/AZone")).occurrence,
         )
     }
 

@@ -1,8 +1,15 @@
 package com.niumi.app.navigation
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -10,28 +17,26 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.niumi.app.help.HelpScreen
-import com.niumi.feature.session.active.ActiveSessionRoute
 import com.niumi.feature.session.active.CancelledScreen
 import com.niumi.feature.session.active.CompletedScreen
 import com.niumi.feature.session.active.ScanToModifyRoute
 import com.niumi.feature.session.diagnostics.IncidentDiagnosticRoute
-import com.niumi.feature.session.summary.SummaryRoute
-import com.niumi.feature.session.wake.WakeTimeChoice
-import com.niumi.feature.session.wake.WakeTimeRoute
+import com.niumi.feature.session.home.HomeRoute
+import com.niumi.feature.session.transitional.TransitionalSettingsScreen
 import com.niumi.feature.setup.apps.AppSelectionRoute
 import com.niumi.feature.setup.pairing.PairingRoute
 import com.niumi.feature.setup.permissions.PermissionsRoute
 import com.niumi.feature.setup.presentation.PresentationRoute
 
 /**
- * Graphe de navigation de l'application. Toutes les destinations sont typées ([NiumiRoute]) : le
- * point d'extension en chaînes qui servait la route POC de debug a disparu avec elle à l'étape 21.
- *
- * Toutes les destinations déclarées sont enregistrées (voir [NiumiRoute]).
+ * Graphe de navigation de l'application. Toutes les destinations sont typées ([NiumiRoute]).
  *
  * [deepLinkDestination] vient du tap d'une notification d'avertissement (§13.1). Elle est empilée
  * **au-dessus** de l'accueil plutôt que substituée à lui comme destination de départ : le bouton
  * Retour doit ramener à l'application, pas la quitter.
+ *
+ * Étape 45 : l'accueil (écran 6) est la destination de départ dès que la mise en route est finie ;
+ * sinon [HomeEntry] la remplace par l'étape de mise en route où en est l'utilisateur.
  */
 @Composable
 fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
@@ -42,175 +47,138 @@ fun NiumiNavHost(deepLinkDestination: NiumiRoute? = null) {
     }
 
     NavHost(navController = navController, startDestination = NiumiRoute.Home) {
-        composable<NiumiRoute.Home> {
-            HomeRoute(
-                onNavigate = { route -> navController.navigate(route) },
-                onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
-                onOpenHelp = { navController.navigate(NiumiRoute.Help) },
-                // Écran 1 à la place de l'accueil : le retour système sur le panneau 1 quitte
-                // l'app au lieu de ramener à un accueil qui la rouvrirait.
-                onOpenPresentation = {
-                    navController.navigate(NiumiRoute.Presentation) {
-                        popUpTo(NiumiRoute.Home) { inclusive = true }
-                    }
-                },
-            )
-        }
+        composable<NiumiRoute.Home> { HomeEntry(navController) }
         setupDestinations(navController)
-        composable<NiumiRoute.WakeTime> {
-            WakeTimeRoute(
-                onContinue = { choice ->
-                    navController.navigate(NiumiRoute.Summary(choice.localTimeIso, choice.blockingLocalTimeIso))
-                },
-            )
-        }
-        composable<NiumiRoute.Summary> { backStackEntry ->
-            val route = backStackEntry.toRoute<NiumiRoute.Summary>()
-            SummaryRoute(
-                choice = WakeTimeChoice(route.localTimeIso, route.blockingLocalTimeIso),
-                onArmed = { navController.navigateToActiveSession() },
-                // Revenir à l'écran 5 plutôt qu'en empiler un second.
-                onChangeTime = { navController.popBackStack() },
-                onSessionInProgress = { navController.navigateToActiveSession() },
-            )
-        }
-        activeSessionDestinations(navController)
+        sessionDestinations(navController)
     }
 }
 
 /**
- * Destinations du parcours de préparation (écran 1 · Présentation, écran 2 · Autorisations, écrans 3
- * et 4), extraites pour tenir sous `LongMethod` de detekt. Le choix de l'heure et le récapitulatif
- * restent dans [NiumiNavHost] : ils portent un argument de route.
- *
- * **Navigation transitoire jusqu'à l'étape 45 de la refonte.** Le diagnostic qui servait de point
- * de passage vers l'association, la sélection et l'heure a laissé place à l'écran 2 (étape 36) : le
- * parcours s'enchaîne désormais Autorisations → Association → Applications → Heure → Récapitulatif.
+ * Entrée de l'accueil (étape 45) : tant que la mise en route n'est pas finie, l'accueil cède sa place
+ * à la présentation ou à l'écran 2 (`popUpTo` inclusif : le retour quitte l'app au lieu de ramener à
+ * un accueil qui les rouvrirait). Un stockage illisible mène au diagnostic d'incident (§15).
+ */
+@Composable
+private fun HomeEntry(
+    navController: NavHostController,
+    gate: HomeGateViewModel = hiltViewModel(),
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) gate.refresh() }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    when (val destination = gate.destination) {
+        null -> {}
+
+        NiumiRoute.Home -> {
+            HomeRoute(
+                onOpenSettings = { navController.navigate(NiumiRoute.TransitionalSettings) },
+                onOpenApps = { navController.navigate(NiumiRoute.AppSelection(editing = true)) },
+                // Jusqu'à l'étape 46, l'annulation passe par l'ancien écran de scan.
+                onCancelWake = { navController.navigate(NiumiRoute.ScanToModify) },
+            )
+        }
+
+        else -> {
+            LaunchedEffect(destination) {
+                navController.navigate(destination) { popUpTo(NiumiRoute.Home) { inclusive = true } }
+            }
+        }
+    }
+}
+
+/**
+ * Mise en route (écran 1 · Présentation, écran 2 · Autorisations, écrans 3 et 4), extraite pour tenir
+ * sous `LongMethod` de detekt. « Continuer » de l'écran 4 ouvre l'accueil, « Réveil désactivé », et
+ * vide la pile : la mise en route ne se refait pas par le retour.
  */
 private fun NavGraphBuilder.setupDestinations(navController: NavHostController) {
     composable<NiumiRoute.Presentation> {
         PresentationRoute(
             onConfigure = {
-                // La présentation n'est montrée qu'une fois : elle quitte la pile et l'accueil y
-                // reprend sa place, sous l'écran 2.
-                navController.navigate(NiumiRoute.Home) {
+                navController.navigate(NiumiRoute.Permissions) {
                     popUpTo(NiumiRoute.Presentation) { inclusive = true }
                 }
-                navController.navigate(NiumiRoute.Permissions)
             },
         )
     }
     composable<NiumiRoute.Permissions> {
+        val activity = LocalActivity.current
         PermissionsRoute(
-            onBack = { navController.popBackStack() },
+            // Premier écran de la pile pendant la mise en route : son retour quitte l'app.
+            onBack = { if (!navController.popBackStack()) activity?.finish() },
             onContinue = { navController.navigate(NiumiRoute.Pairing) },
         )
     }
     composable<NiumiRoute.Pairing> {
-        // Ouvert aussi en session, depuis l'écran de session active (étape 43) : « Continuer » y
-        // est masqué, le retour ramène à la session.
-        PairingRoute(onContinue = { navController.navigate(NiumiRoute.AppSelection) })
+        // Ouvert aussi depuis les réglages transitoires : « Continuer » y ramène (relecture de
+        // l'étape 45) ; pendant la mise en route, il mène à l'écran 4.
+        val fromSettings =
+            navController.previousBackStackEntry?.destination?.hasRoute<NiumiRoute.TransitionalSettings>() == true
+        PairingRoute(
+            onContinue = {
+                if (fromSettings) navController.popBackStack() else navController.navigate(NiumiRoute.AppSelection())
+            },
+        )
     }
-    composable<NiumiRoute.AppSelection> {
+    composable<NiumiRoute.AppSelection> { entry ->
+        val route = entry.toRoute<NiumiRoute.AppSelection>()
         AppSelectionRoute(
-            onContinue = { navController.navigate(NiumiRoute.WakeTime) },
+            editing = route.editing,
+            onContinue = { navController.navigateToHome(clearStack = true) },
+            onBack = { navController.popBackStack() },
             onSessionInProgress = { navController.popBackStack() },
         )
     }
 }
 
 /**
- * Destinations d'une session déjà active (écrans 7, 9 et 11, étape 15), le diagnostic d'incident
- * (écran 12, étape 16) et la session terminée (écran 10, étape 17), extraites pour tenir sous
- * `LongMethod` de detekt.
- *
- * L'écran 12 est atteignable depuis l'écran 7, depuis l'accueil et depuis le tap d'un
- * avertissement (§13.1). C'est un écran de **consultation** : il n'ajoute aucune action de sortie
- * de session, le scan du Niumi Spot restant le seul chemin (§3, §10.2).
+ * Destinations ouvertes depuis l'accueil : réglages transitoires (étapes 45 à 48), annulation par
+ * scan et ses deux issues (jusqu'à l'étape 46), diagnostic d'incident et aide. Le diagnostic est un
+ * écran de **consultation** : il n'ajoute aucune action de sortie de session (§3, §10.2).
  */
-private fun NavGraphBuilder.activeSessionDestinations(navController: NavHostController) {
-    composable<NiumiRoute.ActiveSession> {
-        ActiveSessionRoute(
-            onModifyOrCancel = { navController.navigate(NiumiRoute.ScanToModify) },
+private fun NavGraphBuilder.sessionDestinations(navController: NavHostController) {
+    composable<NiumiRoute.TransitionalSettings> {
+        TransitionalSettingsScreen(
+            onBack = { navController.popBackStack() },
+            onOpenNiumiSpots = { navController.navigate(NiumiRoute.Pairing) },
             onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
-            // Lien transitoire « Mes Niumi Spots » (étape 43), retiré avec cet écran à l'étape 45.
-            onOpenBoxes = { navController.navigate(NiumiRoute.Pairing) },
+            onOpenHelp = { navController.navigate(NiumiRoute.Help) },
         )
     }
     composable<NiumiRoute.ScanToModify> {
         ScanToModifyRoute(
-            onCancelled = { navController.navigateToCancelled() },
-            onCompleted = { navController.navigateToCompleted() },
+            onCancelled = { navController.navigateAfterSession(NiumiRoute.Cancelled) },
+            onCompleted = { navController.navigateAfterSession(NiumiRoute.Completed) },
         )
     }
-    composable<NiumiRoute.Cancelled> {
-        CancelledScreen(
-            onPrepareAgain = { navController.navigateToPreparation() },
-        )
-    }
-    composable<NiumiRoute.Completed> {
-        CompletedScreen(
-            onBackHome = { navController.navigateToHome() },
-        )
-    }
+    composable<NiumiRoute.Cancelled> { CancelledScreen(onPrepareAgain = { navController.navigateToHome() }) }
+    composable<NiumiRoute.Completed> { CompletedScreen(onBackHome = { navController.navigateToHome() }) }
     composable<NiumiRoute.IncidentDiagnostic> { IncidentDiagnosticRoute() }
     composable<NiumiRoute.Help> { HelpScreen() }
 }
 
 /**
- * `popUpTo(Home)` non inclusif : le récapitulatif et le choix de l'heure disparaissent de la pile
- * — y revenir par Retour afficherait un bouton « Activer ma session » que
- * `ActivationReducer.onRequested` refuserait systématiquement, soit un faux état au sens §15 —
- * tandis que l'accueil reste dessous. `inclusive = true` viderait la pile et ferait quitter
- * l'application au premier Retour, en perdant la seconde garantie d'accès au scan de §10.4.
+ * L'écran de scan quitte la pile : la session est terminée, y revenir par Retour afficherait une
+ * session finie comme si elle courait encore (§15, « ne jamais afficher un faux état de
+ * fiabilité »). L'accueil reste dessous.
  */
-private fun NavController.navigateToActiveSession() {
-    navigate(NiumiRoute.ActiveSession) {
+private fun NavController.navigateAfterSession(route: NiumiRoute) {
+    navigate(route) {
         popUpTo(NiumiRoute.Home) { inclusive = false }
         launchSingleTop = true
     }
 }
 
 /**
- * L'écran de session active et l'écran de scan quittent la pile : la session est terminée, y
- * revenir par Retour afficherait une session annulée comme si elle courait encore (§15, « ne
- * jamais afficher un faux état de fiabilité »). L'accueil reste dessous.
+ * Retour à l'accueil. [clearStack] : fin de la mise en route, toute la pile est remplacée ; sinon
+ * l'écran courant quitte la pile pour la même raison que [navigateAfterSession].
  */
-private fun NavController.navigateToCancelled() {
-    navigate(NiumiRoute.Cancelled) {
-        popUpTo(NiumiRoute.Home) { inclusive = false }
-        launchSingleTop = true
-    }
-}
-
-/** Même sortie que [navigateToCancelled], vers l'écran 10 : la session s'est terminée, pas annulée. */
-private fun NavController.navigateToCompleted() {
-    navigate(NiumiRoute.Completed) {
-        popUpTo(NiumiRoute.Home) { inclusive = false }
-        launchSingleTop = true
-    }
-}
-
-/**
- * « Revenir à l'accueil » (écran 10). L'écran quitte la pile pour la même raison que l'écran 11 :
- * y revenir par Retour présenterait une session terminée comme si elle courait encore (§15).
- */
-private fun NavController.navigateToHome() {
+private fun NavController.navigateToHome(clearStack: Boolean = false) {
     navigate(NiumiRoute.Home) {
-        popUpTo(NiumiRoute.Home) { inclusive = true }
-        launchSingleTop = true
-    }
-}
-
-/**
- * « Préparer un nouveau réveil » (écran 11) rejoint l'écran 2, entrée du parcours de
- * préparation quand la présentation est acquittée — ce qu'il est nécessairement, une session ayant
- * déjà été armée (voir [homeDestinationFor]). L'écran 11 quitte la pile pour la même raison
- * qu'il y est entré.
- */
-private fun NavController.navigateToPreparation() {
-    navigate(NiumiRoute.Permissions) {
-        popUpTo(NiumiRoute.Home) { inclusive = false }
+        if (clearStack) popUpTo(graph.id) { inclusive = true } else popUpTo(NiumiRoute.Home) { inclusive = true }
         launchSingleTop = true
     }
 }

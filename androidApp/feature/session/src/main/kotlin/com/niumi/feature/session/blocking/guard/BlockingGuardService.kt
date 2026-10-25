@@ -12,6 +12,7 @@ import com.niumi.system.blocking.guard.BlockingGuardDecision
 import com.niumi.system.blocking.guard.BlockingGuardNotificationWatch
 import com.niumi.system.blocking.guard.BlockingGuardPhase
 import com.niumi.system.blocking.guard.BlockingGuardPolicy
+import com.niumi.system.common.Clock
 import com.niumi.system.common.DefaultDispatcher
 import com.niumi.system.intent.AndroidPendingIntentFactory
 import com.niumi.system.notification.AndroidNotificationChannelRegistrar
@@ -75,6 +76,9 @@ class BlockingGuardService : Service() {
     lateinit var gateway: SessionPersistenceGateway
 
     @Inject
+    lateinit var clock: Clock
+
+    @Inject
     lateinit var ringingNotificationFactory: RingingNotificationFactory
 
     @Inject
@@ -96,6 +100,7 @@ class BlockingGuardService : Service() {
             ringingFactory = ringingNotificationFactory,
             scanRequestFactory = scanRequestNotificationFactory,
             pendingIntentFactory = pendingIntentFactory,
+            now = clock::nowEpochMillis,
         )
     }
 

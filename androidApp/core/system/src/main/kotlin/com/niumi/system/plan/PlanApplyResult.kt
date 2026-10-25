@@ -13,12 +13,6 @@ sealed interface PlanApplyResult {
     data object Disabled : PlanApplyResult
 
     /**
-     * Interrupteur allumé, aucun jour coché (D17, reporté à l'étape 45) : la session en attente
-     * éventuelle a été désarmée, rien n'est armé, l'interrupteur reste allumé.
-     */
-    data object NoDayEnabled : PlanApplyResult
-
-    /**
      * Du coucher au scan, rien ne se modifie (SPEC_CORE_KMP §2, décision 4) : la session est laissée
      * telle quelle et le planning reçu n'est pas enregistré.
      */

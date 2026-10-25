@@ -1,6 +1,8 @@
 package com.niumi.feature.setup
 
+import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
+import com.niumi.system.session.isBlockingInForce
 import com.niumi.system.session.isSessionInProgress
 
 /**
@@ -16,3 +18,10 @@ import com.niumi.system.session.isSessionInProgress
  * remontent le refus par une lambda de navigation.
  */
 fun isSetupEditable(state: SessionStateDto?): Boolean = !state.isSessionInProgress()
+
+/**
+ * Garde de l'écran 4 depuis l'étape 45 (décision 11 amendée le 2026-10-24) : la sélection se modifie
+ * tant que le blocage n'est pas en vigueur, une session en attente comprise (elle est désarmée et
+ * réarmée avec la nouvelle sélection), puis reste verrouillée du coucher au scan.
+ */
+fun isAppSelectionEditable(snapshot: SessionSnapshotDto?): Boolean = !snapshot.isBlockingInForce()

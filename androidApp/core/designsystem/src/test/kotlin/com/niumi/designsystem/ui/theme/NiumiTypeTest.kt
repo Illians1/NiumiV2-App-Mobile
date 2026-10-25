@@ -25,6 +25,10 @@ class NiumiTypeTest {
         mapOf(
             "heureReveil" to listOf("graisse" to NiumiType.clock112),
             "chiffresCadran" to listOf("graisse" to NiumiType.dial42),
+            "valeurRoueHeure" to listOf("graisse" to NiumiType.wheelSelected34),
+            "voisineRoueHeure" to listOf("graisse" to NiumiType.wheelNear22),
+            "eloigneeRoueHeure" to listOf("graisse" to NiumiType.wheelFar18),
+            "ongletAccueil" to listOf("graisse" to NiumiType.tab14, "graisseChoisie" to NiumiType.tabSelected14),
             "titreReussite" to listOf("graisse" to NiumiType.title40),
             "consigneReveil" to listOf("graisse" to NiumiType.instruction30),
             // D19 (tranché le 2026-10-19) : 28 partout, écran 2 compris.
@@ -73,11 +77,12 @@ class NiumiTypeTest {
         }
     }
 
-    /** VALEURS §3 : « Désactivé » au centre du cadran, 30/500 (absent du JSON). */
+    /** VALEURS §3 : « Désactivé » au centre du cadran, 30/500, interlettrage −0,5 (absent du JSON). */
     @Test
     fun theDisabledDialLabelIsThirtyMedium() {
         assertTextUnit("dialDisabled30 taille", NiumiType.dialDisabled30.fontSize, 30.0)
         assertThat(NiumiType.dialDisabled30.fontWeight).isEqualTo(FontWeight.Medium)
+        assertTextUnit("dialDisabled30 interlettrage", NiumiType.dialDisabled30.letterSpacing, -0.5)
     }
 
     @Test

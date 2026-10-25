@@ -40,7 +40,7 @@ class WakePlanStoreTest {
         assertThat(decoded).isEqualTo(plan)
     }
 
-    /** D17 (reporté à l'étape 45) : « aucun jour coché » est un planning valide, jamais relu comme le défaut. */
+    /** « Aucun jour coché » (réveil ponctuel) est un planning valide, jamais relu comme le défaut. */
     @Test
     fun noDayCheckedRoundTripsAsAnEmptySet() {
         val decoded =

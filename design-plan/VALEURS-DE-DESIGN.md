@@ -1,6 +1,6 @@
 # Niumi · Valeurs de design
 
-Ces valeurs sont relevées dans les 58 maquettes validées (dossier `maquettes/`). Elles existent aussi dans `valeurs-de-design.json`, plus facile à lire par un programme.
+Ces valeurs sont relevées dans les 58 maquettes validées (dossier `maquettes/`), complétées le 25 octobre 2026 par celles des maquettes 18 à 20 (onglets de l'accueil, sélecteur d'heure ; 64 maquettes depuis, `maquettes/INDEX.md` fait foi). Elles existent aussi dans `valeurs-de-design.json`, plus facile à lire par un programme.
 
 Les maquettes sont dessinées pour un écran de 390 × 844 points. Les tailles ci-dessous sont dans cette unité : des points sur iPhone, des dp sur Android.
 
@@ -23,8 +23,8 @@ Le passage au clair se fait au moment où la session se termine : écran de réu
 | --- | --- | --- |
 | Fond d'écran | `#FAFAF8` | Tous les écrans clairs |
 | Surface | `#FFFFFF` | Feuilles du bas, cartes, fenêtre d'alerte, menus |
-| Encre | `#0E0E10` | Texte principal, bouton principal, carte « Réveil activé », arc du cadran, jours actifs, bandeau de problème |
-| Texte secondaire | `#5C5C60` | Sous-titres, phrases d'aide, liens discrets |
+| Encre | `#0E0E10` | Texte principal, bouton principal, carte « Réveil activé », arc du cadran, jours actifs, bandeau de problème, onglet choisi et son trait, traits de la valeur choisie des roues, bulle de message en bas d'écran (25 octobre 2026) |
+| Texte secondaire | `#5C5C60` | Sous-titres, phrases d'aide, liens discrets, onglets non choisis, phrase du sélecteur d'heure |
 | Bordure | `#85858A` | Cartes au trait, cases de pièce, jours non cochés, pastilles de durée non choisies |
 | Séparateur | `#DCDCD8` | Lignes entre les rangées des listes |
 | Piste | `#E8E8E4` | Piste du cadran, bouton « Annuler » de la feuille de scan, bouton inactif (tous les écrans, D9) |
@@ -64,7 +64,7 @@ Dégradé du soleil de l'écran 11, de haut en bas : `#E9A23B` à 0 %, `#EFB65F`
 - Sur fond sombre, l'ambre atteint 8:1 à 9:1.
 - Un détail ambre par dessin : pastille du cadenas (écran 1, panneau 1), point du Niumi Spot (tous les dessins), soleil (écran 11).
 - Les icônes de navigation et d'action (chevron, flèche de retour, croix, réglages, coche, trois points, cadenas des rangées) restent noires en clair et blanc cassé en sombre, sans ambre.
-- Deux icônes du design font exception, et elles restent telles quelles (décision de Mehdi du 20 octobre 2026) : le cadenas de la carte « Blocage en cours », ambre au trait épais sur fond sombre (§5, images 15 et 18 à 27), et le point ambre de l'icône du Niumi Spot (image 47), qui est le détail ambre de ce dessin. Aucune autre icône ne prend l'ambre sans décision écrite ici.
+- Deux icônes du design font exception, et elles restent telles quelles (décision de Mehdi du 20 octobre 2026) : le cadenas de la carte « Blocage en cours », ambre au trait épais sur fond sombre (§5, images 17, 24 à 26 et 29), et le point ambre de l'icône du Niumi Spot (images 53 à 60), qui est le détail ambre de ce dessin. Aucune autre icône ne prend l'ambre sans décision écrite ici.
 - Troisième exception (décision de Mehdi du 22 octobre 2026) : sur l'écran 2, la coche d'une autorisation accordée est à l'encre dans une pastille ambre de 28 (coche de 16). L'ambre y est posé sous l'encre, comme le cadenas de l'écran 1 ; la coche garde un contraste de 8,9:1. Les icônes des tuiles restent à l'encre (l'essai ambre du 20 octobre est abandonné le même jour).
 
 ### Couleurs du logo
@@ -87,30 +87,34 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | --- | --- | --- |
 | 112 | 500 | Heure de l'écran de réveil. Interligne 1, interlettrage −4 |
 | 42 | 500 | Chiffres au centre du cadran (« 9 h 26 »). Interlettrage −1 |
-| 40 | 600 | Titre de l'écran 11 (« Debout à 7:04. »), valeur du milieu de la roue (« 15 min »). Interlettrage −1 |
+| 40 | 600 | Titre de l'écran 11 (« Debout à 7:04. »), valeur du milieu de la roue de l'écran 3 bis (« 15 min »). Interlettrage −1 |
+| 34 | 600 | Valeur choisie des roues du sélecteur d'heure (« 22 », « 30 »), interlettrage −1 ; le « : » qui sépare les roues, sans interlettrage (maquettes 19 et 20, 25 octobre 2026) |
 | 30 | 600 | Consigne de l'écran de réveil (« Scanne ton Niumi Spot », « Ton alarme va reprendre. ») |
-| 30 | 500 | « Désactivé » au centre du cadran |
+| 30 | 500 | « Désactivé » au centre du cadran. Interlettrage −0,5 |
 | 28 | 600 | Titres d'écran : écrans 1, 3 bis et 4, « Réglages », « Aide », titres des pages d'aide. Valeur de la carte « Temps gagné » |
 | 26 | 600 | Titre de l'écran 2 (« Trois autorisations ») dans la maquette. Tranché le 19 octobre 2026 (D19) : l'app l'affiche en 28, comme les autres titres d'écran |
 | 26 | 400 | « Prêt à scanner », dans la feuille de scan |
 | 24 | 600 | Titres des feuilles et des échecs, titre de l'écran de blocage |
-| 24 | 400 | Valeurs voisines du milieu dans la roue |
+| 24 | 400 | Valeurs voisines du milieu dans la roue de l'écran 3 bis |
 | 22 | 600 | Titre de la feuille « Sonnerie », titre de l'alerte d'autorisations |
 | 22 | 500 | Consigne de l'écran 3 |
+| 22 | 400 | Valeurs voisines de la valeur choisie dans les roues du sélecteur d'heure, en `#85858A` |
 | 20 | 600 | Titres de carte et de liste (« Aucune application choisie », « Applications à bloquer ») |
 | 20 | 500 | Sous-titre de l'écran 11, phrase du guide des autorisations |
-| 20 | 400 | Valeurs éloignées dans la roue |
+| 20 | 400 | Valeurs éloignées dans la roue de l'écran 3 bis |
 | 18 | 600 | Titre du guide (« Autoriser l'alarme ») |
+| 18 | 400 | Valeurs éloignées dans les roues du sélecteur d'heure, en `#C6C6C2` |
 | 17 | 600 | Heures autour du cadran (« 22:30 »), consigne de la recopie, intertitres de l'aide |
 | 17 | 500 | Texte des boutons principaux |
 | 17 | 400 | Texte sous les titres de l'écran 1, phrase de la feuille de scan |
 | 16 | 600 | Noms des autorisations, « Blocage en cours », son choisi, « 80 % » |
 | 16 | 500 | « Réveil activé », « Réveil désactivé », jours cochés, pilule « Modifier », bouton de la recopie |
 | 16 | 400 | Texte courant, noms des pièces. Interligne 1,35 |
-| 15 | 500 | Bouton « Autoriser », segment de durée choisi |
-| 15 | 400 | Segments de durée, lien « Annuler le réveil », texte d'introduction de l'écran 2 |
+| 15 | 500 | Bouton « Autoriser », segment de durée choisi, onglet choisi du sélecteur d'heure (« Coucher », « Réveil ») |
+| 15 | 400 | Segments de durée, lien « Annuler le réveil », texte d'introduction de l'écran 2, onglet non choisi du sélecteur d'heure |
 | 14 | 600 | Liens du bandeau de problème |
-| 14 | 400 | Phrases des tuiles, deuxième ligne des cartes, liens discrets |
+| 14 | 500 | Onglet choisi de l'accueil (« Ponctuel » ou « Quotidien », maquette 18) |
+| 14 | 400 | Phrases des tuiles, deuxième ligne des cartes, liens discrets, onglets non choisis de l'accueil, phrase du sélecteur d'heure (« 8 h 30 de sommeil avant le réveil de 7:00 ») |
 | 13 | 500 | Message d'erreur de la recopie |
 | 13 | 400 | Légendes (« Coucher », « Progressive · 2 min »), intitulés de section, mentions de bas d'écran |
 | 12 | 400 | Noms sous les icônes d'applications. En 600 quand l'application est cochée |
@@ -128,15 +132,19 @@ Les valeurs exactes de chaque écran sont dans les fichiers de `maquettes/source
 | Bouton de la recopie (au-dessus du clavier) | 48 de haut, coins de 14 |
 | Bouton « Autoriser » d'une tuile | 46 de haut, coins de 12 |
 | Bouton en pilule | 44 de haut (« Modifier ») ou 48 (« Choisir les applications »), coins égaux à la moitié de la hauteur. Les durées de la sonnerie progressive, en pilules jusqu'au 23 octobre 2026, sont passées en barre segmentée |
-| Barre segmentée | 48 de haut, coins de 14, marge intérieure de 4, fond « Tuile grise » ; segments de largeur égale, 40 de haut, coins de 10, le choisi en encre (durées de la sonnerie progressive, maquette 18, 23 octobre 2026) |
-| Interrupteur de ligne | 44 × 26, pastille de 20 (« Sonnerie progressive », maquette 18, 23 octobre 2026) |
+| Barre segmentée | 48 de haut, coins de 14, marge intérieure de 4, fond « Tuile grise » ; segments de largeur égale, 40 de haut, coins de 10, le choisi en encre (durées de la sonnerie progressive, maquette 21, 23 octobre 2026) |
+| Interrupteur de ligne | 44 × 26, pastille de 20 (« Sonnerie progressive », maquette 21, 23 octobre 2026) |
 | Pastille de jour | Cercle de 44 |
+| Onglets texte | 32 de haut, 28 d'écart, centrés ; l'onglet choisi souligné d'un trait de 2 à l'encre, les autres d'un trait transparent. Accueil (« Ponctuel », « Quotidien ») : 30 sous la carte, pastilles 14 dessous. Sélecteur d'heure (« Coucher », « Réveil ») : remontés de 24 contre la croix (maquettes 18 à 20, 25 octobre 2026). Dans l'app, 16 d'écart au lieu de 28, à l'accueil comme au sélecteur ; à l'accueil, 8 sous la carte et pastilles juste dessous (ligne « Espaces de l'accueil ») (décision de Mehdi du 2026-10-25, après essai sur appareil) |
+| Espaces de l'accueil | Maquettes 16 et 18 : zone du cadran à la marge du haut de l'écran, cadran → carte 18, carte → onglets 30, onglets → pastilles 14, pastilles → première ligne 34. Dans l'app : zone du cadran 32 sous la marge du haut (l'étiquette du haut touchait presque la barre d'état ; l'icône des réglages reste en haut à droite, à la marge), puis 12, 8, 0 et 20 ; l'écran défile sur les petits écrans (décision de Mehdi du 2026-10-25, après essai sur appareil : « réduire le vide ») |
+| Sélecteur d'heure | Fenêtre centrée verticalement, à 20 des bords gauche et droit, coins de 24, fond « Surface », marges intérieures de 20 en haut et de 24 sur les côtés et en bas, ombre de la fenêtre d'alerte. Croix ronde de 36 dans une zone de 44. Roues 16 sous les onglets : deux colonnes de 90 de large à 8 d'écart, le « : » entre elles ; cinq rangées visibles (36, 40, 56, 40, 36 dans les maquettes), la rangée choisie de 56 entre deux traits de 1,5 à l'encre. Phrase 14 sous les roues, bouton « Valider » de 52 (coins de 14) 16 dessous (maquettes 19 et 20, 25 octobre 2026). Sur Android, les cinq rangées font 42 chacune : écart à la maquette, à valider par Mehdi (`POINTS-OUVERTS.md` §4) |
+| Bulle de message en bas d'écran | À 16 des bords gauche et droit, 34 au-dessus du bas, marges intérieures de 14 × 16, coins de 16, fond encre, texte sur encre, ombre décalée de 10 vers le bas, flou 30, noir à 25 % (maquette 27 ; reprise sans la coche pour M10, 25 octobre 2026) |
 | Carte | Coins de 14 |
 | Tuile d'autorisation, case de pièce | Coins de 16 |
 | Feuille du bas | Coins de 28 en haut, pleine largeur, bord à bord |
 | Emplacement d'icône d'application | 28 × 28, coins de 7 (rangée de l'accueil) |
 | Interrupteur | 52 × 32, pastille de 26 |
-| Rangée de liste | Séparateur d'un pixel, 78 à 86 de haut sur l'accueil |
+| Rangée de liste | Séparateur d'un pixel, 78 à 86 de haut sur l'accueil (maquettes : « Applications bloquées » 86, « Sonnerie » 78, un trait sous la dernière). Dans l'app : 76 et 64, et plus de trait sous la dernière ligne (« Sonnerie ») (décision de Mehdi du 2026-10-25, après essai sur appareil) |
 | Ombre de la fenêtre d'alerte | Décalage 20 vers le bas, flou 50, noir à 25 % |
 | Ombre du menu « trois points » | Décalage 10 vers le bas, flou 30, noir à 18 % |
 | Ombre de la bulle du volume | Décalage 8 vers le bas, flou 24, noir à 22 % |
@@ -160,21 +168,42 @@ Dans les maquettes, les carrés gris qui tiennent la place des icônes d'applica
 
 Cadran de 24 heures. Dans les maquettes : centre (183, 158) dans une zone de 366 × 290, rayon 112, trait de 28, bouts ronds. Une heure vaut 15 degrés. Minuit est en haut.
 
+Dans l'app (décision de Mehdi du 2026-10-25, après essai sur appareil) : zone de 366 × 340, centre (183, 170). Au-dessus et au-dessous de l'anneau, une bande de 40 est réservée aux étiquettes, plus un écart minimal de 4 entre une étiquette et l'anneau (112 + 14 + 4 + 40 = 170). Raison : avec une poignée tout en haut ou tout en bas, l'étiquette (« Réveil 12:00 », environ 39 de haut) recouvrait l'anneau. La zone commence 32 sous la marge du haut de l'écran (§4, « Espaces de l'accueil »).
+
 | État | Piste | Arc de la nuit | Repères |
 | --- | --- | --- | --- |
-| Réveil prévu (clair) | `#E8E8E4` | Encre `#0E0E10`, du coucher au réveil | Poignée du coucher blanche, poignée du réveil ambre, petit point gris pour l'heure actuelle |
+| Réveil prévu (clair) | `#E8E8E4` | Encre `#0E0E10`, du coucher au réveil | Poignée du coucher blanche, poignée du réveil ambre, petit point gris pour l'heure actuelle (blanc sur l'arc de la nuit, voir ci-dessous) |
 | Réveil désactivé (clair) | `#E8E8E4` | Gris `#C6C6C2` | Deux poignées blanches, tout est grisé |
 | Session en cours (sombre) | `#2A2A2F` | Blanc cassé `#FAFAF8` | Pas de poignées. Voir ci-dessous |
 
 Pendant la session, l'arc se remplit d'ambre au fil de la nuit :
 
 - L'ambre est plein du coucher jusqu'au point de l'heure actuelle.
-- Devant le point, l'ambre se fond dans le blanc cassé sur 34 degrés, avec une courbe douce (demi-cosinus).
+- Devant le point, l'ambre se fond dans le blanc cassé sur 34 degrés, avec une courbe douce (demi-cosinus), dans les maquettes. Dans l'app, le fondu dure 12 degrés (48 minutes), en pente droite dès le point : le début du fondu paraissait loin du point (décision de Mehdi du 2026-10-25, après essai sur appareil).
 - Le point de l'heure actuelle est noir `#0E0E10`, rayon 4. Son contraste sur l'ambre est de 8,9:1.
 - En fin de nuit, l'arc est presque entièrement ambre. C'est voulu.
 - Le cadenas de la carte « Blocage en cours » est ambre, au trait épais.
 
 Dans les maquettes, ce fondu est simulé par une suite de petits segments de 1,5 degré. C'est une astuce de dessin : dans l'app, il faut le refaire avec un vrai dégradé le long de l'arc.
+
+### Étiquettes et heure actuelle (décisions de Mehdi du 2026-10-25, après essai sur appareil)
+
+Ces règles et la flèche sont absentes des maquettes, qui ne montrent que des heures bien écartées et loin du haut et du bas de l'anneau.
+
+- **Étiquettes** (« Coucher 22:30 », « Réveil 7:00 ») : jamais sur l'anneau, jamais l'une sur l'autre, jamais sous l'icône des réglages, toujours dans la zone du cadran. Faute de place, une étiquette glisse le long de l'anneau. Quand les poignées sont proches, les deux étiquettes s'écartent ensemble, celle du coucher en arrière, celle du réveil en avant : elles gardent l'ordre de leurs poignées (le coucher passait parfois devant le réveil). Avec une police agrandie, une étiquette trop haute pour la bande de 40 glisse sur le côté.
+- **Flèche de l'heure actuelle** : un petit triangle plein de 8 × 8, à l'intérieur de l'anneau, pointe vers le point de l'heure actuelle ; sa pointe est à 4 du bord intérieur de l'anneau. Il est à l'encre (`#0E0E10` en clair, `#FAFAF8` en session), en gris `#85858A` en « Réveil désactivé ».
+- **Point de l'heure actuelle hors session** : sur l'arc de la nuit, il est blanc `#FFFFFF`, comme les poignées ; ailleurs, gris `#5C5C60` en « Réveil prévu », `#C6C6C2` en « Réveil désactivé », comme dans les maquettes. Gris sur l'arc gris, il était invisible en « Réveil désactivé ».
+
+### Régler les heures (décisions de Mehdi du 25 octobre 2026)
+
+| Geste | Effet |
+| --- | --- |
+| Poser le doigt sur une poignée et bouger | La poignée suit le doigt dès le premier mouvement, sans appui long, de 5 en 5 minutes. L'heure est enregistrée au relâchement |
+| Relâcher sans avoir bougé | Ouvre le sélecteur d'heure : onglet « Coucher » sur la poignée du coucher, onglet « Réveil » partout ailleurs sur le cadran |
+
+- La période du coucher au réveil dure au moins une minute (au sélecteur, réglé à la minute) et au plus 24 h. Deux heures identiques valent 24 h : l'arc fait alors le tour complet du cadran.
+- La poignée glissée ne traverse jamais l'autre : du côté de la nuit, elle s'arrête au dernier cran de 5 minutes avant elle ; du côté du jour, elle peut la rejoindre (24 h).
+- Ces règles remplacent l'écart minimal de 15 minutes décidé le 24 octobre 2026 (Q8).
 
 ## 6. Contrastes
 

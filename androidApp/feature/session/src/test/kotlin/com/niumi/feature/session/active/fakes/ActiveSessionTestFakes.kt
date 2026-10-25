@@ -19,22 +19,12 @@ import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
 import com.niumi.system.nfc.NfcScanHandler
 import com.niumi.system.nfc.ScanOutcome
-import com.niumi.system.readiness.ForegroundReadinessTrigger
 import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionPersistenceGateway
 import kotlinx.coroutines.CompletableDeferred
 
-/** Fakes locaux des écrans 7, 9 et 11 : `:core:system/src/test` n'est pas exporté (aucun `testFixtures`). */
-class RecordingForegroundReadinessTrigger : ForegroundReadinessTrigger {
-    var evaluations: Int = 0
-        private set
-
-    override fun evaluateAsync() {
-        evaluations++
-    }
-}
-
+/** Fakes locaux des écrans 9 et 11 : `:core:system/src/test` n'est pas exporté (aucun `testFixtures`). */
 class FakeSessionIncidentsReader(
     var incidents: List<SessionIncidentDto> = emptyList(),
     var failure: Throwable? = null,

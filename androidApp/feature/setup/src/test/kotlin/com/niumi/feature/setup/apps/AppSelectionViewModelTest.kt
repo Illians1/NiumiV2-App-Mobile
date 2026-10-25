@@ -3,14 +3,27 @@ package com.niumi.feature.setup.apps
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
 import com.niumi.core.domain.AppSelectionSummary
+import com.niumi.core.interop.BlockingScheduleDto
+import com.niumi.core.interop.SessionHealthDto
+import com.niumi.core.interop.SessionSnapshotDto
+import com.niumi.core.interop.SessionStateDto
+import com.niumi.core.interop.WakeScheduleDto
 import com.niumi.database.BlockedPackage
+import com.niumi.feature.setup.presentation.fakes.FakeSetupPreferences
 import com.niumi.system.apps.AppSelectionStore
 import com.niumi.system.apps.InstalledApp
 import com.niumi.system.apps.InstalledAppsSource
+import com.niumi.system.plan.PlanApplyResult
+import com.niumi.system.plan.PlanChangeReason
+import com.niumi.system.plan.WakePlan
+import com.niumi.system.plan.WakePlanScheduler
+import com.niumi.system.plan.WakePlanStore
 import com.niumi.system.session.SessionSnapshotPublisher
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -50,13 +63,52 @@ class AppSelectionViewModelTest {
 
         override suspend fun selection(): List<BlockedPackage> = stored
 
+        val journal = mutableListOf<String>()
+
         override suspend fun replace(selection: List<BlockedPackage>) {
+            journal += "replace"
             replaceCallCount++
             gate?.await()
             stored = selection
         }
     }
 
+    private class FakeWakePlanStore(
+        initial: WakePlan,
+    ) : WakePlanStore {
+        private val flow = MutableStateFlow(initial)
+
+        override val plan: Flow<WakePlan> = flow
+
+        override suspend fun read(): WakePlan = flow.value
+
+        override suspend fun write(plan: WakePlan) {
+            flow.value = plan
+        }
+    }
+
+    private class RecordingScheduler(
+        private val journal: MutableList<String>,
+    ) : WakePlanScheduler {
+        val applied = mutableListOf<Pair<WakePlan, PlanChangeReason>>()
+
+        var failure: Exception? = null
+
+        override suspend fun apply(
+            plan: WakePlan,
+            reason: PlanChangeReason,
+        ): PlanApplyResult {
+            failure?.let { throw it }
+            journal += "apply"
+            applied += plan to reason
+            return PlanApplyResult.Unchanged
+        }
+    }
+
+    private val journal = mutableListOf<String>()
+    private val planStore = FakeWakePlanStore(WakePlan.DEFAULT)
+    private val scheduler = RecordingScheduler(journal)
+    private val setupPreferences = FakeSetupPreferences()
     private val appsSource = FakeInstalledAppsSource()
     private val store = FakeAppSelectionStore()
     private val publisher = SessionSnapshotPublisher()
@@ -77,7 +129,13 @@ class AppSelectionViewModelTest {
         (1..count).map { index -> InstalledApp("com.example.app$index", "Application $index", icon = null) }
 
     private fun viewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): AppSelectionViewModel =
-        AppSelectionViewModel(appsSource, store, publisher, savedStateHandle)
+        AppSelectionViewModel(
+            appsSource,
+            store,
+            publisher,
+            AppSelectionPlanning(planStore, scheduler, setupPreferences),
+            savedStateHandle,
+        )
 
     private fun AppSelectionViewModel.page(): AppSelectionPageState = checkNotNull(state.page)
 
@@ -533,5 +591,100 @@ class AppSelectionViewModelTest {
         val restored = viewModel(handle)
 
         assertThat(restored.page().chosenItems.map { it.app.packageName }).containsExactly("com.example.app2")
+    }
+
+    // Étape 45 : l'écran 4 rouvert depuis l'accueil (M11, décision 11 amendée le 2026-10-24).
+
+    private fun snapshot(blockingApplied: Boolean) =
+        SessionSnapshotDto(
+            schemaVersion = 3,
+            revision = 1,
+            sessionId = "11111111-1111-1111-1111-111111111111",
+            wakeSchedule = WakeScheduleDto("2026-10-23", "07:00", "Europe/Paris", 2L),
+            blockingSchedule = BlockingScheduleDto("2026-10-22", "22:30", 1L),
+            state = SessionStateDto.ARMED,
+            releaseTarget = null,
+            health = SessionHealthDto.HEALTHY,
+            createdAtEpochMillis = 1L,
+            armedAtEpochMillis = 1L,
+            blockingAppliedAtEpochMillis = if (blockingApplied) 1L else null,
+            ringingAtEpochMillis = null,
+            alarmSoundStoppedAtEpochMillis = null,
+            triggerElapsedAtEpochMillis = null,
+            nfcVerifiedAtEpochMillis = null,
+            releasingAtEpochMillis = null,
+            completedAtEpochMillis = null,
+            cancelledAtEpochMillis = null,
+            failureCode = null,
+        )
+
+    @Test
+    fun beforeBedtimeAnArmedSessionLeavesTheSelectionEditable() {
+        publisher.publish(snapshot(blockingApplied = false))
+
+        assertThat(viewModel().state.isSessionInProgress).isFalse()
+    }
+
+    @Test
+    fun fromBedtimeTheSelectionIsLocked() {
+        publisher.publish(snapshot(blockingApplied = true))
+
+        assertThat(viewModel().state.isSessionInProgress).isTrue()
+    }
+
+    @Test
+    fun aValidatedSelectionIsArmedAgainWhenThePlanIsOn() {
+        val enabled = WakePlan.DEFAULT.copy(enabled = true)
+        kotlinx.coroutines.runBlocking { planStore.write(enabled) }
+        appsSource.apps = apps(3)
+        val viewModel = viewModel()
+        viewModel.openPage()
+        viewModel.toggle("com.example.app1")
+
+        viewModel.validate()
+
+        assertThat(scheduler.applied).containsExactly(enabled to PlanChangeReason.APP_SELECTION)
+        assertThat(store.journal + journal).containsExactly("replace", "apply").inOrder()
+    }
+
+    /** Relecture : un réarmement qui échoue n'empêche pas d'enregistrer la sélection ni ne fait planter l'écran. */
+    @Test
+    fun aFailingRearmStillSavesTheSelection() {
+        kotlinx.coroutines.runBlocking { planStore.write(WakePlan.DEFAULT.copy(enabled = true)) }
+        scheduler.failure = java.io.IOException("disque")
+        appsSource.apps = apps(3)
+        val viewModel = viewModel()
+        viewModel.openPage()
+        viewModel.toggle("com.example.app1")
+
+        viewModel.validate()
+
+        assertThat(store.replaceCallCount).isEqualTo(1)
+        assertThat(viewModel.state.saved.map { it.packageName }).containsExactly("com.example.app1")
+        // La page se ferme comme après un enregistrement réussi.
+        assertThat(viewModel.page().isSaved).isTrue()
+    }
+
+    @Test
+    fun aValidatedSelectionArmsNothingWhenThePlanIsOff() {
+        appsSource.apps = apps(3)
+        val viewModel = viewModel()
+        viewModel.openPage()
+        viewModel.toggle("com.example.app1")
+
+        viewModel.validate()
+
+        assertThat(store.replaceCallCount).isEqualTo(1)
+        assertThat(scheduler.applied).isEmpty()
+    }
+
+    @Test
+    fun continuingTheSetupRecordsItsEnd() {
+        var continued = false
+
+        viewModel().completeSetup { continued = true }
+
+        assertThat(setupPreferences.setupCompleted).isTrue()
+        assertThat(continued).isTrue()
     }
 }

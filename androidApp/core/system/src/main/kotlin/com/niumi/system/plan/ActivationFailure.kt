@@ -39,8 +39,8 @@ sealed interface ActivationFailure {
     ) : ActivationFailure
 
     /**
-     * `computeNextOccurrence` n'a produit aucune occurrence armable (étape 44). `NO_DAY_ENABLED`
-     * n'en fait jamais partie : ce n'est pas un échec, le scheduler répond `PlanApplyResult.NoDayEnabled`.
+     * `computeNextOccurrence` n'a produit aucune occurrence armable (étape 44) : heure illisible,
+     * fuseau inconnu ou période vidée par le changement d'heure de printemps (`EMPTY_PERIOD`).
      */
     data class InvalidPlan(
         val status: NextOccurrenceStatusDto,

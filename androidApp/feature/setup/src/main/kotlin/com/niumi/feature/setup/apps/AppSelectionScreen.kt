@@ -1,6 +1,5 @@
 package com.niumi.feature.setup.apps
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -23,14 +22,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -43,13 +39,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.niumi.designsystem.component.LocalNiumiAppIconCache
 import com.niumi.designsystem.component.NiumiActionPill
+import com.niumi.designsystem.component.NiumiAppIcon
+import com.niumi.designsystem.component.NiumiAppIconCache
 import com.niumi.designsystem.component.NiumiLoadingIndicator
+import com.niumi.designsystem.component.NiumiMoreAppsSlot
 import com.niumi.designsystem.component.NiumiPrimaryButton
 import com.niumi.designsystem.component.NiumiScreenScaffold
+import com.niumi.designsystem.component.NiumiTopBar
+import com.niumi.designsystem.component.appSlotCapacity
+import com.niumi.designsystem.component.appSlotLayout
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
-import com.niumi.designsystem.ui.theme.NiumiOpacity
 import com.niumi.designsystem.ui.theme.NiumiShapes
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.designsystem.ui.theme.NiumiType
@@ -68,8 +70,8 @@ fun AppSelectionScreen(
     actions: AppSelectionActions,
     modifier: Modifier = Modifier,
 ) {
-    val iconCache = remember { AppIconCache() }
-    CompositionLocalProvider(LocalAppIconCache provides iconCache) {
+    val iconCache = remember { NiumiAppIconCache() }
+    CompositionLocalProvider(LocalNiumiAppIconCache provides iconCache) {
         val page = state.page
         // La page « Applications à bloquer » prend tout l'écran tant qu'elle est ouverte.
         if (page == null) {
@@ -113,6 +115,9 @@ private fun AppSelectionContent(
                         .heightIn(min = maxHeight)
                         .fillMaxWidth(),
             ) {
+                actions.onBack?.let { onBack ->
+                    NiumiTopBar(onBack = onBack, backLabel = AppSelectionTexts.BACK, title = null)
+                }
                 Text(
                     text = AppSelectionTexts.TITLE,
                     style = NiumiType.screenTitle28,
@@ -186,7 +191,7 @@ private fun SelectionCard(
 @Composable
 private fun AppSlots(saved: List<InstalledApp>) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val capacity = slotCapacity(maxWidth)
+        val capacity = appSlotCapacity(maxWidth.value, NiumiDimens.appSlot.value, NiumiDimens.appSlotGap.value)
         val description =
             if (saved.isEmpty()) {
                 Modifier.clearAndSetSemantics {}
@@ -195,30 +200,23 @@ private fun AppSlots(saved: List<InstalledApp>) {
                 Modifier.clearAndSetSemantics { contentDescription = label }
             }
         Row(modifier = description, horizontalArrangement = Arrangement.spacedBy(NiumiDimens.appSlotGap)) {
-            when {
-                saved.isEmpty() -> {
-                    repeat(capacity) { EmptySlot() }
-                }
-
-                saved.size <= capacity -> {
-                    saved.forEach { AppIconImage(it, NiumiDimens.appSlot, NiumiShapes.appSlot) }
-                }
-
-                else -> {
-                    saved.take(capacity - 1).forEach { AppIconImage(it, NiumiDimens.appSlot, NiumiShapes.appSlot) }
-                    MoreSlot(hidden = saved.size - (capacity - 1))
+            if (saved.isEmpty()) {
+                repeat(capacity) { EmptySlot() }
+            } else {
+                val layout = appSlotLayout(saved.size, capacity)
+                saved.take(layout.shown).forEach { AppIconImage(it, NiumiDimens.appSlot, NiumiShapes.appSlot) }
+                if (layout.hidden > 0) {
+                    NiumiMoreAppsSlot(
+                        text = AppSelectionTexts.moreApps(layout.hidden),
+                        size = NiumiDimens.appSlot,
+                        shape = NiumiShapes.appSlot,
+                        textStyle = NiumiType.label16,
+                    )
                 }
             }
         }
     }
 }
-
-private fun slotCapacity(width: Dp): Int {
-    val step = NiumiDimens.appSlot + NiumiDimens.appSlotGap
-    return ((width + NiumiDimens.appSlotGap) / step).toInt().coerceIn(1, MAX_SLOTS)
-}
-
-private const val MAX_SLOTS = 6
 
 @Composable
 private fun EmptySlot() {
@@ -248,28 +246,7 @@ private fun EmptySlot() {
     )
 }
 
-/** Case « +N » : non dessinée par les maquettes, sur le modèle des cases de la carte. */
-@Composable
-private fun MoreSlot(hidden: Int) {
-    val palette = LocalNiumiPalette.current
-    Box(
-        modifier =
-            Modifier
-                .size(NiumiDimens.appSlot)
-                .clip(NiumiShapes.appSlot)
-                .background(palette.track)
-                .border(NiumiDimens.hairline, palette.disabled, NiumiShapes.appSlot),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = AppSelectionTexts.moreApps(hidden), style = NiumiType.label16, color = palette.textSecondary)
-    }
-}
-
-/**
- * Vraie icône de l'application (VALEURS-DE-DESIGN.md §4 : les carrés gris des maquettes sont des
- * emplacements). Sans icône lisible, l'emplacement gris de la maquette. [greyed] grise une case
- * inactive de la grille : icône en niveaux de gris, à 38 %.
- */
+/** Icône d'une application de la carte ou de la grille (`NiumiAppIcon`, partagée avec l'accueil). */
 @Composable
 internal fun AppIconImage(
     app: InstalledApp,
@@ -278,39 +255,29 @@ internal fun AppIconImage(
     modifier: Modifier = Modifier,
     greyed: Boolean = false,
 ) {
-    val palette = LocalNiumiPalette.current
-    val sizePx = with(LocalDensity.current) { size.roundToPx() }
-    val cache = LocalAppIconCache.current
-    val bitmap = remember(app.packageName, sizePx) { cache.get(app, sizePx) }
-    if (bitmap != null) {
-        // Pas de description : le nom porté par la case ou la carte suffit à TalkBack.
-        Image(
-            bitmap = bitmap,
-            contentDescription = null,
-            modifier = modifier.size(size).clip(shape),
-            colorFilter = if (greyed) GREYSCALE else null,
-            alpha = if (greyed) NiumiOpacity.GREYED_CONTENT else 1f,
-        )
-    } else {
-        Box(
-            modifier =
-                modifier
-                    .size(size)
-                    .alpha(if (greyed) NiumiOpacity.GREYED_CONTENT else 1f)
-                    .clip(shape)
-                    .background(palette.track)
-                    .border(NiumiDimens.hairline, palette.disabled, shape),
-        )
-    }
+    NiumiAppIcon(
+        key = app.packageName,
+        icon = app.icon,
+        size = size,
+        shape = shape,
+        modifier = modifier,
+        greyed = greyed,
+    )
 }
 
 /**
- * Point d'entrée réel. [onSessionInProgress] applique la garde de `SetupGate` : une session en
- * cours interdit de modifier la sélection (SPEC_CORE_KMP §2 point 11, SPEC_ANDROID §12.1).
+ * Point d'entrée réel. [onSessionInProgress] applique la garde de `SetupGate` : du coucher au scan,
+ * la sélection ne se modifie pas (décision 11 amendée le 2026-10-24, SPEC_ANDROID §12.1).
+ *
+ * [editing] (étape 45, M11) : l'écran est rouvert depuis l'accueil ; la flèche, le retour système et
+ * « Continuer » y ramènent par [onBack]. Pendant la mise en route, « Continuer » enregistre la fin de
+ * la mise en route puis appelle [onContinue].
  */
 @Composable
 fun AppSelectionRoute(
+    editing: Boolean,
     onContinue: () -> Unit,
+    onBack: () -> Unit,
     onSessionInProgress: () -> Unit,
     viewModel: AppSelectionViewModel = hiltViewModel(),
 ) {
@@ -325,16 +292,15 @@ fun AppSelectionRoute(
         actions =
             AppSelectionActions(
                 onOpenPage = viewModel::openPage,
-                onContinue = onContinue,
+                onContinue = if (editing) onBack else ({ viewModel.completeSetup(onContinue) }),
                 onToggle = viewModel::toggle,
                 onSearch = viewModel::search,
                 onDismissPage = viewModel::dismissPage,
                 onValidate = viewModel::validate,
+                onBack = if (editing) onBack else null,
             ),
     )
 }
-
-private val GREYSCALE = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
 
 private val previewApps =
     listOf("Instagram", "TikTok", "YouTube", "Snapchat", "Facebook", "Netflix", "WhatsApp", "Messages")

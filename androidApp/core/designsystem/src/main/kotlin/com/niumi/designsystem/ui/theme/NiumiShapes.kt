@@ -50,4 +50,7 @@ object NiumiShapes {
     /** Barre segmentée (maquette 18) : coins de 14 ; chaque segment, coins de 10. */
     val segmentedBar = RoundedCornerShape(14.dp)
     val segment = RoundedCornerShape(10.dp)
+
+    /** Bulle de message en bas d'écran (étape 45, forme de la maquette 27). */
+    val toast = RoundedCornerShape(16.dp)
 }

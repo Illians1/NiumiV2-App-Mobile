@@ -9,4 +9,6 @@ data class AppSelectionActions(
     /** Croix, voile, glissement ou retour : abandonne le brouillon. */
     val onDismissPage: () -> Unit = {},
     val onValidate: () -> Unit = {},
+    /** Écran rouvert depuis l'accueil (étape 45, M11) : flèche de retour ; `null` pendant la mise en route. */
+    val onBack: (() -> Unit)? = null,
 )

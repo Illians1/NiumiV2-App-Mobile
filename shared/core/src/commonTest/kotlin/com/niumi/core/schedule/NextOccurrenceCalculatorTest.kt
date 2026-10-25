@@ -24,6 +24,8 @@ private const val FRI_23_00 = 1_789_160_400_000L
 private const val SUN_22_30 = 1_789_331_400_000L
 private const val MON_07_00 = 1_789_362_000_000L
 private const val NEXT_THU_07_00 = 1_789_621_200_000L
+private const val HOUR = 3_600_000L
+private const val DAY = 86_400_000L
 
 // 2026-03-28 (samedi) 20:00 et 22:30 +01:00 ; le lendemain, l'horloge saute de 02:00 à 03:00.
 private const val SPRING_SAT_20_00 = 1_774_724_400_000L
@@ -123,31 +125,66 @@ class NextOccurrenceCalculatorTest {
     }
 
     @Test
-    fun noCheckedDayIsReported() {
-        val result = compute(nowEpochMillis = THU_20_00, days = emptySet())
+    fun noCheckedDayIsAOneOffAlarmTodayWhenTheWakeTimeIsStillAhead() {
+        // « Ponctuel » (décision de Mehdi du 2026-10-25) : aucun jour coché, le réveil sonne à la
+        // prochaine heure de réveil, quel que soit le jour.
+        val occurrence = requireNotNull(compute(nowEpochMillis = THU_07_00 - HOUR, days = emptySet()).occurrence)
 
-        assertEquals(NextOccurrenceStatus.NO_DAY_ENABLED, result.status)
-        assertNull(result.occurrence)
+        assertEquals("2026-09-10", occurrence.wakeSchedule.localDateIso)
+        assertEquals(THU_07_00, occurrence.wakeSchedule.triggerAtEpochMillis)
+        assertTrue(occurrence.blockingStartsImmediately)
+    }
+
+    @Test
+    fun noCheckedDayIsAOneOffAlarmTomorrowOnceTheWakeTimeHasPassed() {
+        val occurrence = requireNotNull(compute(nowEpochMillis = THU_20_00, days = emptySet()).occurrence)
+
+        assertEquals(FRI_07_00, occurrence.wakeSchedule.triggerAtEpochMillis)
+        assertEquals(BlockingSchedule("2026-09-10", "22:30", THU_22_30), occurrence.blockingSchedule)
+    }
+
+    @Test
+    fun aOneOffAlarmIgnoresTheWeekend() {
+        val occurrence = requireNotNull(compute(nowEpochMillis = FRI_23_00, days = emptySet()).occurrence)
+
+        assertEquals("2026-09-12", occurrence.wakeSchedule.localDateIso)
+        assertEquals(FRI_07_00 + DAY, occurrence.wakeSchedule.triggerAtEpochMillis)
     }
 
     @Test
     fun daysOutsideTheIsoWeekAreIgnored() {
-        assertEquals(
-            NextOccurrenceStatus.NO_DAY_ENABLED,
-            compute(nowEpochMillis = THU_20_00, days = setOf(0, 8)).status,
-        )
+        // {0, 8} ne désigne aucun jour : c'est un réveil ponctuel.
+        val oneOff = requireNotNull(compute(nowEpochMillis = THU_20_00, days = setOf(0, 8)).occurrence)
+        assertEquals(FRI_07_00, oneOff.wakeSchedule.triggerAtEpochMillis)
 
-        val occurrence = requireNotNull(compute(nowEpochMillis = THU_20_00, days = setOf(0, 5, 8)).occurrence)
-        assertEquals(FRI_07_00, occurrence.wakeSchedule.triggerAtEpochMillis)
+        val occurrence = requireNotNull(compute(nowEpochMillis = FRI_23_00, days = setOf(0, 5, 8)).occurrence)
+        assertEquals("2026-09-18", occurrence.wakeSchedule.localDateIso)
     }
 
     @Test
-    fun bedtimeEqualToWakeIsReported() {
-        // Q8 : le cadran impose 15 min d'écart ; le moteur refuse par sécurité une période vide.
-        val result = compute(nowEpochMillis = THU_20_00, bedtime = "07:00")
+    fun bedtimeEqualToWakeIsATwentyFourHourPeriodStartingTheDayBefore() {
+        // Décision de Mehdi du 2026-10-25 (Q8 révisé) : deux heures identiques bloquent 24 h.
+        val occurrence =
+            requireNotNull(
+                compute(nowEpochMillis = THU_20_00, days = setOf(5), bedtime = "22:30", wake = "22:30").occurrence,
+            )
 
-        assertEquals(NextOccurrenceStatus.BEDTIME_EQUALS_WAKE, result.status)
-        assertNull(result.occurrence)
+        assertEquals("2026-09-11", occurrence.wakeSchedule.localDateIso)
+        assertEquals(THU_22_30 + DAY, occurrence.wakeSchedule.triggerAtEpochMillis)
+        assertEquals(BlockingSchedule("2026-09-10", "22:30", THU_22_30), occurrence.blockingSchedule)
+        assertFalse(occurrence.blockingStartsImmediately)
+    }
+
+    @Test
+    fun aOneOffTwentyFourHourPeriodIsAlwaysInProgress() {
+        val occurrence =
+            requireNotNull(
+                compute(nowEpochMillis = THU_20_00, days = emptySet(), bedtime = "22:30", wake = "22:30").occurrence,
+            )
+
+        assertEquals(THU_22_30, occurrence.wakeSchedule.triggerAtEpochMillis)
+        assertTrue(occurrence.blockingStartsImmediately)
+        assertEquals(BlockingSchedule.IMMEDIATE, occurrence.blockingSchedule)
     }
 
     @Test
@@ -162,12 +199,12 @@ class NextOccurrenceCalculatorTest {
     }
 
     @Test
-    fun bedtimeAndWakeMergedBySpringGapAreReportedAsEqual() {
+    fun bedtimeAndWakeMergedBySpringGapAreReportedAsAnEmptyPeriod() {
         // Q8, décision du 2026-10-24 : 2:15 et 2:45 n'existent pas le 2026-03-29, les deux
         // deviennent 3:00 ; un planning vide serait refusé ensuite par INVALID_BLOCKING_SCHEDULE.
         val result = compute(nowEpochMillis = SPRING_SAT_20_00, days = setOf(7), wake = "02:45", bedtime = "02:15")
 
-        assertEquals(NextOccurrenceStatus.BEDTIME_EQUALS_WAKE, result.status)
+        assertEquals(NextOccurrenceStatus.EMPTY_PERIOD, result.status)
         assertNull(result.occurrence)
     }
 

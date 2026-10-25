@@ -39,7 +39,7 @@
 - **Restes ouverts du Lot 8 (`docs/android/RESTE_A_FAIRE.md`) : la refonte fait foi.** L'écran 3 actuel est remplacé (étapes 47 et 48) : sa relecture NFC depuis le volet rapide et son TalkBack sont sans objet ; la réserve « même tag refusé puis accepté » est rejouée à l'étape 55 sous la nouvelle règle (accepté dès l'ajout) ; l'export du diagnostic avec plusieurs boîtiers suit Q20 ; l'incident `TIME_CHANGED` après un redémarrage reste hors refonte.
 - **Correctif A8 (2026-10-19 et 20), entre les étapes 33 et 34.** Service de garde de session : service de premier plan `specialUse` pendant toute la session, notification à deux textes (« Réveil programmé à 07:00 », « Blocage en cours jusqu'à 07:00 »), jamais ramenée une fois écartée ; carte de Niumi rendue aux récents (`RecentsCard` supprimé) ; neuvième permission ; canal `niumi_blocking_guard` (l'étape 52 en ajoute un cinquième). Voir SPEC_ANDROID §12.5 et `A8-RECENTS.md`. Revu le 2026-10-22 : « Réveil prévu à 07:00 » au lieu de « Blocage en cours jusqu'à 07:00 » ; de l'alarme au scan, la garde reprend la notification de la sonnerie ou de la demande de scan (une seule notification, ramenée si elle est écartée).
 - **Durées de montée.** L'étape 28 a laissé `VolumeRampDurations.SECONDS = [120, 300, 600, 900]` (committé, `1225e87`) ; l'étape 40 les remet en cause (décision Q7) : ne pas y toucher avant. *Q7 tranché le 2026-10-23 : liste inchangée ; le même jour, le défaut passe à 600 (10 min).*
-- **Maquettes renumérotées et « Niumi Spot » (2026-10-23).** Le dossier `design-plan/maquettes` compte 61 maquettes depuis cette date (`INDEX.md` fait foi) : les numéros cités dans ce plan, dans `SPECIFICATION.md`, `TEXTES-DES-MAQUETTES.md` et SPEC_ANDROID sont ceux de l'ancien dossier, sauf la sonnerie (18 à 20). Les maquettes disent désormais « Niumi Spot » : renommage décidé (D22), à faire dans une étape dédiée avant l'étape 53 ; aucun texte de l'app ne change avant.
+- **Maquettes renumérotées et « Niumi Spot » (2026-10-23).** Le dossier `design-plan/maquettes` compte 61 maquettes depuis cette date (`INDEX.md` fait foi) : les numéros cités dans ce plan, dans `SPECIFICATION.md`, `TEXTES-DES-MAQUETTES.md` et SPEC_ANDROID sont ceux de l'ancien dossier, sauf la sonnerie (18 à 20). Les maquettes disent désormais « Niumi Spot » : renommage décidé (D22), à faire dans une étape dédiée avant l'étape 53 ; aucun texte de l'app ne change avant. **Nouvelle renumérotation le 2026-10-25** (64 maquettes) : trois maquettes de l'accueil insérées en 18 (réveil ponctuel), 19 et 20 (sélecteur d'heure) ; toutes les anciennes maquettes 18 à 61 prennent +3 (sonnerie 21 à 23, annulation 24 à 27, écran 7 en 28, écrans 8 et 9 en 29 à 33, écran 10 en 34 à 41, écran 11 en 42, réglages 43 à 60, bandeaux et alertes 61 à 64). Les étapes 45 à 52 ci-dessous citent la nouvelle numérotation ; les étapes déjà faites gardent l'ancienne. Les sources régénérées ce jour-là ramènent d'anciens textes (« session ») : régression notée E14 dans `POINTS-OUVERTS.md`, D23 maintenu.
 
 ## Contraintes globales
 
@@ -109,7 +109,7 @@ Le design-plan dit ce que l'app doit faire, pas tout ce qu'elle rencontrera. Cha
 1. **Coucher après minuit** (coucher 1:00, réveil 7:00) : le coucher a lieu le jour même du réveil, pas la veille ; `NextOccurrenceCalculatorTest`, étape 41.
 2. **Heure déjà passée le jour coché** (jeudi coché, il est jeudi 8:00, réveil 7:00) : prochaine occurrence = vendredi si coché, sinon le jour coché suivant, jamais aujourd'hui ; `NextOccurrenceCalculatorTest`, étape 41.
 3. **Apostrophes et majuscules automatiques du clavier** dans la recopie (le texte modèle contient « J'avais », « c'est », « jusqu'au ») : la comparaison ne doit pas signaler de faute ; `EmergencyTranscriptionTest`, étape 42.
-4. **Compte à rebours qui traverse minuit et durée inférieure à une heure** : « Réveil dans 56 min », « 9 h 26 », jamais « 0 h 56 » ; `NiumiTimeFormatTest` (étape 34) et `HomeViewModelTest` (étape 45).
+4. **Compte à rebours qui traverse minuit et durée inférieure à une heure** : « Réveil dans 56 min », « 9 h 26 », jamais « 0 h 56 » ; `NiumiTimeFormatTest` (étape 34) et `HomeViewModelTest` (étape 45, *fait le 2026-10-25*).
 5. **Session armée avec une durée de montée retirée de la liste** (30 s ou 1 min, d'avant l'étape 28) : l'alarme sonne avec la durée assainie, jamais muette ; `VolumeRampDurations.sanitized()`, `AlarmSoundSettingsTest`, `RingingSoundResolverTest`, étape 40.
 6. **Niumi Spot ajouté pendant la session**, depuis les réglages ou depuis l'écran 8 pendant la sonnerie, puis scanné : accepté (ensemble courant) ; un point supprimé en session n'arrête plus rien ; `HandleValidNfcUseCaseTest`, étape 43 ; `PointPairingViewModelTest` (mode `ALARM`), étape 49.
 7. **Rotation ou mort du processus pendant la recopie** : la saisie survit à la rotation ; après une mort du processus, l'écran 9 revient vide et l'alarme sonne toujours ; `EmergencyExitViewModelTest`, étape 49.
@@ -142,8 +142,8 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 40 | M7 | Version sombre de la feuille, non dessinée | **Tranché le 2026-10-23** : la palette sombre du thème (comme la feuille de scan) ; la bulle suit `ink`/`onInk` |
 | 40 | — | **Révision du 2026-10-23** (maquettes 18 à 20 redessinées après validation) : interrupteur à la place de « Non » ; forme des durées ; allumage et défaut ; taille de l'interrupteur | **Tranché le 2026-10-23** : interrupteur « Sonnerie progressive » (44 × 26, pastille de 20, nouveau jeton) ; barre segmentée (fond « Tuile grise », 48, segments de 40) à quatre durées 2/5/10/15 (Q7 tenu) ; allumer choisit **10 min**, qui devient aussi le défaut d'une préférence neuve (`DEFAULT_SECONDS` 600, remplace les 2 min du 2026-09-30) |
 | 40 | D22 | Les 61 nouvelles maquettes disent « Niumi Spot » | **Décidé le 2026-10-23, à appliquer plus tard** : renommage acquis, étape dédiée à prévoir avant l'étape 53 ; la renumérotation des maquettes (E13) est à répercuter dans les specs et ce plan |
-| 41 | Q8 | Coucher égal au réveil | **Tranché le 2026-10-24** : le cadran impose 15 min d'écart ; `BEDTIME_EQUALS_WAKE` défensif en KMP, aussi quand le trou de printemps confond les deux instants |
-| 41 | D17 | Aucun jour coché | **Reporté à l'étape 45 le 2026-10-24** : le moteur répond `NO_DAY_ENABLED` ; le comportement de l'interrupteur et le texte de la carte se décident avec l'accueil (recommandation : interrupteur allumé mais rien d'armé, carte « Aucun jour choisi ») |
+| 41 | Q8 | Coucher égal au réveil | ~~**Tranché le 2026-10-24** : le cadran impose 15 min d'écart ; `BEDTIME_EQUALS_WAKE` défensif en KMP, aussi quand le trou de printemps confond les deux instants~~ **Révisé le 2026-10-25** (étape 45, décision de Mehdi) : plus d'écart minimal ; une minute au sélecteur, 5 min au cadran ; deux heures identiques = période de 24 h (coucher la veille), acceptée au cadran comme au sélecteur ; en Quotidien, blocage permanent, assumé. `BEDTIME_EQUALS_WAKE` disparaît ; `EMPTY_PERIOD` ne reste que pour le trou de printemps (SPEC_CORE_KMP §8.4) |
+| 41 | D17 | Aucun jour coché | ~~**Reporté à l'étape 45 le 2026-10-24** : le moteur répond `NO_DAY_ENABLED` ; le comportement de l'interrupteur et le texte de la carte se décident avec l'accueil (recommandation : interrupteur allumé mais rien d'armé, carte « Aucun jour choisi »)~~ **Tranché le 2026-10-25** (étape 45) : aucun jour coché = réveil ponctuel (onglet « Ponctuel », maquette 18), plus un cas d'erreur ; `NO_DAY_ENABLED` et `PlanApplyResult.NoDayEnabled` supprimés (contrat 1.5 amendé, SPEC_CORE_KMP §8.4) |
 | 41 | Q9 | Fuseau pendant `ARMED` | **Tranché le 2026-10-24, autrement que recommandé** : avant le coucher, un changement de fuseau désarme la session en attente et la réarme à l'heure locale du nouveau fuseau ; après le coucher, l'instant est conservé (décision 9). Mis en œuvre par le coordinateur à l'étape 44 |
 | 42 | D2 | Sortie de secours le matin : écran suivant, réveil du lendemain | **Tranché le 2026-10-24** : écran 11 sans « Bravo ! » ; planning laissé allumé (moteur : `COMPLETED` le matin, `CANCELLED` le soir) |
 | 42 | D8, D3, Q10 | Autres textes à recopier ; « 1 heure et + » = 60 ; arrondi | **Tranché le 2026-10-24** : un seul texte livré dans une liste prête, sans rotation codée (le texte ne change pas tant qu'il est seul) ; 60 ; minute inférieure. Même jour : le texte compte **196** caractères, non 197 (spec et maquettes corrigées) ; la limite à dix est appliquée à Android dès l'étape 42 |
@@ -151,8 +151,16 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 44 | Q12 | Sonnerie modifiable en `RINGING` ? | **Tranché le 2026-10-24** : non, `ARMED` seulement (comme aujourd'hui, `updateAlarmSound` inchangé) |
 | 44 | — | Changement d'horloge (`TIME_CHANGED`) avant le coucher : Q9 ne visait que le fuseau | **Tranché le 2026-10-24** : comme le fuseau ; dans les deux cas, désarmement seulement si un instant recalculé change (une resynchronisation réseau ne fait rien) |
 | 44 | — | Décision 11 (« sélection interdite tant qu'une session est active ») contredite par l'état « Réveil prévu » | **Tranché le 2026-10-24** : amendée, la sélection se modifie avant le coucher (désarmement puis nouvelle session), verrouillée du coucher au scan |
-| 45 | M10, Q13 | Forme du message « Modifiable après avoir scanné… » ; point de l'heure actuelle | Message bas d'écran, même place que « Réveil annulé… » ; tick à la minute |
-| 46 | Q14 | Ré-armement échoué après le scan du matin | **Tranché le 2026-10-24** (étape 44) : l'interrupteur reste allumé, rien n'est armé, l'échec est journalisé (`PLAN_REARM_FAILED`), publié dans `PlanArmingStatus` et retenté au démarrage et au déverrouillage ; une fenêtre d'erreur et une notification l'annoncent, livrées à l'étape 52 avec leurs textes ; jamais un faux « Réveil prévu » |
+| 45 | M10, Q13 | Forme du message « Modifiable après avoir scanné… » ; point de l'heure actuelle | **Tranché le 2026-10-25** : bulle encre en bas d'écran, forme de la maquette 27 sans la coche (`NiumiToast`), annoncée par TalkBack, retirée après 4 s ou au toucher suivant ; point de l'heure et comptes à rebours rafraîchis à chaque minute |
+| 45 | — | Onglets « Ponctuel » / « Quotidien » (maquette 18, ajoutée le 2026-10-25) | **Tranché le 2026-10-25** : au-dessus des pastilles. Ponctuel = aucun jour coché : réveil à la prochaine heure de réveil (aujourd'hui si elle est à venir, sinon le lendemain, n'importe quel jour), puis interrupteur éteint après le scan ou la recopie du matin (extinction native, `DefaultWakePlanScheduler.onFinished`). Quotidien = sept jours. Jours libres : aucun onglet souligné. Toucher Quotidien coche tout, Ponctuel décoche tout, décocher le dernier jour revient à Ponctuel |
+| 45 | — | Sélecteur d'heure (maquettes 19 et 20) | **Tranché le 2026-10-25** : fenêtre centrée, onglets Coucher / Réveil, roues heures (0–23) et minutes (00–59), phrase de sommeil en direct, « Valider » applique les deux heures, croix et voile ferment sans rien changer ; ouvert par un toucher bref, onglet Coucher sur la poignée du coucher, Réveil ailleurs. Textes non dessinés à valider : « 24 h de blocage… », « Choisir l’heure », « Heures », « Minutes », « Icône de l’application bloquée ». Écart : rangées des roues de 42, au lieu de 36/40/56/40/36 |
+| 45 | — | Geste du cadran | **Tranché le 2026-10-25** : glisser une poignée dès le premier mouvement, sans appui long, pas de 5 min ; la poignée glissée ne traverse jamais l'autre (côté nuit, dernier cran avant elle ; côté jour, elle la rejoint : 24 h) ; relâcher sans bouger ouvre le sélecteur |
+| 45 | — | Icône des réglages avant l'écran 12 (étape 48) | **Tranché le 2026-10-25** : page transitoire non dessinée « Réglages » à trois lignes, « Niumi Spots » (écran 3 actuel), « Diagnostic » (diagnostic d'incident), « Aide et limites » ; supprimée à l'étape 48. Le lien « Annuler le réveil » ouvre l'ancien écran de scan (`ScanToModify`) jusqu'à l'étape 46 |
+| 45 | — | Fin de la mise en route | **Tranché le 2026-10-25** : préférence `setupCompleted` (DataStore `niumi_setup`, clé `setup_completed`) écrite par « Continuer » de l'écran 4 ; installation antérieure finie si ≥ 1 Niumi Spot et ≥ 1 application (`SetupCompletion`). Destination à l'ouverture : illisible → diagnostic ; session non finale ou mise en route finie → accueil ; présentation lue → écran 2 ; sinon présentation. L'accueil n'est pas sous la mise en route ; « Continuer » de l'écran 4 vide la pile |
+| 45 | M11 | Écran 4 ouvert depuis l'accueil | **Tranché le 2026-10-25** : flèche de retour ; « Continuer » et le retour système ramènent à l'accueil ; modifiable tant que le blocage n'est pas en vigueur (décision 11 amendée, appliquée à l'écran), puis `apply(APP_SELECTION)` si le planning est allumé |
+| 45 | Q14 | Ré-armement échoué, à l'accueil | **Tranché le 2026-10-25, jusqu'à l'étape 52** : interrupteur allumé, carte « Réveil activé » + « Aucun réveil ni blocage prévu », centre du cadran « Réveil » sans compte à rebours |
+| 45 | D23 | Maquettes régénérées le 2026-10-25 : « Annuler la session », « Session annulée », ancien texte de l'écran 2 et des écrans 8 et 9 | **Régression, D23 maintenu** : l'app garde « Annuler le réveil » et le texte actuel de l'écran 2 ; sources HTML et `INDEX.md` à corriger par Mehdi (`POINTS-OUVERTS.md` E14) |
+| 46 | Q14 | Ré-armement échoué après le scan du matin | **Tranché le 2026-10-24** (étape 44 ; affichage de l'accueil fixé à l'étape 45, ligne ci-dessus) : l'interrupteur reste allumé, rien n'est armé, l'échec est journalisé (`PLAN_REARM_FAILED`), publié dans `PlanArmingStatus` et retenté au démarrage et au déverrouillage ; une fenêtre d'erreur et une notification l'annoncent, livrées à l'étape 52 avec leurs textes ; jamais un faux « Réveil prévu » |
 | 47 | D11, M5, M6, Q15 | « Continuer » grisé sans pièce ; échecs non dessinés ; URL de la page produit | Oui ; même feuille d'échec qu'à l'écran 10 avec « Annuler » ; URL à fournir |
 | 47 | Q21 | Nom du Niumi Spot : pièce proposée ou nom libre ? | **Tranché le 2026-10-19** : quatre pièces proposées (Salle de bain, Cuisine, Salon, Entrée) et « Une autre pièce » en saisie libre ; la limite technique de 30 caractères (`PairedBoxName`) est conservée |
 | 48 | Q22, D21 | Nombre maximal et dernier point | **Tranché le 2026-10-19** : dix au plus (`PairedBoxLimit.MAX = 10`), toujours au moins un, suppression confirmée par une feuille ; à dix, la ligne « Ajouter un Niumi Spot » grisée avec « Tu as déjà dix Niumi Spots. » ; refus « Ce Niumi Spot est déjà enregistré. » avec « Réessayer » (D21 tranché le 2026-10-19) |
@@ -222,8 +230,30 @@ sealed interface NfcScanSheetContent { data object Ready; data class Failure(val
 @Composable fun NfcScanSheet(content: NfcScanSheetContent, onDismiss: () -> Unit, onFailureAction: () -> Unit, failurePaneTitle: String,
                              modifier: Modifier = Modifier, emergencyLinkText: String? = null, onEmergencyExit: (() -> Unit)? = null)
 // Textes de « Prêt à scanner » : NiumiComponentTexts.SCAN_SHEET_TITLE / _PHRASE / _CANCEL (les mêmes aux écrans 3, 10 et à l'annulation)
-@Composable fun NiumiDial(state: DialState, onBedtimeChanged: ((LocalTime) -> Unit)?, onWakeTimeChanged: ((LocalTime) -> Unit)?) // étape 45
-sealed interface DialState { data class Scheduled(...); data class Disabled(...); data class InSession(...) } // bedtime, wake, now
+// Livré à l'étape 45 (2026-10-25), écarts à la signature prévue : heures en minutes depuis minuit, textes passés par l'écran,
+// un seul rappel pour les deux poignées (au relâchement) et un toucher bref qui ouvre le sélecteur.
+@Composable fun NiumiDial(state: DialState, texts: DialTexts, onTimeChanged: (DialHandle, Int) -> Unit, onTap: (DialHandle) -> Unit, modifier: Modifier = Modifier)
+sealed interface DialState { val bedtimeMinutes: Int; val wakeMinutes: Int; val nowMinutes: Int; val centerLabel: String; val centerValue: String
+                             data class Scheduled(...); data class Disabled(...); data class InSession(...) /* pas de poignées, toucher → onTap(WAKE) */ }
+data class DialTexts(val bedtime: String, val wake: String, val chooseTime: String)
+// DS/drawing (JVM) : enum class DialHandle { BEDTIME, WAKE } ; object DialGeometry { MINUTES_PER_DAY; DRAG_STEP_MINUTES = 5; FADE_DEGREES = 34f;
+//   degreesOf(min); degreesOfPoint(dx, dy); signedDeltaMinutes(from, to); periodMinutes(bedtime, wake) /* égalité = 1440 */; elapsedMinutes(bedtime, now);
+//   dragged(handle, start, other, deltaMinutes) /* cran de 5, ne traverse pas l'autre poignée */; fadeAlpha(degreesPastNow) }
+@Composable fun NiumiTextTabs(labels: List<String>, selectedIndex: Int? /* null = aucun */, onSelect: (Int) -> Unit, modifier: Modifier = Modifier,
+                              size: NiumiTextTabsSize = NiumiTextTabsSize.Home, state: NiumiFieldState = Normal, onLockedClick: (() -> Unit)? = null) // étape 45 (prévu « NiumiModeTabs »)
+enum class NiumiTextTabsSize { Home /* 14 */, Picker /* 15 */ }
+@Composable fun NiumiWheelPicker(values: List<String>, selectedIndex: Int, onSelectedIndexChange: (Int) -> Unit, contentDescription: String, modifier: Modifier = Modifier) // étape 45, sans fin ; réutilisable à l'étape 50
+@Composable fun NiumiTimePickerDialog(initialHandle: DialHandle, bedtimeMinutes: Int, wakeMinutes: Int, texts: TimePickerTexts,
+                                      sentence: (handle: DialHandle, bedtime: Int, wake: Int) -> String, onConfirm: (bedtime: Int, wake: Int) -> Unit, onDismiss: () -> Unit) // étape 45
+data class TimePickerTexts(val bedtimeTab: String, val wakeTab: String, val bedtimeTitle: String, val wakeTitle: String, val hours: String, val minutes: String, val confirm: String, val close: String)
+@Composable fun NiumiToast(text: String, modifier: Modifier = Modifier)   // étape 45 (M10) : bulle encre en bas d'écran, liveRegion ; l'écran décide quand elle disparaît ; réutilisée à l'étape 46
+// Icônes d'applications, déplacées de :feature:setup à l'étape 45 (écran 4 et accueil) :
+class NiumiAppIconCache(convert: (Drawable?, Int) -> ImageBitmap? = ...) { fun get(key: String, icon: Drawable?, sizePx: Int): ImageBitmap? }   // + LocalNiumiAppIconCache
+fun Drawable.toImageBitmapOrNull(sizePx: Int): ImageBitmap?
+@Composable fun NiumiAppIcon(key: String, icon: Drawable?, size: Dp, shape: Shape, modifier: Modifier = Modifier, greyed: Boolean = false)
+@Composable fun NiumiMoreAppsSlot(text: String, size: Dp, shape: Shape, textStyle: TextStyle, modifier: Modifier = Modifier)   // case « +N »
+data class AppSlotLayout(val shown: Int, val hidden: Int); const val MAX_APP_SLOTS = 6
+fun appSlotCapacity(width: Float, slot: Float, gap: Float): Int; fun appSlotLayout(count: Int, capacity: Int): AppSlotLayout
 @Composable fun NiumiProblemBanner(text: String, linkText: String, onLink: () -> Unit)                   // étape 52
 @Composable fun NiumiAlertDialog(title: String, body: @Composable () -> Unit, primary: String, onPrimary: () -> Unit, secondaryLink: String, onSecondary: () -> Unit)
 // :core:designsystem — com.niumi.designsystem.format (étape 34)
@@ -262,7 +292,7 @@ data class WakePlan(val enabled: Boolean, val enabledIsoDays: Set<Int>, val wake
 interface WakePlanStore { suspend fun read(): WakePlan; suspend fun write(plan: WakePlan); val plan: Flow<WakePlan> }   // DataStore niumi_wake_plan, garde de déverrouillage
 interface TimeToGetUpPreferences { suspend fun declaredMinutes(): Int?; suspend fun setDeclaredMinutes(value: Int) }   // DataStore niumi_time_to_get_up
 enum class PlanChangeReason { SWITCH, DAYS, WAKE_TIME, BEDTIME, APP_SELECTION, PROCESS_START, USER_UNLOCKED, TIME_CHANGED, TIMEZONE_CHANGED, SESSION_FINISHED }
-sealed interface PlanApplyResult { data class Armed(val occurrence: NextOccurrenceDto); data object Disabled; data object NoDayEnabled;
+sealed interface PlanApplyResult { data class Armed(val occurrence: NextOccurrenceDto); data object Disabled; /* NoDayEnabled supprimé à l'étape 45 : aucun jour = ponctuel */
                                    data object LockedBySession; data object Unchanged /* étape 44 */; data class Failed(val failure: ActivationFailure) }
 interface WakePlanScheduler {
     suspend fun apply(plan: WakePlan, reason: PlanChangeReason): PlanApplyResult   // sous SessionCoordinator.withLock : DISARM_REQUESTED si ARMED en attente, puis ACTIVATION ; enregistre le planning ; programme le rappel du soir (étape 52)
@@ -273,7 +303,13 @@ interface WakePlanScheduler {
 // démarrage ou déverrouillage sans session → armement ; TIME/TIMEZONE_CHANGED → recalcul si un instant change. Rien avant déverrouillage.
 // SessionCoordinator : + withLock(block: suspend (LockedSession) -> T) ; LockedSession { load(); clearActive(id); dispatch(event, extras); reconcile(reason) }.
 // ArmOccurrenceUseCase(facade, eventFactory, pairedBoxStore, appSelectionStore, alarmSoundPreferences) et ActivationFailure (+ InvalidPlan) dans SYS/plan.
-// PlanArmingStatus { state: StateFlow<PlanArmingState> } (Ok | Failed(failure, atEpochMillis)), en mémoire, lu par l'étape 52 (Q14).
+// PlanArmingStatus { state: StateFlow<PlanArmingState> } (Ok | Failed(failure, atEpochMillis)), en mémoire, lu par l'étape 52 (Q14) — et par l'accueil depuis l'étape 45.
+// Étape 45 (2026-10-25) : onFinished éteint aussi le planning après COMPLETED quand enabledIsoDays est vide (ponctuel consommé, ReconcileAction.PlanSwitchedOff) ;
+// ActivationFailure.InvalidPlan couvre EMPTY_PERIOD ; fun NiumiCoreFacade.nextOccurrence(plan: WakePlan, zoneId: String, nowEpochMillis: Long): NextOccurrenceResultDto devient publique (affichage de l'accueil).
+
+// :core:system — com.niumi.system.setup (étape 45)
+// SetupPreferences : + isSetupCompleted() / markSetupCompleted() (clé setup_completed du DataStore niumi_setup) ; − lastWakeTimeIso, lastBlockingStartTimeIso (clés laissées sans lecture)
+class SetupCompletion(preferences: SetupPreferences, pairedBoxStore: PairedBoxStore, appSelection: AppSelectionSource) { suspend fun isCompleted(): Boolean } // clé, ou ≥ 1 Niumi Spot et ≥ 1 application
 interface EveningReminderScheduler { fun schedule(occurrence: NextOccurrenceDto, plan: WakePlan, appCount: Int): OperationResult; fun cancel(): OperationResult }
 // setWindow RTC_WAKEUP à startsAt − 30 min, fenêtre 10 min ; canal niumi_evening_reminder ; aucune action ; tap → accueil
 
@@ -298,8 +334,10 @@ interface PairedBoxStore {   // all() / add(credential, name) / rename(boxId, na
 
 // :app — routes finales (NiumiRoute, étapes 35 à 51)
 // Presentation, Permissions, AccessibilityConsent (étape 36), PermissionGuide(permission: String) /* reporté avec M1 */, PointPairing(mode: String /* SETUP | ADD | ALARM */),
-// TimeToGetUp(mode: String /* SETUP | EDIT */), AppSelection, Home, Success, EmergencyExit(origin: String /* HOME | ALARM */),
+// TimeToGetUp(mode: String /* SETUP | EDIT */), AppSelection(editing: Boolean = false) /* étape 45, M11 */, Home, Success, EmergencyExit(origin: String /* HOME | ALARM */),
 // Settings, NiumiSpots, Help, HelpTopic(id: String), About, Licenses
+// Étape 45 : − WakeTime, Summary, ActiveSession ; + TransitionalSettings (jusqu'à l'étape 48) ;
+// fun homeDestinationFor(state: SessionStateDto?, onboardingAcknowledged: Boolean, setupCompleted: Boolean, storageUnreadable: Boolean = false): NiumiRoute (lue par HomeGateViewModel)
 ```
 
 ### Contrat KMP 1.5 (étapes 41 et 42)
@@ -318,13 +356,14 @@ class EmergencyExitProof internal constructor(val textId: String, val sessionId:
 // :shared:core — com.niumi.core.schedule
 data class WakePlan(val enabledIsoDays: Set<Int>, val wakeTimeIso: String, val bedtimeIso: String)   // ISO 1 = lundi … 7 = dimanche
 data class NextOccurrenceInput(val plan: WakePlan, val zoneId: String, val nowEpochMillis: Long)
-enum class NextOccurrenceStatus { VALID, NO_DAY_ENABLED, INVALID_TIME, UNKNOWN_ZONE, BEDTIME_EQUALS_WAKE }
+enum class NextOccurrenceStatus { VALID, INVALID_TIME, UNKNOWN_ZONE, EMPTY_PERIOD }   // amendé le 2026-10-25 : − NO_DAY_ENABLED, − BEDTIME_EQUALS_WAKE, + EMPTY_PERIOD
 data class NextOccurrence(val wakeSchedule: WakeSchedule, val blockingSchedule: BlockingSchedule, val blockingStartsImmediately: Boolean)
 data class NextOccurrenceResult(val status: NextOccurrenceStatus, val occurrence: NextOccurrence?)
 object NextOccurrenceCalculator { fun compute(input: NextOccurrenceInput): NextOccurrenceResult }
-// Règle §8.4 : pour d ∈ 0..7, candidat = (aujourd'hui + d) si son jour ISO est coché, à wakeTimeIso ; première occurrence strictement future ;
-// coucher la veille si bedtime > wakeTime, sinon le jour même ; coucher ≤ now → blockingStartsImmediately = true, blockingSchedule immédiat ;
-// DST délégué à WakeScheduleCalculator ; bedtime == wake → BEDTIME_EQUALS_WAKE.
+// Règle §8.4 : pour d ∈ 0..7, candidat = (aujourd'hui + d) si son jour ISO est coché (tous les jours si aucun ne l'est : ponctuel, 2026-10-25), à wakeTimeIso ;
+// première occurrence strictement future ; coucher la veille si bedtime >= wakeTime (égalité = 24 h, 2026-10-25), sinon le jour même ;
+// coucher ≤ now → blockingStartsImmediately = true, blockingSchedule immédiat ; DST délégué à WakeScheduleCalculator ;
+// heures distinctes confondues par le trou de printemps → EMPTY_PERIOD (BEDTIME_EQUALS_WAKE jusqu'au 2026-10-25).
 
 // :shared:core — com.niumi.core.nfc : BoxVerifier.verify(payload, credentials: List, context) du contrat 1.4 conservé tel quel (MATCH, NO_PAIRED_BOX_MATCH, UNSUPPORTED_VERSION)
 // :shared:core — com.niumi.core.diagnostics : PairedBoxLimit.MAX = 10 (MIN = 1 inchangé) ; TOO_MANY_PAIRED_BOXES au-dessus de dix
@@ -610,7 +649,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Fichiers :**
 - `:shared:core` — créer `KMP/schedule/WakePlan.kt`, `NextOccurrenceCalculator.kt`, `NextOccurrenceInput.kt`, `NextOccurrenceResult.kt`, `KMP/domain/ReleaseMeans.kt`, `DisarmReducer.kt` (`onDisarmRequested` : exige `ARMED`, `isBlockingPending`, `occurredAt < triggerAt` ; snapshot `RELEASING` cible `DISARMED`, `releasedBy = PLAN_CHANGE`, `disarmedAtEpochMillis` renseigné à `RELEASE_SUCCEEDED`), `KMP/interop/PlanDtos.kt`, `PlanDtoMappers.kt` ; modifier `SessionState.kt`, `ReleaseTarget.kt`, `SessionEventKind.kt`, `SessionSnapshot.kt` (`SCHEMA_VERSION = 3`, deux champs), `NfcReducer.kt` (`releasedBy = NFC_SCAN`), `ReleaseReducer.kt` (`DISARMED` à `RELEASE_SUCCEEDED`), `SessionEngine.kt`, `SessionEventValidation.kt`, `ReducerSupport.kt`, `ViolationCode.kt`, `KMP/diagnostics/ActivationPolicy.kt` (contrôles ignorés si liste vide ; `pairedBoxCount` déjà borné par `PairedBoxLimit`), `interop/SessionDtos.kt`, `DtoMappers.kt`, `SessionSnapshotEventMappers.kt`, `NiumiCoreFacade.kt` (+ `computeNextOccurrence`), `NiumiCoreVersion.kt` (1.5, schéma 3).
 - Fixtures : `shared/core/src/commonTest/resources/fixtures/wake_plans.json` ; snapshot v2 conservé pour la lecture par défaut ; snapshot v3 `DISARMED`.
-- Tests : créer `NextOccurrenceCalculatorTest` (L–V 7:00/22:30 à jeudi 20:00 → vendredi 7:00, coucher jeudi 22:30 ; vendredi 23:00 → lundi 7:00, coucher dimanche 22:30 ; coucher 1:00 → jour même ; période en cours → `blockingStartsImmediately` ; aucun jour → `NO_DAY_ENABLED` ; DST printemps/automne comme `WakeScheduleCalculatorTest` ; égalité → `BEDTIME_EQUALS_WAKE`), `SessionEngineDisarmTest` (en attente → `RELEASING`/`DISARMED`, effets ; appliqué → `BLOCKING_ALREADY_APPLIED` ; hors `ARMED` → `INVALID_STATE_TRANSITION` ; `RELEASE_SUCCEEDED` → `DISARMED`, `disarmedAt`), étendre `SessionEngineReleaseTest`, `SessionEngineNfcTest` (`releasedBy`), `SessionEngineForbiddenTransitionsTest` (10 × 14), `DtoRoundTripTest` (v2 → `releasedBy` déduit), `NiumiCoreFacadeTest`, `ActivationPolicyTest` (liste vide autorisée).
+- Tests : créer `NextOccurrenceCalculatorTest` (L–V 7:00/22:30 à jeudi 20:00 → vendredi 7:00, coucher jeudi 22:30 ; vendredi 23:00 → lundi 7:00, coucher dimanche 22:30 ; coucher 1:00 → jour même ; période en cours → `blockingStartsImmediately` ; aucun jour → `NO_DAY_ENABLED` ; DST printemps/automne comme `WakeScheduleCalculatorTest` ; égalité → `BEDTIME_EQUALS_WAKE` ; *ces deux cas sont réécrits à l'étape 45 : ponctuel, 24 h, `EMPTY_PERIOD`*), `SessionEngineDisarmTest` (en attente → `RELEASING`/`DISARMED`, effets ; appliqué → `BLOCKING_ALREADY_APPLIED` ; hors `ARMED` → `INVALID_STATE_TRANSITION` ; `RELEASE_SUCCEEDED` → `DISARMED`, `disarmedAt`), étendre `SessionEngineReleaseTest`, `SessionEngineNfcTest` (`releasedBy`), `SessionEngineForbiddenTransitionsTest` (10 × 14), `DtoRoundTripTest` (v2 → `releasedBy` déduit), `NiumiCoreFacadeTest`, `ActivationPolicyTest` (liste vide autorisée).
 
 **Produit :** un moteur qui calcule l'occurrence suivante d'un planning et se désarme proprement avant le coucher.
 
@@ -701,7 +740,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 **Fichiers :**
 - `:core:system` — créer `SYS/plan/WakePlanScheduler.kt`, `DefaultWakePlanScheduler.kt` (sous `SessionCoordinator.withLock` : si `ARMED` en attente → `DISARM_REQUESTED` et attente de `DISARMED` ; si session après le coucher → `LockedBySession` ; puis `computeNextOccurrence` et `ACTIVATION_REQUESTED` avec `checks = emptyList()` ; `enabled = false` → désarmement seul ; `TIMEZONE_CHANGED` avant le coucher → désarmement puis ré-armement à l'heure locale du nouveau fuseau, après le coucher → rien, décision Q9 du 2026-10-24 ; `DISARM_REQUESTED` refusé par `BLOCKING_START_ALREADY_ELAPSED` → appliquer le blocage et répondre `LockedBySession`), `PlanChangeReason.kt`, `PlanApplyResult.kt`, `SYS/session/DisarmResult.kt` ; modifier `SessionEventFactory.kt` (+ `disarmRequested`, `emergencyExitConfirmed`), `DefaultSessionCoordinator.kt` (`DISARM_REQUESTED` dans l'aiguillage des phases à effets requis, aujourd'hui `else -> error` ; `PublishSnapshotExecutor` : `DISARMED` → `SESSION_DISARMED` ; après `RELEASE_SUCCEEDED` : `COMPLETED`/`DISARMED` → `rearmAfterFinalState()` ; `CANCELLED` → `WakePlanStore.write(enabled = false)`), `SessionReconciler.kt`, `SessionStartupReconciler.kt` (au démarrage et à `USER_UNLOCKED` : aucune session active et planning allumé → `apply(PROCESS_START | USER_UNLOCKED)`), `ReconcileResult.kt`, `TechnicalEventType.kt`.
 - `:feature:session` — `ArmSessionUseCase` → `SESSION/activation/ArmOccurrenceUseCase.kt` (reçoit une `NextOccurrenceDto`, lit sonnerie et sélection au moment d'armer ; aucune liste de boîtiers).
-- Tests : `WakePlanSchedulerTest` (interrupteur allumé → armé ; changement d'heure → `DISARMED` puis `ARMED` avec deux `sessionId` ; après coucher → `LockedBySession` ; période en cours → blocage immédiat ; aucun jour → `NoDayEnabled`), `SessionCoordinatorDisarmTest`, `SessionCoordinatorEmergencyExitTest`, `SessionCoordinatorRearmTest` (`COMPLETED` → nouvelle session ; `CANCELLED` → interrupteur éteint, rien d'armé), `SessionReconcilerRearmTest`, `ArmOccurrenceUseCaseTest`, `TechnicalEventTypeTest`.
+- Tests : `WakePlanSchedulerTest` (interrupteur allumé → armé ; changement d'heure → `DISARMED` puis `ARMED` avec deux `sessionId` ; après coucher → `LockedBySession` ; période en cours → blocage immédiat ; aucun jour → `NoDayEnabled`, *devenu à l'étape 45 « aucun jour → armé au prochain réveil », avec « ponctuel terminé → interrupteur éteint » et « quotidien terminé → réarmé »*), `SessionCoordinatorDisarmTest`, `SessionCoordinatorEmergencyExitTest`, `SessionCoordinatorRearmTest` (`COMPLETED` → nouvelle session ; `CANCELLED` → interrupteur éteint, rien d'armé), `SessionReconcilerRearmTest`, `ArmOccurrenceUseCaseTest`, `TechnicalEventTypeTest`.
 
 **Produit :** l'option B prouvée en JVM : le planning arme, désarme et ré-arme sans que l'interface écrive jamais un état de session.
 
@@ -717,13 +756,15 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ## Phase Q — Lot 14 : accueil et fin de session (étapes 45 et 46)
 
-**Lot ajouté le 2026-10-10.** Décisions : l'accueil vit dans `SESSION/home/` ; `NiumiDial` est un composant du design system (fondu ambre par `Brush.sweepGradient` sur l'arc, demi-cosinus sur 34°) ; les poignées imposent 15 minutes d'écart (Q8) ; le point de l'heure actuelle avance à la minute (Q13).
+**Lot ajouté le 2026-10-10.** Décisions : l'accueil vit dans `SESSION/home/` ; `NiumiDial` est un composant du design system (fondu ambre par `Brush.sweepGradient` sur l'arc, demi-cosinus sur 34°) ; les poignées imposent 15 minutes d'écart (Q8) ; le point de l'heure actuelle avance à la minute (Q13). *Révisé le 2026-10-25 : plus d'écart minimal, deux heures identiques = 24 h (Q8 révisé, voir l'étape 45) ; fondu de 12° en pente droite après essai sur appareil (même jour, étape 45).*
 
 ### Étape 45 : écran 6 · Accueil à trois états et cadran
 
-**Specs à lire :** `SPECIFICATION.md` §9, §2, §10 ; `VALEURS-DE-DESIGN.md` §5 ; maquettes 15, 16, 17, 21 (sources pour le cadran) ; SPEC_ANDROID §15 ; `APP/navigation/HomeScreen.kt`, `HomeViewModel.kt`, `HomeUiState.kt`, `HomeDestination.kt`, `SESSION/wake/*`, `summary/*`, `active/ActiveSession*`.
+**Specs à lire :** `SPECIFICATION.md` §9, §2, §10 ; `VALEURS-DE-DESIGN.md` §5 ; maquettes 15 à 20 et 24 (numérotation du 2026-10-25 ; sources pour le cadran, les onglets et le sélecteur) ; SPEC_ANDROID §15 ; `APP/navigation/HomeScreen.kt`, `HomeViewModel.kt`, `HomeUiState.kt`, `HomeDestination.kt`, `SESSION/wake/*`, `summary/*`, `active/ActiveSession*`.
 
-**Points ouverts touchés :** D5, D17, M10, Q8, Q13.
+**Points ouverts touchés :** D5, D17, M10, M11, Q8, Q13, Q14 (tranchés le 2026-10-25, voir le tableau).
+
+**Écarts décidés le 2026-10-25 (décisions de Mehdi ; `ETAPE-45.md` à rédiger après la validation sur appareil).** Les maquettes 15 à 17 ont été mises à jour et trois maquettes ajoutées (18 réveil ponctuel, 19 et 20 sélecteur d'heure) : onglets « Ponctuel » / « Quotidien » au-dessus des pastilles, sélecteur d'heure à roues, toucher bref et glisser sans appui long sur le cadran. Le contrat 1.5 est amendé (SPEC_CORE_KMP §8.4) : jours vides = ponctuel, égalité = 24 h, `NO_DAY_ENABLED` et `BEDTIME_EQUALS_WAKE` retirés, `EMPTY_PERIOD` ajouté, fixtures `wake_plans.json` mises à jour ; l'extinction après un ponctuel terminé est native (`DefaultWakePlanScheduler.onFinished`) et `PlanApplyResult.NoDayEnabled` disparaît. Q8 est révisé (plus de 15 min d'écart) ; D17, M10, M11 et Q14 (affichage) sont tranchés. Écart aux fichiers prévus : `NiumiTextTabs` (et non `NiumiModeTabs`), `NiumiWheelPicker`, `NiumiTimePickerDialog` et `NiumiToast` en plus du cadran ; les icônes d'applications (`NiumiAppIcon`, `NiumiAppIconCache`, `appSlotLayout`) passent de `:feature:setup` à `:core:designsystem` ; `HomeMode` a quatre valeurs (`InSession`, `Disabled`, `NothingArmed` pour Q14, `Scheduled`) et `DayMode` trois ; `SetupPreferences.setupCompleted` et `SetupCompletion` décident de la fin de la mise en route (`homeDestinationFor`, `HomeGateViewModel`) ; l'écran 4 gagne un mode `editing` (M11) et réarme par `apply(APP_SELECTION)` ; une page transitoire « Réglages » (`TransitionalSettings`, jusqu'à l'étape 48) remplace l'écran 12 derrière l'icône ; le lien « Annuler le réveil » ouvre `ScanToModify` jusqu'à l'étape 46. `ArmSessionUseCase` et l'activation ponctuelle disparaissent avec les écrans 5, 6 et 7 ; l'affichage des incidents `CRITICAL` de l'écran 7 n'a pas de remplaçant avant l'étape 52 (notification 13.1 et diagnostic d'incident d'ici là). La ligne Sonnerie lit la session armée, sinon la préférence. Textes non dessinés à valider par Mehdi : « 24 h de blocage » et ses deux phrases du sélecteur, « Choisir l’heure », « Heures », « Minutes », « Icône de l’application bloquée ». Écart visuel : rangées des roues de 42. Régression des maquettes régénérées (« Annuler la session », écran 2) : non appliquée, D23 maintenu (E14). **Après les essais sur appareil, le même jour (décisions de Mehdi, M16) :** zone du cadran de 366 × 340, centre à 170 (290 et 158), bande de 40 pour les étiquettes et 4 d'écart avec l'anneau, une étiquette en haut ou en bas recouvrant l'anneau ; étiquettes placées par `DialLabelLayout` (jamais sur l'anneau, l'une sur l'autre ni sous l'icône des réglages, glissement le long de l'anneau, ordre des poignées gardé, glissement sur le côté avec une police agrandie) ; cadran 32 sous la marge du haut ; espaces resserrés (12, 8, 0, 20 au lieu de 18, 30, 14, 34), lignes de 76 et 64 (86 et 78), plus de trait sous « Sonnerie », onglets à 16 d'écart (28) ; comptes à rebours d'un jour ou plus en « 1 j 4 h » (texte à valider) ; flèche de 8 × 8 vers le point de l'heure actuelle, point blanc sur l'arc de la nuit ; fondu de l'ambre de 12° en pente droite (34° en demi-cosinus) ; notification de la garde qui dit le jour (« Réveil dimanche à 0:30 », texte à valider) et heures des notifications de la garde sans zéro devant (SPEC_ANDROID §12.5) ; surveillance 13.1 déclenchée après chaque réglage de l'accueil. Limites constatées (SPEC_ANDROID §13.1) : retirer une autorisation d'exécution (les notifications) fait tuer le processus et laisse le service d'accessibilité planté, donc le blocage coupé, jusqu'à sa réactivation ; `USE_EXACT_ALARM` n'est pas retirable, l'essai « alarme exacte retirée → Q14 » ne se fait donc pas sur appareil. Specs mises à jour : `SPECIFICATION.md` §2, §9, §17, `VALEURS-DE-DESIGN.md` §4, §5, `POINTS-OUVERTS.md` §2, §4, SPEC_ANDROID §12.5, §13.1, §15.
 
 **Fichiers :**
 - `:core:designsystem` — créer `DS/component/NiumiDial.kt`, `DialState.kt`, `DS/drawing/DialGeometry.kt` (rayon 112, trait 28, 15°/h, minuit en haut ; poignées déplaçables ; arc ambre + fondu en session).
@@ -733,18 +774,18 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** l'accueil des maquettes, qui pilote le planning et reflète la session.
 
-- [ ] **Écrire `DialStateTest`**, implémenter le cadran.
-- [ ] **Écrire `HomeTextsTest`, `HomeViewModelTest`**, implémenter l'accueil ; supprimer les écrans 5, 6, 7 anciens.
-- [ ] **Vérifier :** batterie standard ; `grep -rn "WakeTimeScreen\|SummaryScreen\|ActiveSessionScreen" androidApp` vide.
-- [ ] **Valider sur appareil, rédiger `ETAPE-45.md`.** SPEC_ANDROID §15 (écran 6 à trois états), §8 (prochaine occurrence), §9.2.
+- [x] **Écrire ~~`DialStateTest`~~ `DialGeometryTest`**, implémenter le cadran (*2026-10-25 ; avec `NiumiDialTest` instrumenté*).
+- [x] **Écrire `HomeTextsTest`, `HomeViewModelTest`**, implémenter l'accueil ; supprimer les écrans 5, 6, 7 anciens. *(2026-10-25.)*
+- [x] **Vérifier :** batterie standard ; `grep -rn "WakeTimeScreen\|SummaryScreen\|ActiveSessionScreen" androidApp` vide. *(2026-10-25, sans appareil, détail dans `ETAPE-45.md` ; specs mises à jour le même jour : `SPECIFICATION.md` §2, §3, §8, §9, `TEXTES-DES-MAQUETTES.md`, `VALEURS-DE-DESIGN.md` §3 à §5, `POINTS-OUVERTS.md`, SPEC_CORE_KMP §8.4, §14, §17, §19, SPEC_IOS §11, §15, SPEC_ANDROID §8, §9.2, §10.4, §13, §15, §19.1.)*
+- [ ] **Valider sur appareil, rédiger `ETAPE-45.md`.** *(2026-10-25 : essais 1 à 8 conformes et tests instrumentés verts sur Xiaomi 25080RABDG, Android 16 ; `ETAPE-45.md` rédigé. Restent les deux nuits L–V réelles et le passage TalkBack : case laissée ouverte.)* `connectedDebugAndroidTest` (`:core:designsystem`, `:feature:session`, `:app`), puis réactiver le service d'accessibilité, puis le protocole manuel ci-dessous.
 
-**Tests manuels :** fin de mise en route → « Réveil désactivé » grisé ; interrupteur → carte noire, « Réveil dans … » ; déplacer la poignée du coucher → la carte se met à jour, une session `DISARMED` puis `ARMED` en base ; régler une période déjà en cours → blocage immédiat, accueil sombre ; toucher un jour en session → « Modifiable après avoir scanné ton Niumi Spot. » ; deux nuits L–V réelles.
+**Tests manuels :** fin de mise en route → « Réveil désactivé » grisé ; interrupteur → carte noire, « Réveil dans … » ; glisser la poignée du coucher (pas de 5 min, sans appui long) → la carte se met à jour, une session `DISARMED` puis `ARMED` en base ; toucher bref sur la poignée du coucher → onglet Coucher, ailleurs → onglet Réveil ; 22:31 au sélecteur accepté ; heures identiques → 24 h, blocage immédiat en ponctuel, accueil sombre ; Ponctuel → réveil au prochain horaire, scan du matin → interrupteur éteint ; Quotidien → sept jours ; décocher le dernier jour → Ponctuel ; régler une période déjà en cours → blocage immédiat, accueil sombre ; toucher un jour en session → bulle « Modifiable après avoir scanné ton Niumi Spot. » ; ligne « Applications bloquées » → écran 4 avec flèche, retour, réarmement ; ~~alarme exacte retirée → Q14~~ (impossible sur appareil : `USE_EXACT_ALARM` n'est pas retirable, SPEC_ANDROID §13.1) ; TalkBack sur le cadran et le sélecteur ; deux nuits L–V réelles ; restes de l'étape 44 (`TIMEZONE_CHANGED` réel, réarmement au déverrouillage après redémarrage).
 
 **Terminé quand :** les trois états sont conformes aux maquettes (constaté) ; aucune écriture d'état de session depuis l'interface (grep `SessionCoordinator` dans `home/` vide : seul `WakePlanScheduler` est injecté).
 
 ### Étape 46 : annulation par scan et écran 11 · Réussite
 
-**Specs à lire :** `SPECIFICATION.md` §11, §15 ; maquettes 21 à 24, 39 ; SPEC_ANDROID §11.3 ; `SESSION/active/ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `RING/AlarmViewModel.kt` (`AlarmUiState.Exit`), `APP/navigation/DeepLinkDestination.kt`.
+**Specs à lire :** `SPECIFICATION.md` §11, §15 ; maquettes 24 à 27, 42 (21 à 24 et 39 avant le 2026-10-25) ; SPEC_ANDROID §11.3 ; `SESSION/active/ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `RING/AlarmViewModel.kt` (`AlarmUiState.Exit`), `APP/navigation/DeepLinkDestination.kt`.
 
 **Points ouverts touchés :** D2, D15, Q14.
 
@@ -790,7 +831,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 48 : écran 12 · Réglages (squelette) et liste des Niumi Spots
 
-**Specs à lire :** `SPECIFICATION.md` §16 (introduction, Niumi Spots) ; maquettes 40, 45, 50 à 57 ; SPEC_ANDROID §15.
+**Specs à lire :** `SPECIFICATION.md` §16 (introduction, Niumi Spots) ; maquettes 43, 48, 53 à 60 (40, 45, 50 à 57 avant le 2026-10-25) ; SPEC_ANDROID §15.
 
 **Points ouverts touchés :** D21 et Q22 tranchés ; textes à relire du §2 de `POINTS-OUVERTS.md` (mentions Niumi Spots, « Enregistrer »).
 
@@ -813,7 +854,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 49 : écrans 8 et 9 · Sortie de secours
 
-**Specs à lire :** `SPECIFICATION.md` §13 ; maquettes 26 à 30 ; SPEC_CORE_KMP §12 (1.5) ; SPEC_ANDROID §3, §4.5 (à réécrire), §10.2 ; `SYS/audio/AlarmAudioEngine.kt`, `DefaultAlarmAudioEngine.kt`, `VolumeRampPolicy.kt` ; `docs/android/LIMITES.md`, `play-console/PRIVACY_POLICY.md` ; point de vigilance 3.
+**Specs à lire :** `SPECIFICATION.md` §13 ; maquettes 29 à 33 (26 à 30 avant le 2026-10-25 ; leurs sources régénérées reprennent l'ancien texte, E14 : `SPECIFICATION.md` fait foi) ; SPEC_CORE_KMP §12 (1.5) ; SPEC_ANDROID §3, §4.5 (à réécrire), §10.2 ; `SYS/audio/AlarmAudioEngine.kt`, `DefaultAlarmAudioEngine.kt`, `VolumeRampPolicy.kt` ; `docs/android/LIMITES.md`, `play-console/PRIVACY_POLICY.md` ; point de vigilance 3.
 
 **Points ouverts touchés :** D2, D8, D20, Q16 ; D21, M13 et Q23 tranchés.
 
@@ -836,12 +877,12 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 50 : écran 3 bis et rubrique « Temps gagné »
 
-**Specs à lire :** `SPECIFICATION.md` §7, §16 « Aide / Temps gagné », §15 ; maquettes 11, 43, 48 ; étape 43 (`TimeToGetUpPreferences`).
+**Specs à lire :** `SPECIFICATION.md` §7, §16 « Aide / Temps gagné », §15 ; maquettes 11, 46, 51 (11, 43, 48 avant le 2026-10-25) ; étape 43 (`TimeToGetUpPreferences`).
 
 **Points ouverts touchés :** D3, D4, M9.
 
 **Fichiers :**
-- `:feature:setup` — créer `SETUP/timetogetup/TimeToGetUpScreen.kt` (roue de onze durées, valeur du milieu en 40/600, mention, « Continuer » en mode `SETUP`, « Enregistrer » en mode `EDIT`), `TimeToGetUpTexts.kt`, `TimeToGetUpViewModel.kt` (écrit `TimeToGetUpPreferences`).
+- `:feature:setup` — créer `SETUP/timetogetup/TimeToGetUpScreen.kt` (roue de onze durées sur `NiumiWheelPicker`, livrée à l'étape 45 pour le sélecteur d'heure et réutilisable ici, à étendre si besoin aux tailles de l'écran 3 bis et à une roue bornée ; valeur du milieu en 40/600, mention, « Continuer » en mode `SETUP`, « Enregistrer » en mode `EDIT`), `TimeToGetUpTexts.kt`, `TimeToGetUpViewModel.kt` (écrit `TimeToGetUpPreferences`).
 - `:feature:session` — `SuccessViewModel.kt` déjà branché (étape 46) : vérifier que « Bravo ! » apparaît dès qu'une durée est déclarée. La page d'aide « Temps gagné » (carte « Temps pour sortir du lit avant Niumi · 15 min », « Modifier » → roue en mode `EDIT`) arrive avec l'aide à l'étape 51.
 - `:app` — route `TimeToGetUp(mode)` ; NavHost `PointPairing(SETUP)` → `TimeToGetUp(SETUP)` → `AppSelection`.
 - Tests : `TimeToGetUpTextsTest`, `TimeToGetUpViewModelTest` (onze valeurs, « 1 heure et + » = 60 selon D3, présélection D4, obligatoire, mode `EDIT` enregistre sans naviguer), `SuccessViewModelTest` étendu.
@@ -860,7 +901,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 51 : Autorisations depuis les réglages, Aide, À propos, Licences
 
-**Specs à lire :** `SPECIFICATION.md` §16 (Aide, À propos), §5 (réouverture de l'écran 2) ; maquettes 41 à 49 ; `design-plan/police/LISEZ-MOI.md` ; `APP/help/HelpScreen.kt`, `HelpTexts.kt` ; `docs/android/LIMITES.md`.
+**Specs à lire :** `SPECIFICATION.md` §16 (Aide, À propos), §5 (réouverture de l'écran 2) ; maquettes 44 à 52 (41 à 49 avant le 2026-10-25) ; `design-plan/police/LISEZ-MOI.md` ; `APP/help/HelpScreen.kt`, `HelpTexts.kt` ; `docs/android/LIMITES.md`.
 
 **Points ouverts touchés :** M2, M3, M4, M8, Q17, Q20.
 
@@ -881,14 +922,14 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 ### Étape 52 : notification du soir, bandeau de problème, alerte d'autorisations
 
-**Specs à lire :** `SPECIFICATION.md` §17 ; maquettes 58 à 61 ; SPEC_ANDROID §9.1 (dérogations), §10.5, §13.1, §14 ; `SYS/notification/*`, `SYS/readiness/SessionReadinessWatcher.kt` ; `ReleaseHygieneTest` ; point de vigilance 7.
+**Specs à lire :** `SPECIFICATION.md` §17 ; maquettes 61 à 64 (58 à 61 avant le 2026-10-25) ; SPEC_ANDROID §9.1 (dérogations), §10.5, §13.1, §14 ; `SYS/notification/*`, `SYS/readiness/SessionReadinessWatcher.kt` ; `ReleaseHygieneTest` ; point de vigilance 7.
 
 **Points ouverts touchés :** D10, M12, Q18, Q19.
 
 **Fichiers :**
 - `:core:system` — créer `SYS/notification/EveningReminderScheduler.kt`, `AndroidEveningReminderScheduler.kt` (`setWindow` selon Q18), `EveningReminderReceiver.kt`, `EveningReminderSpecs.kt` (titre « Tu te réveilles toujours demain à 7:00 ? », texte « Ton heure de coucher est programmée à 22:30, 6 applications seront bloquées. », canal `niumi_evening_reminder`, tap → accueil, aucune action), `SYS/permissions/PermissionAlertPolicy.kt`, `SYS/home/ProblemBannerPolicy.kt` ; modifier `DefaultWakePlanScheduler.kt` (programme/annule le rappel avec la session), `NiumiComponent` (+ `EVENING_REMINDER_RECEIVER`), manifeste.
 - `:core:designsystem` — `NiumiProblemBanner.kt`, `NiumiAlertDialog.kt`.
-- `:feature:session` — `HomeViewModel.kt` (+ `banner`, `alert`), `HomeScreen.kt` (bandeau en haut, cadran décalé ; alerte centrée), `PermissionAlertTexts.kt`.
+- `:feature:session` — `HomeViewModel.kt` (+ `banner`, `alert`), `HomeScreen.kt` (bandeau en haut, cadran décalé ; alerte centrée), `PermissionAlertTexts.kt`. L'alerte doit dire que retirer les notifications coupe aussi le blocage : Android tue alors le processus et le service d'accessibilité reste planté jusqu'à sa réactivation manuelle (constaté le 2026-10-25 à l'étape 45, SPEC_ANDROID §13.1). Texte à faire valider par Mehdi et à écrire dans `SPECIFICATION.md` §17 (alerte d'autorisations) avant de coder : la phrase actuelle des notifications n'en dit rien.
 - `:app` — `MainActivity.kt` (alerte évaluée à chaque `onStart`, une fois par passage, selon Q19).
 - Q14 (tranché le 2026-10-24, étape 44) : lire `PlanArmingStatus` (`SYS/plan/`) ; un échec d'armement planning allumé ouvre une fenêtre d'erreur et publie une notification. Textes à écrire dans `SPECIFICATION.md` avant de coder (aucun n'existe au 2026-10-24). **À trancher avec Mehdi** (relecture de l'étape 44) : le nouvel essai n'a lieu qu'au démarrage du processus et au premier déverrouillage après redémarrage ; faut-il réessayer au retour dans l'application (`FOREGROUND`, ou bouton de la fenêtre) ?
 - Tests : `EveningReminderSpecsTest` (textes, H−30, annulée avec la session), `PermissionAlertPolicyTest` (une / plusieurs ; conséquences mot pour mot), `ProblemBannerPolicyTest` (NFC avant « aucun point » ; un seul), `ReleaseHygieneTest` (quatrième site `AlarmManager` autorisé), `AndroidEveningReminderInstrumentedTest`.
@@ -899,7 +940,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - [ ] **Vérifier :** batterie standard ; `./gradlew :core:system:connectedDebugAndroidTest`.
 - [ ] **Valider sur appareil, rédiger `ETAPE-52.md`.** SPEC_ANDROID §9.1 (3e dérogation), §13.1 (présentation), §14, §15, §17, §20.
 
-**Tests manuels :** notification à H−30 ; absente si l'interrupteur est éteint ; couper le NFC → bandeau ; retirer le service d'accessibilité, rouvrir l'app → alerte, « Voir les autorisations » → écran 2 ; « Plus tard » → pas de seconde alerte avant le prochain passage.
+**Tests manuels :** notification à H−30 ; absente si l'interrupteur est éteint ; couper le NFC → bandeau ; retirer les notifications de Niumi → l'alerte signale aussi le service d'accessibilité coupé ; retirer le service d'accessibilité, rouvrir l'app → alerte, « Voir les autorisations » → écran 2 ; « Plus tard » → pas de seconde alerte avant le prochain passage.
 
 **Terminé quand :** `ReleaseHygieneTest` vert ; les deux bandeaux et les deux alertes sont conformes (constaté).
 

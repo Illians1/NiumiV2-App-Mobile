@@ -38,6 +38,36 @@ class SessionCoordinatorRearmTest {
             assertThat(next.wakeSchedule.triggerAtEpochMillis).isEqualTo(mondaySeven)
         }
 
+    /** « Ponctuel » (2026-10-25) : une fois le réveil terminé, l'interrupteur s'éteint et rien n'est armé. */
+    @Test
+    fun aOneOffAlarmTurnsTheSwitchOffOnceCompleted() =
+        runTest {
+            val harness = PlanTestHarness()
+            val oneOff = WEEKDAYS_PLAN.copy(enabledIsoDays = emptySet())
+            harness.scheduler.apply(oneOff, PlanChangeReason.SWITCH)
+            harness.ring()
+
+            val result = harness.scan()
+
+            assertThat((result as DispatchResult.Applied).snapshot?.state).isEqualTo(SessionStateDto.COMPLETED)
+            assertThat(harness.activeSnapshot()).isNull()
+            assertThat(harness.planStore.current).isEqualTo(oneOff.copy(enabled = false))
+        }
+
+    /** La recopie du matin consomme aussi un réveil ponctuel. */
+    @Test
+    fun aOneOffAlarmEndedByTheEmergencyExitTurnsTheSwitchOff() =
+        runTest {
+            val harness = PlanTestHarness()
+            harness.scheduler.apply(WEEKDAYS_PLAN.copy(enabledIsoDays = emptySet()), PlanChangeReason.SWITCH)
+            harness.ring()
+
+            harness.emergencyExit()
+
+            assertThat(harness.activeSnapshot()).isNull()
+            assertThat(harness.planStore.current.enabled).isFalse()
+        }
+
     /** D2 (2026-10-24) : le matin, la recopie termine la session et laisse le planning allumé. */
     @Test
     fun anEmergencyExitDuringTheAlarmArmsTheNextOccurrence() =

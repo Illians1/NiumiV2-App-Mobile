@@ -11,24 +11,53 @@ import org.junit.Test
 class BlockingGuardNotificationSpecsTest {
     @Test
     fun beforeBedtimeItAnnouncesTheWakeAndTheBlockingTimes() {
-        val spec = BlockingGuardNotificationSpecs.beforeBlocking("07:00", "22:30")
+        val spec =
+            BlockingGuardNotificationSpecs.beforeBlocking(
+                GuardMoment("7:00", day = null),
+                GuardMoment("22:30", day = null),
+            )
 
-        assertThat(spec.title).isEqualTo("Réveil programmé à 07:00")
+        assertThat(spec.title).isEqualTo("Réveil à 7:00")
+        assertThat(spec.text).isEqualTo("Tes applications choisies seront bloquées à partir de 22:30.")
+    }
+
+    /** Décision du 2026-10-25 : un réveil armé des jours à l'avance dit son jour. */
+    @Test
+    fun aWakeDaysAheadNamesTheDays() {
+        val spec =
+            BlockingGuardNotificationSpecs.beforeBlocking(
+                GuardMoment("0:30", day = "dimanche"),
+                GuardMoment("11:45", day = "samedi"),
+            )
+
+        assertThat(spec.title).isEqualTo("Réveil dimanche à 0:30")
+        assertThat(spec.text).isEqualTo("Tes applications choisies seront bloquées samedi à partir de 11:45.")
+    }
+
+    @Test
+    fun aWakeTheNextDayNamesItsDay() {
+        val spec =
+            BlockingGuardNotificationSpecs.beforeBlocking(
+                GuardMoment("7:00", day = "lundi"),
+                GuardMoment("22:30", day = null),
+            )
+
+        assertThat(spec.title).isEqualTo("Réveil lundi à 7:00")
         assertThat(spec.text).isEqualTo("Tes applications choisies seront bloquées à partir de 22:30.")
     }
 
     @Test
     fun withoutABlockingTimeItSaysAtBedtime() {
-        assertThat(BlockingGuardNotificationSpecs.beforeBlocking("07:00", null).text)
+        assertThat(BlockingGuardNotificationSpecs.beforeBlocking(GuardMoment("7:00", null), null).text)
             .isEqualTo("Tes applications choisies seront bloquées au coucher.")
     }
 
     /** Décision du 2026-10-22 : la notification parle du réveil, et le blocage dure jusqu'au scan. */
     @Test
     fun duringTheBlockingTheTitleCarriesTheWakeTime() {
-        val spec = BlockingGuardNotificationSpecs.blocking("07:00")
+        val spec = BlockingGuardNotificationSpecs.blocking("7:00")
 
-        assertThat(spec.title).isEqualTo("Réveil prévu à 07:00")
+        assertThat(spec.title).isEqualTo("Réveil prévu à 7:00")
         assertThat(spec.text).isEqualTo("Tes applications choisies restent bloquées jusqu'au scan de ton Niumi Spot.")
     }
 
@@ -53,9 +82,12 @@ class BlockingGuardNotificationSpecsTest {
     fun noTextSpeaksOfASession() {
         val specs =
             listOf(
-                BlockingGuardNotificationSpecs.beforeBlocking("07:00", "22:30"),
+                BlockingGuardNotificationSpecs.beforeBlocking(
+                    GuardMoment("7:00", "lundi"),
+                    GuardMoment("22:30", null),
+                ),
                 BlockingGuardNotificationSpecs.beforeBlocking(null, null),
-                BlockingGuardNotificationSpecs.blocking("07:00"),
+                BlockingGuardNotificationSpecs.blocking("7:00"),
                 BlockingGuardNotificationSpecs.blocking(null),
                 BlockingGuardNotificationSpecs.unknownPhase(),
             )
@@ -66,7 +98,7 @@ class BlockingGuardNotificationSpecsTest {
     @Test
     fun allArePermanentSilentStatusNotificationsWithoutAction() {
         listOf(
-            BlockingGuardNotificationSpecs.beforeBlocking("07:00", "22:30"),
+            BlockingGuardNotificationSpecs.beforeBlocking(GuardMoment("7:00", null), GuardMoment("22:30", null)),
             BlockingGuardNotificationSpecs.blocking("07:00"),
             BlockingGuardNotificationSpecs.unknownPhase(),
         ).forEach { spec ->

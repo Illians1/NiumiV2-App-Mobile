@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
      * appareil à l'étape 17 ont conduit ici :
      *
      * - une redirection posée sur l'accueil ne s'exécutait jamais, le `NavHost` étant sur
-     *   `ActiveSession` après l'armement ;
+     *   l’ancien écran de session active après l’armement ;
      * - une redirection posée sur le seul `onResume` ne se déclenchait pas quand l'alarme sonnait
      *   **pendant** que l'utilisateur était déjà dans Niumi : `onResume` ne se rejoue pas, et
      *   aucune notification n'ouvre l'écran de réveil sans un tap (sans plein écran depuis le
