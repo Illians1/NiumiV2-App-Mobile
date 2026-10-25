@@ -56,6 +56,7 @@ import com.niumi.designsystem.component.NiumiToast
 import com.niumi.designsystem.component.TimePickerTexts
 import com.niumi.designsystem.component.appSlotCapacity
 import com.niumi.designsystem.component.appSlotLayout
+import com.niumi.designsystem.component.niumiTabBarClearance
 import com.niumi.designsystem.drawing.DialGeometry
 import com.niumi.designsystem.drawing.DialHandle
 import com.niumi.designsystem.format.NiumiTimeFormat
@@ -73,9 +74,9 @@ import java.time.LocalTime
  * Écran 6 · Accueil (`design-plan/SPECIFICATION.md` §9, maquettes 15 à 20 ; étape 45) : cadran,
  * carte d'état, onglets « Ponctuel / Quotidien », pastilles des jours, lignes « Applications
  * bloquées » et « Sonnerie », puis la barre d'onglets du bas, « Réveil » choisi (décision de Mehdi
- * du 2026-10-25, qui retire l'icône des réglages du haut). Le contenu défile au-dessus de la barre
- * sur un écran trop court. La bulle du bas (M10) se pose au-dessus de la barre et disparaît au
- * toucher suivant, où qu'il soit.
+ * du 2026-10-25, qui retire l'icône des réglages du haut). Sur un écran trop court, le contenu
+ * défile sous la barre, qui le laisse deviner par son haut translucide. La bulle du bas (M10) se
+ * pose au-dessus de la barre et disparaît au toucher suivant, où qu'il soit.
  */
 @Composable
 fun HomeScreen(
@@ -105,6 +106,8 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 HomeContent(state, actions)
+                // Le contenu passe sous la barre ; sa fin doit pouvoir remonter au-dessus d'elle.
+                Spacer(modifier = Modifier.height(niumiTabBarClearance()))
             }
         }
         state.message?.let { message ->

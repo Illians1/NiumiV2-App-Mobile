@@ -280,7 +280,9 @@
       "badge": {
         "hauteur": 13,
         "margeCotes": 6,
-        "rayon": "moitié de la hauteur"
+        "rayon": "moitié de la hauteur",
+        "position": "en travers de l'icône, centré",
+        "lisere": 1.5
       }
     }
   },

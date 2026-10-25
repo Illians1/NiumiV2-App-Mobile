@@ -505,9 +505,12 @@ object NiumiDimens {
      * Barre d'onglets du bas (maquette 16 du 2026-10-25, décision de Mehdi) : 100 de haut dans la
      * maquette, dont les 34 de la barre d'accueil de l'iPhone. Sur Android, 66 au-dessus de la barre
      * système, que son fond couvre. Quatre onglets de 90, centrés : icône de 28, libellé 2 dessous,
-     * badge « Bientôt » de 13 de haut 2 sous le libellé, 6 de marge sur les côtés. L'ombre de la
-     * maquette (4 vers le haut, flou 16, noir à 8 %) est rendue par une élévation, comme celle de la
-     * bulle du bas.
+     * badge « Bientôt » de 13 de haut en haut à droite de l'icône (en travers, centré, horizontal),
+     * 6 de marge sur les côtés, liseré de 1,5 (demande de Mehdi du 2026-10-25 : sous le libellé, il
+     * faisait remonter l'onglet). L'ombre de la
+     * maquette (4 vers le haut, flou 16, noir à 8 %) est un dégradé de 12 au-dessus de la barre ; le
+     * fond est translucide sur ses 10 premiers, jusqu'au haut des icônes (icône, écart et libellé, 46
+     * environ, centrés dans 66 ; demandes de Mehdi du 2026-10-25 : 24 puis 16 descendaient trop).
      */
     val tabBarHeight = 66.dp
     val tabBarItemWidth = 90.dp
@@ -515,7 +518,9 @@ object NiumiDimens {
     val tabBarLabelGap = 2.dp
     val tabBarBadgeHeight = 13.dp
     val tabBarBadgePadding = 6.dp
-    val tabBarElevation = 8.dp
+    val tabBarBadgeOutline = 1.5.dp
+    val tabBarShadowHeight = 12.dp
+    val tabBarTranslucentHeight = 10.dp
 
     /** Tremblement d'un onglet « Bientôt » touché : 3 au plus de chaque côté (décision du 2026-10-25). */
     val tabBarShake = 3.dp

@@ -1,6 +1,7 @@
 package com.niumi.designsystem.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,6 +12,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
@@ -26,9 +28,10 @@ import com.niumi.designsystem.ui.theme.NiumiType
  * maquette (décision du 2026-10-22, `marginsOverSystemBars`).
  * [bottom] reçoit le bouton principal, collé au bas ; [content] prend la place restante et gère
  * lui-même son défilement (une liste paresseuse ne peut pas vivre dans une colonne défilante).
- * [navigationBar] reçoit la barre d'onglets (`NiumiTabBar`), bord à bord tout en bas : elle prend
- * alors le bas de l'écran à sa charge, barre système comprise, et le contenu s'arrête contre elle
- * (`marginsAboveTabBar`, décision de Mehdi du 2026-10-25).
+ * [navigationBar] reçoit la barre d'onglets (`NiumiTabBar`), bord à bord tout en bas, posée sur le
+ * contenu : elle prend le bas de l'écran à sa charge, barre système comprise (`marginsAboveTabBar`,
+ * décision de Mehdi du 2026-10-25), et le contenu va jusqu'en bas, sous elle, pour se deviner à
+ * travers son haut translucide. Le contenu qui défile finit alors par `niumiTabBarClearance()`.
  */
 @Composable
 fun NiumiScreenScaffold(
@@ -39,12 +42,11 @@ fun NiumiScreenScaffold(
 ) {
     val palette = LocalNiumiPalette.current
     CompositionLocalProvider(LocalContentColor provides palette.ink) {
-        Column(modifier = modifier.fillMaxSize().background(palette.background)) {
+        Box(modifier = modifier.fillMaxSize().background(palette.background)) {
             Column(
                 modifier =
                     Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .then(
                             if (navigationBar == null) {
                                 Modifier.marginsOver(WindowInsets.safeDrawing, NiumiDimens.screenMargins)
@@ -56,7 +58,7 @@ fun NiumiScreenScaffold(
                 Column(modifier = Modifier.weight(1f).fillMaxWidth(), content = content)
                 if (bottom != null) Column(modifier = Modifier.fillMaxWidth(), content = bottom)
             }
-            navigationBar?.invoke()
+            if (navigationBar != null) Box(modifier = Modifier.align(Alignment.BottomCenter)) { navigationBar() }
         }
     }
 }

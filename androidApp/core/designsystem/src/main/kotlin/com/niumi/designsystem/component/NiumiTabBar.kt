@@ -6,6 +6,7 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
@@ -29,7 +31,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -87,14 +88,21 @@ data class NiumiTabBarItem(
 }
 
 /**
- * Barre d'onglets du bas (maquette 16, décision de Mehdi du 2026-10-25), bord à bord : fond
- * « Surface », ombre légère, onglets de 90 centrés, chacun centré verticalement dans 66 ; son fond
- * couvre la barre système. L'onglet [selectedIndex] est à l'encre (libellé 12/600) ; les autres à la
- * bordure (12/500) ; un onglet « Bientôt » est en « Désactivé » avec son badge en pilule « Tuile
- * grise ». Les couleurs sont celles du thème : en session, la barre est sombre comme l'écran.
+ * Barre d'onglets du bas (maquette 16, décision de Mehdi du 2026-10-25), bord à bord, posée sur le
+ * contenu, qui défile dessous. Son fond « Surface » est translucide en haut, pour laisser deviner
+ * ce qui passe derrière (demande de Mehdi du 2026-10-25), puis plein jusqu'en bas, barre système
+ * comprise ; icônes, libellés et badges restent pleins. Ombre légère au-dessus ; tous les touchers
+ * restent à la barre (`niumiTabBarSurface`).
+ *
+ * Onglets de 90 centrés, chacun centré verticalement dans 66. L'onglet [selectedIndex] est à l'encre
+ * (libellé 12/600) ; les autres à la bordure (12/500) ; un onglet « Bientôt » est en « Désactivé »
+ * avec son badge en pilule « Tuile grise ». Les couleurs sont celles du thème : en session, la barre
+ * est sombre comme l'écran.
  *
  * [onSelect] reçoit l'index d'un onglet disponible touché, choisi ou non ; jamais celui d'un onglet
- * « Bientôt », qui refuse le toucher par un tremblement et une vibration ([Refusal]). Se pose dans l'emplacement `navigationBar` de [NiumiScreenScaffold].
+ * « Bientôt », qui refuse le toucher par un tremblement et une vibration ([Refusal]). Se pose dans
+ * l'emplacement `navigationBar` de [NiumiScreenScaffold] ; le contenu qui défile finit par
+ * [niumiTabBarClearance] pour que sa fin remonte au-dessus de la barre.
  */
 @Composable
 fun NiumiTabBar(
@@ -108,8 +116,7 @@ fun NiumiTabBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .shadow(NiumiDimens.tabBarElevation)
-                .background(palette.surface)
+                .niumiTabBarSurface(palette.surface)
                 .navigationBarsPadding(),
     ) {
         Row(
@@ -160,14 +167,21 @@ private fun Tab(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(NiumiDimens.tabBarLabelGap, Alignment.CenterVertically),
     ) {
-        TabIcon(item.icon, selected, color)
+        Box(modifier = Modifier.size(NiumiDimens.tabBarIcon)) {
+            TabIcon(item.icon, selected, color)
+            item.badge?.let { badge ->
+                Badge(
+                    text = badge,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        }
         Text(
             text = item.label,
             style = if (selected) NiumiType.tabBarLabelSelected12 else NiumiType.tabBarLabel12,
             color = color,
             maxLines = 1,
         )
-        item.badge?.let { badge -> Badge(badge) }
     }
 }
 
@@ -272,15 +286,24 @@ private fun ClockIcon(
 }
 
 /**
- * Badge « Bientôt » : pilule de 13 de haut au moins (elle grandit avec la police), 6 de marge, 2 sous
- * le libellé comme le libellé sous l'icône.
+ * Badge « Bientôt » en travers de l'icône, centré et horizontal (demandes de
+ * Mehdi du 2026-10-25 : sous le libellé, il faisait remonter l'icône et le libellé des onglets
+ * « Bientôt » au-dessus des autres). Il ne compte pas dans la taille de l'onglet : icônes et
+ * libellés restent alignés d'un onglet à l'autre. Pilule de 13 de haut au moins (elle grandit avec la police), 6 de
+ * marge, liseré « Surface » qui la détache du trait de l'icône.
  */
 @Composable
-private fun Badge(text: String) {
+private fun Badge(
+    text: String,
+    modifier: Modifier,
+) {
     val palette = LocalNiumiPalette.current
     Box(
         modifier =
-            Modifier
+            modifier
+                .wrapContentSize(align = Alignment.Center, unbounded = true)
+                .border(NiumiDimens.tabBarBadgeOutline, palette.surface, NiumiShapes.pill)
+                .padding(NiumiDimens.tabBarBadgeOutline)
                 .heightIn(min = NiumiDimens.tabBarBadgeHeight)
                 .clip(NiumiShapes.pill)
                 .background(palette.tileGrey)

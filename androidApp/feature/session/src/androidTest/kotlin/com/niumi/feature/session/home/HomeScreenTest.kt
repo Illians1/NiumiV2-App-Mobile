@@ -11,13 +11,15 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -185,11 +187,16 @@ class HomeScreenTest {
         assertThat(calls).isEmpty()
     }
 
+    /**
+     * Le contenu passe sous la barre d'onglets (2026-10-25) : « Sonnerie » n'est touchable qu'une
+     * fois remontée au-dessus d'elle, comme le ferait un doigt ; la barre garde les touchers.
+     */
     @Test
     fun theRowsOpenTheirScreens() {
         show(scheduled)
 
-        composeRule.onNodeWithText(HomeTexts.RINGTONE).performScrollTo().performClick()
+        composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp(startY = centerY, endY = top) }
+        composeRule.onNodeWithText(HomeTexts.RINGTONE).performClick()
         composeRule.onNodeWithContentDescription(MainTabTexts.SETTINGS).performClick()
 
         assertThat(calls).containsExactly("ringtone", "settings").inOrder()

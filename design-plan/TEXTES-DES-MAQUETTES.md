@@ -284,8 +284,8 @@ Fichier : `15_ecran-6-reveil-desactive-arrivee-apres-l-ecran-4`
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
 - Réveil
-- Blocage seul Bientôt
-- Suivi Bientôt
+- Bientôt Blocage seul
+- Bientôt Suivi
 - Réglages
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -330,8 +330,8 @@ Fichier : `16_ecran-6-reveil-prevu`
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
 - Réveil
-- Blocage seul Bientôt
-- Suivi Bientôt
+- Bientôt Blocage seul
+- Bientôt Suivi
 - Réglages
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -376,8 +376,8 @@ Fichier : `17_ecran-6-session-en-cours-sombre`
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
 - Réveil
-- Blocage seul Bientôt
-- Suivi Bientôt
+- Bientôt Blocage seul
+- Bientôt Suivi
 - Réglages
 
 La source régénérée le 25 octobre 2026 écrit « Annuler la session ». C'est une régression : D23 (24 octobre 2026) fixe « Annuler le réveil », que l'app garde (`POINTS-OUVERTS.md` §5, E14).
@@ -424,8 +424,8 @@ Fichier : `18_ecran-6-reveil-prevu-alarme-unique` (ajoutée le 25 octobre 2026 :
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
 - Réveil
-- Blocage seul Bientôt
-- Suivi Bientôt
+- Bientôt Blocage seul
+- Bientôt Suivi
 - Réglages
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -609,8 +609,8 @@ La source régénérée le 25 octobre 2026 écrit « Annuler la session » : ré
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
 - Réveil
-- Blocage seul Bientôt
-- Suivi Bientôt
+- Bientôt Blocage seul
+- Bientôt Suivi
 - Réglages
 
 Libellés d'accessibilité présents dans le fichier source :

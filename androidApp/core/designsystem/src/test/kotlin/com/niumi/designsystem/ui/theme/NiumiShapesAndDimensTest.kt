@@ -175,6 +175,7 @@ class NiumiShapesAndDimensTest {
         assertDp("onglet, écart icône-libellé", NiumiDimens.tabBarLabelGap, bar.dp("ecartIconeLibelle"))
         assertDp("badge, hauteur", NiumiDimens.tabBarBadgeHeight, badge.dp("hauteur"))
         assertDp("badge, marge", NiumiDimens.tabBarBadgePadding, badge.dp("margeCotes"))
+        assertDp("badge, liseré", NiumiDimens.tabBarBadgeOutline, badge.dp("lisere"))
     }
 
     /** Une forme ajoutée au design sans jeton ferait échouer ce test au lieu d'être oubliée. */
