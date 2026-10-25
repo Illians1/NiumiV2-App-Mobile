@@ -95,8 +95,10 @@ class HomeSources
  * [WakePlanScheduler.apply], qui désarme et réarme sous le verrou du coordinateur.
  *
  * Le planning demandé est montré tout de suite, le temps que le scheduler l'applique ; il disparaît
- * s'il est refusé (session commencée entre-temps). Le cadran, les comptes à rebours et le point de
- * l'heure suivent la minute ([MinuteTicker], Q13).
+ * s'il est refusé (session commencée entre-temps). Un changement qui lancerait le blocage tout de
+ * suite (coucher déjà atteint) attend d'abord la confirmation de l'utilisateur ; d'ici là, l'écran
+ * garde le planning lu (décision de Mehdi du 2026-10-25, qui remplace « sans confirmation », §2).
+ * Le cadran, les comptes à rebours et le point de l'heure suivent la minute ([MinuteTicker], Q13).
  */
 @Suppress("TooManyFunctions") // Une fonction par geste de l'écran.
 @HiltViewModel
@@ -116,6 +118,7 @@ class HomeViewModel
         private var ringtone: AlarmSoundSummary? = null
         private var message: String? = null
         private var picker: DialHandle? = null
+        private var pendingChange: Pair<WakePlan, PlanChangeReason>? = null
         private var messageJob: Job? = null
         private val applying = Mutex()
 
@@ -203,6 +206,20 @@ class HomeViewModel
             recompute()
         }
 
+        /** « Bloquer maintenant » : le changement mis en attente est appliqué, une seule fois. */
+        fun onImmediateBlockingConfirmed() {
+            val (target, reason) = pendingChange ?: return
+            pendingChange = null
+            apply(target, reason)
+        }
+
+        /** « Annuler », le voile ou le retour : rien n'est appliqué, l'écran garde le planning lu. */
+        fun onImmediateBlockingDismissed() {
+            if (pendingChange == null) return
+            pendingChange = null
+            recompute()
+        }
+
         /** M10 : la bulle du bas, quatre secondes ou jusqu'au toucher suivant. */
         fun onLockedTouch() {
             message = HomeTexts.LOCKED_UNTIL_SCAN
@@ -226,13 +243,27 @@ class HomeViewModel
             reason: PlanChangeReason,
             edit: (WakePlan) -> WakePlan,
         ) {
+            if (state.isLocked) return onLockedTouch()
             val current = displayedPlan()
-            val target = current?.let(edit)
-            when {
-                state.isLocked -> onLockedTouch()
-                current != null && target != null && target != current -> apply(target, reason)
+            val target = current?.let(edit)?.takeIf { it != current } ?: return
+            if (blocksImmediately(target)) {
+                pendingChange = target to reason
+                recompute()
+            } else {
+                apply(target, reason)
             }
         }
+
+        /** Interrupteur allumé et coucher atteint : armer ce planning bloquerait tout de suite (§8.4, règle 6). */
+        private fun blocksImmediately(target: WakePlan): Boolean =
+            target.enabled &&
+                sources.plan.facade
+                    .nextOccurrence(
+                        target,
+                        sources.time.timeZoneProvider.currentZoneId(),
+                        sources.time.clock.nowEpochMillis(),
+                    ).occurrence
+                    ?.blockingStartsImmediately == true
 
         private fun apply(
             target: WakePlan,
@@ -315,6 +346,7 @@ class HomeViewModel
                     ringtone = ringtone,
                     message = message,
                     picker = picker,
+                    immediateBlockingBedtimeMinutes = pendingChange?.first?.bedtimeIso?.toMinutes(),
                 )
             state = textsFor(base, snapshot, pending, plan, zone, now)
         }

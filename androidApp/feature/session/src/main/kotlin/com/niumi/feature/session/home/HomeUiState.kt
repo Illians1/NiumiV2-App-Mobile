@@ -29,7 +29,9 @@ enum class DayMode { ONE_OFF, DAILY, CUSTOM }
  * Ce que montre l'accueil. Heures en minutes depuis minuit. [cardLines] : les lignes sous le titre de
  * la carte ; [apps] : une icône par application choisie, l'icône manquante d'une application
  * désinstallée comprise. [message] : la bulle du bas (M10) ; [picker] : le sélecteur d'heure ouvert,
- * sur l'onglet de cette poignée.
+ * sur l'onglet de cette poignée. [immediateBlockingBedtimeMinutes] : la fenêtre « Tes applications
+ * seront bloquées dès maintenant » est ouverte, avec le coucher du changement en attente, pas encore
+ * appliqué.
  */
 data class HomeUiState(
     val isLoading: Boolean = true,
@@ -48,7 +50,10 @@ data class HomeUiState(
     val ringtone: AlarmSoundSummary? = null,
     val message: String? = null,
     val picker: DialHandle? = null,
+    val immediateBlockingBedtimeMinutes: Int? = null,
 ) {
+    val confirmsImmediateBlocking: Boolean get() = immediateBlockingBedtimeMinutes != null
+
     /** Du coucher au scan, heures, jours et applications sont verrouillés (§2). */
     val isLocked: Boolean get() = mode == HomeMode.InSession
 }

@@ -409,5 +409,110 @@ class HomeViewModelTest {
         assertThat(viewModel.state.wakeMinutes).isEqualTo(7 * 60)
     }
 
+    // Confirmation avant un blocage immédiat (décision de Mehdi du 2026-10-25, remplace « sans
+    // confirmation » de SPECIFICATION.md §2). Jeudi 21:34 : un coucher à 21:00 est déjà passé.
+
+    private val insidePeriod = WakePlan.DEFAULT.copy(bedtimeIso = "21:00")
+
+    @Test
+    fun enablingInsideThePeriodAsksForConfirmationFirst() {
+        runBlockingWrite(insidePeriod)
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(true)
+
+        assertThat(scheduler.applied).isEmpty()
+        assertThat(viewModel.state.confirmsImmediateBlocking).isTrue()
+        assertThat(viewModel.state.switchChecked).isFalse()
+    }
+
+    @Test
+    fun confirmingAppliesThePendingChangeOnce() {
+        runBlockingWrite(insidePeriod)
+        val viewModel = viewModel()
+        viewModel.onSwitchChanged(true)
+
+        viewModel.onImmediateBlockingConfirmed()
+
+        assertThat(scheduler.applied.single()).isEqualTo(insidePeriod.copy(enabled = true) to PlanChangeReason.SWITCH)
+        assertThat(viewModel.state.confirmsImmediateBlocking).isFalse()
+        assertThat(readiness.evaluations).isEqualTo(1)
+    }
+
+    @Test
+    fun dismissingTheConfirmationKeepsTheReleasedHandleWhereItWas() {
+        runBlockingWrite(enabledPlan)
+        val viewModel = viewModel()
+        viewModel.onTimeChanged(DialHandle.BEDTIME, 21 * 60)
+        // La fenêtre cite le coucher demandé, pas celui encore affiché sur le cadran.
+        assertThat(viewModel.state.immediateBlockingBedtimeMinutes).isEqualTo(21 * 60)
+
+        viewModel.onImmediateBlockingDismissed()
+        viewModel.onImmediateBlockingConfirmed()
+
+        assertThat(scheduler.applied).isEmpty()
+        assertThat(viewModel.state.confirmsImmediateBlocking).isFalse()
+        assertThat(viewModel.state.bedtimeMinutes).isEqualTo(22 * 60 + 30)
+    }
+
+    /** Le cas vécu : cocher le jour du prochain réveil (vendredi) alors que le coucher est passé. */
+    @Test
+    fun checkingTheNextWakeDayInsideThePeriodAsksForConfirmation() {
+        runBlockingWrite(insidePeriod.copy(enabled = true, enabledIsoDays = setOf(1, 2, 3)))
+        val viewModel = viewModel()
+
+        viewModel.onDayToggled(5)
+
+        assertThat(scheduler.applied).isEmpty()
+        assertThat(viewModel.state.confirmsImmediateBlocking).isTrue()
+        assertThat(viewModel.state.enabledIsoDays).containsExactly(1, 2, 3)
+    }
+
+    @Test
+    fun choosingDailyInsideThePeriodAsksForConfirmation() {
+        runBlockingWrite(insidePeriod.copy(enabled = true, enabledIsoDays = setOf(1, 2, 3)))
+        val viewModel = viewModel()
+
+        viewModel.onDayModeSelected(DayMode.DAILY)
+
+        assertThat(scheduler.applied).isEmpty()
+        assertThat(viewModel.state.confirmsImmediateBlocking).isTrue()
+    }
+
+    @Test
+    fun validatingAPassedBedtimeInThePickerAsksForConfirmation() {
+        runBlockingWrite(enabledPlan)
+        val viewModel = viewModel()
+        viewModel.onDialTapped(DialHandle.BEDTIME)
+
+        viewModel.onPickerConfirmed(bedtime = 21 * 60, wake = 7 * 60)
+
+        assertThat(viewModel.state.picker).isNull()
+        assertThat(scheduler.applied).isEmpty()
+        assertThat(viewModel.state.confirmsImmediateBlocking).isTrue()
+    }
+
+    @Test
+    fun switchingOffInsideThePeriodNeedsNoConfirmation() {
+        runBlockingWrite(insidePeriod.copy(enabled = true, enabledIsoDays = setOf(1, 2, 3)))
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(false)
+
+        assertThat(viewModel.state.confirmsImmediateBlocking).isFalse()
+        assertThat(scheduler.applied.single().second).isEqualTo(PlanChangeReason.SWITCH)
+    }
+
+    @Test
+    fun aChangeThatKeepsThePeriodAheadNeedsNoConfirmation() {
+        runBlockingWrite(enabledPlan)
+        val viewModel = viewModel()
+
+        viewModel.onTimeChanged(DialHandle.BEDTIME, 22 * 60)
+
+        assertThat(viewModel.state.confirmsImmediateBlocking).isFalse()
+        assertThat(scheduler.applied).hasSize(1)
+    }
+
     private fun runBlockingWrite(plan: WakePlan) = kotlinx.coroutines.runBlocking { store.write(plan) }
 }

@@ -42,6 +42,7 @@ import com.niumi.designsystem.R
 import com.niumi.designsystem.component.DialReservedArea
 import com.niumi.designsystem.component.DialState
 import com.niumi.designsystem.component.DialTexts
+import com.niumi.designsystem.component.NiumiAlertDialog
 import com.niumi.designsystem.component.NiumiAppIcon
 import com.niumi.designsystem.component.NiumiCard
 import com.niumi.designsystem.component.NiumiComponentTexts
@@ -112,6 +113,34 @@ fun HomeScreen(
             )
         }
         state.picker?.let { handle -> HomeTimePicker(state, handle, actions) }
+        state.immediateBlockingBedtimeMinutes?.let { bedtime -> ImmediateBlockingDialog(bedtime, actions) }
+    }
+}
+
+/**
+ * Avant un changement qui lancerait le blocage tout de suite (`SPECIFICATION.md` §2 et §9, décision
+ * de Mehdi du 2026-10-25) : fenêtre centrée comme le sélecteur d'heure. « Annuler », le voile et le
+ * retour ne changent rien.
+ */
+@Composable
+private fun ImmediateBlockingDialog(
+    bedtimeMinutes: Int,
+    actions: HomeActions,
+) {
+    NiumiAlertDialog(
+        onDismiss = actions.onImmediateBlockingDismissed,
+        title = HomeTexts.IMMEDIATE_BLOCKING_TITLE,
+        icon = R.drawable.ic_lock,
+        primary = HomeTexts.BLOCK_NOW,
+        onPrimary = actions.onImmediateBlockingConfirmed,
+        secondaryLink = HomeTexts.CANCEL,
+        onSecondary = actions.onImmediateBlockingDismissed,
+    ) {
+        Text(
+            text = HomeTexts.immediateBlockingBody(clockOf(bedtimeMinutes)),
+            style = NiumiType.body16,
+            color = LocalNiumiPalette.current.textSecondary,
+        )
     }
 }
 
@@ -414,7 +443,7 @@ private fun RingtoneRow(
     // Pas de trait sous la dernière ligne (décision de Mehdi du 2026-10-25, la maquette en dessine un).
 }
 
-private val previewActions = HomeActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, { _, _ -> }, {}, {}, {})
+private val previewActions = HomeActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, { _, _ -> }, {}, {}, {}, {}, {})
 
 private val previewScheduled =
     HomeUiState(

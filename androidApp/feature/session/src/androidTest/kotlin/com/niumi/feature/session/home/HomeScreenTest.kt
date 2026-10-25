@@ -48,6 +48,8 @@ class HomeScreenTest {
             onPickerDismissed = {},
             onLockedTouch = { calls += "locked" },
             onAnyTouch = {},
+            onImmediateBlockingConfirmed = { calls += "block-now" },
+            onImmediateBlockingDismissed = { calls += "keep" },
         )
 
     private val scheduled =
@@ -115,6 +117,19 @@ class HomeScreenTest {
         show(scheduled.copy(enabledIsoDays = emptySet(), dayMode = DayMode.ONE_OFF))
 
         composeRule.onNodeWithText(HomeTexts.ONE_OFF).assertIsSelected()
+    }
+
+    /** Changement qui bloquerait tout de suite (décision du 2026-10-25) : la fenêtre demande confirmation. */
+    @Test
+    fun theImmediateBlockingConfirmationOffersBlockNowAndCancel() {
+        show(scheduled.copy(immediateBlockingBedtimeMinutes = 21 * 60))
+
+        composeRule.onNodeWithText(HomeTexts.IMMEDIATE_BLOCKING_TITLE).assertIsDisplayed()
+        composeRule.onNodeWithText(HomeTexts.immediateBlockingBody("21:00")).assertIsDisplayed()
+        composeRule.onNodeWithText(HomeTexts.CANCEL).performClick()
+        composeRule.onNodeWithText(HomeTexts.BLOCK_NOW).performClick()
+
+        assertThat(calls).containsExactly("keep", "block-now").inOrder()
     }
 
     /** Session en cours : pas d'interrupteur, cadenas, champs verrouillés qui renvoient vers la bulle M10. */

@@ -43,7 +43,8 @@ internal fun HomeTimePicker(
     )
 }
 
-private fun clockOf(minutes: Int): String =
+/** « 22:30 », « 7:00 » : l'heure du cadran, partagée par le sélecteur et la fenêtre de confirmation. */
+internal fun clockOf(minutes: Int): String =
     NiumiTimeFormat.clock(
         LocalTime.of(
             minutes / MINUTES_PER_HOUR,

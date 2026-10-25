@@ -115,7 +115,10 @@ class WakePlanSchedulerTest {
             assertThat(harness.planStore.current.wakeTimeIso).isEqualTo("07:00")
         }
 
-    /** Déjà dans la période : le blocage commence tout de suite, sans confirmation (§2). */
+    /**
+     * Déjà dans la période : le blocage commence tout de suite (§2). Le scheduler ne demande rien :
+     * l'accueil demande confirmation avant d'appeler `apply` (décision de Mehdi du 2026-10-25).
+     */
     @Test
     fun aBedtimeAlreadyPassedBlocksImmediately() =
         runTest {

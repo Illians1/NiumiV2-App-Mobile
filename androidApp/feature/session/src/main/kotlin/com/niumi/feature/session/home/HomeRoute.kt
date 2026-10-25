@@ -55,6 +55,8 @@ fun HomeRoute(
                 onPickerDismissed = viewModel::onPickerDismissed,
                 onLockedTouch = viewModel::onLockedTouch,
                 onAnyTouch = viewModel::dismissMessage,
+                onImmediateBlockingConfirmed = viewModel::onImmediateBlockingConfirmed,
+                onImmediateBlockingDismissed = viewModel::onImmediateBlockingDismissed,
             ),
     )
 

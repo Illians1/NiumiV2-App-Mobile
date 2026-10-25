@@ -72,7 +72,10 @@ class ArmOccurrenceUseCaseTest {
             assertThat(harness.blockingStartScheduler.isScheduled(snapshot.sessionId)).isTrue()
         }
 
-    /** Coucher déjà passé : le blocage commence tout de suite, sans confirmation (§2). */
+    /**
+     * Coucher déjà passé : le blocage commence tout de suite (§2). L'armement ne demande rien :
+     * l'accueil demande confirmation avant (décision de Mehdi du 2026-10-25).
+     */
     @Test
     fun anOccurrenceWhoseBedtimeHasPassedBlocksImmediately() =
         runTest {

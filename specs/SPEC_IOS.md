@@ -586,6 +586,8 @@ Contrat KMP 1.5 : pour un planning récurrent (jours de réveil, heure de révei
 
 *Amendement du contrat commun du 2026-10-25 (section 8.4, décisions de Mehdi), même règle sur iPhone :* aucun jour coché est un réveil ponctuel, à la prochaine heure de réveil, n'importe quel jour ; deux heures identiques forment une période de 24 h, coucher la veille. `computeNextOccurrence` ne répond plus `NO_DAY_ENABLED` ni `BEDTIME_EQUALS_WAKE` ; `EMPTY_PERIOD` signale le seul trou de printemps qui confondrait coucher et réveil. L'interface ne refuse donc ni un ensemble de jours vide ni deux heures égales.
 
+*Décision de Mehdi du 2026-10-25 (`design-plan/SPECIFICATION.md` §2 et §9), même règle sur iPhone, non encore implémentée :* avant d'appliquer un changement de planning fait depuis l'accueil (interrupteur, jours, onglets, heures), l'interface calcule la prochaine occurrence du planning cible ; interrupteur allumé et `blockingStartsImmediately`, elle demande d'abord confirmation (« Tes applications seront bloquées dès maintenant », avec l'heure du coucher demandé, « Bloquer maintenant », « Annuler » ; textes dans `design-plan/SPECIFICATION.md` §9) et n'applique rien si l'utilisateur annule. Le moteur ne demande aucune confirmation.
+
 `CORRIGÉ`: le calcul appartient à `NiumiCore`. Si l'heure locale choisie n'existe pas, utiliser le premier instant valide après le saut. Si elle existe deux fois, choisir la première occurrence. Après `ACTIVATION_SUCCEEDED`, l'instant devient immuable. Une programmation `Alarm.Schedule.fixed` est déjà absolue: un changement d'heure ou de fuseau vérifie l'alarme et ne la reprogramme que si elle manque ou diffère, puis recalcule seulement l'affichage local.
 
 ### Transaction d'activation

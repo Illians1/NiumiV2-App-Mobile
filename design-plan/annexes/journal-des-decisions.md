@@ -144,6 +144,8 @@ Si on choisit une heure de coucher plus tardive que l'heure de réveil, le couch
 
 Règle changée le 7 octobre 2026 : Niumi fonctionne par période, du coucher au réveil. L'interrupteur s'active toujours et aucune heure n'est refusée. Si l'on se trouve déjà dans la période au moment où l'on active l'interrupteur ou où l'on déplace une poignée, le blocage commence tout de suite, sans confirmation, et l'accueil passe en « Blocage en cours » jusqu'au scan du matin. Exemple : il est 23:00 et la période va de 22:30 à 7:00. Activer l'interrupteur, ou régler le coucher sur 22:30, lance le blocage aussitôt. L'ancien message « Cette heure est déjà passée. Choisis une heure à venir. » est supprimé.
 
+Règle changée le 25 octobre 2026 (décision de Mehdi) : le blocage ne part plus « sans confirmation ». En ajoutant un jour et en changeant l'heure, Mehdi a vu le blocage démarrer sans prévenir. Désormais, tout changement de l'accueil qui lancerait le blocage tout de suite (interrupteur, pastilles, onglets « Ponctuel » et « Quotidien », poignées, sélecteur d'heure) ouvre d'abord une fenêtre : « Tes applications seront bloquées dès maintenant », « Ton coucher de 22:30 est déjà passé. Tes applications resteront bloquées jusqu'au scan de ton Niumi Spot. » (l'heure du coucher demandé), bouton « Bloquer maintenant », lien « Annuler ». « Annuler » ne change rien. Textes non dessinés, revus par Mehdi le même jour après un premier essai (le premier titre, « Le blocage va commencer tout de suite », est abandonné). Détail dans `SPECIFICATION.md` §9.
+
 ## Écran 6 · Accueil
 
 L'accueil récapitule le prochain réveil et permet de modifier tout ce qui peut l'être. Il a trois états selon le moment.

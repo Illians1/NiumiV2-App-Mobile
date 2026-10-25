@@ -17,4 +17,6 @@ data class HomeActions(
     val onPickerDismissed: () -> Unit,
     val onLockedTouch: () -> Unit,
     val onAnyTouch: () -> Unit,
+    val onImmediateBlockingConfirmed: () -> Unit,
+    val onImmediateBlockingDismissed: () -> Unit,
 )

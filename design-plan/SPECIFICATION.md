@@ -23,13 +23,13 @@ Une **session** va de l'heure du coucher jusqu'au scan du matin. Ce mot nomme le
 | Du coucher au scan | Heures, jours et applications sont verrouillés. La sonnerie et les Niumi Spots restent modifiables (décision du 19 octobre 2026). Un scan avant l'alarme annule la session |
 | Fin normale | Scan, le matin, d'un Niumi Spot enregistré. N'importe lequel convient |
 | Sortie de secours | Un long texte à recopier remplace le scan. Elle compte comme un scan |
-| Exclu de l'app | Lancement anticipé, confirmation, essai à blanc, historique, compte. Ce sont les mots de la règle d'origine. Le mot « confirmation » ne vise pas les confirmations décidées depuis (écran 8, suppression d'un Niumi Spot) **(ouvert : sens exact à confirmer)** |
+| Exclu de l'app | Lancement anticipé, confirmation, essai à blanc, historique, compte. Ce sont les mots de la règle d'origine. Le mot « confirmation » ne vise pas les confirmations décidées depuis (écran 8, suppression d'un Niumi Spot, blocage immédiat depuis l'accueil, §9) **(ouvert : sens exact à confirmer)** |
 
 Autres règles :
 
 - **Tutoiement.** Tous les textes tutoient l'utilisateur.
 - **Même fonctionnement sur iPhone et Android, autant que possible.** Exemple : la feuille de scan de l'iPhone ne peut pas contenir de lien, donc le lien « Je n'ai pas accès à mon Niumi Spot » est placé avant le scan sur les deux. Les différences voulues sont signalées dans chaque écran.
-- **Fonctionnement par période.** Niumi raisonne par période, du coucher au réveil. L'interrupteur s'active toujours et aucune heure n'est refusée. Si l'on se trouve déjà dans la période au moment où l'on active l'interrupteur ou où l'on déplace une poignée du cadran, le blocage commence tout de suite, sans confirmation, et l'accueil passe en « Blocage en cours » jusqu'au scan du matin. Exemple : il est 23:00 et la période va de 22:30 à 7:00 ; activer l'interrupteur lance le blocage aussitôt. Une période de 24 h est toujours en cours en ponctuel : le blocage commence aussitôt. En Quotidien, elle bloque en permanence, puisque la période suivante commence au scan du matin : conséquence assumée par Mehdi (décision du 2026-10-25).
+- **Fonctionnement par période.** Niumi raisonne par période, du coucher au réveil. L'interrupteur s'active toujours et aucune heure n'est refusée. Si l'on se trouve déjà dans la période au moment où l'on active l'interrupteur, coche un jour, touche « Ponctuel » ou « Quotidien », ou change une heure (poignée du cadran ou sélecteur), une fenêtre demande d'abord confirmation (§9, « Confirmation avant un blocage immédiat ») ; si l'on confirme, le blocage commence tout de suite et l'accueil passe en « Blocage en cours » jusqu'au scan du matin. Exemple : il est 23:00 et la période va de 22:30 à 7:00 ; activer l'interrupteur ouvre la fenêtre, et « Bloquer maintenant » lance le blocage. Une période de 24 h est toujours en cours en ponctuel : l'activer demande aussi confirmation. Décision de Mehdi du 2026-10-25, après un blocage parti sans prévenir en ajoutant un jour et en changeant l'heure : elle remplace « le blocage commence tout de suite, sans confirmation » (décision du 7 octobre 2026). En Quotidien, elle bloque en permanence, puisque la période suivante commence au scan du matin : conséquence assumée par Mehdi (décision du 2026-10-25).
 - **Clair ou sombre.** L'app est claire quand aucune session n'est en cours, sombre pendant une session. Elle ne suit pas le réglage du téléphone. Détail dans `VALEURS-DE-DESIGN.md`.
 - **Valeurs par défaut.** Lundi à vendredi, réveil à 7:00, coucher à 22:30.
 - **Exemple utilisé dans les maquettes.** Réveil à 7:00, coucher à 22:30, 6 applications, Niumi Spots dans la salle de bain et la cuisine.
@@ -298,6 +298,23 @@ Une fenêtre centrée par-dessus l'accueil assombri.
 - **Toucher bref** : relâcher sans avoir bougé ouvre le sélecteur d'heure (ci-dessus).
 - Pour le lecteur d'écran, chaque poignée est un réglage qui avance ou recule de 5 minutes, et une action « Choisir l'heure » ouvre le sélecteur (libellé à valider par Mehdi).
 - Pendant une session, il n'y a pas de poignées : toucher le cadran affiche la bulle « Modifiable après avoir scanné ton Niumi Spot. ».
+
+### Confirmation avant un blocage immédiat
+
+Décision de Mehdi du 25 octobre 2026 (section 2). Non dessinée. Textes revus par Mehdi le même jour, après un premier essai : le titre dit ce qui arrive aux applications, le texte en donne la raison.
+
+- **Quand** : un changement fait depuis l'accueil, interrupteur allumé, lancerait le blocage tout de suite, parce que l'heure actuelle est déjà dans la période coucher → réveil du planning modifié. Gestes concernés : allumer l'interrupteur, cocher ou décocher une pastille, toucher « Ponctuel » ou « Quotidien », relâcher une poignée, « Valider » du sélecteur d'heure. Éteindre l'interrupteur ou un changement qui laisse la période à venir n'ouvre rien. « Valider » de l'écran 4 n'est pas concerné.
+- **Forme** : fenêtre centrée sur l'accueil assombri, comme le sélecteur d'heure, sans croix. Icône du cadenas dans un rond gris.
+
+| Élément | Contenu |
+| --- | --- |
+| Titre | Tes applications seront bloquées dès maintenant |
+| Texte | Ton coucher de 22:30 est déjà passé. Tes applications resteront bloquées jusqu'au scan de ton Niumi Spot. L'heure est celle du coucher demandé par le changement, écrite comme sur le cadran (« 7:00 ») |
+| Bouton | Bloquer maintenant |
+| Lien | Annuler |
+
+- « Bloquer maintenant » applique le changement : l'accueil passe en « Blocage en cours ».
+- « Annuler », un toucher sur le voile et le retour du téléphone ne changent rien : l'interrupteur reste éteint, la pastille garde son état, la poignée revient à son heure.
 
 ## 10. Choix de la sonnerie
 

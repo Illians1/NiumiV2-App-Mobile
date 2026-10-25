@@ -9,8 +9,10 @@ import com.niumi.feature.session.ui.AlarmSoundTexts
  * maquettes 18 à 20 du 2026-10-25), recopiés mot pour mot, apostrophe typographique (D13).
  *
  * Non écrits dans les maquettes : [CHOOSE_TIME], [HOURS] et [MINUTES] (libellés d'accessibilité du
- * cadran et des roues) et le cas de la période de 24 h (« 24 h de blocage… », décision du
- * 2026-10-25), à valider par Mehdi au premier essai.
+ * cadran et des roues), le cas de la période de 24 h (« 24 h de blocage… », décision du
+ * 2026-10-25) et la fenêtre de confirmation avant un blocage immédiat ([IMMEDIATE_BLOCKING_TITLE],
+ * [immediateBlockingBody], [BLOCK_NOW], [CANCEL], décision du 2026-10-25, revus par Mehdi le même
+ * jour), à valider par Mehdi au premier essai.
  */
 object HomeTexts {
     const val SETTINGS = "Réglages"
@@ -45,6 +47,11 @@ object HomeTexts {
     const val HOURS = "Heures"
     const val MINUTES = "Minutes"
 
+    /** Fenêtre avant un changement qui lancerait le blocage tout de suite (§2, décision du 2026-10-25). */
+    const val IMMEDIATE_BLOCKING_TITLE = "Tes applications seront bloquées dès maintenant"
+    const val BLOCK_NOW = "Bloquer maintenant"
+    const val CANCEL = "Annuler"
+
     /** Pastilles, du lundi au dimanche (jours ISO 1 à 7). */
     val DAY_LABELS = listOf("L", "M", "M", "J", "V", "S", "D")
     val DAY_NAMES = listOf("Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche")
@@ -71,6 +78,10 @@ object HomeTexts {
         val hours = minutes % DialGeometry.MINUTES_PER_DAY / MINUTES_PER_HOUR
         return if (hours == 0) "$days j" else "$days j $hours h"
     }
+
+    /** Texte de la même fenêtre : le coucher demandé, au format du cadran (« 22:30 », « 7:00 »). */
+    fun immediateBlockingBody(bedtime: String): String =
+        "Ton coucher de $bedtime est déjà passé. Tes applications resteront bloquées jusqu’au scan de ton Niumi Spot."
 
     fun iconsLabel(count: Int): String =
         if (count == 1) "Icône de l’application bloquée" else "Icônes des $count applications bloquées"

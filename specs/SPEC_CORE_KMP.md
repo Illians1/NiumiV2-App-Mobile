@@ -606,7 +606,7 @@ Règles :
 6. si le coucher est déjà atteint, la période est en cours : `blockingStartsImmediately = true` et `blockingSchedule` vaut le blocage immédiat ; sinon `blockingSchedule` porte la date, l'heure et l'instant du coucher ;
 7. `wakeSchedule.localTimeIso` est l'intention saisie et `zoneIdAtActivation` le fuseau reçu.
 
-Le résultat se convertit directement en `ActivationRequest`. Une fois la session armée, ses instants sont immuables (section 8.2) ; un changement de planning ou de fuseau avant le coucher passe par le désarmement puis une nouvelle occurrence (décisions 4 et 9).
+Le résultat se convertit directement en `ActivationRequest`. `blockingStartsImmediately` sert aussi aux plateformes à demander confirmation avant d'armer une occurrence dont la période est déjà en cours ; le moteur, lui, n'en demande aucune (Android depuis le 2026-10-25, `design-plan/SPECIFICATION.md` §2). Une fois la session armée, ses instants sont immuables (section 8.2) ; un changement de planning ou de fuseau avant le coucher passe par le désarmement puis une nouvelle occurrence (décisions 4 et 9).
 
 **Fin d'un réveil ponctuel (native, décision de Mehdi du 2026-10-25).** Le moteur ne connaît pas l'interrupteur : c'est la plateforme qui l'éteint quand une session se termine en `COMPLETED` (scan ou recopie du matin) alors que le planning n'a aucun jour coché, au lieu d'armer l'occurrence suivante. Une session `DISARMED` ne consomme pas le réveil ponctuel : il est réarmé. Android l'applique depuis l'étape 45 (`DefaultWakePlanScheduler`, SPEC_ANDROID §9.2) ; l'iPhone doit appliquer la même règle (SPEC_IOS §15).
 

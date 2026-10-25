@@ -123,6 +123,10 @@ class HomeTextsTest {
                 HomeTexts.CONFIRM,
                 HomeTexts.CLOSE,
                 HomeTexts.CHOOSE_TIME,
+                HomeTexts.IMMEDIATE_BLOCKING_TITLE,
+                HomeTexts.immediateBlockingBody("22:30"),
+                HomeTexts.BLOCK_NOW,
+                HomeTexts.CANCEL,
                 HomeTexts.HOURS,
                 HomeTexts.MINUTES,
                 HomeTexts.iconsLabel(1),
@@ -132,5 +136,16 @@ class HomeTextsTest {
                 HomeTexts.sleepBeforeWake(1440, "7:00"),
                 HomeTexts.sleepAfterBedtime(1440, "22:30"),
             ) + HomeTexts.DAY_NAMES
+    }
+
+    /** Confirmation avant un blocage immédiat (décision du 2026-10-25) : textes non dessinés, à valider. */
+    @Test
+    fun theImmediateBlockingConfirmationIsQuotedWordForWord() {
+        assertThat(HomeTexts.IMMEDIATE_BLOCKING_TITLE).isEqualTo("Tes applications seront bloquées dès maintenant")
+        assertThat(HomeTexts.immediateBlockingBody("22:30")).isEqualTo(
+            "Ton coucher de 22:30 est déjà passé. Tes applications resteront bloquées jusqu’au scan de ton Niumi Spot.",
+        )
+        assertThat(HomeTexts.BLOCK_NOW).isEqualTo("Bloquer maintenant")
+        assertThat(HomeTexts.CANCEL).isEqualTo("Annuler")
     }
 }
