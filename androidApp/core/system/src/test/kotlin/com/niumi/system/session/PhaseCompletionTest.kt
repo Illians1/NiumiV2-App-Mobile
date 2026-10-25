@@ -49,9 +49,45 @@ class PhaseCompletionTest {
             )
     }
 
+    /**
+     * Étape 44 : le désarmement et la sortie de secours referment leur phase comme le scan. Un kind
+     * que la décision n'a pas produit est satisfait d'office ([EffectOutcomes.succeeded]) : le
+     * désarmement, qui ne produit que `CANCEL_ALARM` parmi les trois, n'exige donc que lui
+     * (SPEC_CORE_KMP §6).
+     */
+    @Test
+    fun disarmAndEmergencyExitRequireTheSameEffectsAsTheScan() {
+        val scan = PhaseCompletion.requiredKindsFor(SessionEventKindDto.VALID_NFC_SCANNED)
+
+        assertThat(PhaseCompletion.requiredKindsFor(SessionEventKindDto.DISARM_REQUESTED)).isEqualTo(scan)
+        assertThat(PhaseCompletion.requiredKindsFor(SessionEventKindDto.EMERGENCY_EXIT_CONFIRMED)).isEqualTo(scan)
+    }
+
+    @Test
+    fun aDisarmIsSatisfiedByTheAlarmCancellationAlone() {
+        val result =
+            outcomes(
+                SessionEffectKindDto.PUBLISH_PLATFORM_SNAPSHOT to OperationResult.Success,
+                SessionEffectKindDto.CANCEL_ALARM to OperationResult.Success,
+                SessionEffectKindDto.CANCEL_BLOCKING_START to OperationResult.Failure("ANDROID_CANCEL_FAILED"),
+            )
+
+        assertThat(PhaseCompletion.isSatisfied(SessionEventKindDto.DISARM_REQUESTED, result)).isTrue()
+    }
+
     @Test
     fun otherEventKindsHaveNoRequiredEffects() {
-        assertThat(PhaseCompletion.requiredKindsFor(SessionEventKindDto.INCIDENT_REPORTED)).isEmpty()
+        val releaseOrActivation =
+            setOf(
+                SessionEventKindDto.ACTIVATION_REQUESTED,
+                SessionEventKindDto.VALID_NFC_SCANNED,
+                SessionEventKindDto.DISARM_REQUESTED,
+                SessionEventKindDto.EMERGENCY_EXIT_CONFIRMED,
+            )
+
+        SessionEventKindDto.entries.filterNot { it in releaseOrActivation }.forEach { kind ->
+            assertThat(PhaseCompletion.requiredKindsFor(kind)).isEmpty()
+        }
     }
 
     @Test

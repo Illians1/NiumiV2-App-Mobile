@@ -96,6 +96,17 @@ class SessionEventFactory(
 }
 
 /**
+ * Désarmement d'une session en attente (SPEC_CORE_KMP §5.1, décision 4 ; étape 44) : produit par le
+ * `WakePlanScheduler` quand le planning change avant le coucher, sans aucune charge. Fonction de
+ * fichier : la classe est au plafond detekt `TooManyFunctions` (11), voir [base].
+ *
+ * **Seul le scheduler l'envoie, et par sa `LockedSession`.** Envoyé par un `dispatch` public, il
+ * passerait par le crochet du planning, qui réarmerait aussitôt la session `DISARMED`.
+ */
+fun SessionEventFactory.disarmRequested(snapshot: SessionSnapshotDto) =
+    base(snapshot, SessionEventKindDto.DISARM_REQUESTED)
+
+/**
  * Squelette commun des événements de suivi. Fonction de fichier plutôt que membre depuis le Lot 6 :
  * `blockingStartElapsed` en faisait la douzième fonction de la classe, au-delà du plafond detekt
  * `TooManyFunctions` (11). C'est la seule qui ne soit pas une entrée de la fabrique — chacune des

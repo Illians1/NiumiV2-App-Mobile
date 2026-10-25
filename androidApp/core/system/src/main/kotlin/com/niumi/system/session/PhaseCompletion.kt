@@ -41,7 +41,15 @@ object PhaseCompletion {
     fun requiredKindsFor(eventKind: SessionEventKindDto): Set<SessionEffectKindDto> =
         when (eventKind) {
             SessionEventKindDto.ACTIVATION_REQUESTED -> activationRequired
-            SessionEventKindDto.VALID_NFC_SCANNED -> releaseRequired
+
+            // Étape 44 : le désarmement et la sortie de secours referment leur phase comme le scan.
+            // Le désarmement ne produit que `CANCEL_ALARM` parmi les trois : les deux autres, non
+            // produits, sont satisfaits d'office (SPEC_CORE_KMP §6).
+            SessionEventKindDto.VALID_NFC_SCANNED,
+            SessionEventKindDto.DISARM_REQUESTED,
+            SessionEventKindDto.EMERGENCY_EXIT_CONFIRMED,
+            -> releaseRequired
+
             else -> emptySet()
         }
 

@@ -30,10 +30,12 @@ import com.niumi.system.session.DefaultSessionRuntimeStatusProbe
 import com.niumi.system.session.EffectDispatcher
 import com.niumi.system.session.EffectExecutor
 import com.niumi.system.session.FacadeSessionReducer
+import com.niumi.system.session.HookedSessionCoordinator
 import com.niumi.system.session.ReconcilerSources
 import com.niumi.system.session.SessionCoordinator
 import com.niumi.system.session.SessionEventFactory
 import com.niumi.system.session.SessionNfcEvaluability
+import com.niumi.system.session.SessionPassHook
 import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionReconciler
 import com.niumi.system.session.SessionReducer
@@ -48,6 +50,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
+import javax.inject.Provider
 import javax.inject.Singleton
 
 /**
@@ -143,6 +146,11 @@ object SessionModule {
     ): SessionReconciler =
         SessionReconciler(gateway, effectDispatcher, sources, facade, eventFactory, technicalEventLog)
 
+    /**
+     * Le coordinateur enveloppé par [HookedSessionCoordinator] (étape 44) : chaque passe se termine,
+     * sous le même verrou, par le crochet du planning. `Provider` : le `WakePlanScheduler` qui
+     * l'implémente dépend lui-même de ce coordinateur.
+     */
     @Provides
     @Singleton
     fun provideSessionCoordinator(
@@ -152,8 +160,12 @@ object SessionModule {
         reconciler: SessionReconciler,
         eventFactory: SessionEventFactory,
         technicalEventLog: TechnicalEventLog,
+        passHook: Provider<SessionPassHook>,
     ): SessionCoordinator =
-        DefaultSessionCoordinator(reducer, gateway, effectDispatcher, reconciler, eventFactory, technicalEventLog)
+        HookedSessionCoordinator(
+            DefaultSessionCoordinator(reducer, gateway, effectDispatcher, reconciler, eventFactory, technicalEventLog),
+            passHook,
+        )
 
     @Provides
     @Singleton

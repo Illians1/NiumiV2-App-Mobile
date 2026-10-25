@@ -32,4 +32,11 @@ interface SessionCoordinator {
         ringtoneKey: String,
         volumeRampSeconds: Int?,
     ): AlarmSoundUpdateResult
+
+    /**
+     * Exécute [block] sous le verrou de [dispatch] et [reconcile] (étape 44) : le `WakePlanScheduler`
+     * y lit la session, la désarme et arme la suivante d'un seul tenant. [block] reçoit une
+     * [LockedSession] et ne doit jamais rappeler les fonctions verrouillantes de ce coordinateur.
+     */
+    suspend fun <T> withLock(block: suspend (LockedSession) -> T): T
 }

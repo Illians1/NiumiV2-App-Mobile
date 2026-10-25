@@ -3,7 +3,6 @@ package com.niumi.feature.session.di
 import com.niumi.database.pairing.PairedBoxStore
 import com.niumi.feature.session.activation.ActivationSources
 import com.niumi.system.apps.AppSelectionStore
-import com.niumi.system.audio.AlarmSoundPreferences
 import com.niumi.system.common.TimeZoneProvider
 import dagger.Module
 import dagger.Provides
@@ -25,6 +24,5 @@ object ActivationModule {
         pairedBoxStore: PairedBoxStore,
         appSelectionStore: AppSelectionStore,
         timeZoneProvider: TimeZoneProvider,
-        alarmSoundPreferences: AlarmSoundPreferences,
-    ): ActivationSources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider, alarmSoundPreferences)
+    ): ActivationSources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider)
 }

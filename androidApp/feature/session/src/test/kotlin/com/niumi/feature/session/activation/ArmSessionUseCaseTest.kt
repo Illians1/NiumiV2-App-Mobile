@@ -27,6 +27,9 @@ import com.niumi.feature.session.wake.fakes.FakeClock
 import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.audio.NiumiRingtones
 import com.niumi.system.common.UuidIdGenerator
+import com.niumi.system.plan.ActivationFailure
+import com.niumi.system.plan.ArmOccurrenceUseCase
+import com.niumi.system.plan.ArmSessionResult
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck
 import com.niumi.system.readiness.ReadinessCheckId
@@ -121,8 +124,15 @@ class ArmSessionUseCaseTest {
             readinessChecker = readinessChecker,
             facade = NiumiCoreFacade(),
             coordinator = coordinator,
-            eventFactory = SessionEventFactory(idGenerator = UuidIdGenerator(), clock = FakeClock(now)),
-            sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider, alarmSoundPreferences),
+            armOccurrence =
+                ArmOccurrenceUseCase(
+                    NiumiCoreFacade(),
+                    SessionEventFactory(idGenerator = UuidIdGenerator(), clock = FakeClock(now)),
+                    pairedBoxStore,
+                    appSelectionStore,
+                    alarmSoundPreferences,
+                ),
+            sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider),
         )
 
     private fun armedSnapshot(

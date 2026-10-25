@@ -33,6 +33,9 @@ class InMemoryPersistenceGateway(
     private val effectsById = mutableMapOf<String, PendingEffect>()
     val incidentsRecorded = mutableListOf<Pair<String, SessionIncidentDto>>()
     var incidentRecordingAllowed: Boolean = true
+
+    /** Tous les snapshots committés, dans l'ordre : ce que Room garderait, sessions closes comprises (étape 44). */
+    val committed = mutableListOf<SessionSnapshotDto>()
     var forceUnreadable: String? = null
 
     /** Simule l'appareil verrouillé pour [updateAlarmSound] seulement (Lot 7). */
@@ -50,6 +53,7 @@ class InMemoryPersistenceGateway(
 
     override suspend fun commit(decision: StoredDecision) {
         journal.record("gateway.commit")
+        committed += decision.snapshot
         active = ActiveSession(decision.snapshot, decision.androidExtras)
         receiptsByEventId[decision.receipt.eventId] = decision.receipt
         decision.effects.forEach { effectsById[it.effectId] = it }

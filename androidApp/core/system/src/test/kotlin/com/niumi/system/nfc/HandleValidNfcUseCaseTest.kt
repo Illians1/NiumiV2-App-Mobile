@@ -14,6 +14,7 @@ import com.niumi.system.readiness.fakes.FakePairedBoxStore
 import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.LoadResult
+import com.niumi.system.session.LockedSession
 import com.niumi.system.session.ReconcileReason
 import com.niumi.system.session.ReconcileResult
 import com.niumi.system.session.SessionCoordinator
@@ -529,4 +530,7 @@ private class ProgrammableCoordinator(
         ringtoneKey: String,
         volumeRampSeconds: Int?,
     ): AlarmSoundUpdateResult = throw UnsupportedOperationException("Non utilisé par le scan")
+
+    override suspend fun <T> withLock(block: suspend (LockedSession) -> T): T =
+        throw UnsupportedOperationException("Non utilisé par le scan")
 }

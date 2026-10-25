@@ -53,6 +53,11 @@ class TechnicalEventTypeTest {
                 "SESSION_FAILED",
                 "RELEASE_PARTIAL_FAILURE",
                 "SNAPSHOT_CORRUPTED",
+                // Étape 44 : planning, désarmement et sortie de secours (SPEC_ANDROID §17).
+                "SESSION_DISARMED",
+                "PLAN_REARMED",
+                "PLAN_REARM_FAILED",
+                "EMERGENCY_EXIT_CONFIRMED",
             )
 
         assertThat(TechnicalEventType.entries.map { it.name }).containsExactlyElementsIn(expected)

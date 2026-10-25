@@ -1,14 +1,17 @@
-package com.niumi.feature.session.activation
+package com.niumi.system.plan
 
 import com.niumi.core.interop.ActivationReasonDto
 import com.niumi.core.interop.BlockingScheduleStatusDto
 import com.niumi.core.interop.DomainViolationDto
+import com.niumi.core.interop.NextOccurrenceStatusDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleStatusDto
 
 /**
- * Issues de `ArmSessionUseCase.arm` (SPEC_ANDROID §9.2). Une seule d'entre elles autorise un
+ * Issues de `ArmOccurrenceUseCase.arm` et de `ArmSessionUseCase.arm` (SPEC_ANDROID §9.2). Déplacées
+ * de `:feature:session` à l'étape 44 : le `WakePlanScheduler` (`:core:system`) les renvoie dans
+ * `PlanApplyResult.Failed` et les publie dans `PlanArmingStatus`. Une seule d'entre elles autorise un
  * réessai immédiat sans que rien n'ait changé côté utilisateur : [CoordinatorFailed], dont
  * `ACTIVATION_FAILED` a déjà effacé le pointeur de session actif (`CLEAR_ACTIVE_SESSION`,
  * SPEC_CORE_KMP §10). [Rejected] et [Duplicate] signalent au contraire un état qui ne se
@@ -35,6 +38,14 @@ sealed interface ActivationFailure {
         val status: BlockingScheduleStatusDto,
     ) : ActivationFailure
 
+    /**
+     * `computeNextOccurrence` n'a produit aucune occurrence armable (étape 44). `NO_DAY_ENABLED`
+     * n'en fait jamais partie : ce n'est pas un échec, le scheduler répond `PlanApplyResult.NoDayEnabled`.
+     */
+    data class InvalidPlan(
+        val status: NextOccurrenceStatusDto,
+    ) : ActivationFailure
+
     /** Le coordinateur a enchaîné `ACTIVATION_FAILED` : le pointeur actif a été effacé, réessai sûr. */
     data class CoordinatorFailed(
         val failureCode: String?,
@@ -59,3 +70,19 @@ sealed interface ArmSessionResult {
         val failure: ActivationFailure,
     ) : ArmSessionResult
 }
+
+/**
+ * Code court d'un échec, pour le journal technique (`PLAN_REARM_FAILED`, SPEC_ANDROID §17) : un code
+ * contrôlé, jamais un message libre.
+ */
+val ActivationFailure.diagnosticCode: String
+    get() =
+        when (this) {
+            is ActivationFailure.Blocked -> reasons.firstOrNull()?.code ?: "ACTIVATION_BLOCKED"
+            is ActivationFailure.InvalidSchedule -> "WAKE_SCHEDULE_${status.name}"
+            is ActivationFailure.InvalidBlockingSchedule -> "BLOCKING_SCHEDULE_${status.name}"
+            is ActivationFailure.InvalidPlan -> "NEXT_OCCURRENCE_${status.name}"
+            is ActivationFailure.CoordinatorFailed -> failureCode ?: "ANDROID_ACTIVATION_FAILED"
+            is ActivationFailure.Rejected -> violations.firstOrNull()?.code ?: "ACTIVATION_REJECTED"
+            ActivationFailure.Duplicate -> "EVENT_ID_DUPLICATE"
+        }

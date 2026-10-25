@@ -23,6 +23,14 @@ import kotlinx.coroutines.sync.withLock
 
 private const val MISSING_EXTRAS_CODE = "MISSING_ANDROID_EXTRAS"
 
+/** Les trois kinds qui ouvrent une libération : scan, désarmement, sortie de secours (étape 44). */
+private val RELEASE_KINDS =
+    setOf(
+        SessionEventKindDto.VALID_NFC_SCANNED,
+        SessionEventKindDto.DISARM_REQUESTED,
+        SessionEventKindDto.EMERGENCY_EXIT_CONFIRMED,
+    )
+
 /**
  * Implémentation unique de [SessionCoordinator] (SPEC_CORE_KMP §6, §6.1, §10, §12 ; SPEC_ANDROID
  * §7.1, §9.2, §11.3). [dispatch] et [reconcile] partagent un seul [Mutex] — non réentrant : tout le
@@ -40,13 +48,17 @@ class DefaultSessionCoordinator(
 ) : SessionCoordinator {
     private val mutex = Mutex()
 
+    /** Vue verrouillée de ce coordinateur : chaque fonction suppose [mutex] déjà pris. */
+    private val lockedSession: LockedSession = Locked()
+
     override suspend fun dispatch(
         event: SessionEventDto,
         extras: AndroidSessionExtras?,
-    ): DispatchResult = mutex.withLock { dispatchLocked(event, extras) }
+    ): DispatchResult = withLock { it.dispatch(event, extras) }
 
-    override suspend fun reconcile(reason: ReconcileReason): ReconcileResult =
-        mutex.withLock { reconciler.reconcile(reason) { locked -> dispatchLocked(locked, extras = null) } }
+    override suspend fun reconcile(reason: ReconcileReason): ReconcileResult = withLock { it.reconcile(reason) }
+
+    override suspend fun <T> withLock(block: suspend (LockedSession) -> T): T = mutex.withLock { block(lockedSession) }
 
     override suspend fun updateAlarmSound(
         ringtoneKey: String,
@@ -76,6 +88,20 @@ class DefaultSessionCoordinator(
                 }
             }
         }
+
+    private inner class Locked : LockedSession {
+        override suspend fun load(): LoadResult = gateway.load()
+
+        override suspend fun clearActive(sessionId: String) = gateway.clearActive(sessionId)
+
+        override suspend fun dispatch(
+            event: SessionEventDto,
+            extras: AndroidSessionExtras?,
+        ): DispatchResult = dispatchLocked(event, extras)
+
+        override suspend fun reconcile(reason: ReconcileReason): ReconcileResult =
+            reconciler.reconcile(reason) { locked -> dispatchLocked(locked, extras = null) }
+    }
 
     /**
      * Non verrouillante : appelée uniquement sous [mutex] déjà pris, par [dispatch] ou par
@@ -214,10 +240,16 @@ class DefaultSessionCoordinator(
         }
 
         val satisfied = PhaseCompletion.isSatisfied(event.kind, outcomes)
+        // §17 (étape 44) : la recopie acceptée par le moteur, que le nettoyage qui suit réussisse ou
+        // non. Ici et non dans le cas d'usage de l'écran 9 : seul le coordinateur sait que la preuve
+        // a été acceptée, un refus ne devant laisser aucune trace de sortie.
+        if (event.kind == SessionEventKindDto.EMERGENCY_EXIT_CONFIRMED) {
+            technicalEventLog.log(TechnicalEventType.EMERGENCY_EXIT_CONFIRMED, snapshot.sessionId)
+        }
         // §18 : « une erreur pendant le nettoyage conserve RELEASING, crée RELEASE_PARTIAL_FAILURE
         // et déclenche une reprise idempotente ». L'incident métier est porté par l'événement de
         // suivi construit juste après ; l'événement technique de §17 est journalisé ici.
-        if (!satisfied && event.kind == SessionEventKindDto.VALID_NFC_SCANNED) {
+        if (!satisfied && event.kind in RELEASE_KINDS) {
             technicalEventLog.log(TechnicalEventType.RELEASE_PARTIAL_FAILURE, snapshot.sessionId)
         }
         val followUpEvent = buildFollowUpEvent(event.kind, snapshot, satisfied, outcomes)
@@ -254,7 +286,10 @@ class DefaultSessionCoordinator(
                 }
             }
 
-            SessionEventKindDto.VALID_NFC_SCANNED -> {
+            SessionEventKindDto.VALID_NFC_SCANNED,
+            SessionEventKindDto.DISARM_REQUESTED,
+            SessionEventKindDto.EMERGENCY_EXIT_CONFIRMED,
+            -> {
                 if (satisfied) {
                     eventFactory.releaseSucceeded(snapshot)
                 } else {

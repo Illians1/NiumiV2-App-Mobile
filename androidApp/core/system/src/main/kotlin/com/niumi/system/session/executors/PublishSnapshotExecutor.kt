@@ -13,9 +13,10 @@ import com.niumi.system.session.SessionSnapshotPublisher
 
 /**
  * `PUBLISH_PLATFORM_SNAPSHOT` (SPEC_CORE_KMP §6) : premier effet de toute décision, exécuté à
- * chaque transition d'état. Point unique pour journaliser les six types §17 liés à une transition
+ * chaque transition d'état. Point unique pour journaliser les sept types §17 liés à une transition
  * d'état (`SESSION_PREPARING`, `SESSION_ARMED`, `SESSION_RELEASING`, `SESSION_CANCELLED`,
- * `SESSION_COMPLETED`, `SESSION_FAILED`) : aucun autre exécuteur ne connaît systématiquement
+ * `SESSION_COMPLETED`, `SESSION_FAILED`, `SESSION_DISARMED` depuis l'étape 44) : aucun autre
+ * exécuteur ne connaît systématiquement
  * `snapshot.state` au moment de chaque transition.
  *
  * **Une fois par transition effective, pas à chaque publication (2026-09-29).** `INCIDENT_REPORTED`
@@ -57,13 +58,11 @@ class PublishSnapshotExecutor(
 
             SessionStateDto.FAILED -> TechnicalEventType.SESSION_FAILED
 
+            SessionStateDto.DISARMED -> TechnicalEventType.SESSION_DISARMED
+
             SessionStateDto.RINGING,
             SessionStateDto.AWAITING_NFC,
             SessionStateDto.TRIGGERED_AWAITING_NFC,
             -> null
-
-            // Contrat 1.5 : jamais produit avant l'étape 44 du plan de refonte, qui ajoute
-            // `SESSION_DISARMED` au journal technique.
-            SessionStateDto.DISARMED -> null
         }
 }

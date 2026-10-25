@@ -1,6 +1,7 @@
 package com.niumi.system.session
 
 import com.niumi.core.interop.IncidentSeverityDto
+import com.niumi.core.interop.SessionSnapshotDto
 
 /**
  * Décision(s) prise(s) par une réconciliation (non défini par le plan MVP : nécessaire pour que
@@ -53,7 +54,27 @@ sealed interface ReconcileAction {
 
     data object SnapshotCorrupted : ReconcileAction
 
-    data object PointerCleared : ReconcileAction
+    /**
+     * Pointeur d'une session finie effacé par la passe. [snapshot] est l'état final : le
+     * `WakePlanScheduler` en tire les conséquences quand elles n'ont pas pu l'être au moment de la
+     * libération (appareil verrouillé, processus mort entre les deux ; étape 44).
+     */
+    data class PointerCleared(
+        val snapshot: SessionSnapshotDto,
+    ) : ReconcileAction
+
+    /** Le planning a armé une session ([triggerAtEpochMillis] : son réveil), étape 44. */
+    data class PlanRearmed(
+        val triggerAtEpochMillis: Long,
+    ) : ReconcileAction
+
+    /** Le planning est allumé mais l'armement a échoué ([code] : `ActivationFailure.diagnosticCode`). */
+    data class PlanRearmFailed(
+        val code: String,
+    ) : ReconcileAction
+
+    /** Une annulation (`CANCELLED`) a éteint l'interrupteur (`design-plan/SPECIFICATION.md` §11, §13). */
+    data object PlanSwitchedOff : ReconcileAction
 }
 
 data class ReconcileResult(

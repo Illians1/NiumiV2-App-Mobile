@@ -9,15 +9,15 @@ import com.niumi.core.diagnostics.ActivationReasonCode
 import com.niumi.core.interop.BlockingScheduleStatusDto
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.WakeScheduleStatusDto
-import com.niumi.feature.session.activation.ActivationFailure
 import com.niumi.feature.session.activation.ActivationPreview
-import com.niumi.feature.session.activation.ArmSessionResult
 import com.niumi.feature.session.activation.ArmSessionUseCase
 import com.niumi.feature.session.ui.AlarmSoundSummary
 import com.niumi.feature.session.ui.AlarmSoundTexts
 import com.niumi.feature.session.ui.BlockingScheduleFormatter
 import com.niumi.feature.session.ui.WakeScheduleFormatter
 import com.niumi.system.audio.AlarmSoundPreferences
+import com.niumi.system.plan.ActivationFailure
+import com.niumi.system.plan.ArmSessionResult
 import com.niumi.system.session.SessionSnapshotPublisher
 import com.niumi.system.session.isSessionInProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -174,6 +174,12 @@ class SummaryViewModel
 
                 is ActivationFailure.InvalidBlockingSchedule -> {
                     blockingScheduleMessage(failure.status)
+                }
+
+                // Jamais produit par ce parcours (aucune occurrence calculée depuis un planning) :
+                // même phrase qu'un horaire invalide plutôt qu'une branche muette.
+                is ActivationFailure.InvalidPlan -> {
+                    SummaryTexts.INVALID_SCHEDULE_MESSAGE
                 }
 
                 is ActivationFailure.CoordinatorFailed -> {

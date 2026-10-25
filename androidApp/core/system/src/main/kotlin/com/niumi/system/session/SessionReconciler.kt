@@ -132,7 +132,7 @@ class SessionReconciler(
 
             SessionStateDto.COMPLETED, SessionStateDto.CANCELLED, SessionStateDto.DISARMED, SessionStateDto.FAILED -> {
                 gateway.clearActive(sessionId)
-                actions += ReconcileAction.PointerCleared
+                actions += ReconcileAction.PointerCleared(snapshot)
             }
         }
 

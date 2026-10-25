@@ -35,6 +35,24 @@ class SessionEventFactoryTriggerTest {
         assertThat(event.incident).isNull()
     }
 
+    /** Étape 44 : `DISARM_REQUESTED` ne porte aucune charge (SPEC_CORE_KMP §5.1). */
+    @Test
+    fun disarmRequestedCarriesTheSnapshotRevisionAndNoPayload() {
+        val snapshot = SessionDtoFixtures.deferredArmedSnapshot(revision = 4)
+
+        val event = factory.disarmRequested(snapshot)
+
+        assertThat(event.kind).isEqualTo(SessionEventKindDto.DISARM_REQUESTED)
+        assertThat(event.sessionId).isEqualTo(snapshot.sessionId)
+        assertThat(event.expectedRevision).isEqualTo(4)
+        assertThat(event.occurredAtEpochMillis).isEqualTo(NOW)
+        assertThat(event.activationRequest).isNull()
+        assertThat(event.nfcProof).isNull()
+        assertThat(event.emergencyProof).isNull()
+        assertThat(event.failureCode).isNull()
+        assertThat(event.incident).isNull()
+    }
+
     /** `incident` est facultatif pour ce kind (SPEC_CORE_KMP §6) : nul quand le début est à l'heure. */
     @Test
     fun blockingStartElapsedWithoutAnIncidentCarriesOnlyTheRevision() {

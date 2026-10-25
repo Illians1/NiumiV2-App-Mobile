@@ -10,6 +10,7 @@ import com.niumi.system.audio.RingtonePreviewPlayer
 import com.niumi.system.common.OperationResult
 import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.DispatchResult
+import com.niumi.system.session.LockedSession
 import com.niumi.system.session.ReconcileReason
 import com.niumi.system.session.ReconcileResult
 import com.niumi.system.session.SessionCoordinator
@@ -107,6 +108,9 @@ class FakeSessionCoordinator : SessionCoordinator {
         lastVolumeRampSeconds = volumeRampSeconds
         return result
     }
+
+    override suspend fun <T> withLock(block: suspend (LockedSession) -> T): T =
+        throw UnsupportedOperationException("Non utilisé par la feuille Sonnerie")
 }
 
 /** Réglages distincts du défaut, pour distinguer « lu de la session » de « lu de la préférence ». */

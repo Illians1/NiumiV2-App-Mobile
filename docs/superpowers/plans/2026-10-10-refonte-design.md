@@ -148,9 +148,11 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 42 | D2 | Sortie de secours le matin : écran suivant, réveil du lendemain | **Tranché le 2026-10-24** : écran 11 sans « Bravo ! » ; planning laissé allumé (moteur : `COMPLETED` le matin, `CANCELLED` le soir) |
 | 42 | D8, D3, Q10 | Autres textes à recopier ; « 1 heure et + » = 60 ; arrondi | **Tranché le 2026-10-24** : un seul texte livré dans une liste prête, sans rotation codée (le texte ne change pas tant qu'il est seul) ; 60 ; minute inférieure. Même jour : le texte compte **196** caractères, non 197 (spec et maquettes corrigées) ; la limite à dix est appliquée à Android dès l'étape 42 |
 | 43 | Q11 | Niumi Spots valides en session : ensemble courant ou figé au coucher ? | **Tranché le 2026-10-19 : ensemble courant**, lu au moment du scan ; la liste figée du Lot 8 du plan maître (`session_box`) disparaît |
-| 44 | Q12 | Sonnerie modifiable en `RINGING` ? | Non, `ARMED` seulement (comme aujourd'hui) |
+| 44 | Q12 | Sonnerie modifiable en `RINGING` ? | **Tranché le 2026-10-24** : non, `ARMED` seulement (comme aujourd'hui, `updateAlarmSound` inchangé) |
+| 44 | — | Changement d'horloge (`TIME_CHANGED`) avant le coucher : Q9 ne visait que le fuseau | **Tranché le 2026-10-24** : comme le fuseau ; dans les deux cas, désarmement seulement si un instant recalculé change (une resynchronisation réseau ne fait rien) |
+| 44 | — | Décision 11 (« sélection interdite tant qu'une session est active ») contredite par l'état « Réveil prévu » | **Tranché le 2026-10-24** : amendée, la sélection se modifie avant le coucher (désarmement puis nouvelle session), verrouillée du coucher au scan |
 | 45 | M10, Q13 | Forme du message « Modifiable après avoir scanné… » ; point de l'heure actuelle | Message bas d'écran, même place que « Réveil annulé… » ; tick à la minute |
-| 46 | Q14 | Ré-armement échoué après le scan du matin | Accueil « Réveil désactivé » + bandeau ou alerte ; jamais un faux « Réveil prévu » |
+| 46 | Q14 | Ré-armement échoué après le scan du matin | **Tranché le 2026-10-24** (étape 44) : l'interrupteur reste allumé, rien n'est armé, l'échec est journalisé (`PLAN_REARM_FAILED`), publié dans `PlanArmingStatus` et retenté au démarrage et au déverrouillage ; une fenêtre d'erreur et une notification l'annoncent, livrées à l'étape 52 avec leurs textes ; jamais un faux « Réveil prévu » |
 | 47 | D11, M5, M6, Q15 | « Continuer » grisé sans pièce ; échecs non dessinés ; URL de la page produit | Oui ; même feuille d'échec qu'à l'écran 10 avec « Annuler » ; URL à fournir |
 | 47 | Q21 | Nom du Niumi Spot : pièce proposée ou nom libre ? | **Tranché le 2026-10-19** : quatre pièces proposées (Salle de bain, Cuisine, Salon, Entrée) et « Une autre pièce » en saisie libre ; la limite technique de 30 caractères (`PairedBoxName`) est conservée |
 | 48 | Q22, D21 | Nombre maximal et dernier point | **Tranché le 2026-10-19** : dix au plus (`PairedBoxLimit.MAX = 10`), toujours au moins un, suppression confirmée par une feuille ; à dix, la ligne « Ajouter un Niumi Spot » grisée avec « Tu as déjà dix Niumi Spots. » ; refus « Ce Niumi Spot est déjà enregistré. » avec « Réessayer » (D21 tranché le 2026-10-19) |
@@ -261,18 +263,25 @@ interface WakePlanStore { suspend fun read(): WakePlan; suspend fun write(plan: 
 interface TimeToGetUpPreferences { suspend fun declaredMinutes(): Int?; suspend fun setDeclaredMinutes(value: Int) }   // DataStore niumi_time_to_get_up
 enum class PlanChangeReason { SWITCH, DAYS, WAKE_TIME, BEDTIME, APP_SELECTION, PROCESS_START, USER_UNLOCKED, TIME_CHANGED, TIMEZONE_CHANGED, SESSION_FINISHED }
 sealed interface PlanApplyResult { data class Armed(val occurrence: NextOccurrenceDto); data object Disabled; data object NoDayEnabled;
-                                   data object LockedBySession; data class Failed(val failure: ActivationFailure) }
+                                   data object LockedBySession; data object Unchanged /* étape 44 */; data class Failed(val failure: ActivationFailure) }
 interface WakePlanScheduler {
-    suspend fun apply(plan: WakePlan, reason: PlanChangeReason): PlanApplyResult   // mutex : DISARM_REQUESTED si ARMED en attente, puis ACTIVATION ; programme le rappel du soir
-    suspend fun rearmAfterFinalState(): PlanApplyResult                           // COMPLETED / DISARMED → apply ; CANCELLED → enabled = false
+    suspend fun apply(plan: WakePlan, reason: PlanChangeReason): PlanApplyResult   // sous SessionCoordinator.withLock : DISARM_REQUESTED si ARMED en attente, puis ACTIVATION ; enregistre le planning ; programme le rappel du soir (étape 52)
 }
+// Livré à l'étape 44 (2026-10-24), écarts : pas de rearmAfterFinalState public — DefaultWakePlanScheduler implémente aussi
+// SessionPassHook { afterDispatch(result, session); afterReconcile(reason, result, session): List<ReconcileAction> }, appelé par
+// HookedSessionCoordinator(inner, Provider<SessionPassHook>) sous le verrou : COMPLETED / DISARMED → occurrence suivante ; CANCELLED → enabled = false ;
+// démarrage ou déverrouillage sans session → armement ; TIME/TIMEZONE_CHANGED → recalcul si un instant change. Rien avant déverrouillage.
+// SessionCoordinator : + withLock(block: suspend (LockedSession) -> T) ; LockedSession { load(); clearActive(id); dispatch(event, extras); reconcile(reason) }.
+// ArmOccurrenceUseCase(facade, eventFactory, pairedBoxStore, appSelectionStore, alarmSoundPreferences) et ActivationFailure (+ InvalidPlan) dans SYS/plan.
+// PlanArmingStatus { state: StateFlow<PlanArmingState> } (Ok | Failed(failure, atEpochMillis)), en mémoire, lu par l'étape 52 (Q14).
 interface EveningReminderScheduler { fun schedule(occurrence: NextOccurrenceDto, plan: WakePlan, appCount: Int): OperationResult; fun cancel(): OperationResult }
 // setWindow RTC_WAKEUP à startsAt − 30 min, fenêtre 10 min ; canal niumi_evening_reminder ; aucune action ; tap → accueil
 
 // :core:system — com.niumi.system.session (étape 44)
-// SessionEventFactory : + disarmRequested(snapshot), + emergencyExitConfirmed(snapshot, proof: EmergencyExitProof)
-// ReconcileAction : + PlanRearmed(triggerAtEpochMillis), + PlanDisarmed
-// TechnicalEventType : + SESSION_DISARMED, PLAN_REARMED, EMERGENCY_EXIT_CONFIRMED, EVENING_REMINDER_SCHEDULED
+// SessionEventFactory : + disarmRequested(snapshot) (fonction de fichier, plafond TooManyFunctions) ; sortie de secours dans
+//   SYS/emergency/EmergencyExitEventFactory { verificationContext(snapshot); emergencyExitConfirmed(context, proof) } (même patron que NfcScanEventFactory)
+// ReconcileAction : + PlanRearmed(triggerAtEpochMillis), + PlanRearmFailed(code), + PlanSwitchedOff ; PointerCleared porte le snapshot final
+// TechnicalEventType : + SESSION_DISARMED, PLAN_REARMED, PLAN_REARM_FAILED, EMERGENCY_EXIT_CONFIRMED (étape 44) ; + EVENING_REMINDER_SCHEDULED (étape 52)
 
 // :core:database (étape 43) — delta sur le Lot 8 du plan maître
 // Conservés : PairedBoxDto(credential, name), PairedBoxAddResult { Added, AlreadyPaired, LimitReached }, PairedBoxName (1 à 30), PairedBoxEntity(name, position)
@@ -359,7 +368,7 @@ Transitions ajoutées à §5.1 :
 
 | État source | Événement | État cible | Cible de libération |
 | --- | --- | --- | --- |
-| `ARMED`, blocage en attente, avant `triggerAtEpochMillis` | `DISARM_REQUESTED` | `RELEASING` | `DISARMED` (effets : `PUBLISH`, `CANCEL_ALARM`, `CANCEL_BLOCKING_START` ; seul `CANCEL_ALARM` requis) |
+| `ARMED`, blocage en attente, avant `blockingStartsAtEpochMillis` (corrigé le 2026-10-24 : « avant `triggerAtEpochMillis` » était périmé depuis l'étape 41) | `DISARM_REQUESTED` | `RELEASING` | `DISARMED` (effets : `PUBLISH`, `CANCEL_ALARM`, `CANCEL_BLOCKING_START` ; seul `CANCEL_ALARM` requis) |
 | `ARMED` blocage appliqué | `EMERGENCY_EXIT_CONFIRMED` (preuve) | `RELEASING` | `CANCELLED` |
 | `RINGING`, `AWAITING_NFC`, `TRIGGERED_AWAITING_NFC` | `EMERGENCY_EXIT_CONFIRMED` (preuve) | `RELEASING` | `COMPLETED` |
 
@@ -685,7 +694,9 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Specs à lire :** SPEC_ANDROID §9.2, §9.3, §11.3, §13.1, §17, §18 ; SPEC_CORE_KMP §6, §10, §12 (1.5) ; `SPECIFICATION.md` §2, §9, §11, §15 ; `SYS/session/DefaultSessionCoordinator.kt`, `SessionEventFactory.kt`, `SessionReconciler.kt`, `SessionStartupReconciler.kt`, `ReconcileResult.kt`, `SESSION/activation/ArmSessionUseCase.kt` ; point de vigilance 8.
 
-**Points ouverts touchés :** Q12, Q14.
+**Points ouverts touchés :** Q12, Q14 (tranchés le 2026-10-24, voir le tableau et `ETAPE-44.md`).
+
+**Écarts décidés le 2026-10-24 (voir `ETAPE-44.md`).** `SessionCoordinator.withLock` n'existait pas : ajouté, avec `LockedSession` (le mutex n'est pas réentrant). Le crochet de fin de session passe par un décorateur, `HookedSessionCoordinator`, et non par le coordinateur lui-même (`LongParameterList`, cycle de dépendances résolu par `Provider`). `ArmOccurrenceUseCase` et `ActivationFailure` vivent dans `SYS/plan/`, car le coordinateur (`:core:system`) déclenche le ré-armement ; `ArmSessionUseCase` reste pour l'écran 6 transitoire et délègue l'armement. `rearmAfterFinalState` n'est pas une fonction publique. `PlanApplyResult.Unchanged` est ajouté. La sortie de secours se construit en deux temps (`EmergencyExitEventFactory`). `EVENING_REMINDER_SCHEDULED` attend l'étape 52. Trois décisions de Mehdi : Q12, Q14, horloge comme fuseau ; une correction de spec : décision 11.
 
 **Fichiers :**
 - `:core:system` — créer `SYS/plan/WakePlanScheduler.kt`, `DefaultWakePlanScheduler.kt` (sous `SessionCoordinator.withLock` : si `ARMED` en attente → `DISARM_REQUESTED` et attente de `DISARMED` ; si session après le coucher → `LockedBySession` ; puis `computeNextOccurrence` et `ACTIVATION_REQUESTED` avec `checks = emptyList()` ; `enabled = false` → désarmement seul ; `TIMEZONE_CHANGED` avant le coucher → désarmement puis ré-armement à l'heure locale du nouveau fuseau, après le coucher → rien, décision Q9 du 2026-10-24 ; `DISARM_REQUESTED` refusé par `BLOCKING_START_ALREADY_ELAPSED` → appliquer le blocage et répondre `LockedBySession`), `PlanChangeReason.kt`, `PlanApplyResult.kt`, `SYS/session/DisarmResult.kt` ; modifier `SessionEventFactory.kt` (+ `disarmRequested`, `emergencyExitConfirmed`), `DefaultSessionCoordinator.kt` (`DISARM_REQUESTED` dans l'aiguillage des phases à effets requis, aujourd'hui `else -> error` ; `PublishSnapshotExecutor` : `DISARMED` → `SESSION_DISARMED` ; après `RELEASE_SUCCEEDED` : `COMPLETED`/`DISARMED` → `rearmAfterFinalState()` ; `CANCELLED` → `WakePlanStore.write(enabled = false)`), `SessionReconciler.kt`, `SessionStartupReconciler.kt` (au démarrage et à `USER_UNLOCKED` : aucune session active et planning allumé → `apply(PROCESS_START | USER_UNLOCKED)`), `ReconcileResult.kt`, `TechnicalEventType.kt`.
@@ -694,11 +705,11 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** l'option B prouvée en JVM : le planning arme, désarme et ré-arme sans que l'interface écrive jamais un état de session.
 
-- [ ] **Écrire `WakePlanSchedulerTest`**, implémenter le scheduler.
-- [ ] **Écrire les tests du coordinateur**, implémenter le ré-armement et l'extinction.
-- [ ] **Écrire `ArmOccurrenceUseCaseTest`**, remplacer `ArmSessionUseCase` (l'écran 5/6 transitoire l'utilise jusqu'à l'étape 45 : adapter `SummaryViewModel` sans le refondre).
-- [ ] **Vérifier :** batterie standard ; `./gradlew :core:system:connectedDebugAndroidTest`.
-- [ ] **Rédiger `ETAPE-44.md`.** SPEC_ANDROID §9.2 (activation en deux phases depuis le planning), §9.3, §11.3, §17.
+- [x] **Écrire `WakePlanSchedulerTest`**, implémenter le scheduler.
+- [x] **Écrire les tests du coordinateur**, implémenter le ré-armement et l'extinction.
+- [x] **Écrire `ArmOccurrenceUseCaseTest`**, ~~remplacer~~ faire déléguer `ArmSessionUseCase` (l'écran 5/6 transitoire l'utilise jusqu'à l'étape 45 : `SummaryViewModel` adapté sans refonte).
+- [x] **Vérifier :** batterie standard ; `./gradlew :core:system:connectedDebugAndroidTest :app:connectedDebugAndroidTest` (`ProcessDeathInstrumentedTest` est le seul à résoudre le vrai coordinateur et son crochet). *(2026-10-24 : batterie JVM, ktlint, detekt, lint et assemblage verts. 2026-10-25, Xiaomi 25080RABDG, Android 16 : `:core:system` 38/38 ; `:app` 16/17, l'échec `BlockingGuardServiceInstrumentedTest` dépendait de l'ordre des tests comme à l'étape 43 ; le test efface désormais les notifications avant chaque cas, puis deux passages complets à 17/17, voir `ETAPE-44.md`.)*
+- [x] **Rédiger `ETAPE-44.md`.** SPEC_ANDROID §7.2, §8, §9.2 (activation depuis le planning), §9.3, §11.3, §17 ; SPEC_CORE_KMP décisions 9 et 11, §10 ; SPEC_IOS §11.
 
 **Tests manuels :** aucun à cette étape (l'interface arrive à l'étape 45) ; la séquence est prouvée par les tests du coordinateur.
 
@@ -879,6 +890,7 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 - `:core:designsystem` — `NiumiProblemBanner.kt`, `NiumiAlertDialog.kt`.
 - `:feature:session` — `HomeViewModel.kt` (+ `banner`, `alert`), `HomeScreen.kt` (bandeau en haut, cadran décalé ; alerte centrée), `PermissionAlertTexts.kt`.
 - `:app` — `MainActivity.kt` (alerte évaluée à chaque `onStart`, une fois par passage, selon Q19).
+- Q14 (tranché le 2026-10-24, étape 44) : lire `PlanArmingStatus` (`SYS/plan/`) ; un échec d'armement planning allumé ouvre une fenêtre d'erreur et publie une notification. Textes à écrire dans `SPECIFICATION.md` avant de coder (aucun n'existe au 2026-10-24). **À trancher avec Mehdi** (relecture de l'étape 44) : le nouvel essai n'a lieu qu'au démarrage du processus et au premier déverrouillage après redémarrage ; faut-il réessayer au retour dans l'application (`FOREGROUND`, ou bouton de la fenêtre) ?
 - Tests : `EveningReminderSpecsTest` (textes, H−30, annulée avec la session), `PermissionAlertPolicyTest` (une / plusieurs ; conséquences mot pour mot), `ProblemBannerPolicyTest` (NFC avant « aucun point » ; un seul), `ReleaseHygieneTest` (quatrième site `AlarmManager` autorisé), `AndroidEveningReminderInstrumentedTest`.
 
 **Produit :** les trois éléments hors écrans.

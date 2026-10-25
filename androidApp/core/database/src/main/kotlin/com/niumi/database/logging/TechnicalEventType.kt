@@ -70,4 +70,14 @@ enum class TechnicalEventType {
 
     /** Snapshot Direct Boot ou Room illisible (SPEC_CORE_KMP §13 ; SPEC_ANDROID §18, étape 20). */
     SNAPSHOT_CORRUPTED,
+
+    /**
+     * Étape 44 (SPEC_ANDROID §17) : état final `DISARMED`, écrit par `PublishSnapshotExecutor` comme
+     * les autres événements d'état ; armement depuis le planning réussi ou refusé (décision Q14 du
+     * 2026-10-24 : l'échec laisse l'interrupteur allumé) ; sortie de secours acceptée par le moteur.
+     */
+    SESSION_DISARMED,
+    PLAN_REARMED,
+    PLAN_REARM_FAILED,
+    EMERGENCY_EXIT_CONFIRMED,
 }

@@ -25,6 +25,7 @@ import com.niumi.feature.session.wake.fakes.FakeAlarmSoundPreferences
 import com.niumi.feature.session.wake.fakes.FakeClock
 import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.common.UuidIdGenerator
+import com.niumi.system.plan.ArmOccurrenceUseCase
 import com.niumi.system.readiness.ReadinessAction
 import com.niumi.system.readiness.ReadinessCheck
 import com.niumi.system.readiness.ReadinessCheckId
@@ -158,8 +159,15 @@ class SummaryViewModelTest {
                 readinessChecker = readinessChecker,
                 facade = NiumiCoreFacade(),
                 coordinator = coordinator,
-                eventFactory = SessionEventFactory(UuidIdGenerator(), FakeClock(now)),
-                sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider, alarmSoundPreferences),
+                armOccurrence =
+                    ArmOccurrenceUseCase(
+                        NiumiCoreFacade(),
+                        SessionEventFactory(UuidIdGenerator(), FakeClock(now)),
+                        pairedBoxStore,
+                        appSelectionStore,
+                        alarmSoundPreferences,
+                    ),
+                sources = ActivationSources(pairedBoxStore, appSelectionStore, timeZoneProvider),
             )
         return SummaryViewModel(useCase, alarmSoundPreferences, snapshotPublisher)
     }

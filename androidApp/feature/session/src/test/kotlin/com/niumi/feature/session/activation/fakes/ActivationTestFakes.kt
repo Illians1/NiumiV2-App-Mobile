@@ -15,6 +15,8 @@ import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.ReadinessReport
 import com.niumi.system.session.AlarmSoundUpdateResult
 import com.niumi.system.session.DispatchResult
+import com.niumi.system.session.LoadResult
+import com.niumi.system.session.LockedSession
 import com.niumi.system.session.ReconcileReason
 import com.niumi.system.session.ReconcileResult
 import com.niumi.system.session.SessionCoordinator
@@ -152,4 +154,22 @@ class RecordingSessionCoordinator(
         ringtoneKey: String,
         volumeRampSeconds: Int?,
     ): AlarmSoundUpdateResult = throw UnsupportedOperationException("Non utilisé par ArmSessionUseCase")
+
+    /** L'armement passe par le verrou depuis l'étape 44 : la dispatch verrouillée est celle-ci, journalisée. */
+    override suspend fun <T> withLock(block: suspend (LockedSession) -> T): T =
+        block(
+            object : LockedSession {
+                override suspend fun load(): LoadResult = LoadResult.Absent
+
+                override suspend fun clearActive(sessionId: String) = Unit
+
+                override suspend fun dispatch(
+                    event: SessionEventDto,
+                    extras: AndroidSessionExtras?,
+                ): DispatchResult = this@RecordingSessionCoordinator.dispatch(event, extras)
+
+                override suspend fun reconcile(reason: ReconcileReason): ReconcileResult =
+                    throw UnsupportedOperationException("Non utilisé par ArmSessionUseCase")
+            },
+        )
 }

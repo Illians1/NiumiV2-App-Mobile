@@ -1,25 +1,21 @@
 package com.niumi.feature.session.activation
 
-import com.niumi.core.diagnostics.ActivationReasonCode
 import com.niumi.core.interop.ActivationPolicyResultDto
-import com.niumi.core.interop.ActivationReasonDto
-import com.niumi.core.interop.ActivationRequestDto
-import com.niumi.core.interop.AppSelectionSummaryDto
 import com.niumi.core.interop.BlockingScheduleInputDto
 import com.niumi.core.interop.BlockingScheduleResultDto
 import com.niumi.core.interop.BlockingScheduleStatusDto
+import com.niumi.core.interop.NextOccurrenceDto
 import com.niumi.core.interop.NiumiCoreFacade
-import com.niumi.core.interop.SessionStateDto
 import com.niumi.core.interop.WakeScheduleInputDto
 import com.niumi.core.interop.WakeScheduleResultDto
-import com.niumi.database.AndroidSessionExtras
 import com.niumi.database.BlockedPackage
+import com.niumi.system.plan.ActivationFailure
+import com.niumi.system.plan.ArmOccurrenceUseCase
+import com.niumi.system.plan.ArmSessionResult
 import com.niumi.system.readiness.DeviceReadinessChecker
 import com.niumi.system.readiness.ReadinessInput
 import com.niumi.system.readiness.toActivationPolicyInput
-import com.niumi.system.session.DispatchResult
 import com.niumi.system.session.SessionCoordinator
-import com.niumi.system.session.SessionEventFactory
 import javax.inject.Inject
 
 /**
@@ -65,12 +61,15 @@ data class ActivationPreview(
 }
 
 /**
- * Orchestre les points 1 à 6 de l'activation en deux phases (SPEC_ANDROID §9.2). Les points 4 à 9
+ * Activation ponctuelle de l'écran 6 transitoire (SPEC_ANDROID §9.2), jusqu'à l'accueil de
+ * l'étape 45 qui arme depuis le planning. Ce use case garde le diagnostic qui alimente l'aperçu et
+ * refuse encore sur un contrôle bloquant, comme l'écran le montre ; depuis l'étape 44, l'armement
+ * lui-même — Niumi Spots, sélection et sonnerie lus au moment d'armer, `ACTIVATION_REQUESTED` — est
+ * délégué à [ArmOccurrenceUseCase], sous le verrou du coordinateur. Le planning n'est jamais écrit
+ * ici : il reste éteint, et une session ponctuelle terminée ne réarme donc rien. Les points 4 à 9
  * (transaction Room, alarme, blocage, vérification, `ACTIVATION_SUCCEEDED`, persistance `ARMED`)
- * sont internes à [SessionCoordinator.dispatch] et déjà prouvés par
- * `SessionCoordinatorActivationTest`, `PhaseCompletionTest` et les instrumentés Room/Direct Boot
- * des étapes 9 à 11 : ce use case ne dispatche que `ACTIVATION_REQUESTED` et n'observe que le
- * résultat.
+ * sont internes au coordinateur et déjà prouvés par `SessionCoordinatorActivationTest`,
+ * `PhaseCompletionTest` et les instrumentés Room/Direct Boot des étapes 9 à 11.
  *
  * | Points §9.2 | Prouvé par |
  * |---|---|
@@ -88,7 +87,7 @@ class ArmSessionUseCase
         private val readinessChecker: DeviceReadinessChecker,
         private val facade: NiumiCoreFacade,
         private val coordinator: SessionCoordinator,
-        private val eventFactory: SessionEventFactory,
+        private val armOccurrence: ArmOccurrenceUseCase,
         private val sources: ActivationSources,
     ) {
         suspend fun preview(
@@ -107,8 +106,8 @@ class ArmSessionUseCase
         }
 
         /**
-         * Clauses de garde séquentielles (horaire invalide, refus de la politique, Niumi Spot
-         * disparu) avant le corps principal — même motif que `DefaultSessionCoordinator.dispatch`
+         * Clauses de garde séquentielles (horaire invalide, début de blocage refusé, refus de la
+         * politique) avant le corps principal — même motif que `DefaultSessionCoordinator.dispatch`
          * (`:core:system`) et `NfcReducer.onValidScan` (`:shared:core`). Chaque refus est une
          * issue distincte de §9.2 point 2, que fondre dans une seule sortie rendrait moins
          * lisible, pas plus.
@@ -140,52 +139,17 @@ class ArmSessionUseCase
                 return ArmSessionResult.Failed(ActivationFailure.Blocked(policy.blockingReasons))
             }
 
-            // Une activation sans Niumi Spot enregistré est refusée. La liste n'est plus figée dans la
-            // session (étape 43, SPEC_CORE_KMP §2 décisions 11 et 16) : la vérification d'un scan
-            // relit l'ensemble courant de `PairedBoxStore`.
-            if (sources.pairedBoxStore.all().isEmpty()) {
-                return ArmSessionResult.Failed(
-                    ActivationFailure.Blocked(
-                        listOf(ActivationReasonDto(ActivationReasonCode.NO_PAIRED_BOX, null)),
-                    ),
-                )
-            }
-            val selection = sources.appSelectionStore.selection()
-            // Lu **au moment d'armer**, jamais transporté par la route : même règle que les heures
-            // (SetupPreferences). `sanitized()` protège d'une clé ou d'une durée retirée du
-            // catalogue depuis la dernière écriture de la préférence.
-            val alarmSound = sources.alarmSoundPreferences.read().sanitized()
-
-            val request =
-                ActivationRequestDto(
+            // Le reste — Niumi Spots, sélection et sonnerie lus au moment d'armer, bornes communes,
+            // dispatch — est celui de l'armement depuis le planning (étape 44), sous le même verrou.
+            val occurrence =
+                NextOccurrenceDto(
                     wakeSchedule = schedule,
-                    appSelection = AppSelectionSummaryDto(count = selection.size),
                     // L'instant **calculé**, jamais l'heure saisie : c'est lui qui est contractuel et
                     // immuable pour la durée de la session (SPEC_CORE_KMP §8.3).
                     blockingSchedule = blockingSchedule,
+                    blockingStartsImmediately = blockingSchedule.startsAtEpochMillis == null,
                 )
-            val extras =
-                AndroidSessionExtras(
-                    ringtoneKey = alarmSound.ringtoneKey,
-                    vibrationEnabled = true,
-                    volumeRampSeconds = alarmSound.volumeRampSeconds,
-                    blockedPackages = selection,
-                )
-
-            return when (val result = coordinator.dispatch(eventFactory.activationRequested(request), extras)) {
-                is DispatchResult.Applied -> interpretApplied(result)
-                is DispatchResult.Rejected -> ArmSessionResult.Failed(ActivationFailure.Rejected(result.violations))
-                is DispatchResult.Duplicate -> ArmSessionResult.Failed(ActivationFailure.Duplicate)
-            }
-        }
-
-        private fun interpretApplied(applied: DispatchResult.Applied): ArmSessionResult {
-            val snapshot = applied.snapshot
-            return if (snapshot != null && snapshot.state == SessionStateDto.ARMED) {
-                ArmSessionResult.Armed(snapshot)
-            } else {
-                ArmSessionResult.Failed(ActivationFailure.CoordinatorFailed(snapshot?.failureCode, snapshot?.state))
-            }
+            return coordinator.withLock { armOccurrence.arm(occurrence, it) }
         }
 
         /**

@@ -34,6 +34,9 @@ class SessionStartupReconcilerTest {
             ringtoneKey: String,
             volumeRampSeconds: Int?,
         ): AlarmSoundUpdateResult = throw UnsupportedOperationException("Non utilisé au démarrage")
+
+        override suspend fun <T> withLock(block: suspend (LockedSession) -> T): T =
+            throw UnsupportedOperationException("Non utilisé au démarrage")
     }
 
     @Test

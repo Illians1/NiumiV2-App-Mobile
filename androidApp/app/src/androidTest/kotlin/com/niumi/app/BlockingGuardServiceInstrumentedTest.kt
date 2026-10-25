@@ -68,9 +68,16 @@ class BlockingGuardServiceInstrumentedTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val notificationManager by lazy { context.getSystemService(NotificationManager::class.java) }
 
+    /**
+     * Les notifications laissées par une suite précédente sont effacées d'abord (2026-10-25) : un test
+     * de `:app` qui coupe le service d'accessibilité laisse l'avertissement de §13.1 (identifiant 8),
+     * que [fromTheAlarmTheGuardTakesOverTheAlarmNotification] comptait avec les siennes. Échec relevé
+     * aux étapes 43 et 44 dans la suite complète, jamais en lançant la classe seule.
+     */
     @Before
     fun setUp() {
         hiltRule.inject()
+        notificationManager.cancelAll()
         assertThat(runBlocking { gateway.load() }).isEqualTo(LoadResult.Absent)
     }
 
