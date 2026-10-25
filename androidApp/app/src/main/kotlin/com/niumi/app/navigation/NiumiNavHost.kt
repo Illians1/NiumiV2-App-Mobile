@@ -74,7 +74,8 @@ private fun HomeEntry(
 
         NiumiRoute.Home -> {
             HomeRoute(
-                onOpenSettings = { navController.navigate(NiumiRoute.TransitionalSettings) },
+                // Onglet « Réglages » de la barre du bas (décision de Mehdi du 2026-10-25).
+                onOpenSettings = { navController.navigate(NiumiRoute.TransitionalSettings) { launchSingleTop = true } },
                 onOpenApps = { navController.navigate(NiumiRoute.AppSelection(editing = true)) },
                 // Jusqu'à l'étape 46, l'annulation passe par l'ancien écran de scan.
                 onCancelWake = { navController.navigate(NiumiRoute.ScanToModify) },
@@ -138,11 +139,17 @@ private fun NavGraphBuilder.setupDestinations(navController: NavHostController) 
  * Destinations ouvertes depuis l'accueil : réglages transitoires (étapes 45 à 48), annulation par
  * scan et ses deux issues (jusqu'à l'étape 46), diagnostic d'incident et aide. Le diagnostic est un
  * écran de **consultation** : il n'ajoute aucune action de sortie de session (§3, §10.2).
+ *
+ * Les réglages s'ouvrent par l'onglet « Réglages » de la barre du bas, au-dessus de l'accueil ; leur
+ * onglet « Réveil » dépile jusqu'à l'accueil, comme le retour du téléphone (décision de Mehdi du
+ * 2026-10-25).
  */
 private fun NavGraphBuilder.sessionDestinations(navController: NavHostController) {
     composable<NiumiRoute.TransitionalSettings> {
         TransitionalSettingsScreen(
-            onBack = { navController.popBackStack() },
+            onOpenWake = {
+                if (!navController.popBackStack(NiumiRoute.Home, inclusive = false)) navController.navigateToHome()
+            },
             onOpenNiumiSpots = { navController.navigate(NiumiRoute.Pairing) },
             onOpenDiagnostic = { navController.navigate(NiumiRoute.IncidentDiagnostic) },
             onOpenHelp = { navController.navigate(NiumiRoute.Help) },

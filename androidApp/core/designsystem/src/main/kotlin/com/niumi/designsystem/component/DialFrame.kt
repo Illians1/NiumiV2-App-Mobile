@@ -17,7 +17,6 @@ import com.niumi.designsystem.drawing.DialGeometry
 import com.niumi.designsystem.drawing.DialHandle
 import com.niumi.designsystem.drawing.DialLabelLayout
 import com.niumi.designsystem.drawing.DialLabelSpace
-import com.niumi.designsystem.drawing.LabelBox
 import com.niumi.designsystem.format.NiumiTimeFormat
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiPalette
@@ -216,7 +215,6 @@ internal fun DrawScope.drawLabels(
     texts: DialTexts,
     state: DialState,
     times: Pair<Int, Int>,
-    reservedTopEnd: DialReservedArea?,
     palette: NiumiPalette,
 ) {
     val captionColor = if (state is DialState.Scheduled) palette.textSecondary else palette.border
@@ -240,7 +238,6 @@ internal fun DrawScope.drawLabels(
             centerX = frame.centerX,
             centerY = frame.centerY,
             clearRadius = frame.radius + frame.stroke / 2 + frame.px(NiumiDimens.dialLabelGap),
-            obstacles = listOfNotNull(reservedTopEnd?.let { reservedBox(it, size.width) }),
         )
     val (bedtimeBox, wakeBox) =
         DialLabelLayout.placeBoth(
@@ -270,16 +267,6 @@ internal fun DrawScope.drawLabels(
         drawText(caption, topLeft = Offset(xOf(caption.size.width), box.top))
         drawText(hour, topLeft = Offset(xOf(hour.size.width), box.top + caption.size.height))
     }
-}
-
-/** L'icône des réglages dans le repère de la zone du cadran, qui déborde de 12 sur la marge de 24. */
-private fun DrawScope.reservedBox(
-    area: DialReservedArea,
-    zoneWidth: Float,
-): LabelBox {
-    val right = zoneWidth - (area.inset - (NiumiDimens.screenHorizontal - NiumiDimens.dialOverflow)).toPx()
-    val top = -area.above.toPx()
-    return LabelBox(left = right - area.size.toPx(), top = top, right = right, bottom = top + area.size.toPx())
 }
 
 internal fun Int.toLocalTime(): LocalTime = LocalTime.of(this / MINUTES_PER_HOUR, this % MINUTES_PER_HOUR)

@@ -58,6 +58,8 @@ Ensuite, chaque jour :
 - Avant l'alarme : annulation de la session par scan (section 11).
 - À tout moment de la session : sortie de secours (écrans 8 et 9).
 
+La barre d'onglets en bas de l'accueil mène aux réglages, en session comme hors session. « Blocage seul » et « Suivi » y sont annoncés « Bientôt » et ne font rien (décision de Mehdi du 25 octobre 2026, section 9).
+
 ## 4. Écran 1 · Présentation du principe
 
 Images : `01_ecran-1-panneau-1`, `02_ecran-1-panneau-2`. Thème clair.
@@ -225,13 +227,15 @@ L'accueil récapitule le prochain réveil et permet de modifier tout ce qui peut
 
 ### Ce que contient l'écran, de haut en bas
 
-1. **L'icône des réglages**, en haut à droite. Pas de nom d'application. Elle ouvre l'écran 12.
-2. **Un cadran de 24 heures**, avec « Coucher 22:30 » et « Réveil 7:00 » écrits à l'extérieur, et au centre un libellé et une valeur. Deux poignées, une pour le coucher et une pour le réveil, se déplacent sur le cadran pour régler les heures. Un toucher bref ouvre le sélecteur d'heure. Un petit point marque l'heure actuelle. Ajouts du 2026-10-25 (décision de Mehdi du 2026-10-25, après essai sur appareil) : une petite flèche, à l'intérieur de l'anneau, pointe vers ce point ; sur l'arc de la nuit, le point est blanc, sinon il disparaissait sur l'arc gris de « Réveil désactivé ». Les deux étiquettes ne recouvrent jamais l'anneau, ni l'une l'autre, ni l'icône des réglages : faute de place, elles glissent le long de l'anneau en gardant l'ordre de leurs poignées. Valeurs dans `VALEURS-DE-DESIGN.md` §5.
-3. **Une carte d'état**, avec l'interrupteur général.
-4. **Deux onglets, « Ponctuel » et « Quotidien »**, centrés au-dessus des pastilles (ajoutés le 25 octobre 2026, maquette 18).
-5. **Sept pastilles**, une par jour : L M M J V S D. Toucher une pastille coche ou décoche le jour.
-6. **La ligne « Applications bloquées »** : les icônes des applications, puis « +N » quand elles ne tiennent plus sur la ligne ; à droite, le nombre et un chevron. Elle ouvre l'écran 4.
-7. **La ligne « Sonnerie »** : à droite, le nom du son et, dessous, « Progressive · 2 min », puis un chevron. Elle ouvre le choix de la sonnerie (section 10). Dans l'app, aucun trait sous cette dernière ligne (décision de Mehdi du 2026-10-25, après essai sur appareil).
+1. **Un cadran de 24 heures**, avec « Coucher 22:30 » et « Réveil 7:00 » écrits à l'extérieur, et au centre un libellé et une valeur. Deux poignées, une pour le coucher et une pour le réveil, se déplacent sur le cadran pour régler les heures. Un toucher bref ouvre le sélecteur d'heure. Un petit point marque l'heure actuelle. Ajouts du 2026-10-25 (décision de Mehdi du 2026-10-25, après essai sur appareil) : une petite flèche, à l'intérieur de l'anneau, pointe vers ce point ; sur l'arc de la nuit, le point est blanc, sinon il disparaissait sur l'arc gris de « Réveil désactivé ». Les deux étiquettes ne recouvrent jamais l'anneau ni l'une l'autre : faute de place, elles glissent le long de l'anneau en gardant l'ordre de leurs poignées. Valeurs dans `VALEURS-DE-DESIGN.md` §5.
+2. **Une carte d'état**, avec l'interrupteur général.
+3. **Deux onglets, « Ponctuel » et « Quotidien »**, centrés au-dessus des pastilles (ajoutés le 25 octobre 2026, maquette 18).
+4. **Sept pastilles**, une par jour : L M M J V S D. Toucher une pastille coche ou décoche le jour.
+5. **La ligne « Applications bloquées »** : les icônes des applications, puis « +N » quand elles ne tiennent plus sur la ligne ; à droite, le nombre et un chevron. Elle ouvre l'écran 4.
+6. **La ligne « Sonnerie »** : à droite, le nom du son et, dessous, « Progressive · 2 min », puis un chevron. Elle ouvre le choix de la sonnerie (section 10). Dans l'app, aucun trait sous cette dernière ligne (décision de Mehdi du 2026-10-25, après essai sur appareil).
+7. **La barre d'onglets**, tout en bas, bord à bord, avec quatre onglets : « Réveil », choisi ; « Blocage seul » et « Suivi », grisés, avec un badge « Bientôt », qui n'ouvrent rien et sont lus « Blocage seul, bientôt disponible » et « Suivi, bientôt disponible ». Touchés, ils tremblent brièvement de gauche à droite et le téléphone vibre, pour montrer que le toucher a été reçu mais refusé (décision de Mehdi du 25 octobre 2026, effet choisi par Claude) ; « Réglages », qui ouvre l'écran 12. Elle est la même dans les trois états et reste utilisable pendant la session, sombre comme l'écran. Le contenu défile au-dessus d'elle et la bulle du bas se pose au-dessus d'elle. Ce que feront « Blocage seul » et « Suivi » n'est pas décidé (`POINTS-OUVERTS.md`, D24).
+
+La barre d'onglets remplace l'icône des réglages, qui était en haut à droite (décision de Mehdi du 25 octobre 2026, nouvelle maquette 16). Les maquettes 15 à 18 et 24 ont été mises à jour le même jour : icône retirée, barre ajoutée, espaces et flèche de l'heure actuelle de l'app. La version sombre de la barre (maquettes 17 et 24) n'a pas été dessinée par Mehdi : elle reprend les couleurs du thème sombre (`VALEURS-DE-DESIGN.md` §4, à valider, `POINTS-OUVERTS.md` M17).
 
 Dans l'app, le cadran descend un peu sous le haut de l'écran et les espaces entre les éléments sont plus serrés que dans les maquettes ; l'écran défile sur les petits écrans (décision de Mehdi du 2026-10-25, après essai sur appareil : « réduire le vide » ; valeurs dans `VALEURS-DE-DESIGN.md` §4).
 
@@ -548,7 +552,7 @@ Images : `43_ecran-12-reglages` à `47_reglages-a-propos` et `53_niumi-spots-la-
 
 Les réglages regroupent ce qu'on configure une fois. Tout ce qui décrit la prochaine nuit reste sur l'accueil. Ils s'ouvrent aussi pendant une session : ils sont alors sombres, avec les mêmes mises en page et les mêmes textes. L'écran 2, la roue de « Temps gagné » et le parcours d'ajout d'un Niumi Spot n'ont pas de version sombre dessinée **(ouvert)**.
 
-Chaque page a une flèche de retour en haut à gauche.
+Chaque page a une flèche de retour en haut à gauche, sauf la première page des réglages. Elle s'ouvre par l'onglet « Réglages » de la barre d'onglets et garde cette barre en bas, avec « Réglages » choisi. Son onglet « Réveil » et le retour du téléphone ramènent à l'accueil (décision de Mehdi du 25 octobre 2026).
 
 | Ligne | À droite | Ouvre |
 | --- | --- | --- |
@@ -623,7 +627,7 @@ Elle n'est pas dessinée : c'est une notification standard d'Android, avec l'ic�
 
 Images : `61_bandeau-nfc-coupe-android`, `62_bandeau-aucun-niumi-spot-au-cas-ou`.
 
-Un bandeau noir tout en haut de l'accueil, avec un symbole d'avertissement, une phrase et un lien souligné. Il reste affiché tant que le problème existe. Le cadran et l'icône des réglages descendent d'autant. Un seul bandeau à la fois, le plus grave d'abord.
+Un bandeau noir tout en haut de l'accueil, avec un symbole d'avertissement, une phrase et un lien souligné. Il reste affiché tant que le problème existe. Le cadran descend d'autant. Un seul bandeau à la fois, le plus grave d'abord.
 
 | Problème | Texte | Lien |
 | --- | --- | --- |

@@ -1,11 +1,16 @@
 package com.niumi.feature.session.home
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -17,14 +22,16 @@ import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.niumi.designsystem.ui.theme.NiumiTheme
+import com.niumi.feature.session.tabs.MainTabTexts
 import com.niumi.feature.session.ui.AlarmSoundSummary
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Accueil (maquettes 15 à 18, étape 45) : les trois états, le cadenas et la bulle en session, les
- * contrôles automatiques d'accessibilité (décision du 2026-10-20).
+ * Accueil (maquettes 15 à 18, étape 45) : les trois états, le cadenas et la bulle en session, la
+ * barre d'onglets du bas (2026-10-25), les contrôles automatiques d'accessibilité (décision du
+ * 2026-10-20).
  */
 @RunWith(AndroidJUnit4::class)
 class HomeScreenTest {
@@ -150,8 +157,32 @@ class HomeScreenTest {
         composeRule.onNodeWithContentDescription("Lundi, Verrouillé").performClick()
         composeRule.onNodeWithText(HomeTexts.CANCEL_WAKE).performClick()
         composeRule.onNodeWithText(HomeTexts.LOCKED_UNTIL_SCAN).assertIsDisplayed()
+        // La barre d'onglets reste utilisable en session (décision de Mehdi du 2026-10-25).
+        composeRule.onNodeWithContentDescription(MainTabTexts.SETTINGS).performClick()
 
-        assertThat(calls).containsExactly("locked", "cancel").inOrder()
+        assertThat(calls).containsExactly("locked", "cancel", "settings").inOrder()
+    }
+
+    /**
+     * Barre d'onglets du bas (maquette 16, décision de Mehdi du 2026-10-25) : « Réveil » choisi,
+     * « Blocage seul » et « Suivi » annoncés « bientôt disponible », désactivés et sans action.
+     */
+    @Test
+    fun theTabBarSelectsWakeAndTheComingSoonTabsDoNothing() {
+        show(scheduled)
+
+        composeRule.onNode(isTab and hasContentDescription(MainTabTexts.WAKE)).assertIsSelected().performClick()
+        listOf(MainTabTexts.BLOCKING_ONLY, MainTabTexts.TRACKING).forEach { label ->
+            composeRule
+                .onNodeWithContentDescription(MainTabTexts.soon(label))
+                .assert(isTab)
+                .assertIsNotEnabled()
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+                .performClick()
+        }
+        composeRule.onNodeWithContentDescription(MainTabTexts.SETTINGS).assert(isTab).assertIsNotSelected()
+
+        assertThat(calls).isEmpty()
     }
 
     @Test
@@ -159,12 +190,13 @@ class HomeScreenTest {
         show(scheduled)
 
         composeRule.onNodeWithText(HomeTexts.RINGTONE).performScrollTo().performClick()
-        composeRule.onNodeWithContentDescription(HomeTexts.SETTINGS).performClick()
+        composeRule.onNodeWithContentDescription(MainTabTexts.SETTINGS).performClick()
 
         assertThat(calls).containsExactly("ringtone", "settings").inOrder()
     }
 
     private companion object {
+        val isTab = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
         const val BEDTIME = 22 * 60 + 30
         const val WAKE = 7 * 60
         const val EVENING = 21 * 60 + 34

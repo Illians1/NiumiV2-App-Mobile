@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +38,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import com.niumi.designsystem.R
-import com.niumi.designsystem.component.DialReservedArea
 import com.niumi.designsystem.component.DialState
 import com.niumi.designsystem.component.DialTexts
 import com.niumi.designsystem.component.NiumiAlertDialog
@@ -66,14 +64,18 @@ import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiShapes
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.designsystem.ui.theme.NiumiType
+import com.niumi.feature.session.tabs.MainTab
+import com.niumi.feature.session.tabs.MainTabBar
 import com.niumi.feature.session.ui.AlarmSoundSummary
 import java.time.LocalTime
 
 /**
- * Écran 6 · Accueil (`design-plan/SPECIFICATION.md` §9, maquettes 15 à 20 ; étape 45) : icône des
- * réglages, cadran, carte d'état, onglets « Ponctuel / Quotidien », pastilles des jours, lignes
- * « Applications bloquées » et « Sonnerie ». Le contenu défile sur un écran trop court. La bulle du
- * bas (M10) disparaît au toucher suivant, où qu'il soit.
+ * Écran 6 · Accueil (`design-plan/SPECIFICATION.md` §9, maquettes 15 à 20 ; étape 45) : cadran,
+ * carte d'état, onglets « Ponctuel / Quotidien », pastilles des jours, lignes « Applications
+ * bloquées » et « Sonnerie », puis la barre d'onglets du bas, « Réveil » choisi (décision de Mehdi
+ * du 2026-10-25, qui retire l'icône des réglages du haut). Le contenu défile au-dessus de la barre
+ * sur un écran trop court. La bulle du bas (M10) se pose au-dessus de la barre et disparaît au
+ * toucher suivant, où qu'il soit.
  */
 @Composable
 fun HomeScreen(
@@ -96,12 +98,15 @@ fun HomeScreen(
                 }
             },
     ) {
-        NiumiScreenScaffold {
+        NiumiScreenScaffold(
+            navigationBar = {
+                MainTabBar(selected = MainTab.WAKE, onWake = {}, onSettings = actions.onOpenSettings)
+            },
+        ) {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 HomeContent(state, actions)
             }
         }
-        SettingsButton(onClick = actions.onOpenSettings, modifier = Modifier.align(Alignment.TopEnd))
         state.message?.let { message ->
             NiumiToast(
                 text = message,
@@ -109,7 +114,10 @@ fun HomeScreen(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .padding(horizontal = NiumiDimens.toastHorizontalMargin, vertical = NiumiDimens.screenBottom),
+                        // Au-dessus de la barre d'onglets, à l'écart d'une barre système : les 34 de la
+                        // maquette 27 sont la marge du bas de l'iPhone, que la barre occupe désormais.
+                        .padding(bottom = NiumiDimens.tabBarHeight + NiumiDimens.systemBarGap)
+                        .padding(horizontal = NiumiDimens.toastHorizontalMargin),
             )
         }
         state.picker?.let { handle -> HomeTimePicker(state, handle, actions) }
@@ -161,13 +169,6 @@ private fun HomeContent(
         texts = DialTexts(bedtime = HomeTexts.BEDTIME, wake = HomeTexts.WAKE, chooseTime = HomeTexts.CHOOSE_TIME),
         onTimeChanged = actions.onTimeChanged,
         onTap = actions.onDialTapped,
-        // Les étiquettes du cadran laissent libre l'icône des réglages (essai du 2026-10-25).
-        reservedTopEnd =
-            DialReservedArea(
-                size = NiumiDimens.minTouch,
-                inset = NiumiDimens.homeSettingsInset,
-                above = NiumiDimens.homeDialTop,
-            ),
     )
     Spacer(modifier = Modifier.height(NiumiDimens.homeCardTop))
     StatusCard(state, actions)
@@ -235,27 +236,6 @@ private fun dialStateOf(state: HomeUiState): DialState =
             )
         }
     }
-
-/** Icône des réglages (44 × 44 à 14 du bord droit, maquettes 15 à 20), sans ambre. */
-@Composable
-private fun SettingsButton(
-    onClick: () -> Unit,
-    modifier: Modifier,
-) {
-    val palette = LocalNiumiPalette.current
-    Box(
-        modifier =
-            modifier
-                .padding(top = NiumiDimens.screenTop, end = NiumiDimens.homeSettingsInset)
-                .size(NiumiDimens.minTouch)
-                .minimumInteractiveComponentSize()
-                .clickable(role = Role.Button, onClick = onClick)
-                .semantics { contentDescription = HomeTexts.SETTINGS },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(painterResource(R.drawable.ic_settings), contentDescription = null, tint = palette.ink)
-    }
-}
 
 /**
  * Carte d'état : « Réveil activé » noire, « Réveil désactivé » au trait, « Blocage en cours » avec le

@@ -6,6 +6,8 @@ Quand une maquette montre une feuille par-dessus un écran, les textes de l'écr
 
 Les textes dont la validation n'est pas certaine sont listés dans `POINTS-OUVERTS.md`, section 2.
 
+Barre d'onglets du 25 octobre 2026 (décision de Mehdi) : les maquettes 15 à 18 et 24 ont perdu l'icône des réglages du haut et gagné la barre « Réveil », « Blocage seul », « Suivi », « Réglages » ; leurs textes ci-dessous sont relevés sur les sources mises à jour.
+
 Numérotation du 25 octobre 2026 (64 maquettes, `maquettes/INDEX.md` fait foi) : les maquettes 18 à 20 sont nouvelles, les anciennes 18 à 61 sont devenues 21 à 64. Les sources régénérées ce jour-là ramènent d'anciens textes dans les maquettes 05, 17, 24 à 27 et 29 à 33 ; ce relevé garde les textes décidés (D23) et signale chaque écart dans la section concernée.
 
 ## 01 · Écran 1 · Panneau 1
@@ -281,10 +283,13 @@ Fichier : `15_ecran-6-reveil-desactive-arrivee-apres-l-ecran-4`
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
+- Réveil
+- Blocage seul Bientôt
+- Suivi Bientôt
+- Réglages
 
 Libellés d'accessibilité présents dans le fichier source :
 
-- Réglages
 - Réveil désactivé
 - Lundi
 - Mardi
@@ -294,6 +299,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Samedi
 - Dimanche
 - Icônes des 6 applications bloquées
+- Navigation
+- Réveil
+- Blocage seul, bientôt disponible
+- Suivi, bientôt disponible
+- Réglages
 
 ## 16 · Écran 6 · Réveil prévu
 
@@ -319,10 +329,13 @@ Fichier : `16_ecran-6-reveil-prevu`
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
+- Réveil
+- Blocage seul Bientôt
+- Suivi Bientôt
+- Réglages
 
 Libellés d'accessibilité présents dans le fichier source :
 
-- Réglages
 - Réveil activé
 - Lundi
 - Mardi
@@ -332,6 +345,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Samedi
 - Dimanche
 - Icônes des 6 applications bloquées
+- Navigation
+- Réveil
+- Blocage seul, bientôt disponible
+- Suivi, bientôt disponible
+- Réglages
 
 ## 17 · Écran 6 · Session en cours (sombre)
 
@@ -357,12 +375,15 @@ Fichier : `17_ecran-6-session-en-cours-sombre`
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
+- Réveil
+- Blocage seul Bientôt
+- Suivi Bientôt
+- Réglages
 
 La source régénérée le 25 octobre 2026 écrit « Annuler la session ». C'est une régression : D23 (24 octobre 2026) fixe « Annuler le réveil », que l'app garde (`POINTS-OUVERTS.md` §5, E14).
 
 Libellés d'accessibilité présents dans le fichier source :
 
-- Réglages
 - Verrouillé
 - Lundi
 - Mardi
@@ -372,6 +393,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Samedi
 - Dimanche
 - Icônes des 6 applications bloquées
+- Navigation
+- Réveil
+- Blocage seul, bientôt disponible
+- Suivi, bientôt disponible
+- Réglages
 
 ## 18 · Écran 6 · Réveil prévu, alarme unique
 
@@ -397,10 +423,13 @@ Fichier : `18_ecran-6-reveil-prevu-alarme-unique` (ajoutée le 25 octobre 2026 :
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
+- Réveil
+- Blocage seul Bientôt
+- Suivi Bientôt
+- Réglages
 
 Libellés d'accessibilité présents dans le fichier source :
 
-- Réglages
 - Réveil activé
 - Lundi
 - Mardi
@@ -410,6 +439,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Samedi
 - Dimanche
 - Icônes des 6 applications bloquées
+- Navigation
+- Réveil
+- Blocage seul, bientôt disponible
+- Suivi, bientôt disponible
+- Réglages
 
 ## 19 · Écran 6 · Sélecteur d'heure, onglet Coucher
 
@@ -574,10 +608,13 @@ La source régénérée le 25 octobre 2026 écrit « Annuler la session » : ré
 - D
 - Applications bloquées 6
 - Sonnerie Carillon Progressive · 2 min
+- Réveil
+- Blocage seul Bientôt
+- Suivi Bientôt
+- Réglages
 
 Libellés d'accessibilité présents dans le fichier source :
 
-- Réglages
 - Verrouillé
 - Lundi
 - Mardi
@@ -587,6 +624,11 @@ Libellés d'accessibilité présents dans le fichier source :
 - Samedi
 - Dimanche
 - Icônes des 6 applications bloquées
+- Navigation
+- Réveil
+- Blocage seul, bientôt disponible
+- Suivi, bientôt disponible
+- Réglages
 
 ## 25 · Annuler · 2. Scanner ou sortie de secours
 

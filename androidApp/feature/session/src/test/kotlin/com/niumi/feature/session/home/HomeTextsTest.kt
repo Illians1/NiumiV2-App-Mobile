@@ -10,7 +10,6 @@ import org.junit.Test
 class HomeTextsTest {
     @Test
     fun theDialAndCardTextsAreQuotedWordForWord() {
-        assertThat(HomeTexts.SETTINGS).isEqualTo("Réglages")
         assertThat(HomeTexts.BEDTIME).isEqualTo("Coucher")
         assertThat(HomeTexts.WAKE).isEqualTo("Réveil")
         assertThat(HomeTexts.WAKE_IN).isEqualTo("Réveil dans")
@@ -102,7 +101,6 @@ class HomeTextsTest {
 
         val allTexts =
             listOf(
-                HomeTexts.SETTINGS,
                 HomeTexts.BEDTIME,
                 HomeTexts.WAKE,
                 HomeTexts.WAKE_IN,

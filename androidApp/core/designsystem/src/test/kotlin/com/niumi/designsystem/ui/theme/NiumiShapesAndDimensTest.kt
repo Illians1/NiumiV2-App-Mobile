@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -154,6 +155,28 @@ class NiumiShapesAndDimensTest {
         )
     }
 
+    /**
+     * Barre d'onglets du bas (maquette 16, décision de Mehdi du 2026-10-25) : 66 de contenu, les 34
+     * restants des 100 de la maquette étant la barre d'accueil de l'iPhone ; badge en pilule.
+     */
+    @Test
+    fun tabBar() {
+        val bar = forms.getValue("barreDOnglets").jsonObject
+        val badge = bar.getValue("badge").jsonObject
+
+        fun Map<String, JsonElement>.dp(field: String) = getValue(field).jsonPrimitive.content.toFloat()
+
+        assertDp("barre d'onglets, hauteur", NiumiDimens.tabBarHeight, bar.dp("hauteur"))
+        assertWithMessage("barre d'onglets : hauteur iPhone moins la barre d'accueil")
+            .that(bar.dp("hauteurAvecBarreIphone") - NiumiDimens.screenBottom.value)
+            .isEqualTo(NiumiDimens.tabBarHeight.value)
+        assertDp("onglet, largeur", NiumiDimens.tabBarItemWidth, bar.dp("largeurOnglet"))
+        assertDp("onglet, icône", NiumiDimens.tabBarIcon, bar.dp("icone"))
+        assertDp("onglet, écart icône-libellé", NiumiDimens.tabBarLabelGap, bar.dp("ecartIconeLibelle"))
+        assertDp("badge, hauteur", NiumiDimens.tabBarBadgeHeight, badge.dp("hauteur"))
+        assertDp("badge, marge", NiumiDimens.tabBarBadgePadding, badge.dp("margeCotes"))
+    }
+
     /** Une forme ajoutée au design sans jeton ferait échouer ce test au lieu d'être oubliée. */
     @Test
     fun everyFormOfTheDesignValuesIsCovered() {
@@ -174,6 +197,7 @@ class NiumiShapesAndDimensTest {
                 "interrupteur",
                 "interrupteurDeLigne",
                 "barreSegmentee",
+                "barreDOnglets",
             )
         // L'écran de référence des maquettes (390 × 844) n'est pas un jeton : les écrans s'adaptent.
         val notATokenKeys = setOf("ecranDeReference")

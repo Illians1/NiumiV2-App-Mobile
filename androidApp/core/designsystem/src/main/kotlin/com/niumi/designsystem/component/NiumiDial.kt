@@ -78,8 +78,7 @@ import kotlin.math.sin
  *
  * Zone de 366 × 340 qui déborde de 12 sur les marges de l'écran, réduite proportionnellement sur un
  * écran plus étroit (LISEZ-MOI : les écrans s'adaptent aux autres tailles). Les étiquettes ne touchent
- * jamais l'anneau, l'autre étiquette ni [reservedTopEnd] (l'icône des réglages de l'accueil) :
- * `DialLabelLayout`.
+ * jamais l'anneau ni l'autre étiquette : `DialLabelLayout`.
  */
 @Suppress("LongParameterList") // Convention Compose : les paramètres d'un composant sont son API.
 @Composable
@@ -89,7 +88,6 @@ fun NiumiDial(
     onTimeChanged: (DialHandle, Int) -> Unit,
     onTap: (DialHandle) -> Unit,
     modifier: Modifier = Modifier,
-    reservedTopEnd: DialReservedArea? = null,
 ) {
     val overflow = NiumiDimens.dialOverflow
     BoxWithConstraints(
@@ -104,7 +102,7 @@ fun NiumiDial(
                 },
     ) {
         val scale = min(1f, maxWidth / NiumiDimens.dialWidth)
-        DialBody(state, texts, scale, reservedTopEnd, onTimeChanged, onTap)
+        DialBody(state, texts, scale, onTimeChanged, onTap)
     }
 }
 
@@ -120,7 +118,6 @@ private fun DialBody(
     state: DialState,
     texts: DialTexts,
     scale: Float,
-    reservedTopEnd: DialReservedArea?,
     onTimeChanged: (DialHandle, Int) -> Unit,
     onTap: (DialHandle) -> Unit,
 ) {
@@ -167,7 +164,7 @@ private fun DialBody(
         ) {
             val frame = DialFrame(size.width, scale, density.density)
             drawDial(frame, state, bedtime, wake, palette)
-            drawLabels(frame, measurer, texts, state, bedtime to wake, reservedTopEnd, palette)
+            drawLabels(frame, measurer, texts, state, bedtime to wake, palette)
         }
         DialCenter(state, scale, palette, Modifier.align(Alignment.TopCenter))
         if (hasHandles) {

@@ -26,24 +26,37 @@ import com.niumi.designsystem.ui.theme.NiumiType
  * maquette (décision du 2026-10-22, `marginsOverSystemBars`).
  * [bottom] reçoit le bouton principal, collé au bas ; [content] prend la place restante et gère
  * lui-même son défilement (une liste paresseuse ne peut pas vivre dans une colonne défilante).
+ * [navigationBar] reçoit la barre d'onglets (`NiumiTabBar`), bord à bord tout en bas : elle prend
+ * alors le bas de l'écran à sa charge, barre système comprise, et le contenu s'arrête contre elle
+ * (`marginsAboveTabBar`, décision de Mehdi du 2026-10-25).
  */
 @Composable
 fun NiumiScreenScaffold(
     modifier: Modifier = Modifier,
     bottom: (@Composable ColumnScope.() -> Unit)? = null,
+    navigationBar: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val palette = LocalNiumiPalette.current
     CompositionLocalProvider(LocalContentColor provides palette.ink) {
-        Column(
-            modifier =
-                modifier
-                    .fillMaxSize()
-                    .background(palette.background)
-                    .marginsOver(WindowInsets.safeDrawing, NiumiDimens.screenMargins),
-        ) {
-            Column(modifier = Modifier.weight(1f).fillMaxWidth(), content = content)
-            if (bottom != null) Column(modifier = Modifier.fillMaxWidth(), content = bottom)
+        Column(modifier = modifier.fillMaxSize().background(palette.background)) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .then(
+                            if (navigationBar == null) {
+                                Modifier.marginsOver(WindowInsets.safeDrawing, NiumiDimens.screenMargins)
+                            } else {
+                                Modifier.marginsAboveTabBar(WindowInsets.safeDrawing, NiumiDimens.screenMargins)
+                            },
+                        ),
+            ) {
+                Column(modifier = Modifier.weight(1f).fillMaxWidth(), content = content)
+                if (bottom != null) Column(modifier = Modifier.fillMaxWidth(), content = bottom)
+            }
+            navigationBar?.invoke()
         }
     }
 }

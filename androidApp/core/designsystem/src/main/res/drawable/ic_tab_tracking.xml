@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Onglet « Suivi » de la barre d'onglets (décision de Mehdi du 2026-10-25) : trois barres sur une ligne.
+    Tracé recopié de la source HTML de la maquette 16 (viewBox 24 × 24, trait de 1,7, bouts et
+    angles ronds), dessinée dans une zone de 28. Noir dans le fichier : la barre d'onglets teinte
+    l'icône (encre si l'onglet est choisi, bordure sinon, « Désactivé » pour un onglet « Bientôt »).
+    Icône de navigation : jamais ambre (VALEURS-DE-DESIGN.md §2, règles d'emploi de l'ambre).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,20h16"
+        android:strokeWidth="1.7"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M6.8,11h1.4a0.8,0.8 0,0 1,0.8,0.8v4.4a0.8,0.8 0,0 1,-0.8,0.8h-1.4a0.8,0.8 0,0 1,-0.8,-0.8v-4.4a0.8,0.8 0,0 1,0.8,-0.8z"
+        android:strokeWidth="1.7"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M11.3,6h1.4a0.8,0.8 0,0 1,0.8,0.8v9.4a0.8,0.8 0,0 1,-0.8,0.8h-1.4a0.8,0.8 0,0 1,-0.8,-0.8v-9.4a0.8,0.8 0,0 1,0.8,-0.8z"
+        android:strokeWidth="1.7"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M15.8,9h1.4a0.8,0.8 0,0 1,0.8,0.8v6.4a0.8,0.8 0,0 1,-0.8,0.8h-1.4a0.8,0.8 0,0 1,-0.8,-0.8v-6.4a0.8,0.8 0,0 1,0.8,-0.8z"
+        android:strokeWidth="1.7"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

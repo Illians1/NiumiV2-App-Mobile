@@ -487,9 +487,6 @@ object NiumiDimens {
     val homeAppIconGap = 6.dp
     val homeRowTrailingGap = 6.dp
 
-    /** Icône des réglages : 44 × 44 à 14 du bord droit (maquettes 15 à 20). */
-    val homeSettingsInset = 14.dp
-
     /** Cadenas de la carte « Blocage en cours ». */
     val homeLockIcon = 18.dp
 
@@ -503,6 +500,25 @@ object NiumiDimens {
     val tabHeight = 32.dp
     val tabGap = 16.dp
     val tabUnderline = 2.dp
+
+    /**
+     * Barre d'onglets du bas (maquette 16 du 2026-10-25, décision de Mehdi) : 100 de haut dans la
+     * maquette, dont les 34 de la barre d'accueil de l'iPhone. Sur Android, 66 au-dessus de la barre
+     * système, que son fond couvre. Quatre onglets de 90, centrés : icône de 28, libellé 2 dessous,
+     * badge « Bientôt » de 13 de haut 2 sous le libellé, 6 de marge sur les côtés. L'ombre de la
+     * maquette (4 vers le haut, flou 16, noir à 8 %) est rendue par une élévation, comme celle de la
+     * bulle du bas.
+     */
+    val tabBarHeight = 66.dp
+    val tabBarItemWidth = 90.dp
+    val tabBarIcon = 28.dp
+    val tabBarLabelGap = 2.dp
+    val tabBarBadgeHeight = 13.dp
+    val tabBarBadgePadding = 6.dp
+    val tabBarElevation = 8.dp
+
+    /** Tremblement d'un onglet « Bientôt » touché : 3 au plus de chaque côté (décision du 2026-10-25). */
+    val tabBarShake = 3.dp
 
     /** Sélecteur d'heure (maquettes 19, 20) : fenêtre à 20 des bords, marges 20 / 24 / 24. */
     val timePickerHorizontalMargin = 20.dp

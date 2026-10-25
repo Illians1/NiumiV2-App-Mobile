@@ -49,6 +49,9 @@ class NiumiTypeTest {
             "texteSecondaire" to listOf("graisse" to NiumiType.secondary14),
             "legendeEtMention" to listOf("graisse" to NiumiType.caption13),
             "nomSousIcone" to listOf("graisse" to NiumiType.appLabel12, "graisseCochee" to NiumiType.appLabelChecked12),
+            "ongletBarre" to
+                listOf("graisse" to NiumiType.tabBarLabel12, "graisseChoisie" to NiumiType.tabBarLabelSelected12),
+            "badgeBientot" to listOf("graisse" to NiumiType.badge9),
         )
 
     @Test

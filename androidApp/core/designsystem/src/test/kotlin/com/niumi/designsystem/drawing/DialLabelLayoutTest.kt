@@ -7,12 +7,12 @@ import org.junit.Test
 
 /**
  * Étiquettes « Coucher 22:30 » et « Réveil 7:00 » du cadran (essai sur appareil du 2026-10-25,
- * décision de Mehdi) : jamais sur l'anneau, jamais l'une sur l'autre, jamais sous l'icône des
- * réglages, toujours dans la zone. Mesures en dp, densité 1 : zone de 366 × 340, centre (183, 170),
- * anneau de rayon 112 et de trait 28, écart de 4 ; icône de 44 au coin haut droit, à 2 du bord.
+ * décision de Mehdi) : jamais sur l'anneau, jamais l'une sur l'autre, toujours dans la zone.
+ * Mesures en dp, densité 1 : zone de 366 × 340, centre (183, 170), anneau de rayon 112 et de trait
+ * 28, écart de 4. L'icône des réglages, que les étiquettes évitaient, a quitté l'accueil pour la
+ * barre d'onglets le 2026-10-25 (décision de Mehdi).
  */
 class DialLabelLayoutTest {
-    private val icon = LabelBox(left = 320f, top = 0f, right = 364f, bottom = 44f)
     private val space =
         DialLabelSpace(
             width = 366f,
@@ -20,7 +20,6 @@ class DialLabelLayoutTest {
             centerX = 183f,
             centerY = NiumiDimens.dialCenterY.value,
             clearRadius = 112f + 14f + NiumiDimens.dialLabelGap.value,
-            obstacles = listOf(icon),
         )
 
     private fun angleOf(minutes: Int) = DialGeometry.degreesOf(minutes)
@@ -34,7 +33,6 @@ class DialLabelLayoutTest {
         assertWithMessage(
             "$label hors de l'anneau",
         ).that(box.distanceFrom(space.centerX, space.centerY)).isAtLeast(space.clearRadius - 0.5f)
-        assertWithMessage("$label hors de l'icône").that(box.intersects(icon)).isFalse()
     }
 
     @Test
@@ -67,18 +65,6 @@ class DialLabelLayoutTest {
         assertWellPlaced("coucher", bedtime)
         assertWellPlaced("réveil", wake)
         assertThat(bedtime.intersects(wake)).isFalse()
-    }
-
-    @Test
-    fun aLabelThatWouldFallUnderTheSettingsIconMovesAway() {
-        val free = space.copy(obstacles = emptyList())
-        val underIcon =
-            (0 until 24 * 60 step 5).firstOrNull { minutes ->
-                DialLabelLayout.place(angleOf(minutes), WIDE to HEIGHT, free).intersects(icon)
-            }
-        assertWithMessage("une heure dont l'étiquette tombe sous l'icône").that(underIcon).isNotNull()
-
-        assertWellPlaced("sous l'icône", DialLabelLayout.place(angleOf(underIcon!!), WIDE to HEIGHT, space))
     }
 
     @Test
@@ -142,7 +128,6 @@ class DialLabelLayoutTest {
 
     private companion object {
         const val WIDTH = 50f
-        const val WIDE = 70f
         const val HEIGHT = 40f
     }
 }

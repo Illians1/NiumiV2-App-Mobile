@@ -33,8 +33,7 @@ data class LabelBox(
 
 /**
  * La zone où placer les étiquettes : ses dimensions, le centre de l'anneau, la distance au centre en
- * deçà de laquelle une étiquette toucherait l'anneau ([clearRadius] : rayon, demi-trait et écart), et
- * les boîtes à éviter (icône des réglages).
+ * deçà de laquelle une étiquette toucherait l'anneau ([clearRadius] : rayon, demi-trait et écart).
  */
 data class DialLabelSpace(
     val width: Float,
@@ -42,13 +41,12 @@ data class DialLabelSpace(
     val centerX: Float,
     val centerY: Float,
     val clearRadius: Float,
-    val obstacles: List<LabelBox> = emptyList(),
 )
 
 /**
  * Placement des étiquettes « Coucher 22:30 » et « Réveil 7:00 » autour du cadran (essai sur appareil
  * du 2026-10-25, décision de Mehdi) : chacune près de sa poignée, à l'extérieur de l'anneau, jamais
- * sur l'anneau, sur l'autre étiquette ni sur un obstacle, toujours dans la zone.
+ * sur l'anneau ni sur l'autre étiquette, toujours dans la zone.
  *
  * Une étiquette est alignée vers l'extérieur (à droite de son ancrage sur la moitié droite, à gauche
  * sur la moitié gauche, centrée en haut et en bas), centrée verticalement sur son ancrage, et son
@@ -74,7 +72,6 @@ object DialLabelLayout {
         awayFromDegrees: Float? = null,
     ): LabelBox {
         val away = awayFromDegrees?.let { sign(signedDelta(it, degrees)).takeIf { s -> s != 0f } } ?: 1f
-        val blocked = space.obstacles + avoid
         val steps = (MAX_SLIDE_DEGREES / SLIDE_STEP_DEGREES).toInt()
         val offsets =
             listOf(0f) +
@@ -82,7 +79,7 @@ object DialLabelLayout {
         return offsets
             .asSequence()
             .map { offset -> boxAt(degrees + offset, size, space) }
-            .firstOrNull { box -> box.inside(space) && blocked.none(box::intersects) }
+            .firstOrNull { box -> box.inside(space) && avoid.none(box::intersects) }
             ?: clamped(boxAt(degrees, size, space), space)
     }
 
@@ -137,7 +134,8 @@ object DialLabelLayout {
         forward: Float,
         space: DialLabelSpace,
     ): Boolean =
-        listOf(bedtime, wake).all { box -> box.inside(space) && space.obstacles.none(box::intersects) } &&
+        bedtime.inside(space) &&
+            wake.inside(space) &&
             !bedtime.intersects(wake) &&
             signedDelta(centerAngle(bedtime, space), centerAngle(wake, space)) * forward > 0f
 

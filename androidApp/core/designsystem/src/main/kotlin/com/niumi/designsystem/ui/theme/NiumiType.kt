@@ -95,6 +95,13 @@ object NiumiType {
     /** 12/600 — nom sous l'icône d'une application cochée. */
     val appLabelChecked12 = style(12, FontWeight.SemiBold)
 
+    /** 12/500 — libellé d'un onglet de la barre du bas ; 12/600 pour l'onglet choisi (maquette 16). */
+    val tabBarLabel12 = style(12, FontWeight.Medium)
+    val tabBarLabelSelected12 = style(12, FontWeight.SemiBold)
+
+    /** 9/600 — badge « Bientôt » sous un onglet pas encore disponible (maquette 16). */
+    val badge9 = style(9, FontWeight.SemiBold)
+
     /**
      * Typographie Material 3 des composants Material encore présents (champ de recherche, feuille
      * modale, anciens écrans jusqu'à leur refonte) : chaque rôle reprend un style Niumi, aucune

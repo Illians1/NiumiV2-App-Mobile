@@ -62,6 +62,19 @@ class NiumiMarginsTest {
         assertThat(rtl.calculateLeftPadding(LayoutDirection.Rtl)).isEqualTo(24.dp)
     }
 
+    /** Barre d'onglets en bas (décision du 2026-10-25) : elle prend le bas, côtés et haut inchangés. */
+    @Test
+    fun aTabBarTakesTheBottomAndLeavesTheSidesAndTopAsTheyAre() {
+        val system = PaddingValues(start = 30.dp, top = 40.dp, bottom = 48.dp)
+
+        val margins = marginsAboveTabBar(system, LayoutDirection.Ltr, screen)
+
+        assertThat(margins.calculateBottomPadding()).isEqualTo(0.dp)
+        assertThat(margins.calculateTopPadding()).isEqualTo(56.dp)
+        assertThat(margins.calculateLeftPadding(LayoutDirection.Ltr)).isEqualTo(30.dp)
+        assertThat(margins.calculateRightPadding(LayoutDirection.Ltr)).isEqualTo(24.dp)
+    }
+
     @Test
     fun theScreenMarginsAreThoseOfTheDesign() {
         assertThat(screen.calculateTopPadding()).isEqualTo(NiumiDimens.screenTop)

@@ -191,6 +191,15 @@
       "taille": 12,
       "graisse": 400,
       "graisseCochee": 600
+    },
+    "ongletBarre": {
+      "taille": 12,
+      "graisse": 500,
+      "graisseChoisie": 600
+    },
+    "badgeBientot": {
+      "taille": 9,
+      "graisse": 600
     }
   },
   "formes": {
@@ -260,6 +269,18 @@
       "segment": {
         "hauteur": 40,
         "rayon": 10
+      }
+    },
+    "barreDOnglets": {
+      "hauteur": 66,
+      "hauteurAvecBarreIphone": 100,
+      "largeurOnglet": 90,
+      "icone": 28,
+      "ecartIconeLibelle": 2,
+      "badge": {
+        "hauteur": 13,
+        "margeCotes": 6,
+        "rayon": "moitié de la hauteur"
       }
     }
   },

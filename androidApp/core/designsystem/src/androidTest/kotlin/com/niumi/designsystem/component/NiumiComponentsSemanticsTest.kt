@@ -29,6 +29,7 @@ import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.niumi.designsystem.R
 import com.niumi.designsystem.drawing.LockedPhoneDrawing
 import com.niumi.designsystem.drawing.PhoneNearSpotDrawing
 import com.niumi.designsystem.ui.theme.NiumiDimens
@@ -558,6 +559,45 @@ class NiumiComponentsSemanticsTest {
         composeRule
             .onNodeWithContentDescription("Panneau 1 sur 2")
             .assertNoClickAction()
+    }
+
+    // Barre d'onglets du bas (maquette 16, décision de Mehdi du 2026-10-25)
+
+    @Test
+    fun theTabBarExposesTabsAndTheComingSoonOneHasNoAction() {
+        val touched = mutableListOf<Int>()
+        val items =
+            listOf(
+                NiumiTabBarItem("Réveil", NiumiTabIcon.Clock),
+                NiumiTabBarItem(
+                    "Suivi",
+                    NiumiTabIcon.Vector(R.drawable.ic_tab_tracking),
+                    badge = "Bientôt",
+                    accessibilityLabel = "Suivi, bientôt disponible",
+                ),
+                NiumiTabBarItem("Réglages", NiumiTabIcon.Vector(R.drawable.ic_tab_settings)),
+            )
+        show { NiumiTabBar(items = items, selectedIndex = 0, onSelect = { touched += it }) }
+
+        composeRule
+            .onNodeWithContentDescription("Réveil")
+            .assertRole(Role.Tab)
+            .assertIsSelected()
+            .assertTouchTarget()
+        composeRule
+            .onNodeWithContentDescription("Suivi, bientôt disponible")
+            .assertRole(Role.Tab)
+            .assertIsNotEnabled()
+            .assertNoClickAction()
+            .performClick()
+        composeRule
+            .onNodeWithContentDescription("Réglages")
+            .assertRole(Role.Tab)
+            .assertIsNotSelected()
+            .assertTouchTarget()
+            .performClick()
+
+        assertThat(touched).containsExactly(2)
     }
 
     // Dessins (étape 35)

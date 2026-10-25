@@ -13,13 +13,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 </head>
 <body>
 <div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 56px 24px 34px; display: flex; flex-direction: column; background: #0E0E10; color: #FAFAF8; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.35">
-<button aria-label="Réglages" style="position: absolute; top: 56px; right: 14px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
-<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: #FAFAF8; stroke-width: 1.6; stroke-linecap: round">
-<path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path>
-<circle cx="16" cy="7" r="2"></circle>
-<circle cx="8" cy="17" r="2"></circle>
-</svg>
-</button>
 <div style="margin: 0 -12px; display: flex; justify-content: center">
 <svg viewBox="0 0 366 290" width="366" height="290" aria-hidden="true">
 <circle cx="183" cy="158" r="112" style="fill: none; stroke: #2A2A2F; stroke-width: 28"></circle>
@@ -53,7 +46,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 <path d="M211.99 49.82 A112 112 0 0 1 215.75 50.89" style="fill: none; stroke: #F9F4EB; stroke-width: 28"></path>
 <path d="M214.81 50.61 A112 112 0 0 1 218.54 51.79" style="fill: none; stroke: #F9F7F1; stroke-width: 28"></path>
 <path d="M217.61 51.48 A112 112 0 0 1 221.31 52.75" style="fill: none; stroke: #FAF9F5; stroke-width: 28"></path>
-<circle cx="158.8" cy="48.7" r="4" style="fill: #0E0E10"></circle>
+<circle cx="158.8" cy="48.7" r="4" style="fill: #0E0E10"></circle><path data-fleche="heure-actuelle" d="M162.0 63.3 L169.4 68.8 L157.7 71.4 Z" style="fill: #FAFAF8; stroke: #FAFAF8; stroke-width: 1.5; stroke-linejoin: round"></path>
 <text x="108" y="20" style="text-anchor: end; font-size: 13px; fill: #74747B">Coucher</text>
 <text x="108" y="40" style="text-anchor: end; font-size: 17px; font-weight: 600; fill: #74747B">22:30</text>
 <text x="319" y="188" style="text-anchor: start; font-size: 13px; fill: #74747B">Réveil</text>
@@ -62,12 +55,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 <text x="183" y="186" style="text-anchor: middle; font-size: 42px; font-weight: 500; letter-spacing: -1px; fill: #FAFAF8">7 h 50</text>
 </svg>
 </div>
-<div style="margin-top: 18px; box-sizing: border-box; padding: 12px 16px 2px; border: 1px solid #74747B; border-radius: 14px; background: #1B1B1F; color: #FAFAF8; display: flex; flex-direction: column">
+<div style="margin-top: 8px; box-sizing: border-box; padding: 12px 16px 2px; border: 1px solid #74747B; border-radius: 14px; background: #1B1B1F; color: #FAFAF8; display: flex; flex-direction: column">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600"><span>Blocage en cours</span><svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-label="Verrouillé" style="fill: none; stroke: #E9A23B; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round"><path d="M8 11V8a4 4 0 0 1 8 0v3"></path><rect x="5" y="11" width="14" height="9" rx="2"></rect></svg></div>
 <div style="margin-top: 2px; font-size: 14px; color: #A9A9AE">Applications bloquées jusqu'au scan de ton Niumi Spot</div>
 <button style="min-height: 44px; display: flex; align-items: center; font-size: 15px; color: #FAFAF8; text-decoration: underline; text-underline-offset: 4px">Annuler la session</button>
 </div>
-<div style="margin-top: 30px; display: flex; justify-content: center; gap: 28px"><button aria-pressed="false" style="height: 32px; font-size: 14px; color: #74747B; border-bottom: 2px solid transparent">Ponctuel</button><button aria-pressed="false" style="height: 32px; font-size: 14px; color: #74747B; border-bottom: 2px solid transparent">Quotidien</button></div>
+<div style="margin-top: 12px; display: flex; justify-content: center; gap: 28px"><button aria-pressed="false" style="height: 32px; font-size: 14px; color: #74747B; border-bottom: 2px solid transparent">Ponctuel</button><button aria-pressed="false" style="height: 32px; font-size: 14px; color: #74747B; border-bottom: 2px solid transparent">Quotidien</button></div>
 <div style="margin-top: 14px; display: flex; justify-content: space-between">
 <button aria-pressed="true" aria-label="Lundi" aria-disabled="true" style="width: 44px; height: 44px; border-radius: 22px; background: #4A4A50; color: #0E0E10; font-weight: 500; text-align: center">L</button>
 <button aria-pressed="true" aria-label="Mardi" aria-disabled="true" style="width: 44px; height: 44px; border-radius: 22px; background: #4A4A50; color: #0E0E10; font-weight: 500; text-align: center">M</button>
@@ -77,8 +70,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 <button aria-pressed="false" aria-label="Samedi" aria-disabled="true" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; border: 1px solid #3A3A40; color: #74747B; text-align: center">S</button>
 <button aria-pressed="false" aria-label="Dimanche" aria-disabled="true" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; border: 1px solid #3A3A40; color: #74747B; text-align: center">D</button>
 </div>
-<div style="margin-top: 34px; display: flex; flex-direction: column">
-<button aria-disabled="true" style="width: 100%; height: 86px; border-top: 1px solid #2E2E33; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<div style="margin-top: 12px; display: flex; flex-direction: column">
+<button aria-disabled="true" style="width: 100%; height: 80px; border-top: 1px solid #2E2E33; display: flex; align-items: center; justify-content: space-between; gap: 12px">
 <span style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
 <span style="color: #74747B">Applications bloquées</span>
 <span role="img" aria-label="Icônes des 6 applications bloquées" style="display: flex; gap: 6px">
@@ -92,7 +85,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 </span>
 <span style="display: flex; align-items: center; gap: 6px; color: #74747B"><span>6</span><svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-label="Verrouillé" style="fill: none; stroke: #74747B; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round"><path d="M8 11V8a4 4 0 0 1 8 0v3"></path><rect x="5" y="11" width="14" height="9" rx="2"></rect></svg></span>
 </button>
-<button style="width: 100%; height: 78px; border-top: 1px solid #2E2E33; border-bottom: 1px solid #2E2E33; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<button style="width: 100%; height: 72px; border-top: 1px solid #2E2E33; border-bottom: 1px solid #2E2E33; display: flex; align-items: center; justify-content: space-between; gap: 12px">
 <span style="color: #FAFAF8">Sonnerie</span>
 <span style="display: flex; align-items: center; gap: 8px">
 <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="color: #FAFAF8">Carillon</span><span style="font-size: 13px; color: #A9A9AE">Progressive · 2 min</span></span>
@@ -100,6 +93,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 </span>
 </button>
 </div>
+<nav aria-label="Navigation" style="position: absolute; left: 0; right: 0; bottom: 0; height: 100px; box-sizing: border-box; padding: 0 0 34px; background: #1B1B1F; box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08); display: flex; align-items: center; justify-content: center"><button role="tab" aria-selected="true" aria-label="Réveil"  style="width: 90px; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" style="color: #FAFAF8; fill: none; stroke: #FAFAF8; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round"><circle cx="12" cy="12" r="9.5" style="fill: currentColor; stroke: none"></circle><path d="M12 7.5V12l3 2" style="stroke: #0E0E10; stroke-width: 1.8"></path></svg><span style="font-size: 12px; font-weight: 600; color: #FAFAF8; white-space: nowrap">Réveil</span></button><button role="tab" aria-selected="false" aria-label="Blocage seul, bientôt disponible" aria-disabled="true" style="width: 90px; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" style="fill: none; stroke: #4A4A50; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path></svg><span style="font-size: 12px; font-weight: 500; color: #4A4A50; white-space: nowrap"><span style="display: flex; flex-direction: column; align-items: center; gap: 2px"><span>Blocage seul</span><span style="padding: 0 6px; height: 13px; line-height: 13px; border-radius: 7px; background: #2A2A2F; font-size: 9px; font-weight: 600; color: #74747B">Bientôt</span></span></span></button><button role="tab" aria-selected="false" aria-label="Suivi, bientôt disponible" aria-disabled="true" style="width: 90px; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" style="fill: none; stroke: #4A4A50; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;"><path d="M4 20h16"></path><rect x="6" y="11" width="3" height="6" rx="0.8"></rect><rect x="10.5" y="6" width="3" height="11" rx="0.8"></rect><rect x="15" y="9" width="3" height="8" rx="0.8"></rect></svg><span style="font-size: 12px; font-weight: 500; color: #4A4A50; white-space: nowrap"><span style="display: flex; flex-direction: column; align-items: center; gap: 2px"><span>Suivi</span><span style="padding: 0 6px; height: 13px; line-height: 13px; border-radius: 7px; background: #2A2A2F; font-size: 9px; font-weight: 600; color: #74747B">Bientôt</span></span></span></button><button role="tab" aria-selected="false" aria-label="Réglages"  style="width: 90px; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" style="fill: none; stroke: #74747B; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span style="font-size: 12px; font-weight: 500; color: #74747B; white-space: nowrap">Réglages</span></button></nav>
 </div>
 </body>
 </html>

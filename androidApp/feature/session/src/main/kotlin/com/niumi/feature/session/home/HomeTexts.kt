@@ -15,7 +15,6 @@ import com.niumi.feature.session.ui.AlarmSoundTexts
  * jour), à valider par Mehdi au premier essai.
  */
 object HomeTexts {
-    const val SETTINGS = "Réglages"
     const val BEDTIME = "Coucher"
     const val WAKE = "Réveil"
     const val WAKE_IN = "Réveil dans"

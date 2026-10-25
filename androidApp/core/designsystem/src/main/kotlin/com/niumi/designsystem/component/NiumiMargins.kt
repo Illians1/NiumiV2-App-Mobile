@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import com.niumi.designsystem.ui.theme.NiumiDimens
 
@@ -36,9 +37,35 @@ internal fun marginsOverSystemBars(
         bottom = max(margins.calculateBottomPadding(), system.calculateBottomPadding() + NiumiDimens.systemBarGap),
     )
 
+/**
+ * Marges d'un écran dont le bas est pris par la barre d'onglets (décision de Mehdi du 2026-10-25) :
+ * côtés et haut comme [marginsOverSystemBars], rien en bas. La barre couvre la barre système de son
+ * fond et le contenu s'arrête contre elle, comme dans la maquette 16.
+ */
+internal fun marginsAboveTabBar(
+    system: PaddingValues,
+    layoutDirection: LayoutDirection,
+    margins: PaddingValues,
+): PaddingValues {
+    val over = marginsOverSystemBars(system, layoutDirection, margins)
+    return PaddingValues(
+        start = over.calculateStartPadding(layoutDirection),
+        top = over.calculateTopPadding(),
+        end = over.calculateEndPadding(layoutDirection),
+        bottom = 0.dp,
+    )
+}
+
 /** [marginsOverSystemBars] appliqué à un élément bord à bord, d'après les retraits [insets] de la fenêtre. */
 @Composable
 internal fun Modifier.marginsOver(
     insets: WindowInsets,
     margins: PaddingValues,
 ): Modifier = padding(marginsOverSystemBars(insets.asPaddingValues(), LocalLayoutDirection.current, margins))
+
+/** [marginsAboveTabBar] appliqué à un élément bord à bord, d'après les retraits [insets] de la fenêtre. */
+@Composable
+internal fun Modifier.marginsAboveTabBar(
+    insets: WindowInsets,
+    margins: PaddingValues,
+): Modifier = padding(marginsAboveTabBar(insets.asPaddingValues(), LocalLayoutDirection.current, margins))
