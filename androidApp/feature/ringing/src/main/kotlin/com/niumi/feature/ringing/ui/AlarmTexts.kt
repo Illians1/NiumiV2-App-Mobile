@@ -2,6 +2,7 @@ package com.niumi.feature.ringing.ui
 
 import com.niumi.designsystem.component.NfcScanSheetContent
 import com.niumi.system.nfc.ScanFailureReason
+import com.niumi.system.nfc.ScanFailureTexts
 
 /**
  * Textes de l'écran 10 · Réveil et de ses feuilles d'échec (étape 38), recopiés de
@@ -27,41 +28,15 @@ object AlarmTexts {
     /** Libellé d'accessibilité du dessin (source de la maquette 28). */
     const val DRAWING = "Un téléphone approché d’un Niumi Spot"
 
-    /** Nom de la feuille d'échec pour TalkBack (`aria-label` des maquettes 30 à 33). */
-    const val FAILURE_PANE = "Échec du scan"
-
-    private const val NOT_A_NIUMI_SPOT = "Ce n’est pas un Niumi Spot."
-    private const val NOT_REGISTERED = "Ce Niumi Spot n’est pas enregistré."
-    private const val SCAN_A_REGISTERED_POINT = "Scanne un Niumi Spot que tu as enregistré."
-    private const val UNREADABLE = "Ton Niumi Spot n’a pas pu être lu."
-    private const val UNREADABLE_HELP = "Rapproche ton téléphone et réessaie."
-    private const val NFC_DISABLED = "Le NFC est coupé."
-    private const val NFC_DISABLED_HELP = "Active-le pour scanner ton Niumi Spot."
-    private const val RETRY = "Réessayer"
-    private const val OPEN_SETTINGS = "Ouvrir les réglages"
+    /** Nom de la feuille d'échec pour TalkBack, partagé avec la feuille d'annulation. */
+    const val FAILURE_PANE = ScanFailureTexts.FAILURE_PANE
 
     /** Lu par TalkBack sur le cercle de chargement, après un scan validé (aucun texte à l'écran). */
     const val RELEASE_LOADER = "Fin du réveil"
 
     const val NFC_ABSENT = "Cet appareil ne prend pas en charge le NFC."
 
-    /** Titre, phrase d'aide et bouton de chaque échec (`SPECIFICATION.md` §14, tableau des échecs). */
+    /** Titre, phrase d'aide et bouton de chaque échec (`ScanFailureTexts`, depuis l'étape 46). */
     fun failure(reason: ScanFailureReason): NfcScanSheetContent.Failure =
-        when (reason) {
-            ScanFailureReason.NOT_A_NIUMI_SPOT -> {
-                NfcScanSheetContent.Failure(NOT_A_NIUMI_SPOT, SCAN_A_REGISTERED_POINT, RETRY)
-            }
-
-            ScanFailureReason.NOT_REGISTERED -> {
-                NfcScanSheetContent.Failure(NOT_REGISTERED, SCAN_A_REGISTERED_POINT, RETRY)
-            }
-
-            ScanFailureReason.UNREADABLE -> {
-                NfcScanSheetContent.Failure(UNREADABLE, UNREADABLE_HELP, RETRY)
-            }
-
-            ScanFailureReason.NFC_DISABLED -> {
-                NfcScanSheetContent.Failure(NFC_DISABLED, NFC_DISABLED_HELP, OPEN_SETTINGS)
-            }
-        }
+        ScanFailureTexts.of(reason).let { NfcScanSheetContent.Failure(it.title, it.help, it.actionLabel) }
 }

@@ -17,17 +17,22 @@ import com.niumi.feature.session.ringtone.RingtoneSheetRoute
  * premier plan (retour de l'écran 4, de la feuille « Sonnerie » ou d'une autre application). La
  * feuille « Sonnerie » s'ouvre par-dessus l'accueil, en session aussi (§10).
  *
- * [onCancelWake] mène jusqu'à l'étape 46 à l'ancien écran de scan pour modifier ou annuler.
+ * Le lien « Annuler le réveil » ouvre la feuille d'annulation (§11, étape 46). Un réveil annulé
+ * laisse l'accueil, revenu seul en clair « Réveil désactivé », avec la bulle « Réveil annulé… » ;
+ * si l'alarme a sonné entre-temps et que le scan a terminé la session, [onSessionCompleted] mène à
+ * l'écran 11.
  */
 @Composable
 fun HomeRoute(
     onOpenSettings: () -> Unit,
     onOpenApps: () -> Unit,
-    onCancelWake: () -> Unit,
+    onSessionCompleted: (sessionId: String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
+    cancelViewModel: CancelSessionViewModel = hiltViewModel(),
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var showRingtone by rememberSaveable { mutableStateOf(false) }
+    var showCancel by rememberSaveable { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -45,7 +50,10 @@ fun HomeRoute(
                 onOpenSettings = onOpenSettings,
                 onOpenApps = onOpenApps,
                 onOpenRingtone = { showRingtone = true },
-                onCancelWake = onCancelWake,
+                onCancelWake = {
+                    cancelViewModel.open()
+                    showCancel = true
+                },
                 onSwitchChanged = viewModel::onSwitchChanged,
                 onDayToggled = viewModel::onDayToggled,
                 onDayModeSelected = viewModel::onDayModeSelected,
@@ -67,6 +75,21 @@ fun HomeRoute(
                 // La feuille ne déclenche pas `ON_RESUME` : la ligne « Sonnerie » est relue ici.
                 viewModel.refresh()
             },
+        )
+    }
+
+    if (showCancel) {
+        CancelSessionRoute(
+            onDismiss = { showCancel = false },
+            onCancelled = {
+                showCancel = false
+                viewModel.showCancelledMessage()
+            },
+            onCompleted = { sessionId ->
+                showCancel = false
+                onSessionCompleted(sessionId)
+            },
+            viewModel = cancelViewModel,
         )
     }
 }

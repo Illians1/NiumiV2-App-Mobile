@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.niumi.designsystem.R
@@ -61,8 +62,11 @@ import kotlinx.coroutines.launch
  *
  * En-tête, deux formes relevées dans les maquettes :
  * - avec [closeLabel] (« Fermer », « Fermer sans enregistrer ») : titre et croix sur une ligne de
- *   48, 8 sous la poignée ; titre 22/600 par défaut (feuille « Sonnerie ») ;
- * - sans croix : titre 24/600 à 22 sous la poignée (« Annuler le réveil ? »).
+ *   48, 8 sous la poignée (feuille « Sonnerie ») ;
+ * - sans croix : titre à 22 sous la poignée (« Annuler le réveil ? »), centré si [titleCentered].
+ *
+ * Titre 22/600 dans les deux cas : la maquette met 24 sans croix, jugé trop imposant (décision de
+ * Mehdi du 2026-10-26).
  *
  * [showHandle] à `false` : sans poignée, pour la feuille de scan, que ses maquettes (06, 20, 29 à 33)
  * dessinent sans elle ; le contenu pose alors sa propre marge du haut.
@@ -79,8 +83,9 @@ fun NiumiBottomSheet(
     title: String?,
     modifier: Modifier = Modifier,
     closeLabel: String? = null,
-    titleStyle: TextStyle = if (closeLabel != null) NiumiType.alertTitle22 else NiumiType.sheetTitle24,
+    titleStyle: TextStyle = NiumiType.alertTitle22,
     showHandle: Boolean = true,
+    titleCentered: Boolean = false,
     content: @Composable ColumnScope.(requestClose: () -> Unit) -> Unit,
 ) {
     val palette = LocalNiumiPalette.current
@@ -130,7 +135,13 @@ fun NiumiBottomSheet(
                     ),
         ) {
             if (showHandle) SheetHandle(Modifier.align(Alignment.CenterHorizontally))
-            SheetHeader(title = title, titleStyle = titleStyle, closeLabel = closeLabel, onClose = close)
+            SheetHeader(
+                title = title,
+                titleStyle = titleStyle,
+                closeLabel = closeLabel,
+                onClose = close,
+                centered = titleCentered,
+            )
             content(close)
         }
     }
@@ -155,6 +166,7 @@ private fun SheetHeader(
     titleStyle: TextStyle,
     closeLabel: String?,
     onClose: () -> Unit,
+    centered: Boolean,
 ) {
     if (closeLabel != null) {
         Row(
@@ -171,7 +183,12 @@ private fun SheetHeader(
             NiumiCloseButton(label = closeLabel, onClick = onClose)
         }
     } else if (title != null) {
-        SheetTitle(title, titleStyle, Modifier.padding(top = NiumiDimens.sheetTitleTop))
+        SheetTitle(
+            title = title,
+            style = titleStyle,
+            modifier = Modifier.padding(top = NiumiDimens.sheetTitleTop).fillMaxWidth(),
+            textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+        )
     }
 }
 
@@ -192,8 +209,9 @@ private fun SheetTitle(
     title: String,
     style: TextStyle,
     modifier: Modifier,
+    textAlign: TextAlign = TextAlign.Start,
 ) {
-    Text(text = title, style = style, modifier = modifier.semantics { heading() })
+    Text(text = title, style = style, textAlign = textAlign, modifier = modifier.semantics { heading() })
 }
 
 @Preview(name = "Clair", widthDp = 390, heightDp = 844)

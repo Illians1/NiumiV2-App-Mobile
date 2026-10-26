@@ -4,20 +4,19 @@ import com.niumi.core.interop.SessionStateDto
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.ScanSheetState
 
-/** Où l'écran de réveil renvoie l'utilisateur quand la session atteint un état final. */
-enum class AlarmExitDestination {
-    /** Écran 10, après `COMPLETED` (SPEC_ANDROID §15). */
-    COMPLETED,
-
-    /** Écran 11, après `CANCELLED`. */
-    CANCELLED,
+/** Où l'écran de réveil renvoie l'utilisateur quand la session suivie atteint un état final. */
+sealed interface AlarmExitDestination {
+    /** Écran 11 · Réussite, qui relit cette session par son identifiant (étape 46). */
+    data class Success(
+        val sessionId: String,
+    ) : AlarmExitDestination
 
     /**
-     * `FAILED` n'a pas d'écran dans §15 : il est réservé à une activation qui n'a jamais abouti
-     * (§18), donc inatteignable depuis l'écran de réveil. Classé explicitement plutôt que laissé
-     * à un `else`, l'exhaustivité du `when` étant la propriété recherchée.
+     * L'accueil : après `CANCELLED` (l'écran « Session annulée » a disparu à l'étape 46), un
+     * désarmement ou `FAILED` — réservé à une activation qui n'a jamais abouti (§18), donc
+     * inatteignable depuis l'écran de réveil.
      */
-    HOME,
+    data object Home : AlarmExitDestination
 }
 
 /**
@@ -46,6 +45,7 @@ sealed interface AlarmUiState {
     companion object {
         fun forSession(
             sessionState: SessionStateDto,
+            sessionId: String,
             nfcAvailability: NfcAvailability = NfcAvailability.ENABLED,
             sheet: ScanSheetState = ScanSheetState.Hidden,
         ): AlarmUiState =
@@ -65,17 +65,13 @@ sealed interface AlarmUiState {
                 }
 
                 SessionStateDto.COMPLETED -> {
-                    Exit(AlarmExitDestination.COMPLETED)
-                }
-
-                SessionStateDto.CANCELLED -> {
-                    Exit(AlarmExitDestination.CANCELLED)
+                    Exit(AlarmExitDestination.Success(sessionId))
                 }
 
                 // Un désarmement (contrat 1.5) précède le coucher : rien à montrer après, comme
-                // une activation échouée.
-                SessionStateDto.DISARMED, SessionStateDto.FAILED -> {
-                    Exit(AlarmExitDestination.HOME)
+                // une activation échouée ou une annulation.
+                SessionStateDto.CANCELLED, SessionStateDto.DISARMED, SessionStateDto.FAILED -> {
+                    Exit(AlarmExitDestination.Home)
                 }
 
                 // Avant la sonnerie, l'écran de réveil n'a rien à montrer : l'écran 7 est le seul

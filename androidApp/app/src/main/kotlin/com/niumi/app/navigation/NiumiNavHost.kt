@@ -17,11 +17,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.niumi.app.help.HelpScreen
-import com.niumi.feature.session.active.CancelledScreen
-import com.niumi.feature.session.active.CompletedScreen
-import com.niumi.feature.session.active.ScanToModifyRoute
 import com.niumi.feature.session.diagnostics.IncidentDiagnosticRoute
 import com.niumi.feature.session.home.HomeRoute
+import com.niumi.feature.session.success.SuccessRoute
 import com.niumi.feature.session.transitional.TransitionalSettingsScreen
 import com.niumi.feature.setup.apps.AppSelectionRoute
 import com.niumi.feature.setup.pairing.PairingRoute
@@ -77,8 +75,8 @@ private fun HomeEntry(
                 // Onglet « Réglages » de la barre du bas (décision de Mehdi du 2026-10-25).
                 onOpenSettings = { navController.navigate(NiumiRoute.TransitionalSettings) { launchSingleTop = true } },
                 onOpenApps = { navController.navigate(NiumiRoute.AppSelection(editing = true)) },
-                // Jusqu'à l'étape 46, l'annulation passe par l'ancien écran de scan.
-                onCancelWake = { navController.navigate(NiumiRoute.ScanToModify) },
+                // L'alarme a sonné pendant la feuille d'annulation et le scan a terminé la session.
+                onSessionCompleted = { navController.navigateToSuccess(it) },
             )
         }
 
@@ -136,8 +134,9 @@ private fun NavGraphBuilder.setupDestinations(navController: NavHostController) 
 }
 
 /**
- * Destinations ouvertes depuis l'accueil : réglages transitoires (étapes 45 à 48), annulation par
- * scan et ses deux issues (jusqu'à l'étape 46), diagnostic d'incident et aide. Le diagnostic est un
+ * Destinations ouvertes depuis l'accueil : réglages transitoires (étapes 45 à 48), écran 11
+ * (étape 46, atteint depuis l'écran de réveil ou la feuille d'annulation), diagnostic d'incident et
+ * aide. Le diagnostic est un
  * écran de **consultation** : il n'ajoute aucune action de sortie de session (§3, §10.2).
  *
  * Les réglages s'ouvrent par l'onglet « Réglages » de la barre du bas, au-dessus de l'accueil ; leur
@@ -155,25 +154,19 @@ private fun NavGraphBuilder.sessionDestinations(navController: NavHostController
             onOpenHelp = { navController.navigate(NiumiRoute.Help) },
         )
     }
-    composable<NiumiRoute.ScanToModify> {
-        ScanToModifyRoute(
-            onCancelled = { navController.navigateAfterSession(NiumiRoute.Cancelled) },
-            onCompleted = { navController.navigateAfterSession(NiumiRoute.Completed) },
+    composable<NiumiRoute.Success> { entry ->
+        SuccessRoute(
+            sessionId = entry.toRoute<NiumiRoute.Success>().sessionId,
+            onBackHome = { navController.navigateToHome() },
         )
     }
-    composable<NiumiRoute.Cancelled> { CancelledScreen(onPrepareAgain = { navController.navigateToHome() }) }
-    composable<NiumiRoute.Completed> { CompletedScreen(onBackHome = { navController.navigateToHome() }) }
     composable<NiumiRoute.IncidentDiagnostic> { IncidentDiagnosticRoute() }
     composable<NiumiRoute.Help> { HelpScreen() }
 }
 
-/**
- * L'écran de scan quitte la pile : la session est terminée, y revenir par Retour afficherait une
- * session finie comme si elle courait encore (§15, « ne jamais afficher un faux état de
- * fiabilité »). L'accueil reste dessous.
- */
-private fun NavController.navigateAfterSession(route: NiumiRoute) {
-    navigate(route) {
+/** Écran 11 au-dessus de l'accueil, le reste de la pile retiré (§15). */
+private fun NavController.navigateToSuccess(sessionId: String) {
+    navigate(NiumiRoute.Success(sessionId)) {
         popUpTo(NiumiRoute.Home) { inclusive = false }
         launchSingleTop = true
     }
@@ -181,7 +174,8 @@ private fun NavController.navigateAfterSession(route: NiumiRoute) {
 
 /**
  * Retour à l'accueil. [clearStack] : fin de la mise en route, toute la pile est remplacée ; sinon
- * l'écran courant quitte la pile pour la même raison que [navigateAfterSession].
+ * l'écran courant quitte la pile : y revenir par Retour afficherait une session finie comme si elle
+ * courait encore (§15, « ne jamais afficher un faux état de fiabilité »).
  */
 private fun NavController.navigateToHome(clearStack: Boolean = false) {
     navigate(NiumiRoute.Home) {

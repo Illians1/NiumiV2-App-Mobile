@@ -2,8 +2,10 @@ package com.niumi.database.di
 
 import com.niumi.database.NiumiDatabase
 import com.niumi.database.RoomSessionAlarmSoundStore
+import com.niumi.database.RoomSessionHistoryStore
 import com.niumi.database.RoomSessionStore
 import com.niumi.database.SessionAlarmSoundStore
+import com.niumi.database.SessionHistoryStore
 import com.niumi.database.SessionStore
 import com.niumi.database.directboot.DirectBootRoomMerge
 import com.niumi.database.directboot.RoomDirectBootMerge
@@ -52,4 +54,12 @@ object SessionStoreModule {
         databaseProvider: Provider<NiumiDatabase>,
         unlockState: UnlockState,
     ): SessionAlarmSoundStore = RoomSessionAlarmSoundStore(databaseProvider, unlockState)
+
+    /** Session relue par identifiant, finie comprise (étape 46) ; même garde de déverrouillage. */
+    @Provides
+    @Singleton
+    fun provideSessionHistoryStore(
+        databaseProvider: Provider<NiumiDatabase>,
+        unlockState: UnlockState,
+    ): SessionHistoryStore = RoomSessionHistoryStore(databaseProvider, unlockState)
 }

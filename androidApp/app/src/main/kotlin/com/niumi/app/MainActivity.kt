@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.niumi.app.navigation.NiumiNavHost
 import com.niumi.app.navigation.NiumiRoute
 import com.niumi.app.navigation.deepLinkDestinationFor
+import com.niumi.app.navigation.readsLaunchDeepLink
 import com.niumi.app.navigation.requiresAlarmScreen
 import com.niumi.app.theme.SessionThemeViewModel
 import com.niumi.designsystem.ui.theme.NiumiTheme
@@ -69,7 +70,10 @@ class MainActivity : ComponentActivity() {
         // première lecture ; puis celle du thème de la session à chaque changement.
         applyNiumiWindowTheme(dark = true)
         followSessionThemeWithWindow()
-        deepLinkDestination = destinationOf(intent)
+        val launchedFromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (readsLaunchDeepLink(restoredState = savedInstanceState != null, launchedFromHistory)) {
+            deepLinkDestination = destinationOf(intent)
+        }
         // SPEC_ANDROID §13.1, « à chaque passage de l'application au premier plan ». L'évaluation
         // est lancée sans être attendue : elle traverse le verrou du coordinateur et ne doit pas
         // retarder l'affichage. Elle ne fait rien si aucune session n'est armée.
@@ -169,5 +173,8 @@ class MainActivity : ComponentActivity() {
 
     /** §16 : tout extra reçu est validé — ici, une destination inconnue vaut « aucune ». */
     private fun destinationOf(intent: Intent?): NiumiRoute? =
-        deepLinkDestinationFor(intent?.getStringExtra(NiumiDeepLink.EXTRA_DESTINATION))
+        deepLinkDestinationFor(
+            intent?.getStringExtra(NiumiDeepLink.EXTRA_DESTINATION),
+            intent?.getStringExtra(NiumiDeepLink.EXTRA_SESSION_ID),
+        )
 }

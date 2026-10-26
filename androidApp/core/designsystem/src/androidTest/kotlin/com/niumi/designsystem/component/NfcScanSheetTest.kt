@@ -15,6 +15,7 @@ import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -41,7 +42,7 @@ class NfcScanSheetTest {
     private var failureActions = 0
     private var content: NfcScanSheetContent by mutableStateOf(NfcScanSheetContent.Ready)
 
-    private fun showSheet() {
+    private fun showSheet(phrase: String = NiumiComponentTexts.SCAN_SHEET_PHRASE) {
         composeRule.setContent {
             NiumiTheme(dark = true) {
                 NfcScanSheet(
@@ -49,6 +50,7 @@ class NfcScanSheetTest {
                     onDismiss = { dismissals++ },
                     onFailureAction = { failureActions++ },
                     failurePaneTitle = FAILURE_PANE,
+                    phrase = phrase,
                 )
             }
         }
@@ -65,6 +67,31 @@ class NfcScanSheetTest {
             .assert(isHeading())
         composeRule.onNodeWithText(NiumiComponentTexts.SCAN_SHEET_PHRASE).assertIsDisplayed()
         composeRule.onNodeWithText(NiumiComponentTexts.SCAN_SHEET_CANCEL).assertIsDisplayed()
+    }
+
+    /** Étape 46 : la feuille d'annulation dit pourquoi on scanne (`SPECIFICATION.md` §11). */
+    @Test
+    fun theScreenCanGiveItsOwnPhrase() {
+        showSheet(phrase = CANCEL_PHRASE)
+
+        composeRule.onNodeWithText(CANCEL_PHRASE).assertIsDisplayed()
+        composeRule.onNodeWithText(NiumiComponentTexts.SCAN_SHEET_PHRASE).assertDoesNotExist()
+    }
+
+    /**
+     * Étape 46 (choix de Mehdi du 2026-10-26) : pendant la libération, la feuille ne montre que le
+     * cercle de chargement, lu par TalkBack, après le délai habituel.
+     */
+    @Test
+    fun theReleasingContentShowsOnlyTheLoader() {
+        content = NfcScanSheetContent.Releasing(LOADER_LABEL)
+        showSheet()
+        composeRule.mainClock.advanceTimeBy(NiumiLoadingIndicatorDefaults.DELAY_MILLIS + 100)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithContentDescription(LOADER_LABEL).assertExists()
+        composeRule.onNodeWithText(NiumiComponentTexts.SCAN_SHEET_TITLE).assertDoesNotExist()
+        composeRule.onNodeWithText(NiumiComponentTexts.SCAN_SHEET_CANCEL).assertDoesNotExist()
     }
 
     /** Deux touchers pendant l'animation de fermeture, horloge arrêtée : une seule fermeture. */
@@ -177,6 +204,8 @@ class NfcScanSheetTest {
 
     private companion object {
         const val FAILURE_PANE = "Échec du scan"
+        const val LOADER_LABEL = "Annulation du réveil"
+        const val CANCEL_PHRASE = "Approche ton téléphone du Niumi Spot pour annuler le réveil"
         const val EMERGENCY_LINK = "Je n’ai pas accès à mon Niumi Spot"
         val FAILURE =
             NfcScanSheetContent.Failure(

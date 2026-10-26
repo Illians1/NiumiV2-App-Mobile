@@ -221,8 +221,13 @@ class HomeViewModel
         }
 
         /** M10 : la bulle du bas, quatre secondes ou jusqu'au toucher suivant. */
-        fun onLockedTouch() {
-            message = HomeTexts.LOCKED_UNTIL_SCAN
+        fun onLockedTouch() = showMessage(HomeTexts.LOCKED_UNTIL_SCAN)
+
+        /** Après l'annulation par scan (§11, étape 46) : même bulle, même durée que M10. */
+        fun showCancelledMessage() = showMessage(HomeTexts.WAKE_CANCELLED)
+
+        private fun showMessage(text: String) {
+            message = text
             recompute()
             messageJob?.cancel()
             messageJob =

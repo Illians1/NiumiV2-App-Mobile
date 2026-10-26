@@ -1,8 +1,10 @@
 package com.niumi.feature.ringing
 
 import com.google.common.truth.Truth.assertThat
+import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
 import com.niumi.feature.ringing.fakes.FakeSessionPersistenceGateway
+import com.niumi.feature.ringing.fakes.TEST_SESSION_ID
 import com.niumi.feature.ringing.fakes.presentSession
 import com.niumi.feature.ringing.fakes.snapshotInState
 import com.niumi.feature.ringing.ui.AlarmExitDestination
@@ -12,6 +14,7 @@ import com.niumi.system.nfc.ScanFailureReason
 import com.niumi.system.nfc.ScanOutcome
 import com.niumi.system.nfc.ScanSheetState
 import com.niumi.system.session.LoadResult
+import com.niumi.system.session.SessionHistoryReader
 import com.niumi.system.session.SessionSnapshotPublisher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,7 +46,9 @@ class AlarmViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = AlarmViewModel(gateway, publisher)
+    private val history = mutableMapOf<String, SessionSnapshotDto>()
+
+    private fun viewModel() = AlarmViewModel(gateway, publisher, SessionHistoryReader { history[it] })
 
     @Test
     fun aNullPublisherDoesNotCloseTheScreenWhenThePersistenceHasASession() =
@@ -98,10 +103,61 @@ class AlarmViewModelTest {
     fun aFinalStateLeavesForItsScreen() =
         runTest {
             gateway.result = presentSession(SessionStateDto.COMPLETED)
-            assertThat(viewModel().state).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.COMPLETED))
+            assertThat(viewModel().state).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Success(TEST_SESSION_ID)))
 
             gateway.result = presentSession(SessionStateDto.CANCELLED)
-            assertThat(viewModel().state).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.CANCELLED))
+            assertThat(viewModel().state).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Home))
+        }
+
+    /**
+     * Étape 46 (constat de l'étape 44) : après le scan, le crochet du planning arme la session
+     * suivante sous le même verrou, et le publisher passe de `COMPLETED` à `ARMED` (autre
+     * identifiant) avant que l'écran ait vu la fin. La session suivie, relue, mène à l'écran 11 —
+     * jamais à une simple fermeture.
+     */
+    @Test
+    fun theNextSessionArmedRightAfterTheScanStillLeadsToTheSuccessScreen() =
+        runTest {
+            val viewModel = ringingViewModel()
+            publisher.publish(snapshotInState(SessionStateDto.RELEASING))
+            history[TEST_SESSION_ID] = snapshotInState(SessionStateDto.COMPLETED)
+
+            publisher.publish(snapshotInState(SessionStateDto.ARMED).copy(sessionId = NEXT_SESSION_ID))
+
+            assertThat(viewModel.state).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Success(TEST_SESSION_ID)))
+        }
+
+    /** La fin est retenue : une publication suivante ne la remplace pas par une fermeture. */
+    @Test
+    fun theExitIsKeptWhenAnotherSnapshotFollows() =
+        runTest {
+            val viewModel = ringingViewModel()
+            history[TEST_SESSION_ID] = snapshotInState(SessionStateDto.COMPLETED)
+            publisher.publish(snapshotInState(SessionStateDto.ARMED).copy(sessionId = NEXT_SESSION_ID))
+
+            publisher.publish(snapshotInState(SessionStateDto.ARMED, revision = 3).copy(sessionId = NEXT_SESSION_ID))
+
+            assertThat(viewModel.state).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Success(TEST_SESSION_ID)))
+        }
+
+    /** Une session suivie introuvable (cas défensif) garde l'ancien comportement : fermeture. */
+    @Test
+    fun anUnreadableTrackedSessionFallsBackToClosing() =
+        runTest {
+            val viewModel = ringingViewModel()
+
+            publisher.publish(snapshotInState(SessionStateDto.ARMED).copy(sessionId = NEXT_SESSION_ID))
+
+            assertThat(viewModel.state).isEqualTo(AlarmUiState.Close)
+        }
+
+    /** Ouvert sans session de sonnerie (session armée pour ce soir) : fermeture, comme avant. */
+    @Test
+    fun anArmedSessionAtOpeningClosesTheScreen() =
+        runTest {
+            gateway.result = presentSession(SessionStateDto.ARMED)
+
+            assertThat(viewModel().state).isEqualTo(AlarmUiState.Close)
         }
 
     private val AlarmViewModel.screen get() = (state as AlarmUiState.Visible).screen
@@ -298,4 +354,8 @@ class AlarmViewModelTest {
 
             assertThat(viewModel.state).isInstanceOf(AlarmUiState.Visible::class.java)
         }
+
+    private companion object {
+        const val NEXT_SESSION_ID = "22222222-2222-2222-2222-222222222222"
+    }
 }

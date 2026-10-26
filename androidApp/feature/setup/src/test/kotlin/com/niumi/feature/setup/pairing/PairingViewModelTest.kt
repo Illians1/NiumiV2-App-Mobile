@@ -403,7 +403,8 @@ class PairingViewModelTest {
     }
 
     /**
-     * Un tag tenu au bord de la zone émet plusieurs lectures (même constat qu'`ScanToModifyViewModel`).
+     * Un tag tenu au bord de la zone émet plusieurs lectures (même constat qu'à la feuille
+     * d'annulation, `CancelSessionViewModel`).
      * Les deux passent la garde avant que la lecture du dépôt rende la main : seule la première doit
      * ouvrir le dialogue et journaliser le scan.
      */

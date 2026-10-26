@@ -355,7 +355,7 @@ Images : `24_annuler-1-le-lien-sur-l-accueil`, `25_annuler-2-scanner-ou-sortie-d
 Pendant une session, l'utilisateur peut l'annuler en scannant un Niumi Spot.
 
 1. Sur l'accueil en session, il touche le lien « Annuler le réveil ».
-2. Une feuille monte du bas :
+2. Une feuille monte du bas. Dans l'app, son titre et son texte sont centrés et le titre est un peu plus petit que dans la maquette (décision de Mehdi du 26 octobre 2026, `POINTS-OUVERTS.md` M19) :
 
 | Élément | Contenu |
 | --- | --- |
@@ -365,7 +365,7 @@ Pendant une session, l'utilisateur peut l'annuler en scannant un Niumi Spot.
 | Lien discret | Je n'ai pas accès à mon Niumi Spot |
 
 3. « Scanner le Niumi Spot » ouvre la feuille de scan, avec la phrase « Approche ton iPhone du Niumi Spot pour annuler le réveil » (« ton téléphone » sur Android).
-4. Après le scan, l'accueil revient en clair, dans l'état « Réveil désactivé », avec un message en bas de l'écran : « Réveil annulé. Tes applications sont débloquées. »
+4. Après le scan, le temps que Niumi lève le blocage, la feuille de scan ne montre qu'un cercle de chargement, sans texte ; le lecteur d'écran dit « Annulation du réveil » (Android, décision de Mehdi du 26 octobre 2026 ; non dessiné). Puis l'accueil revient en clair, dans l'état « Réveil désactivé », avec un message en bas de l'écran : « Réveil annulé. Tes applications sont débloquées. » C'est la bulle des champs verrouillés (§9, M10), sans la coche ni le gras de la maquette 27 ; elle disparaît après 4 secondes ou au toucher suivant (décision de Mehdi du 25 octobre 2026, `POINTS-OUVERTS.md` M18).
 
 Effets de l'annulation : le blocage est levé et l'interrupteur « Réveil activé » est éteint. Plus aucune alarme ni blocage n'est prévu tant qu'on ne le rallume pas.
 
@@ -541,7 +541,9 @@ Il confirme que le scan a marché et que les applications sont revenues. Il rest
 | Confirmation | Tes applications sont de nouveau accessibles. |
 | Bouton | Retour à l'accueil |
 
-- Dans l'exemple : l'alarme a sonné à 7:00 et le scan a eu lieu à 7:04.
+- Dans l'exemple : l'alarme a sonné à 7:00 et le scan a eu lieu à 7:04. Le délai compte depuis la sonnerie réelle, même partie en retard.
+- Le délai s'accorde : « Moins d'une minute après la sonnerie. », « 1 minute après la sonnerie. », « 4 minutes après la sonnerie. », puis, à partir d'une heure, comme les autres durées de l'app : « 1 h 15 après la sonnerie. » (section 2). La comparaison suit la même règle (« C'est 1 minute de moins… »). Décision de Mehdi du 25 octobre 2026 ; textes non dessinés, à valider (`POINTS-OUVERTS.md` §2).
+- Si l'alarme n'a pas sonné (téléphone éteint à l'heure du réveil), l'écran dit seulement « Debout à 9:00. », sans délai ni comparaison (décision de Mehdi du 25 octobre 2026, `POINTS-OUVERTS.md` M18).
 - La comparaison s'affiche seulement si l'utilisateur s'est levé plus vite que la durée déclarée à l'écran 3 bis. Dans l'exemple : 15 minutes déclarées, levé en 4 minutes, donc 11 minutes de moins. Sinon, rien ne s'affiche à la place.
 - « Retour à l'accueil » ramène à l'accueil, dans l'état « Réveil prévu ». Après un réveil ponctuel, l'interrupteur s'est éteint : l'accueil est en « Réveil désactivé » (section 2, décision de Mehdi du 25 octobre 2026).
 - Il n'y a pas de lien depuis cet écran vers la rubrique « Temps gagné ».

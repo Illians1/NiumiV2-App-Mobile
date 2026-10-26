@@ -161,6 +161,8 @@ Recommandations de l'auteur du plan ; aucune n'est appliquée sans réponse. Les
 | 45 | Q14 | Ré-armement échoué, à l'accueil | **Tranché le 2026-10-25, jusqu'à l'étape 52** : interrupteur allumé, carte « Réveil activé » + « Aucun réveil ni blocage prévu », centre du cadran « Réveil » sans compte à rebours |
 | 45 | D23 | Maquettes régénérées le 2026-10-25 : « Annuler la session », « Session annulée », ancien texte de l'écran 2 et des écrans 8 et 9 | **Régression, D23 maintenu** : l'app garde « Annuler le réveil » et le texte actuel de l'écran 2 ; sources HTML et `INDEX.md` à corriger par Mehdi (`POINTS-OUVERTS.md` E14) |
 | 46 | Q14 | Ré-armement échoué après le scan du matin | **Tranché le 2026-10-24** (étape 44 ; affichage de l'accueil fixé à l'étape 45, ligne ci-dessus) : l'interrupteur reste allumé, rien n'est armé, l'échec est journalisé (`PLAN_REARM_FAILED`), publié dans `PlanArmingStatus` et retenté au démarrage et au déverrouillage ; une fenêtre d'erreur et une notification l'annoncent, livrées à l'étape 52 avec leurs textes ; jamais un faux « Réveil prévu » |
+| 46 | — | Délais de l'écran 11 autres que « 4 minutes » ; écran 11 sans sonnerie ; forme de la bulle d'annulation | **Tranché le 2026-10-25** : accord (« Moins d’une minute », « 1 minute ») puis « 1 h 15 » dès 60 min, même règle pour « Bravo ! » ; sans sonnerie (`ringingAtEpochMillis` nul), ni délai ni « Bravo ! », une sonnerie en retard compte depuis la sonnerie réelle ; bulle de M10 sans la coche ni le gras de la maquette 27, 4 s ou toucher suivant (`POINTS-OUVERTS.md` M18) |
+| 46 | M19 | Titres des feuilles jugés trop imposants après essai | **Tranché le 2026-10-26** : 22 partout (question, « Prêt à scanner » en 400, échecs), au lieu de 24 et 26 ; titre et texte de « Annuler le réveil ? » centrés ; vaut pour l'écran de réveil et l'association |
 | 47 | D11, M5, M6, Q15 | « Continuer » grisé sans pièce ; échecs non dessinés ; URL de la page produit | Oui ; même feuille d'échec qu'à l'écran 10 avec « Annuler » ; URL à fournir |
 | 47 | Q21 | Nom du Niumi Spot : pièce proposée ou nom libre ? | **Tranché le 2026-10-19** : quatre pièces proposées (Salle de bain, Cuisine, Salon, Entrée) et « Une autre pièce » en saisie libre ; la limite technique de 30 caractères (`PairedBoxName`) est conservée |
 | 48 | Q22, D21 | Nombre maximal et dernier point | **Tranché le 2026-10-19** : dix au plus (`PairedBoxLimit.MAX = 10`), toujours au moins un, suppression confirmée par une feuille ; à dix, la ligne « Ajouter un Niumi Spot » grisée avec « Tu as déjà dix Niumi Spots. » ; refus « Ce Niumi Spot est déjà enregistré. » avec « Réessayer » (D21 tranché le 2026-10-19) |
@@ -228,7 +230,8 @@ enum class NiumiSwitchSize { Main, Row }
 // feuille reçoit un contenu présentationnel ; l'écran traduit ScanSheetState en textes (AlarmTexts.failure).
 sealed interface NfcScanSheetContent { data object Ready; data class Failure(val title: String, val help: String, val actionLabel: String) }
 @Composable fun NfcScanSheet(content: NfcScanSheetContent, onDismiss: () -> Unit, onFailureAction: () -> Unit, failurePaneTitle: String,
-                             modifier: Modifier = Modifier, emergencyLinkText: String? = null, onEmergencyExit: (() -> Unit)? = null)
+                             modifier: Modifier = Modifier, emergencyLinkText: String? = null, onEmergencyExit: (() -> Unit)? = null,
+                             phrase: String = NiumiComponentTexts.SCAN_SHEET_PHRASE /* étape 46 : « … pour annuler le réveil » */)
 // Textes de « Prêt à scanner » : NiumiComponentTexts.SCAN_SHEET_TITLE / _PHRASE / _CANCEL (les mêmes aux écrans 3, 10 et à l'annulation)
 // Livré à l'étape 45 (2026-10-25), écarts à la signature prévue : heures en minutes depuis minuit, textes passés par l'écran,
 // un seul rappel pour les deux poignées (au relâchement) et un toucher bref qui ouvre le sélecteur.
@@ -262,12 +265,18 @@ object NiumiTimeFormat { fun clock(time: LocalTime): String /* "7:00", "22:30" *
 // :core:system — com.niumi.system.session (étapes 33, 43)
 fun SessionSnapshotDto?.isSessionDark(): Boolean   // voir « Contraintes globales », thème par état
 // SESSION_FINAL_STATES : + DISARMED (étape 43)
+// Étape 46 : fun interface SessionHistoryReader { suspend fun find(sessionId): SessionSnapshotDto? } (UnlockAwareSessionHistoryReader : Room après
+//   déverrouillage par :core:database SessionHistoryStore/RoomSessionHistoryStore, projection Direct Boot de la même session avant) ;
+//   needsTrackedSessionRead(trackedId, published) ; trackedSessionEndOf(session): TrackedSessionEnd? { Completed(sessionId), Cancelled, Other }
+// NiumiDeepLink : − DESTINATION_SESSION_CANCELLED, + EXTRA_SESSION_ID (étape 46)
 
 // :core:system — com.niumi.system.nfc (étape 38)
 sealed interface ScanSheetState { data object Hidden; data object Ready; data class Failed(val reason: ScanFailureReason) }
 enum class ScanFailureReason { NOT_A_NIUMI_SPOT, NOT_REGISTERED, UNREADABLE, NFC_DISABLED }
 fun scanFailureOf(outcome: ScanOutcome?, availability: NfcAvailability): ScanFailureReason?
 // Livré à l'étape 38 : ScanOutcome + NotANiumiSpot ; NfcReader.start(activity, onUri, onUnreadable, onForeignTag = onUnreadable)
+// Étape 46 : object ScanFailureTexts { FAILURE_PANE; fun of(reason): ScanFailureCopy(title, help, actionLabel) } — textes d'échec partagés par l'écran 10 et la feuille d'annulation
+// Étape 46 : @Composable fun SunriseDrawing(modifier) (:core:designsystem, DS/drawing, décoratif)
 
 // :core:system — com.niumi.system.permissions (étapes 36, 52)
 enum class NiumiPermission { ALARM, APP_BLOCKING, NOTIFICATIONS }
@@ -337,6 +346,7 @@ interface PairedBoxStore {   // all() / add(credential, name) / rename(boxId, na
 // TimeToGetUp(mode: String /* SETUP | EDIT */), AppSelection(editing: Boolean = false) /* étape 45, M11 */, Home, Success, EmergencyExit(origin: String /* HOME | ALARM */),
 // Settings, NiumiSpots, Help, HelpTopic(id: String), About, Licenses
 // Étape 45 : − WakeTime, Summary, ActiveSession ; + TransitionalSettings (jusqu'à l'étape 48) ;
+// Étape 46 : − ScanToModify, Completed, Cancelled ; Success devient data class Success(sessionId: String) ; deepLinkDestinationFor(extra, sessionId) ;
 // fun homeDestinationFor(state: SessionStateDto?, onboardingAcknowledged: Boolean, setupCompleted: Boolean, storageUnreadable: Boolean = false): NiumiRoute (lue par HomeGateViewModel)
 ```
 
@@ -789,6 +799,8 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Points ouverts touchés :** D2, D15, Q14.
 
+**Écarts décidés le 2026-10-25 (décisions de Mehdi, voir le tableau ; `ETAPE-46.md` à rédiger après la validation sur appareil).** Délais de l'écran 11 accordés puis en heures, écran 11 sans sonnerie, bulle d'annulation sans coche (M18). **Obstacle de l'étape 44 levé** : après le scan du matin, le crochet du planning arme la session suivante sous le même verrou, et le publisher passe de `COMPLETED` à `ARMED` (autre identifiant) avant que l'écran de réveil voie la fin ; l'écran de réveil et la feuille d'annulation suivent donc leur session par identifiant et la relisent (`SessionHistoryReader`, `RoomSessionHistoryStore` séparé de `RoomSessionStore`, au plafond `TooManyFunctions`). D'où, au lieu de « lit la dernière session `COMPLETED` » : `NiumiRoute.Success(sessionId)` et `EXTRA_SESSION_ID`, une route différente chaque matin qui relance aussi la navigation quand `MainActivity` est restée vivante ; `AlarmExitDestination` devient `Success(sessionId)` ou `Home`. L'écran 11 pose `NiumiTheme(dark = false)` : une période de 24 h en Quotidien rebloque dès le scan. Textes d'échec du scan déplacés dans `ScanFailureTexts` (`:core:system`) ; phrase de `NfcScanSheet` en paramètre. Feuille d'annulation : parité avec l'écran 10 (tag étranger, vibration), « Annuler » de la feuille de scan ramène à la question, ViewModel remis à zéro à chaque ouverture (`open()`), `CancelSessionActions` dans son fichier. `SuccessRoute(sessionId)` reçoit l'identifiant en paramètre (`:feature:session` ne connaît pas `NiumiRoute`). Heure « Debout à » dans le fuseau courant. Après la relecture indépendante : rappels du lecteur NFC repassés par le fil principal, base illisible lue « introuvable », `Intent` de lancement lu seulement à un démarrage neuf (`readsLaunchDeepLink`), fenêtre claire pendant l'écran 11 (`NiumiLightWindowWhileShown`). Le 2026-10-26, à la demande de Mehdi, les quatre défauts mineurs de la relecture aussi : relecture périmée ignorée après une réouverture, feuille restaurée limitée à un blocage en vigueur (persistance lue dans un processus neuf), cercle de chargement pendant la libération (`NfcScanSheetContent.Releasing`, TalkBack « Annulation du réveil », choix de Mehdi), NFC relu après l'inscription du receveur. `CancelSessionActions.kt` s'ajoute aux fichiers prévus. Specs mises à jour : `SPECIFICATION.md` §11, §15, `POINTS-OUVERTS.md` (en-tête, §2, M18), SPEC_ANDROID §10.4, §11.2, §11.3, §15.
+
 **Fichiers :**
 - `:feature:session` — créer `SESSION/home/CancelSessionSheet.kt` (titre, texte, bouton « Scanner le Niumi Spot » → `NfcScanSheet` avec la phrase « Approche ton téléphone du Niumi Spot pour annuler le réveil », lien de secours masqué jusqu'à l'étape 49), `CancelSessionViewModel.kt` (Reader Mode via `NfcReader` + `NfcScanHandler` existants ; relecture NFC sur état stable conservée, vigilance 13 ; succès → fermeture, message « Session annulée… »), `SESSION/success/SuccessScreen.kt`, `SuccessTexts.kt` (`standingAt(time)`, `afterAlarm(min)`, `bravo(min)`, `APPS_BACK`, `BACK_HOME`), `SuccessViewModel.kt` (lit la dernière session `COMPLETED`, `TimeToGetUpPreferences`, `computeTimeToGetUp` ; sans durée déclarée → pas de « Bravo ! »), `DS/drawing/SunriseDrawing.kt` (dégradé §2) ; supprimer `ScanToModify*`, `CancelledScreen.kt`, `CompletedScreen.kt`, `CancelledTexts`, `CompletedTexts` et leurs tests.
 - `:feature:ringing` — `AlarmUiState.Exit` → destination `Success` (`COMPLETED`) ou `Home` (`CANCELLED`).
@@ -797,10 +809,10 @@ grep -rn "Color(0x" androidApp --include=*.kt | grep -v NiumiPalettes.kt        
 
 **Produit :** l'annulation de session par scan et l'écran de réussite.
 
-- [ ] **Écrire `CancelSessionViewModelTest`**, implémenter la feuille.
-- [ ] **Écrire `SuccessTextsTest`, `SuccessViewModelTest`**, implémenter l'écran 11 et les sorties de `AlarmActivity`.
-- [ ] **Vérifier :** batterie standard ; `grep -rn "ScanToModify\|CancelledScreen\|CompletedScreen" androidApp` vide.
-- [ ] **Valider sur appareil, rédiger `ETAPE-46.md`.** SPEC_ANDROID §11.3, §15.
+- [x] **Écrire `CancelSessionViewModelTest`**, implémenter la feuille. *(2026-10-25 ; avec `CancelSessionTextsTest`, `CancelSessionSheetTest` instrumenté.)*
+- [x] **Écrire `SuccessTextsTest`, `SuccessViewModelTest`**, implémenter l'écran 11 et les sorties de `AlarmActivity`. *(2026-10-25 ; avec `SuccessScreenTest` instrumenté, `TrackedSessionEndTest`, `UnlockAwareSessionHistoryReaderTest`, `RoomSessionHistoryStoreTest` instrumenté.)*
+- [x] **Vérifier :** batterie standard ; `grep -rn "ScanToModify\|CancelledScreen\|CompletedScreen" androidApp` vide. *(2026-10-25, sans appareil.)*
+- [ ] **Valider sur appareil, rédiger `ETAPE-46.md`.** SPEC_ANDROID §11.3, §15. *(2026-10-26 : tests instrumentés verts et essais 1 à 5 conformes sur Xiaomi 25080RABDG, Android 16, après deux corrections trouvées sur appareil — écran de réveil intercalé pendant une annulation, `MainActivity` empilées depuis l'étape 17 — et les titres des feuilles en 22 (M19) ; `ETAPE-46.md` rédigé. Restent les deux nuits réelles, la période de 24 h vue à l'œil et TalkBack : case laissée ouverte.)*
 
 **Tests manuels :** session en cours → « Annuler le réveil » → feuille → scan → accueil clair « Réveil désactivé » + message ; matin : scan → écran 11 « Debout à 7:04. », « Retour à l'accueil » → « Réveil prévu » (prochaine occurrence armée) ; sans durée déclarée (avant l'étape 50) → pas de « Bravo ! ».
 

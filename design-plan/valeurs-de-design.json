@@ -120,14 +120,16 @@
       "note": "26 sur l'écran 2 dans la maquette ; tranché le 19 octobre 2026 (D19) : 28 partout"
     },
     "titreFeuilleScan": {
-      "taille": 26,
-      "graisse": 400
+      "taille": 22,
+      "graisse": 400,
+      "note": "26 dans les maquettes ; 22 dans l'app, décision de Mehdi du 26 octobre 2026 (titres des feuilles jugés trop imposants)"
     },
     "titreFeuille": {
       "taille": 24,
       "graisse": 600,
       "interligne": 1.2,
-      "interlettrage": -0.5
+      "interlettrage": -0.5,
+      "note": "Titre de l'écran de blocage. Les feuilles et leurs échecs prennent titreAlerte (22) dans l'app, décision de Mehdi du 26 octobre 2026"
     },
     "titreAlerte": {
       "taille": 22,

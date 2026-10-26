@@ -1,6 +1,9 @@
 package com.niumi.designsystem.component
 
-/** Ce que montre la feuille de scan : « Prêt à scanner », ou un échec avec ses textes. */
+/**
+ * Ce que montre la feuille de scan : « Prêt à scanner », un échec avec ses textes, ou le cercle de
+ * chargement de la libération (étape 46).
+ */
 sealed interface NfcScanSheetContent {
     data object Ready : NfcScanSheetContent
 
@@ -9,5 +12,10 @@ sealed interface NfcScanSheetContent {
         val title: String,
         val help: String,
         val actionLabel: String,
+    ) : NfcScanSheetContent
+
+    /** Après un scan accepté, le temps de la libération : cercle seul, lu par TalkBack ([label]). */
+    data class Releasing(
+        val label: String,
     ) : NfcScanSheetContent
 }

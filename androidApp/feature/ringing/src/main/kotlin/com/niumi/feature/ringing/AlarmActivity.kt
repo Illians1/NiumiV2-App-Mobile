@@ -241,19 +241,18 @@ class AlarmActivity : ComponentActivity() {
         // N'arrête rien : cf. onStop().
     }
 
-    /** §15 : l'écran 10 (terminée) ou 11 (annulée) vit dans le `NavHost` de `MainActivity`. */
+    /** §15 : l'écran 11 (session terminée) et l'accueil vivent dans le `NavHost` de `MainActivity`. */
     private fun leaveFor(destination: AlarmExitDestination) {
-        val extra =
-            when (destination) {
-                AlarmExitDestination.COMPLETED -> NiumiDeepLink.DESTINATION_SESSION_COMPLETED
-                AlarmExitDestination.CANCELLED -> NiumiDeepLink.DESTINATION_SESSION_CANCELLED
-                AlarmExitDestination.HOME -> null
-            }
         startActivity(
             Intent()
                 .setComponent(componentResolver.componentName(NiumiComponent.MAIN_ACTIVITY))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .apply { extra?.let { putExtra(NiumiDeepLink.EXTRA_DESTINATION, it) } },
+                .addFlags(AlarmExitIntent.FLAGS)
+                .apply {
+                    if (destination is AlarmExitDestination.Success) {
+                        putExtra(NiumiDeepLink.EXTRA_DESTINATION, NiumiDeepLink.DESTINATION_SESSION_COMPLETED)
+                        putExtra(NiumiDeepLink.EXTRA_SESSION_ID, destination.sessionId)
+                    }
+                },
         )
         finish()
     }

@@ -33,7 +33,7 @@ class NiumiTypeTest {
             "consigneReveil" to listOf("graisse" to NiumiType.instruction30),
             // D19 (tranché le 2026-10-19) : 28 partout, écran 2 compris.
             "titreEcran" to listOf("graisse" to NiumiType.screenTitle28),
-            "titreFeuilleScan" to listOf("graisse" to NiumiType.scanSheetTitle26),
+            "titreFeuilleScan" to listOf("graisse" to NiumiType.scanSheetTitle22),
             "titreFeuille" to listOf("graisse" to NiumiType.sheetTitle24),
             "titreAlerte" to listOf("graisse" to NiumiType.alertTitle22),
             "consigneEcran3" to listOf("graisse" to NiumiType.instruction22),

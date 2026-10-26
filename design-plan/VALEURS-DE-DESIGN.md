@@ -93,10 +93,10 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | 30 | 500 | « Désactivé » au centre du cadran. Interlettrage −0,5 |
 | 28 | 600 | Titres d'écran : écrans 1, 3 bis et 4, « Réglages », « Aide », titres des pages d'aide. Valeur de la carte « Temps gagné » |
 | 26 | 600 | Titre de l'écran 2 (« Trois autorisations ») dans la maquette. Tranché le 19 octobre 2026 (D19) : l'app l'affiche en 28, comme les autres titres d'écran |
-| 26 | 400 | « Prêt à scanner », dans la feuille de scan |
-| 24 | 600 | Titres des feuilles et des échecs, titre de l'écran de blocage |
+| 26 | 400 | « Prêt à scanner », dans la feuille de scan, dans les maquettes. Réduit à 22 dans l'app (décision de Mehdi du 26 octobre 2026, `POINTS-OUVERTS.md` M19) |
+| 24 | 600 | Titre de l'écran de blocage. Titres des feuilles et des échecs dans les maquettes ; 22 dans l'app (même décision) |
 | 24 | 400 | Valeurs voisines du milieu dans la roue de l'écran 3 bis |
-| 22 | 600 | Titre de la feuille « Sonnerie », titre de l'alerte d'autorisations |
+| 22 | 600 | Titre de la feuille « Sonnerie », titre de l'alerte d'autorisations ; dans l'app, titres de toutes les feuilles du bas et des échecs du scan (M19) |
 | 22 | 500 | Consigne de l'écran 3 |
 | 22 | 400 | Valeurs voisines de la valeur choisie dans les roues du sélecteur d'heure, en `#85858A` |
 | 20 | 600 | Titres de carte et de liste (« Aucune application choisie », « Applications à bloquer ») |

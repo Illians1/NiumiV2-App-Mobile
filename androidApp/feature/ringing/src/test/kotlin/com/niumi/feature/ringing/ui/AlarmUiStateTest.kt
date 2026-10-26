@@ -9,7 +9,7 @@ import org.junit.Test
  * §15). Aucun état n'est traité par défaut : un état ajouté au moteur casse la compilation ici.
  */
 class AlarmUiStateTest {
-    private fun forState(state: SessionStateDto) = AlarmUiState.forSession(state)
+    private fun forState(state: SessionStateDto) = AlarmUiState.forSession(state, SESSION_ID)
 
     @Test
     fun theFourScanStatesAreDisplayed() {
@@ -26,30 +26,31 @@ class AlarmUiStateTest {
         }
     }
 
+    /** Étape 46 : l'écran 11 relit la session terminée par son identifiant. */
     @Test
-    fun aCompletedSessionLeavesForTheCompletedScreen() {
+    fun aCompletedSessionLeavesForTheSuccessScreenOfThatSession() {
         assertThat(forState(SessionStateDto.COMPLETED))
-            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.COMPLETED))
+            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Success(SESSION_ID)))
     }
 
+    /** Étape 46 : plus d'écran « Session annulée », l'accueil dit le reste. */
     @Test
-    fun aCancelledSessionLeavesForTheCancelledScreen() {
-        assertThat(forState(SessionStateDto.CANCELLED))
-            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.CANCELLED))
+    fun aCancelledSessionLeavesForHome() {
+        assertThat(forState(SessionStateDto.CANCELLED)).isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Home))
     }
 
     /** §18 réserve `FAILED` à une activation jamais aboutie : aucun écran de §15 ne lui répond. */
     @Test
     fun aFailedSessionFallsBackToHome() {
         assertThat(forState(SessionStateDto.FAILED))
-            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.HOME))
+            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Home))
     }
 
     /** Contrat 1.5 : une session désarmée avant son coucher n'a aucun écran de fin. */
     @Test
     fun aDisarmedSessionFallsBackToHome() {
         assertThat(forState(SessionStateDto.DISARMED))
-            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.HOME))
+            .isEqualTo(AlarmUiState.Exit(AlarmExitDestination.Home))
     }
 
     /** Avant la sonnerie, l'écran 7 est le seul écran atteignable (§10.4). */
@@ -68,5 +69,9 @@ class AlarmUiStateTest {
         // COMPLETED, CANCELLED, DISARMED (contrat 1.5, vers l'accueil) et FAILED.
         assertThat(classified.filterValues { it is AlarmUiState.Exit }).hasSize(4)
         assertThat(classified.filterValues { it == AlarmUiState.Close }).hasSize(2)
+    }
+
+    private companion object {
+        const val SESSION_ID = "11111111-1111-1111-1111-111111111111"
     }
 }

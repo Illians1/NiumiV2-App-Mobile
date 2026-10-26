@@ -28,8 +28,12 @@ import com.niumi.system.plan.WakePlan
 import com.niumi.system.session.SessionSnapshotPublisher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
@@ -335,6 +339,39 @@ class HomeViewModelTest {
     fun theNextTouchDismissesTheMessage() {
         val viewModel = viewModel()
         viewModel.onLockedTouch()
+
+        viewModel.dismissMessage()
+
+        assertThat(viewModel.state.message).isNull()
+    }
+
+    /**
+     * Étape 46 (`SPECIFICATION.md` §11) : après l'annulation par scan, la bulle « Réveil annulé… »
+     * se pose comme celle de M10 et disparaît après 4 s (décision de Mehdi du 2026-10-25).
+     */
+    @Test
+    fun theCancellationMessageShowsThenGoesAwayAfterFourSeconds() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val viewModel = viewModel()
+            runCurrent()
+
+            viewModel.showCancelledMessage()
+            runCurrent()
+            assertThat(viewModel.state.message).isEqualTo("Réveil annulé. Tes applications sont débloquées.")
+
+            advanceTimeBy(3_999)
+            runCurrent()
+            assertThat(viewModel.state.message).isNotNull()
+            advanceTimeBy(2)
+            runCurrent()
+            assertThat(viewModel.state.message).isNull()
+        }
+
+    @Test
+    fun theNextTouchDismissesTheCancellationMessage() {
+        val viewModel = viewModel()
+        viewModel.showCancelledMessage()
 
         viewModel.dismissMessage()
 

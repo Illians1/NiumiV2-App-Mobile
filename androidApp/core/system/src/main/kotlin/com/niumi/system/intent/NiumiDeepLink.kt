@@ -17,11 +17,13 @@ object NiumiDeepLink {
     const val DESTINATION_INCIDENT_DIAGNOSTIC = "incident_diagnostic"
 
     /**
-     * Écrans 10 et 11 (§15), atteints depuis `AlarmActivity` à l'étape 17. L'écran de réveil vit
-     * dans sa propre tâche, hors du `NavHost` : il ne peut pas naviguer, seulement rouvrir
-     * `MainActivity` sur la bonne destination.
+     * Écran 11 · Réussite, atteint depuis `AlarmActivity` (étape 17, refait à l'étape 46). L'écran
+     * de réveil vit dans sa propre tâche, hors du `NavHost` : il ne peut pas naviguer, seulement
+     * rouvrir `MainActivity` sur la bonne destination, avec la session terminée dans
+     * [EXTRA_SESSION_ID]. Depuis l'étape 46, une session annulée ramène à l'accueil sans extra.
      */
     const val DESTINATION_SESSION_COMPLETED = "session_completed"
 
-    const val DESTINATION_SESSION_CANCELLED = "session_cancelled"
+    /** Identifiant de la session terminée que l'écran 11 relit (étape 46). */
+    const val EXTRA_SESSION_ID = "com.niumi.extra.SESSION_ID"
 }

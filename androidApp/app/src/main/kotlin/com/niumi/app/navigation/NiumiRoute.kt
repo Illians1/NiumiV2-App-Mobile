@@ -50,17 +50,15 @@ sealed interface NiumiRoute {
     @Serializable
     data object TransitionalSettings : NiumiRoute
 
-    /** Étape 15. */
+    /**
+     * Écran 11 · Réussite (étape 46), après un réveil terminé. La session est nommée : la suivante
+     * est déjà armée quand l'écran s'ouvre, et une route différente chaque matin relance la
+     * navigation même si `MainActivity` est restée vivante depuis la veille.
+     */
     @Serializable
-    data object ScanToModify : NiumiRoute
-
-    /** Écran 10, étape 17. */
-    @Serializable
-    data object Completed : NiumiRoute
-
-    /** Étape 15. */
-    @Serializable
-    data object Cancelled : NiumiRoute
+    data class Success(
+        val sessionId: String,
+    ) : NiumiRoute
 
     /** Étape 16. Cible du tap des notifications d'avertissement de §13.1. */
     @Serializable

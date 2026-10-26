@@ -32,10 +32,13 @@ object NiumiType {
     /** 28/600 — titres d'écran, écran 2 compris (D19). Interligne 1,15, interlettrage −0,5. */
     val screenTitle28 = style(28, FontWeight.SemiBold, lineHeight = 32.2.sp, letterSpacing = (-0.5).sp)
 
-    /** 26/400 — « Prêt à scanner », feuille de scan. */
-    val scanSheetTitle26 = style(26, FontWeight.Normal)
+    /** 22/400 — « Prêt à scanner », feuille de scan (26 dans les maquettes ; décision de Mehdi du 2026-10-26). */
+    val scanSheetTitle22 = style(22, FontWeight.Normal)
 
-    /** 24/600 — titres des feuilles et des échecs, titre de l'écran de blocage. Interligne 1,2, interlettrage −0,5. */
+    /**
+     * 24/600 — titre de l'écran de blocage. Interligne 1,2, interlettrage −0,5. Les feuilles et leurs
+     * échecs, en 24 dans les maquettes, prennent [alertTitle22] (décision de Mehdi du 2026-10-26).
+     */
     val sheetTitle24 = style(24, FontWeight.SemiBold, lineHeight = 28.8.sp, letterSpacing = (-0.5).sp)
 
     /** 22/600 — titre de la feuille « Sonnerie », de l'alerte d'autorisations. Interligne 1,2, interlettrage −0,3. */

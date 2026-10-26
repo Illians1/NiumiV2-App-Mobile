@@ -16,13 +16,39 @@ class DeepLinkDestinationTest {
         assertThat(route).isEqualTo(NiumiRoute.IncidentDiagnostic)
     }
 
-    /** Écrans 10 et 11, atteints depuis `AlarmActivity` à l'étape 17 (§15). */
+    /**
+     * Écran 11, atteint depuis `AlarmActivity` (§15, étape 46) : la route porte la session terminée,
+     * différente chaque matin, pour que la navigation reparte même si `MainActivity` est restée
+     * vivante depuis la veille.
+     */
     @Test
-    fun theFinalSessionExtrasOpenTheirScreens() {
-        assertThat(deepLinkDestinationFor(NiumiDeepLink.DESTINATION_SESSION_COMPLETED))
-            .isEqualTo(NiumiRoute.Completed)
-        assertThat(deepLinkDestinationFor(NiumiDeepLink.DESTINATION_SESSION_CANCELLED))
-            .isEqualTo(NiumiRoute.Cancelled)
+    fun aCompletedSessionOpensTheSuccessScreenOfThatSession() {
+        assertThat(deepLinkDestinationFor(NiumiDeepLink.DESTINATION_SESSION_COMPLETED, SESSION_ID))
+            .isEqualTo(NiumiRoute.Success(SESSION_ID))
+    }
+
+    /** Sans identifiant, rien à relire : l'accueil. */
+    @Test
+    fun aCompletedSessionWithoutItsIdentifierOpensTheDefaultDestination() {
+        assertThat(deepLinkDestinationFor(NiumiDeepLink.DESTINATION_SESSION_COMPLETED, null)).isNull()
+    }
+
+    /** L'extra « session annulée » d'avant l'étape 46, resté dans un `Intent` : l'accueil. */
+    @Test
+    fun theFormerCancelledExtraOpensTheDefaultDestination() {
+        assertThat(deepLinkDestinationFor("session_cancelled")).isNull()
+    }
+
+    /**
+     * Relecture de l'étape 46 : une activité recréée (changement de configuration, ou mort du
+     * processus puis réouverture depuis les récents) restaure sa pile de navigation ; relire
+     * l'`Intent` d'origine rouvrirait, des heures plus tard, l'écran 11 d'un réveil déjà vu.
+     */
+    @Test
+    fun theLaunchIntentIsReadOnlyOnAFreshStartNotOnARecreation() {
+        assertThat(readsLaunchDeepLink(restoredState = false, launchedFromHistory = false)).isTrue()
+        assertThat(readsLaunchDeepLink(restoredState = true, launchedFromHistory = false)).isFalse()
+        assertThat(readsLaunchDeepLink(restoredState = false, launchedFromHistory = true)).isFalse()
     }
 
     @Test
@@ -38,5 +64,9 @@ class DeepLinkDestinationTest {
     @Test
     fun anUnknownExtraOpensTheDefaultDestinationRatherThanFailing() {
         assertThat(deepLinkDestinationFor("une-destination-disparue")).isNull()
+    }
+
+    private companion object {
+        const val SESSION_ID = "11111111-1111-1111-1111-111111111111"
     }
 }

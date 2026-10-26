@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.niumi.core.interop.SessionSnapshotDto
 import com.niumi.core.interop.SessionStateDto
+import com.niumi.feature.ringing.ui.AlarmExitDestination
 import com.niumi.feature.ringing.ui.AlarmUiState
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.ScanFailureReason
@@ -14,8 +15,12 @@ import com.niumi.system.nfc.ScanOutcome
 import com.niumi.system.nfc.ScanSheetState
 import com.niumi.system.nfc.scanFailureOf
 import com.niumi.system.session.LoadResult
+import com.niumi.system.session.SessionHistoryReader
 import com.niumi.system.session.SessionPersistenceGateway
 import com.niumi.system.session.SessionSnapshotPublisher
+import com.niumi.system.session.TrackedSessionEnd
+import com.niumi.system.session.needsTrackedSessionRead
+import com.niumi.system.session.trackedSessionEndOf
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -48,8 +53,16 @@ class AlarmViewModel
     constructor(
         private val gateway: SessionPersistenceGateway,
         private val snapshotPublisher: SessionSnapshotPublisher,
+        private val historyReader: SessionHistoryReader,
     ) : ViewModel() {
         private var sessionState: SessionStateDto? = null
+        private var sessionId: String? = null
+
+        /** Session de sonnerie suivie (étape 46) : relue par identifiant quand elle n'est plus publiée. */
+        private var trackedSessionId: String? = null
+
+        /** Fin retenue : une publication suivante (session du lendemain) ne la remplace pas. */
+        private var exit: AlarmExitDestination? = null
         private var sessionConfirmedGone = false
         private var nfcAvailability = NfcAvailability.ENABLED
         private var sheet: ScanSheetState = ScanSheetState.Hidden
@@ -104,7 +117,7 @@ class AlarmViewModel
             recompute()
         }
 
-        private fun adoptLoaded(loaded: LoadResult) {
+        private suspend fun adoptLoaded(loaded: LoadResult) {
             when (loaded) {
                 is LoadResult.Present -> adoptSnapshot(loaded.snapshot)
 
@@ -117,34 +130,68 @@ class AlarmViewModel
             }
         }
 
-        private fun confirmSessionGone() {
+        private suspend fun confirmSessionGone() {
+            if (resolvedTrackedEnd(published = null)) return
             sessionConfirmedGone = true
             recompute()
         }
 
-        private fun adoptSnapshot(snapshot: SessionSnapshotDto) {
+        private suspend fun adoptSnapshot(snapshot: SessionSnapshotDto) {
+            if (resolvedTrackedEnd(published = snapshot)) return
             sessionConfirmedGone = false
             sessionState = snapshot.state
+            sessionId = snapshot.sessionId
+            if (snapshot.state in SCAN_STATES || snapshot.state == SessionStateDto.RELEASING) {
+                trackedSessionId = snapshot.sessionId
+            }
             // Plus rien à scanner hors des trois états d'attente : la feuille se ferme pour de bon.
             if (snapshot.state !in SCAN_STATES) sheet = ScanSheetState.Hidden
             recompute()
         }
 
+        /**
+         * Étape 46 : après le scan, le crochet du planning arme la session suivante sous le même
+         * verrou ; le publisher montre alors une autre session (ou plus rien). La session suivie,
+         * relue finie, décide de la sortie. Vrai quand la sortie est fixée.
+         */
+        private suspend fun resolvedTrackedEnd(published: SessionSnapshotDto?): Boolean {
+            val tracked = trackedSessionId
+            if (exit == null && tracked != null && needsTrackedSessionRead(tracked, published)) {
+                exit =
+                    when (trackedSessionEndOf(historyReader.find(tracked))) {
+                        is TrackedSessionEnd.Completed -> AlarmExitDestination.Success(tracked)
+                        TrackedSessionEnd.Cancelled, TrackedSessionEnd.Other -> AlarmExitDestination.Home
+                        null -> null
+                    }
+                if (exit != null) {
+                    sheet = ScanSheetState.Hidden
+                    recompute()
+                }
+            }
+            return exit != null
+        }
+
         private fun recompute() {
             val current = sessionState
+            val currentId = sessionId
             state =
                 when {
+                    exit != null -> {
+                        AlarmUiState.Exit(requireNotNull(exit))
+                    }
+
                     sessionConfirmedGone -> {
                         AlarmUiState.Close
                     }
 
-                    current == null -> {
+                    current == null || currentId == null -> {
                         AlarmUiState.Loading
                     }
 
                     else -> {
                         AlarmUiState.forSession(
                             sessionState = current,
+                            sessionId = currentId,
                             nfcAvailability = nfcAvailability,
                             sheet = sheet,
                         )

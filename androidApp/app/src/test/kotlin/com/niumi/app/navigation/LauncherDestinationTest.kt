@@ -31,9 +31,17 @@ class LauncherDestinationTest {
     @Test
     fun releasingTowardsDisarmedNeverOpensTheAlarmScreen() {
         assertThat(requiresAlarmScreen(SessionStateDto.RELEASING, ReleaseTargetDto.DISARMED)).isFalse()
-        listOf(ReleaseTargetDto.COMPLETED, ReleaseTargetDto.CANCELLED).forEach { target ->
-            assertThat(requiresAlarmScreen(SessionStateDto.RELEASING, target)).isTrue()
-        }
+        assertThat(requiresAlarmScreen(SessionStateDto.RELEASING, ReleaseTargetDto.COMPLETED)).isTrue()
+    }
+
+    /**
+     * Étape 46, constaté sur appareil le 2026-10-26 : une annulation se fait depuis l'accueil
+     * (`SPECIFICATION.md` §11). L'écran de réveil, ouvert pendant sa libération, passait devant
+     * l'accueil puis le rouvrait, et la bulle « Réveil annulé… » se perdait.
+     */
+    @Test
+    fun releasingTowardsCancelledNeverOpensTheAlarmScreen() {
+        assertThat(requiresAlarmScreen(SessionStateDto.RELEASING, ReleaseTargetDto.CANCELLED)).isFalse()
     }
 
     /** Un état ajouté à la machine commune doit être classé explicitement. */

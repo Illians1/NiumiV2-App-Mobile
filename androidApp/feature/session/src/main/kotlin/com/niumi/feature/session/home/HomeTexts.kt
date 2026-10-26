@@ -31,6 +31,12 @@ object HomeTexts {
      */
     const val CANCEL_WAKE = "Annuler le réveil"
 
+    /**
+     * Bulle après l'annulation par scan (`SPECIFICATION.md` §11, D23). Même bulle que M10, sans la
+     * coche de la maquette 27 (décision de Mehdi du 2026-10-25, étape 46).
+     */
+    const val WAKE_CANCELLED = "Réveil annulé. Tes applications sont débloquées."
+
     /** M10 : bulle en bas d'écran quand on touche un champ verrouillé (décision du 2026-10-25). */
     const val LOCKED_UNTIL_SCAN = "Modifiable après avoir scanné ton Niumi Spot."
 

@@ -37,15 +37,21 @@ import com.niumi.designsystem.ui.theme.NiumiType
  * étape 38). Une seule feuille, sans poignée, dont le contenu bascule de « Prêt à scanner » à un
  * échec et retour sans se refermer.
  *
- * - **Prêt à scanner** : titre 26 à l'encre (la maquette le grise comme la fenêtre de l'iPhone ;
- *   rendu plus visible le 2026-10-22, décision de Mehdi), rond de 112 `tileGrey` portant l'icône de scan,
- *   phrase 17, bouton gris « Annuler » de 52 qui range la feuille puis appelle [onDismiss].
- * - **Échec** : titre 24 annoncé dès qu'il paraît, phrase d'aide 16, bouton principal qui appelle
- *   [onFailureAction] sans fermer (« Réessayer », « Ouvrir les réglages »), puis le lien de secours
- *   si [emergencyLinkText] et [onEmergencyExit] sont fournis. [failurePaneTitle] nomme la fenêtre
- *   pour TalkBack (« Échec du scan »).
+ * - **Prêt à scanner** : titre 22 à l'encre (26 dans la maquette, réduit le 2026-10-26 ; la
+ *   maquette le grise comme la fenêtre de l'iPhone, rendu plus visible le 2026-10-22 ; décisions de
+ *   Mehdi), rond de 112 `tileGrey` portant l'icône de scan,
+ *   phrase 17, bouton gris « Annuler » de 52 qui range la feuille puis appelle [onDismiss]. La
+ *   phrase est [phrase] : « Approche ton téléphone du Niumi Spot » par défaut, « … pour annuler le
+ *   réveil » sur la feuille d'annulation (étape 46, `SPECIFICATION.md` §11).
+ * - **Échec** : titre 22/600 (24 dans la maquette, réduit le 2026-10-26) annoncé dès qu'il paraît,
+ *   phrase d'aide 16, bouton principal qui appelle [onFailureAction] sans fermer (« Réessayer »,
+ *   « Ouvrir les réglages »), puis le lien de secours si [emergencyLinkText] et [onEmergencyExit] sont
+ *   fournis. [failurePaneTitle] nomme la fenêtre pour TalkBack (« Échec du scan »).
  *
- * Le voile, le glissement et le retour ferment la feuille dans les deux cas : la maquette de
+ * - **Libération** (étape 46, feuille d'annulation) : cercle de chargement seul, à la hauteur du
+ *   rond de « Prêt à scanner », après le délai habituel ([NiumiLoadingIndicator]).
+ *
+ * Le voile, le glissement et le retour ferment la feuille dans tous les cas : la maquette de
  * l'échec n'a pas de croix (arbitrage de l'étape 38). Le composant ne connaît ni le NFC ni la
  * session : l'écran traduit son état en [content] et pilote la lecture.
  */
@@ -59,12 +65,20 @@ fun NfcScanSheet(
     modifier: Modifier = Modifier,
     emergencyLinkText: String? = null,
     onEmergencyExit: (() -> Unit)? = null,
+    phrase: String = NiumiComponentTexts.SCAN_SHEET_PHRASE,
 ) {
     NiumiBottomSheet(onDismiss = onDismiss, title = null, modifier = modifier, showHandle = false) { requestClose ->
         Spacer(Modifier.height(NiumiDimens.scanSheetTop))
         when (content) {
             NfcScanSheetContent.Ready -> {
-                ReadyContent(onCancel = requestClose)
+                ReadyContent(phrase = phrase, onCancel = requestClose)
+            }
+
+            is NfcScanSheetContent.Releasing -> {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(NiumiDimens.scanSheetCircle),
+                    contentAlignment = Alignment.Center,
+                ) { NiumiLoadingIndicator(label = content.label) }
             }
 
             is NfcScanSheetContent.Failure -> {
@@ -81,7 +95,10 @@ fun NfcScanSheet(
 }
 
 @Composable
-private fun ReadyContent(onCancel: () -> Unit) {
+private fun ReadyContent(
+    phrase: String,
+    onCancel: () -> Unit,
+) {
     val palette = LocalNiumiPalette.current
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -90,7 +107,7 @@ private fun ReadyContent(onCancel: () -> Unit) {
     ) {
         Text(
             text = NiumiComponentTexts.SCAN_SHEET_TITLE,
-            style = NiumiType.scanSheetTitle26,
+            style = NiumiType.scanSheetTitle22,
             color = palette.ink,
             modifier = Modifier.semantics { heading() },
         )
@@ -110,7 +127,7 @@ private fun ReadyContent(onCancel: () -> Unit) {
             )
         }
         Text(
-            text = NiumiComponentTexts.SCAN_SHEET_PHRASE,
+            text = phrase,
             style = NiumiType.lead17,
             color = palette.ink,
             textAlign = TextAlign.Center,
@@ -146,7 +163,7 @@ private fun FailureContent(
     ) {
         Text(
             text = failure.title,
-            style = NiumiType.sheetTitle24,
+            style = NiumiType.alertTitle22,
             color = palette.ink,
             textAlign = TextAlign.Center,
             modifier =

@@ -134,6 +134,10 @@ object NiumiDimens {
     /** Titre d'une feuille sans croix, sous la poignée (maquettes 19, 23, 48). */
     val sheetTitleTop = 22.dp
 
+    /** Feuille « Annuler le réveil ? » (maquette 25) : texte 12 sous le titre, bouton 24 sous le texte. */
+    val questionSheetBodyTop = 12.dp
+    val questionSheetButtonTop = 24.dp
+
     /** Ligne titre et croix d'une feuille : 8 sous la poignée, 48 de haut (maquettes 11, 16). */
     val sheetHeaderTop = 8.dp
     val sheetHeaderHeight = 48.dp
@@ -170,6 +174,20 @@ object NiumiDimens {
     /** Dessin d'un panneau : 342 × 240 au plus, réduit en gardant ses proportions sur un écran étroit. */
     val illustrationWidth = 342.dp
     val illustrationHeight = 240.dp
+
+    /** Hauteur du soleil levant de l'écran 11 (maquette 42 : disque visible 84, horizon 3 à 82). */
+    val sunriseHeight = 85.dp
+
+    /** Écran 11 (maquette 42) : soleil 189 sous la marge du haut, titre 61 sous l'horizon. */
+    val successSunTop = 189.dp
+    val successTitleTop = 61.dp
+
+    /** Écart du titre au délai (8), puis de chaque bloc au précédent (10 + 8). */
+    val successLineGap = 8.dp
+    val successBlockGap = 18.dp
+    val bravoPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+    val bravoMaxWidth = 300.dp
+    val appsBackMaxWidth = 290.dp
 
     /** Largeur maximale du titre et du texte d'un panneau, centrés. */
     val presentationTitleMaxWidth = 320.dp

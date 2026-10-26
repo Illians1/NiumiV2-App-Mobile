@@ -13,9 +13,11 @@ import com.niumi.core.interop.SessionStateDto
  * l'accueil n'était plus composé et sa redirection ne s'exécutait jamais. La règle est globale, sa
  * mise en œuvre doit l'être aussi.
  *
- * [releaseTarget] départage `RELEASING` (étape 43, contrat 1.5) : vers `COMPLETED` ou `CANCELLED`, la
- * libération suit un scan ou une sortie de secours et l'écran de réveil reste devant jusqu'à la fin ;
- * vers `DISARMED`, c'est un désarmement avant le coucher, sans rien à scanner.
+ * [releaseTarget] départage `RELEASING` (étape 43, contrat 1.5) : vers `COMPLETED`, la libération
+ * suit le scan ou la recopie du matin et l'écran de réveil reste devant jusqu'à la fin ; vers
+ * `DISARMED`, c'est un désarmement avant le coucher, sans rien à scanner ; vers `CANCELLED`, une
+ * annulation faite depuis l'accueil (feuille « Annuler le réveil ? », recopie du soir), qui y reste
+ * (étape 46 : l'écran de réveil passait devant puis rouvrait l'accueil, et la bulle se perdait).
  */
 fun requiresAlarmScreen(
     state: SessionStateDto?,
@@ -25,9 +27,14 @@ fun requiresAlarmScreen(
         SessionStateDto.RINGING,
         SessionStateDto.AWAITING_NFC,
         SessionStateDto.TRIGGERED_AWAITING_NFC,
-        -> true
+        -> {
+            true
+        }
 
-        SessionStateDto.RELEASING -> releaseTarget != ReleaseTargetDto.DISARMED
+        SessionStateDto.RELEASING -> {
+            releaseTarget != ReleaseTargetDto.DISARMED &&
+                releaseTarget != ReleaseTargetDto.CANCELLED
+        }
 
         // Avant la sonnerie comme après la session, l'accueil ou la mise en route.
         SessionStateDto.PREPARING,
@@ -37,5 +44,7 @@ fun requiresAlarmScreen(
         SessionStateDto.DISARMED,
         SessionStateDto.FAILED,
         null,
-        -> false
+        -> {
+            false
+        }
     }
