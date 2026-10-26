@@ -12,6 +12,8 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -93,6 +95,7 @@ class HomeScreenTest {
 
         composeRule.onNodeWithText("9 h 26").assertIsDisplayed()
         composeRule.onNodeWithText("Blocage des apps dans 56 min").assertIsDisplayed()
+        composeRule.onNode(hasText(HomeTexts.WAKE_DAYS) and isHeading()).assertIsDisplayed()
         composeRule
             .onNodeWithContentDescription("Réveil activé")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On))

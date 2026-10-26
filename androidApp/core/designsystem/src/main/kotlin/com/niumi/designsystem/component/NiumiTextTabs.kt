@@ -30,8 +30,9 @@ import com.niumi.designsystem.ui.theme.NiumiType
 
 /**
  * Onglets texte centrés, soulignés quand ils sont choisis (maquettes 18 à 20, étape 45) : 32 de
- * haut, 28 d'écart, trait de 2 à l'encre. [selectedIndex] nul : aucun n'est choisi (jours libres,
- * ni « Ponctuel » ni « Quotidien »).
+ * haut, 28 d'écart, trait de 2 à l'encre. [selectedIndex] nul : aucun n'est choisi. Depuis le
+ * 2026-10-26, seul le sélecteur d'heure s'en sert ; « Ponctuel / Quotidien » sont des
+ * [NiumiSegmentedTabs] (décision de Mehdi).
  *
  * États ([NiumiFieldState]) : grisés en « Réveil désactivé », toujours touchables ; verrouillés en
  * session, annoncés « Verrouillé », [onSelect] jamais appelé, [onLockedClick] reçoit le toucher.

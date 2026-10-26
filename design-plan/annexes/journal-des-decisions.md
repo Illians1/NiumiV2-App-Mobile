@@ -199,6 +199,12 @@ Le parcours gardé est dessiné dans le canevas [Niumi · maquettes simples](htt
 
 Hors session, un réveil s'annule en décochant le jour. Un interrupteur général désactive tout le planning : plus aucun réveil ni blocage tant qu'on ne le rallume pas.
 
+### Titre « Jours de réveil » (26 octobre 2026)
+
+Mehdi a relevé que les pastilles prêtaient à confusion : quand la période passe minuit, on ne sait pas si l'on coche le soir du coucher ou le matin du réveil. L'app comptait déjà le jour coché comme jour de réveil (contrat KMP §8.4), sans que l'écran le dise. Quatre pistes ont été proposées : un titre au-dessus des pastilles, avec le jour du blocage nommé sur la carte ; une phrase sous les pastilles qui traduit les jours en nuits (« Du dimanche soir au jeudi soir ») ; des pastilles de nuits (« D→L ») ; un jour coché qui désigne le soir du coucher. Mehdi a gardé la première, sans changer la carte : un titre « Jours de réveil » à gauche, sur la ligne des onglets, et les onglets à droite. Les pistes écartées gardaient la règle de calcul ; la dernière l'aurait inversée, contre l'usage des réveils des téléphones et les valeurs par défaut du lundi au vendredi.
+
+Après un premier essai, le même jour, Mehdi a envoyé un croquis : les onglets soulignés deviennent une capsule grise qui contient « Ponctuel » et « Quotidien ». Le croquis ne montrait aucun onglet choisi ; Claude a repris le segment encre de la barre des durées de la sonnerie.
+
 ## Choix de la sonnerie
 
 Il s'ouvre depuis la ligne « Sonnerie » de l'accueil. Il règle le son et la sonnerie progressive, et affiche le volume du téléphone sans permettre de le modifier (décision du 8 octobre 2026). Valeurs de la sonnerie progressive : désactivée, ou volume maximal en 1, 2, 5 ou 10 min. Il reste modifiable pendant une session. Sur iPhone, le volume et la sonnerie progressive dépendent d'un test à faire (voir « Points à trancher »).

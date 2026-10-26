@@ -57,6 +57,15 @@ class HomeTextsTest {
             .inOrder()
     }
 
+    /**
+     * Titre des pastilles (décision de Mehdi du 2026-10-26) : un jour coché est un jour de réveil.
+     * Texte non dessiné, à valider au premier essai.
+     */
+    @Test
+    fun theDayChipsAreTitledAsWakeDays() {
+        assertThat(HomeTexts.WAKE_DAYS).isEqualTo("Jours de réveil")
+    }
+
     @Test
     fun theRowsAreQuotedWordForWord() {
         assertThat(HomeTexts.BLOCKED_APPS).isEqualTo("Applications bloquées")
@@ -114,6 +123,7 @@ class HomeTextsTest {
                 HomeTexts.LOCKED_UNTIL_SCAN,
                 HomeTexts.ONE_OFF,
                 HomeTexts.DAILY,
+                HomeTexts.WAKE_DAYS,
                 HomeTexts.BLOCKED_APPS,
                 HomeTexts.RINGTONE,
                 HomeTexts.BEDTIME_TITLE,

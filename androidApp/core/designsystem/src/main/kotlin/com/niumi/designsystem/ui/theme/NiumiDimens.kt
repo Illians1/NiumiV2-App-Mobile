@@ -519,12 +519,23 @@ object NiumiDimens {
     val homeLinkPadding = 10.dp
 
     /**
-     * Onglets texte (« Ponctuel / Quotidien », « Coucher / Réveil ») : 32 de haut, trait de 2 ; 16
+     * Onglets texte (« Coucher / Réveil » du sélecteur d'heure) : 32 de haut, trait de 2 ; 16
      * d'écart (28 dans les maquettes, resserrés le 2026-10-25 après essai).
      */
     val tabHeight = 32.dp
     val tabGap = 16.dp
     val tabUnderline = 2.dp
+
+    /**
+     * Onglets segmentés de l'accueil (« Ponctuel / Quotidien », forme demandée par Mehdi le
+     * 2026-10-26, non dessinée ; valeurs relevées sur son croquis, choisies par Claude) : capsule de
+     * 32 aux coins de 10, marge de 3 ; segment de 26, texte à 10 de ses bords.
+     */
+    val segmentedTabsHeight = 32.dp
+    val segmentedTabsRadius = 10.dp
+    val segmentedTabsPadding = 3.dp
+    val segmentedTabHeight = 26.dp
+    val segmentedTabPadding = 10.dp
 
     /**
      * Barre d'onglets du bas (maquette 16 du 2026-10-25, décision de Mehdi) : 100 de haut dans la

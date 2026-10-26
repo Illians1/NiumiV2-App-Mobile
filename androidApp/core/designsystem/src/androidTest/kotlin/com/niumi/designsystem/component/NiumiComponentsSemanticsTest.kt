@@ -281,6 +281,76 @@ class NiumiComponentsSemanticsTest {
         assertThat(chosen).containsExactly(1)
     }
 
+    /**
+     * Onglets segmentés de l'accueil (« Ponctuel / Quotidien », décision de Mehdi du 2026-10-26) :
+     * des onglets de 48 de haut au toucher, dessinés sur 32.
+     */
+    @Test
+    fun segmentedTabsExposeTabsAndReportTheChosenIndex() {
+        val chosen = mutableListOf<Int>()
+        show {
+            NiumiSegmentedTabs(labels = listOf("Ponctuel", "Quotidien"), selectedIndex = 0, onSelect = { chosen += it })
+        }
+
+        composeRule
+            .onNodeWithText("Ponctuel")
+            .assertRole(Role.Tab)
+            .assertIsSelected()
+            .assertTouchTarget()
+        composeRule
+            .onNodeWithText("Quotidien")
+            .assertIsNotSelected()
+            .assertTouchTarget()
+            .performClick()
+
+        assertThat(chosen).containsExactly(1)
+    }
+
+    /** Jours libres : aucun onglet choisi, les deux restent touchables. */
+    @Test
+    fun segmentedTabsWithoutChoiceSelectNone() {
+        val chosen = mutableListOf<Int>()
+        show {
+            NiumiSegmentedTabs(
+                labels = listOf("Ponctuel", "Quotidien"),
+                selectedIndex = null,
+                onSelect = { chosen += it },
+                state = NiumiFieldState.Greyed,
+            )
+        }
+
+        composeRule.onNodeWithText("Ponctuel").assertIsNotSelected().performClick()
+        composeRule.onNodeWithText("Quotidien").assertIsNotSelected()
+
+        assertThat(chosen).containsExactly(0)
+    }
+
+    @Test
+    fun lockedSegmentedTabsNeverSelectAndSayTheyAreLocked() {
+        val chosen = mutableListOf<Int>()
+        var lockedTouches = 0
+        show {
+            NiumiSegmentedTabs(
+                labels = listOf("Ponctuel", "Quotidien"),
+                selectedIndex = 1,
+                onSelect = { chosen += it },
+                state = NiumiFieldState.Locked,
+                onLockedClick = { lockedTouches++ },
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Quotidien, ${NiumiComponentTexts.LOCKED}")
+            .assertIsSelected()
+        composeRule
+            .onNodeWithContentDescription("Ponctuel, ${NiumiComponentTexts.LOCKED}")
+            .assertTouchTarget()
+            .performClick()
+
+        assertThat(chosen).isEmpty()
+        assertThat(lockedTouches).isEqualTo(1)
+    }
+
     @Test
     fun anActionPillIsAButton() {
         var clicks = 0

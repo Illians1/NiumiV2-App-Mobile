@@ -147,3 +147,25 @@ désactivé » relu du planning enregistré, vérifié par Mehdi) ; le DataStore
 - Plan de refonte : décisions (étape 46), interfaces transverses, écarts et cases de l'étape 46.
 - Signalé, non appliqué : les maquettes 25 à 27 régénérées le 2026-10-25 disent encore « session »
   (E14) ; la maquette 27 garde sa coche (M18).
+
+## Après l'étape 46 : titre « Jours de réveil » (2026-10-26)
+
+Hors plan, à la demande de Mehdi : les pastilles de l'accueil ne disaient pas si l'on cochait le
+soir du coucher ou le matin du réveil. La règle ne change pas (jour coché = jour de réveil,
+§8.4). Une ligne « Jours de réveil » remplace les onglets centrés : titre à gauche, onglets
+« Ponctuel » / « Quotidien » à droite. Après un premier essai, Mehdi a demandé sur croquis une
+capsule grise : nouveau composant `NiumiSegmentedTabs`, segment choisi à l'encre (choix de
+Claude) ; `NiumiTextTabs` ne sert plus qu'au sélecteur d'heure. La carte ne change pas. Texte et
+disposition non dessinés (M20).
+
+- Tests : `HomeTextsTest.theDayChipsAreTitledAsWakeDays` ; `HomeScreenTest` vérifie le titre
+  comme intitulé. Instrumentés lancés le 2026-10-26 sur Xiaomi 25080RABDG, Android 16 :
+  `:feature:session` 39 tests, `:core:designsystem` 71 tests (dont trois pour les onglets
+  segmentés), aucun échec.
+- Constaté à l'œil sur le même appareil, état « Réveil désactivé » en Ponctuel : titre à gauche,
+  capsule à droite, « Ponctuel » en segment gris, pastilles dessous, rien ne se chevauche. L'état
+  « Réveil prévu », segment encre, n'a pas été vu : il aurait fallu allumer le vrai réveil.
+- Specs : `design-plan/` SPECIFICATION §9, VALEURS-DE-DESIGN §4, POINTS-OUVERTS (§2, M20),
+  journal ; SPEC_ANDROID écran 6.
+- Restent à valider sur appareil : avis de Mehdi sur le visuel des onglets à droite (M20),
+  couleurs en « Réveil désactivé » et en session, lecture TalkBack, police agrandie.

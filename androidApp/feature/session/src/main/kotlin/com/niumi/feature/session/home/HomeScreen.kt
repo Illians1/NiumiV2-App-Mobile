@@ -32,6 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -49,8 +50,8 @@ import com.niumi.designsystem.component.NiumiDial
 import com.niumi.designsystem.component.NiumiFieldState
 import com.niumi.designsystem.component.NiumiMoreAppsSlot
 import com.niumi.designsystem.component.NiumiScreenScaffold
+import com.niumi.designsystem.component.NiumiSegmentedTabs
 import com.niumi.designsystem.component.NiumiSwitch
-import com.niumi.designsystem.component.NiumiTextTabs
 import com.niumi.designsystem.component.NiumiTimePickerDialog
 import com.niumi.designsystem.component.NiumiToast
 import com.niumi.designsystem.component.TimePickerTexts
@@ -176,18 +177,7 @@ private fun HomeContent(
     Spacer(modifier = Modifier.height(NiumiDimens.homeCardTop))
     StatusCard(state, actions)
     Spacer(modifier = Modifier.height(NiumiDimens.homeTabsTop))
-    NiumiTextTabs(
-        labels = listOf(HomeTexts.ONE_OFF, HomeTexts.DAILY),
-        selectedIndex =
-            when (state.dayMode) {
-                DayMode.ONE_OFF -> 0
-                DayMode.DAILY -> 1
-                DayMode.CUSTOM -> null
-            },
-        onSelect = { index -> actions.onDayModeSelected(if (index == 0) DayMode.ONE_OFF else DayMode.DAILY) },
-        state = fieldState,
-        onLockedClick = actions.onLockedTouch,
-    )
+    DaysHeader(state, fieldState, actions)
     Spacer(modifier = Modifier.height(NiumiDimens.homeDaysTop))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         HomeTexts.DAY_LABELS.forEachIndexed { index, label ->
@@ -205,6 +195,40 @@ private fun HomeContent(
     Spacer(modifier = Modifier.height(NiumiDimens.homeRowsTop))
     AppsRow(state, fieldState, onOpen = if (state.isLocked) actions.onLockedTouch else actions.onOpenApps)
     RingtoneRow(state.ringtone, greyed = state.mode == HomeMode.Disabled, onOpen = actions.onOpenRingtone)
+}
+
+/**
+ * Ligne au-dessus des pastilles (décision de Mehdi du 2026-10-26, non dessinée) : le titre
+ * « Jours de réveil » à gauche, comme ceux des lignes du bas, et les onglets segmentés
+ * « Ponctuel » et « Quotidien » à droite. Le titre est un intitulé pour TalkBack, lu avant les sept jours.
+ */
+@Composable
+private fun DaysHeader(
+    state: HomeUiState,
+    fieldState: NiumiFieldState,
+    actions: HomeActions,
+) {
+    val palette = LocalNiumiPalette.current
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = HomeTexts.WAKE_DAYS,
+            style = NiumiType.body16,
+            color = if (fieldState == NiumiFieldState.Normal) palette.ink else palette.border,
+            modifier = Modifier.weight(1f).semantics { heading() },
+        )
+        NiumiSegmentedTabs(
+            labels = listOf(HomeTexts.ONE_OFF, HomeTexts.DAILY),
+            selectedIndex =
+                when (state.dayMode) {
+                    DayMode.ONE_OFF -> 0
+                    DayMode.DAILY -> 1
+                    DayMode.CUSTOM -> null
+                },
+            onSelect = { index -> actions.onDayModeSelected(if (index == 0) DayMode.ONE_OFF else DayMode.DAILY) },
+            state = fieldState,
+            onLockedClick = actions.onLockedTouch,
+        )
+    }
 }
 
 private fun dialStateOf(state: HomeUiState): DialState =

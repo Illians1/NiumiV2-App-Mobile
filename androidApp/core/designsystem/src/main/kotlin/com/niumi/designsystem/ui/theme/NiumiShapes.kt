@@ -51,6 +51,9 @@ object NiumiShapes {
     val segmentedBar = RoundedCornerShape(14.dp)
     val segment = RoundedCornerShape(10.dp)
 
+    /** Segment choisi des onglets segmentés de l'accueil : coins de 7, ceux de la capsule moins sa marge. */
+    val segmentedTab = RoundedCornerShape(7.dp)
+
     /** Bulle de message en bas d'écran (étape 45, forme de la maquette 27). */
     val toast = RoundedCornerShape(16.dp)
 }

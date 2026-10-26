@@ -12,7 +12,8 @@ import com.niumi.feature.session.ui.AlarmSoundTexts
  * cadran et des roues), le cas de la période de 24 h (« 24 h de blocage… », décision du
  * 2026-10-25) et la fenêtre de confirmation avant un blocage immédiat ([IMMEDIATE_BLOCKING_TITLE],
  * [immediateBlockingBody], [BLOCK_NOW], [CANCEL], décision du 2026-10-25, revus par Mehdi le même
- * jour), à valider par Mehdi au premier essai.
+ * jour), à valider par Mehdi au premier essai. [WAKE_DAYS], le titre des pastilles (décision de
+ * Mehdi du 2026-10-26), n'est pas dessiné non plus.
  */
 object HomeTexts {
     const val BEDTIME = "Coucher"
@@ -42,6 +43,13 @@ object HomeTexts {
 
     const val ONE_OFF = "Ponctuel"
     const val DAILY = "Quotidien"
+
+    /**
+     * Titre de la ligne des onglets, au-dessus des pastilles (décision de Mehdi du 2026-10-26, non
+     * dessiné, à valider au premier essai) : un jour coché est un jour de réveil, le coucher a lieu
+     * la veille quand son heure est plus tardive (contrat KMP §8.4).
+     */
+    const val WAKE_DAYS = "Jours de réveil"
     const val BLOCKED_APPS = "Applications bloquées"
     const val RINGTONE = AlarmSoundTexts.ROW_TITLE
     const val BEDTIME_TITLE = "Heure de coucher"
