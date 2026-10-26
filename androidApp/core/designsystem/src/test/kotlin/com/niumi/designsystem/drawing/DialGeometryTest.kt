@@ -156,6 +156,19 @@ class DialGeometryTest {
         ).isEqualTo(AmberSpans(solid = 0f, fade = 12f))
     }
 
+    /** Décision du 2026-10-26 : un repère s'efface quand la flèche de l'heure actuelle est à moins de 4° (16 min). */
+    @Test
+    fun aQuarterMarkHidesUnderTheCurrentTimeArrow() {
+        assertThat(DialMarks.QUARTER_MARKS).containsExactly(0, hm(6, 0), hm(12, 0), hm(18, 0)).inOrder()
+        assertThat(DialMarks.isHidden(markMinutes = 0, nowMinutes = 0)).isTrue()
+        assertThat(DialMarks.isHidden(markMinutes = 0, nowMinutes = 15)).isTrue()
+        assertThat(DialMarks.isHidden(markMinutes = 0, nowMinutes = 16)).isFalse()
+        // Passer minuit n'est pas un tour complet : 23:45 est à 15 minutes du repère du haut.
+        assertThat(DialMarks.isHidden(markMinutes = 0, nowMinutes = hm(23, 45))).isTrue()
+        assertThat(DialMarks.isHidden(markMinutes = hm(6, 0), nowMinutes = hm(6, 10))).isTrue()
+        assertThat(DialMarks.isHidden(markMinutes = hm(6, 0), nowMinutes = 0)).isFalse()
+    }
+
     /** Décision du 2026-10-25 : fondu court (12°) et franc dès le point, au lieu du demi-cosinus sur 34°. */
     @Test
     fun theAmberFadesOutStraightOverTwelveDegreesFromTheDot() {

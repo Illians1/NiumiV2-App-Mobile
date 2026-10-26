@@ -1,5 +1,6 @@
 package com.niumi.designsystem.drawing
 
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.roundToInt
 
@@ -29,6 +30,35 @@ data class AmberSpans(
 enum class DialHandle { BEDTIME, WAKE }
 
 /**
+ * Les quatre repères du cadran, en haut, à droite, en bas et à gauche (0 h, 6 h, 12 h et 18 h), et
+ * la règle qui les efface sous la flèche de l'heure actuelle (décision de Mehdi du 2026-10-26).
+ */
+object DialMarks {
+    val QUARTER_MARKS: List<Int> = listOf(0, 6 * MINUTES_PER_HOUR, 12 * MINUTES_PER_HOUR, 18 * MINUTES_PER_HOUR)
+
+    /**
+     * Un repère s'efface quand la flèche est à moins de 4° de lui (16 minutes) : à la base de la flèche
+     * (rayon 86), sa demi-largeur de 4 et la demi-épaisseur du repère (1) font 3,3°, plus une marge d'un point.
+     */
+    const val HIDE_DEGREES = 4f
+
+    /** Le repère à [markMinutes] est-il caché par la flèche de l'heure actuelle à [nowMinutes] ? */
+    fun isHidden(
+        markMinutes: Int,
+        nowMinutes: Int,
+    ): Boolean {
+        val delta =
+            DialGeometry.signedDeltaMinutes(
+                fromDegrees = DialGeometry.degreesOf(markMinutes),
+                toDegrees = DialGeometry.degreesOf(nowMinutes),
+            )
+        return abs(delta) * DialGeometry.DEGREES_PER_MINUTE < HIDE_DEGREES
+    }
+
+    private const val MINUTES_PER_HOUR = 60
+}
+
+/**
  * Géométrie du cadran de 24 heures de l'accueil (VALEURS-DE-DESIGN.md §5), sans Compose pour se
  * tester en JVM. Les heures sont des minutes depuis minuit (0 à 1439) ; les angles, des degrés
  * comptés depuis le haut dans le sens horaire (une heure vaut 15°).
@@ -51,7 +81,7 @@ object DialGeometry {
 
     private const val DEGREES_PER_TURN = 360f
     private const val HALF_TURN = 180f
-    private const val DEGREES_PER_MINUTE = DEGREES_PER_TURN / MINUTES_PER_DAY
+    internal const val DEGREES_PER_MINUTE = DEGREES_PER_TURN / MINUTES_PER_DAY
 
     fun degreesOf(minutes: Int): Float = minutes.mod(MINUTES_PER_DAY) * DEGREES_PER_MINUTE
 

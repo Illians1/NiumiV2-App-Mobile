@@ -480,6 +480,13 @@ object NiumiDimens {
     val dialNowArrowWidth = 8.dp
     val dialNowArrowGap = 4.dp
 
+    /**
+     * Repères de 0 h, 6 h, 12 h et 18 h (décision de Mehdi du 2026-10-26, absents des maquettes) :
+     * traits de 8 de long et 2 d'épaisseur, à l'intérieur de l'anneau, à la même distance que la flèche.
+     */
+    val dialMarkLength = 8.dp
+    val dialMarkWidth = 2.dp
+
     /** Distance au centre du cadran à laquelle un toucher saisit une poignée, plus large qu'elle. */
     val dialHandleGrabRadius = 24.dp
 

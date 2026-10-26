@@ -17,6 +17,7 @@ import com.niumi.designsystem.drawing.DialGeometry
 import com.niumi.designsystem.drawing.DialHandle
 import com.niumi.designsystem.drawing.DialLabelLayout
 import com.niumi.designsystem.drawing.DialLabelSpace
+import com.niumi.designsystem.drawing.DialMarks
 import com.niumi.designsystem.format.NiumiTimeFormat
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiPalette
@@ -91,6 +92,7 @@ internal fun DrawScope.drawDial(
 
     drawCircle(color = palette.track, radius = frame.radius, center = center, style = Stroke(width = frame.stroke))
     drawArc(arcColor, startAngle, sweep, useCenter = false, topLeft = topLeft, size = ring, style = stroke)
+    drawQuarterMarks(frame, state.nowMinutes, palette.disabled)
 
     val dotRadius = frame.px(NiumiDimens.dialNowDotRadius)
     val now = frame.pointAt(state.nowMinutes)
@@ -121,6 +123,25 @@ internal fun DrawScope.drawDial(
             drawCircle(wakeColor, handleRadius, frame.pointAt(wake))
         }
     }
+}
+
+/**
+ * Repères de 0 h, 6 h, 12 h et 18 h : traits à l'intérieur de l'anneau, alignés sur la flèche, qui
+ * s'effacent quand elle passe dessus (`DialMarks.isHidden`, décision de Mehdi du 2026-10-26).
+ */
+private fun DrawScope.drawQuarterMarks(
+    frame: DialFrame,
+    nowMinutes: Int,
+    color: Color,
+) {
+    val outer = frame.radius - frame.stroke / 2 - frame.px(NiumiDimens.dialNowArrowGap)
+    val inner = outer - frame.px(NiumiDimens.dialMarkLength)
+    val width = frame.px(NiumiDimens.dialMarkWidth)
+    DialMarks.QUARTER_MARKS
+        .filterNot { DialMarks.isHidden(it, nowMinutes) }
+        .forEach { minutes ->
+            drawLine(color, frame.pointAt(minutes, radius = outer), frame.pointAt(minutes, radius = inner), width)
+        }
 }
 
 /** Petit triangle plein à l'intérieur de l'anneau, pointé vers le point de l'heure actuelle. */
