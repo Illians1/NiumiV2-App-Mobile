@@ -8,9 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiPalette
@@ -42,6 +44,13 @@ import com.niumi.designsystem.ui.theme.NiumiType
  *   `border`. Toujours modifiable ;
  * - [NiumiFieldState.Locked] : même aspect que grisé, annoncée « Lundi, Verrouillé », cochée ou
  *   non. [onToggle] n'est jamais appelé ; [onLockedClick], s'il est fourni, reçoit le toucher (message de l'étape 45).
+ *
+ * [size] est le diamètre dessiné : 44, réduit quand sept pastilles ne tiennent pas dans la carte
+ * des jours (décision de Mehdi du 2026-10-30). La zone touchable fait au moins 48 de haut et au
+ * moins [size] de large : elle prend toute la largeur que [modifier] lui donne, le créneau du jour.
+ * Avec les pastilles presque collées des maquettes du 2026-10-30, ce créneau fait moins de 48 :
+ * sept zones de 48 ne tiennent pas dans la carte (exception à la décision du 2026-10-20,
+ * `POINTS-OUVERTS.md` M21). L'ondulation reste un disque de [size], centré.
  */
 @Suppress("LongParameterList") // Convention Compose : les paramètres d'un composant sont son API.
 @Composable
@@ -53,31 +62,15 @@ fun NiumiDayChip(
     modifier: Modifier = Modifier,
     state: NiumiFieldState = NiumiFieldState.Normal,
     onLockedClick: (() -> Unit)? = null,
+    size: Dp = NiumiDimens.dayChip,
 ) {
     val palette = LocalNiumiPalette.current
     val colors = dayChipColors(palette, checked, state)
-    val action =
-        when {
-            state != NiumiFieldState.Locked -> {
-                Modifier.toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle() })
-            }
-
-            onLockedClick != null -> {
-                Modifier.clickable(role = Role.Checkbox, onClick = onLockedClick)
-            }
-
-            else -> {
-                Modifier.semantics { disabled() }
-            }
-        }
+    val action = dayChipAction(checked, state, size, onToggle, onLockedClick)
     Box(
         modifier =
             modifier
-                .minimumInteractiveComponentSize()
-                .size(NiumiDimens.dayChip)
-                .clip(NiumiShapes.pill)
-                .background(colors.fill)
-                .border(NiumiDimens.hairline, colors.outline, NiumiShapes.pill)
+                .sizeIn(minWidth = size, minHeight = NiumiDimens.touchTarget)
                 .semantics(mergeDescendants = true) {
                     // « Verrouillé » s'ajoute au nom : un `stateDescription` remplacerait « coché »
                     // dans l'annonce, et TalkBack ne dirait plus quels jours sonnent.
@@ -92,12 +85,60 @@ fun NiumiDayChip(
                 }.then(action),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style = if (checked) NiumiType.label16 else NiumiType.body16,
-            color = colors.content,
-            modifier = Modifier.clearAndSetSemantics {},
-        )
+        Box(
+            modifier =
+                Modifier
+                    .size(size)
+                    .clip(NiumiShapes.pill)
+                    .background(colors.fill)
+                    .border(NiumiDimens.hairline, colors.outline, NiumiShapes.pill),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                style = if (checked) NiumiType.label16 else NiumiType.body16,
+                color = colors.content,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        }
+    }
+}
+
+/**
+ * Action de la pastille : cocher ou décocher ; verrouillée, signaler le toucher ou rien. L'ondulation
+ * est un disque de [size], centré, même quand la zone touchable est plus large que le dessin.
+ */
+private fun dayChipAction(
+    checked: Boolean,
+    state: NiumiFieldState,
+    size: Dp,
+    onToggle: () -> Unit,
+    onLockedClick: (() -> Unit)?,
+): Modifier {
+    val indication = ripple(bounded = false, radius = size / 2)
+    return when {
+        state != NiumiFieldState.Locked -> {
+            Modifier.toggleable(
+                value = checked,
+                interactionSource = null,
+                indication = indication,
+                role = Role.Checkbox,
+                onValueChange = { onToggle() },
+            )
+        }
+
+        onLockedClick != null -> {
+            Modifier.clickable(
+                interactionSource = null,
+                indication = indication,
+                role = Role.Checkbox,
+                onClick = onLockedClick,
+            )
+        }
+
+        else -> {
+            Modifier.semantics { disabled() }
+        }
     }
 }
 

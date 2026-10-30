@@ -1,9 +1,11 @@
 package com.niumi.designsystem.ui.theme
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.serialization.json.JsonElement
@@ -178,6 +180,43 @@ class NiumiShapesAndDimensTest {
         assertDp("badge, liseré", NiumiDimens.tabBarBadgeOutline, badge.dp("lisere"))
     }
 
+    /**
+     * Carte de section de l'accueil (maquettes du 2026-10-30) : coins de la carte, marges intérieures
+     * du cadran, des jours et des lignes (haut, droite, bas, gauche).
+     */
+    @Test
+    fun sectionCard() {
+        val card = forms.getValue("carteDeSection").jsonObject
+
+        fun margins(field: String) = card.getValue(field).jsonArray.map { it.jsonPrimitive.content.toFloat() }
+
+        fun PaddingValues.sides() =
+            listOf(
+                calculateTopPadding().value,
+                calculateRightPadding(LayoutDirection.Ltr).value,
+                calculateBottomPadding().value,
+                calculateLeftPadding(LayoutDirection.Ltr).value,
+            )
+
+        assertUniformRadius(
+            "carte de section",
+            NiumiShapes.card,
+            card
+                .getValue("rayon")
+                .jsonPrimitive.content
+                .toFloat(),
+        )
+        assertWithMessage("marges du cadran")
+            .that(NiumiDimens.sectionCardDialPadding.sides())
+            .isEqualTo(margins("margesCadran"))
+        assertWithMessage("marges des jours")
+            .that(NiumiDimens.sectionCardDaysPadding.sides())
+            .isEqualTo(margins("margesJours"))
+        assertWithMessage("marges des lignes")
+            .that(NiumiDimens.sectionCardRowsPadding.sides())
+            .isEqualTo(margins("margesLignes"))
+    }
+
     /** Une forme ajoutée au design sans jeton ferait échouer ce test au lieu d'être oubliée. */
     @Test
     fun everyFormOfTheDesignValuesIsCovered() {
@@ -192,6 +231,7 @@ class NiumiShapesAndDimensTest {
                 "boutonPilule",
                 "pastilleJour",
                 "carte",
+                "carteDeSection",
                 "tuile",
                 "feuilleDuBas",
                 "emplacementIcone",

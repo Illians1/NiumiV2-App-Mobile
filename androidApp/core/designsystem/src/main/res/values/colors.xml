@@ -5,6 +5,6 @@
         transitions). Mêmes valeurs que NiumiPalettes.Light.background et Dark.background
         (VALEURS-DE-DESIGN.md §2) ; NiumiPaletteTest vérifie que les deux restent égales.
     -->
-    <color name="niumi_background_light">#FFFAFAF8</color>
+    <color name="niumi_background_light">#FFECEDEE</color>
     <color name="niumi_background_dark">#FF0E0E10</color>
 </resources>

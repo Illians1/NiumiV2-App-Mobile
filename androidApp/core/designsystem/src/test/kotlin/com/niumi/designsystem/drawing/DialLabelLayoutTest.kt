@@ -126,8 +126,65 @@ class DialLabelLayoutTest {
             (box.top + box.bottom) / 2 - space.centerY,
         )
 
+    /**
+     * Dans la carte de 342 (décision de Mehdi du 2026-10-30) : l'anneau se réduit juste assez pour
+     * qu'une étiquette de 50 tienne à côté de lui, entre l'écart de 4 et 4 sur un côté, et la marge
+     * de 6 au bord.
+     */
+    @Test
+    fun theRingShrinksJustEnoughForALabelBesideIt() {
+        val scale = cardScale()
+
+        assertThat(scale).isWithin(0.001f).of((CARD / 2 - WIDTH - GAP - SIDE_GAP - MARGIN) / RING_OUTER)
+        assertThat(
+            DialLabelLayout.ringScale(CARD, 1f, RING_OUTER, GAP + SIDE_GAP, MARGIN, NiumiDimens.DIAL_MIN_RING_SCALE),
+        ).isEqualTo(1f)
+        assertThat(
+            DialLabelLayout.ringScale(200f, WIDTH, RING_OUTER, GAP + SIDE_GAP, MARGIN, NiumiDimens.DIAL_MIN_RING_SCALE),
+        ).isEqualTo(NiumiDimens.DIAL_MIN_RING_SCALE)
+    }
+
+    /**
+     * Essais sur appareil du 2026-10-30 : une poignée sur un côté, dans la carte, laissait son
+     * étiquette glisser contre elle et contre le bord ; à 18 h pile, l'étiquette semblait collée à la
+     * poignée. Elle se pose maintenant à côté, à sa hauteur, 4 plus loin qu'au-dessus ou au-dessous.
+     */
+    @Test
+    fun inTheCardALabelOnASideSitsBesideItsHandle() {
+        val scale = cardScale()
+        val centerY = NiumiDimens.dialCenterYFor(scale).value
+        val card =
+            DialLabelSpace(
+                width = CARD,
+                height = centerY * 2,
+                centerX = CARD / 2,
+                centerY = centerY,
+                clearRadius = RING_OUTER * scale + GAP,
+                horizontalMargin = MARGIN,
+                sideGap = SIDE_GAP,
+            )
+
+        val left = DialLabelLayout.place(angleOf(18 * 60), WIDTH to HEIGHT, card)
+        val right = DialLabelLayout.place(angleOf(6 * 60), WIDTH to HEIGHT, card)
+
+        assertThat(left.right).isWithin(0.5f).of(card.centerX - card.clearRadius - SIDE_GAP)
+        assertThat(left.left).isAtLeast(MARGIN - 0.5f)
+        assertThat((left.top + left.bottom) / 2).isWithin(0.5f).of(centerY)
+        assertThat(right.left).isWithin(0.5f).of(card.centerX + card.clearRadius + SIDE_GAP)
+        assertThat(right.right).isAtMost(CARD - MARGIN + 0.5f)
+        assertThat((right.top + right.bottom) / 2).isWithin(0.5f).of(centerY)
+    }
+
+    private fun cardScale() =
+        DialLabelLayout.ringScale(CARD, WIDTH, RING_OUTER, GAP + SIDE_GAP, MARGIN, NiumiDimens.DIAL_MIN_RING_SCALE)
+
     private companion object {
         const val WIDTH = 50f
         const val HEIGHT = 40f
+        const val CARD = 342f
+        const val RING_OUTER = 126f
+        const val GAP = 4f
+        const val MARGIN = 6f
+        const val SIDE_GAP = 4f
     }
 }

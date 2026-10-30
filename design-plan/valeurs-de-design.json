@@ -3,7 +3,7 @@
   "theme": {
     "regle": "L'app ne suit pas le réglage clair ou sombre du téléphone. Clair quand aucune session n'est en cours, sombre du coucher jusqu'au scan.",
     "clair": {
-      "fond": "#FAFAF8",
+      "fond": "#ECEDEE",
       "surface": "#FFFFFF",
       "encre": "#0E0E10",
       "texteSecondaire": "#5C5C60",
@@ -51,7 +51,8 @@
       "texteSurBoutonPrincipal": "#0E0E10",
       "voile": "rgba(0, 0, 0, 0.6)",
       "lisereFeuille": "#2E2E33",
-      "bordCarte": "#74747B"
+      "bordCarte": "#74747B",
+      "bordCarteDeSection": "#2E2E33"
     }
   },
   "logo": {
@@ -243,6 +244,29 @@
     },
     "carte": {
       "rayon": 14
+    },
+    "carteDeSection": {
+      "_lire": "Cartes du cadran, des jours et des lignes de l'accueil (maquettes du 2026-10-30). En clair, sans bord, avec l'ombre ; en sombre, sans ombre, avec le bord bordCarteDeSection.",
+      "rayon": 14,
+      "ombreClair": "0 2px 10px rgba(0, 0, 0, 0.06)",
+      "margesCadran": [
+        4,
+        0,
+        4,
+        0
+      ],
+      "margesJours": [
+        12,
+        16,
+        14,
+        16
+      ],
+      "margesLignes": [
+        0,
+        16,
+        0,
+        16
+      ]
     },
     "tuile": {
       "rayon": 16

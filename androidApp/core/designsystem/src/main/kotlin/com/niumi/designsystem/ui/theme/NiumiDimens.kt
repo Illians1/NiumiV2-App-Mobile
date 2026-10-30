@@ -1,6 +1,7 @@
 package com.niumi.designsystem.ui.theme
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -445,9 +446,15 @@ object NiumiDimens {
 
     // Accueil (écran 6, étape 45 ; maquettes 15 à 20, VALEURS-DE-DESIGN.md §5).
 
-    /** Zone du cadran : 366 de large, qui déborde de 12 sur les marges de l'écran (maquettes). */
+    /**
+     * Zone du cadran des maquettes : 366 de large, qui débordait de 12 sur les marges de l'écran.
+     * Depuis les maquettes du 2026-10-30, le cadran est dans sa carte, sans débordement : il n'y
+     * dépasse jamais l'échelle de [dialFitWidth] (342 sur un écran de 390) ; la place des étiquettes
+     * le réduit davantage ([DIAL_MIN_RING_SCALE]).
+     */
     val dialWidth = 366.dp
     val dialOverflow = 12.dp
+    val dialFitWidth = dialWidth - dialOverflow * 2
 
     /** Rayon de l'anneau et épaisseur du trait (maquettes). */
     val dialRadius = 112.dp
@@ -466,6 +473,26 @@ object NiumiDimens {
     /** Hauteur de la zone (340, contre 290 dans les maquettes) et centre de l'anneau (170, contre 158). */
     val dialHeight = (dialRadius + dialStroke / 2 + dialLabelGap + dialLabelBand) * 2
     val dialCenterY = dialHeight / 2
+
+    /**
+     * Centre de l'anneau réduit à l'échelle [ringScale] : seul l'anneau se réduit, l'écart et la bande
+     * des étiquettes gardent leur taille, celle du texte (2026-10-30). La zone mesure le double.
+     */
+    fun dialCenterYFor(ringScale: Float): Dp = (dialRadius + dialStroke / 2) * ringScale + dialLabelGap + dialLabelBand
+
+    /**
+     * Marge entre une étiquette du cadran et les bords gauche et droit de sa carte, et plus petite
+     * échelle de l'anneau (décision de Mehdi du 2026-10-30, après essai : dans la carte, une étiquette
+     * n'avait plus la place de se poser à côté d'une poignée sur un côté, et glissait contre elle et
+     * contre le bord). L'anneau se réduit pour que l'étiquette la plus large tienne à côté de lui,
+     * sans descendre sous [DIAL_MIN_RING_SCALE] : en dessous, les étiquettes glissent le long de l'anneau.
+     * Une étiquette posée sur un côté s'écarte de [dialLabelSideGap] de plus que l'écart à l'anneau :
+     * son texte fait face au bout de l'arc, sans l'interligne qui l'aère en haut et en bas (essai sur
+     * appareil du 2026-10-30 : à 18 h pile, « 18:00 » semblait collé à la poignée).
+     */
+    val dialLabelEdgeMargin = 6.dp
+    val dialLabelSideGap = 4.dp
+    const val DIAL_MIN_RING_SCALE = 0.75f
 
     /** Poignées (rayon 10) et point de l'heure actuelle (rayon 4). */
     val dialHandleRadius = 10.dp
@@ -496,16 +523,24 @@ object NiumiDimens {
     val dialCenterLabelGap = 2.dp
 
     /**
-     * Haut d'écran → cadran → carte d'état → onglets → pastilles → lignes. Réglés après essai sur
-     * appareil (décisions de Mehdi du 2026-10-25) : le cadran, élément principal, descend de 32 sous la
-     * marge d'écran (collé à la barre d'état sinon) ; les autres espaces, 18, 30, 14 et 34 dans les
-     * maquettes 16 et 18, sont resserrés pour « réduire le vide ».
+     * Accueil en cartes (maquettes de Mehdi du 2026-10-30) : carte du cadran 20 sous la marge du haut
+     * (32 avant, sans carte), puis 12 entre chaque carte : cadran, carte d'état, jours, lignes. Dans
+     * la carte des jours, 6 entre la ligne du titre et les pastilles.
      */
-    val homeDialTop = 32.dp
+    val homeDialTop = 20.dp
     val homeCardTop = 12.dp
-    val homeTabsTop = 8.dp
-    val homeDaysTop = 0.dp
-    val homeRowsTop = 20.dp
+    val homeSectionGap = 12.dp
+    val homeDaysHeaderGap = 6.dp
+
+    /**
+     * Carte de section de l'accueil (maquettes du 2026-10-30) : coins de la carte, marges intérieures
+     * propres à chaque carte (cadran 4 en haut et en bas ; jours 12, 16, 14 ; lignes 16 sur les
+     * côtés). L'ombre « décalage 2, flou 10, noir à 6 % » est approchée par une élévation de 3.
+     */
+    val sectionCardDialPadding = PaddingValues(vertical = 4.dp)
+    val sectionCardDaysPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 14.dp)
+    val sectionCardRowsPadding = PaddingValues(horizontal = 16.dp)
+    val sectionCardElevation = 3.dp
 
     /** Ligne « Applications bloquées » et ligne « Sonnerie » : 86 et 78 dans les maquettes, resserrées de même. */
     val homeAppsRowHeight = 76.dp

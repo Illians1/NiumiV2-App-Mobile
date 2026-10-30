@@ -1,5 +1,6 @@
 package com.niumi.feature.session.home
 
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -10,6 +11,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -23,14 +25,25 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.apps.common.testing.accessibility.framework.AccessibilityViewCheckResult
+import com.google.android.apps.common.testing.accessibility.framework.checks.TouchTargetSizeCheck
+import com.google.android.apps.common.testing.accessibility.framework.integrations.espresso.AccessibilityValidator
+import com.google.android.apps.common.testing.accessibility.framework.uielement.ViewHierarchyElement
 import com.google.common.truth.Truth.assertThat
 import com.niumi.designsystem.ui.theme.NiumiTheme
 import com.niumi.feature.session.tabs.MainTabTexts
 import com.niumi.feature.session.ui.AlarmSoundSummary
+import org.hamcrest.Description
+import org.hamcrest.TypeSafeMatcher
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.google.android.apps.common.testing.accessibility.framework.replacements.Rect as AtfRect
 
 /**
  * Accueil (maquettes 15 à 18, étape 45) : les trois états, le cadenas et la bulle en session, la
@@ -85,7 +98,19 @@ class HomeScreenTest {
         dark: Boolean = false,
     ) {
         composeRule.setContent { NiumiTheme(dark = dark) { HomeScreen(state = state, actions = actions) } }
-        composeRule.enableAccessibilityChecks()
+        val minimum =
+            with(Density(InstrumentationRegistry.getInstrumentation().targetContext)) { MIN_TOUCH_DP.dp.toPx() }
+        val largeTargets =
+            composeRule
+                .onAllNodes(hasClickAction())
+                .fetchSemanticsNodes()
+                .filter { it.size.width >= minimum && it.size.height >= minimum }
+                .map { Rect(it.positionOnScreen, it.size.toSize()) }
+        composeRule.enableAccessibilityChecks(
+            AccessibilityValidator()
+                .setRunChecksFromRootView(true)
+                .setSuppressingResultMatcher(touchTargetExceptions(largeTargets)),
+        )
         composeRule.onRoot().tryPerformAccessibilityChecks()
     }
 
@@ -206,6 +231,51 @@ class HomeScreenTest {
     }
 
     private companion object {
+        /**
+         * Deux exceptions au seul contrôle de zone de toucher d'Accessibility Test Framework, qui
+         * mesure la part visible d'un élément, parfois sur un nœud sans nom qu'il ajoute au-dessus
+         * de l'élément de Compose (on reconnaît celui-ci parmi ses enfants) :
+         *
+         * - les pastilles de jour : les maquettes du 2026-10-30 les dessinent presque collées dans la
+         *   carte des jours, où sept zones de 48 ne tiennent pas (`POINTS-OUVERTS.md` M21). Chacune
+         *   se touche sur son créneau, 44 à 45 de large ;
+         * - une part d'un élément touchable de Compose d'au moins 48 × 48 ([largeTargets], ses
+         *   limites entières) dont la barre d'onglets cache le reste : le contenu défile sous la
+         *   barre (décision de Mehdi du 2026-10-25).
+         */
+        fun touchTargetExceptions(largeTargets: List<Rect>) =
+            object : TypeSafeMatcher<AccessibilityViewCheckResult>() {
+                override fun matchesSafely(result: AccessibilityViewCheckResult): Boolean {
+                    val element = result.element
+                    return result.accessibilityHierarchyCheck == TouchTargetSizeCheck::class.java &&
+                        element != null &&
+                        (element.isOrHoldsDayChip() || largeTargets.any { it.holds(element.boundsInScreen) })
+                }
+
+                override fun describeTo(description: Description) {
+                    description.appendText("pastille de jour, ou part visible d'un grand élément touchable")
+                }
+            }
+
+        private fun ViewHierarchyElement.children(): List<ViewHierarchyElement> =
+            (0 until childViewCount).mapNotNull { index -> getChildView(index) }
+
+        private fun ViewHierarchyElement.isDayChip(): Boolean =
+            HomeTexts.DAY_NAMES.any { day -> contentDescription?.toString()?.startsWith(day) == true }
+
+        private fun ViewHierarchyElement.isOrHoldsDayChip(): Boolean =
+            (listOf(this) + children()).any { it.isDayChip() }
+
+        private fun Rect.holds(bounds: AtfRect): Boolean =
+            inflate(BOUNDS_TOLERANCE_PX).let {
+                it.left <= bounds.left && it.top <= bounds.top && it.right >= bounds.right && it.bottom >= bounds.bottom
+            }
+
+        /** Arrondis entre les limites de Compose et celles de l'outil, en pixels. */
+        const val BOUNDS_TOLERANCE_PX = 4f
+
+        const val MIN_TOUCH_DP = 48
+
         val isTab = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
         const val BEDTIME = 22 * 60 + 30
         const val WAKE = 7 * 60

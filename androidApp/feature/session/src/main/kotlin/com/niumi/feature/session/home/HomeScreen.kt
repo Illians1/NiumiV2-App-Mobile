@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -50,6 +49,7 @@ import com.niumi.designsystem.component.NiumiDial
 import com.niumi.designsystem.component.NiumiFieldState
 import com.niumi.designsystem.component.NiumiMoreAppsSlot
 import com.niumi.designsystem.component.NiumiScreenScaffold
+import com.niumi.designsystem.component.NiumiSectionCard
 import com.niumi.designsystem.component.NiumiSegmentedTabs
 import com.niumi.designsystem.component.NiumiSwitch
 import com.niumi.designsystem.component.NiumiTimePickerDialog
@@ -75,8 +75,9 @@ import java.time.LocalTime
  * Écran 6 · Accueil (`design-plan/SPECIFICATION.md` §9, maquettes 15 à 20 ; étape 45) : cadran,
  * carte d'état, onglets « Ponctuel / Quotidien », pastilles des jours, lignes « Applications
  * bloquées » et « Sonnerie », puis la barre d'onglets du bas, « Réveil » choisi (décision de Mehdi
- * du 2026-10-25, qui retire l'icône des réglages du haut). Sur un écran trop court, le contenu
- * défile sous la barre, qui le laisse deviner par son haut translucide. La bulle du bas (M10) se
+ * du 2026-10-25, qui retire l'icône des réglages du haut). Depuis les maquettes du 2026-10-30, le
+ * cadran, le bloc des jours et les deux lignes sont chacun dans une carte de section. Sur un écran
+ * trop court, le contenu défile sous la barre, qui le laisse deviner par son haut translucide. La bulle du bas (M10) se
  * pose au-dessus de la barre et disparaît au toucher suivant, où qu'il soit.
  */
 @Composable
@@ -168,66 +169,22 @@ private fun HomeContent(
             HomeMode.NothingArmed, HomeMode.Scheduled -> NiumiFieldState.Normal
         }
     Spacer(modifier = Modifier.height(NiumiDimens.homeDialTop))
-    NiumiDial(
-        state = dialStateOf(state),
-        texts = DialTexts(bedtime = HomeTexts.BEDTIME, wake = HomeTexts.WAKE, chooseTime = HomeTexts.CHOOSE_TIME),
-        onTimeChanged = actions.onTimeChanged,
-        onTap = actions.onDialTapped,
-    )
+    NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
+        NiumiDial(
+            state = dialStateOf(state),
+            texts = DialTexts(bedtime = HomeTexts.BEDTIME, wake = HomeTexts.WAKE, chooseTime = HomeTexts.CHOOSE_TIME),
+            onTimeChanged = actions.onTimeChanged,
+            onTap = actions.onDialTapped,
+        )
+    }
     Spacer(modifier = Modifier.height(NiumiDimens.homeCardTop))
     StatusCard(state, actions)
-    Spacer(modifier = Modifier.height(NiumiDimens.homeTabsTop))
-    DaysHeader(state, fieldState, actions)
-    Spacer(modifier = Modifier.height(NiumiDimens.homeDaysTop))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        HomeTexts.DAY_LABELS.forEachIndexed { index, label ->
-            val isoDay = index + 1
-            NiumiDayChip(
-                label = label,
-                accessibilityLabel = HomeTexts.DAY_NAMES[index],
-                checked = isoDay in state.enabledIsoDays,
-                onToggle = { actions.onDayToggled(isoDay) },
-                state = fieldState,
-                onLockedClick = actions.onLockedTouch,
-            )
-        }
-    }
-    Spacer(modifier = Modifier.height(NiumiDimens.homeRowsTop))
-    AppsRow(state, fieldState, onOpen = if (state.isLocked) actions.onLockedTouch else actions.onOpenApps)
-    RingtoneRow(state.ringtone, greyed = state.mode == HomeMode.Disabled, onOpen = actions.onOpenRingtone)
-}
-
-/**
- * Ligne au-dessus des pastilles (décision de Mehdi du 2026-10-26, non dessinée) : le titre
- * « Jours de réveil » à gauche, comme ceux des lignes du bas, et les onglets segmentés
- * « Ponctuel » et « Quotidien » à droite. Le titre est un intitulé pour TalkBack, lu avant les sept jours.
- */
-@Composable
-private fun DaysHeader(
-    state: HomeUiState,
-    fieldState: NiumiFieldState,
-    actions: HomeActions,
-) {
-    val palette = LocalNiumiPalette.current
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = HomeTexts.WAKE_DAYS,
-            style = NiumiType.body16,
-            color = if (fieldState == NiumiFieldState.Normal) palette.ink else palette.border,
-            modifier = Modifier.weight(1f).semantics { heading() },
-        )
-        NiumiSegmentedTabs(
-            labels = listOf(HomeTexts.ONE_OFF, HomeTexts.DAILY),
-            selectedIndex =
-                when (state.dayMode) {
-                    DayMode.ONE_OFF -> 0
-                    DayMode.DAILY -> 1
-                    DayMode.CUSTOM -> null
-                },
-            onSelect = { index -> actions.onDayModeSelected(if (index == 0) DayMode.ONE_OFF else DayMode.DAILY) },
-            state = fieldState,
-            onLockedClick = actions.onLockedTouch,
-        )
+    Spacer(modifier = Modifier.height(NiumiDimens.homeSectionGap))
+    HomeDaysCard(state, fieldState, actions)
+    Spacer(modifier = Modifier.height(NiumiDimens.homeSectionGap))
+    NiumiSectionCard(contentPadding = NiumiDimens.sectionCardRowsPadding) {
+        AppsRow(state, fieldState, onOpen = if (state.isLocked) actions.onLockedTouch else actions.onOpenApps)
+        RingtoneRow(state.ringtone, greyed = state.mode == HomeMode.Disabled, onOpen = actions.onOpenRingtone)
     }
 }
 
@@ -326,7 +283,10 @@ private fun StatusCard(
     }
 }
 
-/** Ligne « Applications bloquées » : titre et icônes à gauche, nombre et chevron ou cadenas. */
+/**
+ * Ligne « Applications bloquées » : titre et icônes à gauche, nombre et chevron ou cadenas. Première
+ * ligne de sa carte : pas de trait au-dessus (maquettes du 2026-10-30).
+ */
 @Composable
 private fun AppsRow(
     state: HomeUiState,
@@ -336,7 +296,6 @@ private fun AppsRow(
     val palette = LocalNiumiPalette.current
     val greyed = fieldState != NiumiFieldState.Normal
     val count = state.apps.size
-    HorizontalDivider(thickness = NiumiDimens.hairline, color = palette.separator)
     Row(
         modifier =
             Modifier

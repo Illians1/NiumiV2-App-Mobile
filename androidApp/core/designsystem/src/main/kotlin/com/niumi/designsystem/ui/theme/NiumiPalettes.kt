@@ -13,8 +13,9 @@ import androidx.compose.ui.graphics.Color
 object NiumiPalettes {
     val Light =
         NiumiPalette(
-            // « Fond d'écran »
-            background = Color(0xFFFAFAF8),
+            // « Fond d'écran » : #ECEDEE depuis les maquettes de Mehdi du 2026-10-30 (accueil en
+            // cartes), étendu à tous les écrans clairs le même jour (décision de Mehdi).
+            background = Color(0xFFECEDEE),
             // « Surface »
             surface = Color(0xFFFFFFFF),
             // « Encre »
@@ -58,6 +59,10 @@ object NiumiPalettes {
             mismatchTint = Color(0xFFFCF1DF),
             // « Désactivé » : bord des jours non cochés de l'accueil « Réveil désactivé » (maquette 13).
             disabledBorder = Color(0xFFC6C6C2),
+            // Carte de section (maquettes 15 à 29 et 61 à 65 du 2026-10-30) : sans bord, une ombre
+            // « décalage 2, flou 10, noir à 6 % » la détache du fond.
+            sectionCardOutline = Color.Transparent,
+            sectionCardShadow = Color.Black,
         )
 
     val Dark =
@@ -106,6 +111,10 @@ object NiumiPalettes {
             mismatchTint = Color(0xFF3D2C0E),
             // « Bord de menu » : aussi le bord des jours non cochés verrouillés en session (maquette 15).
             disabledBorder = Color(0xFF3A3A40),
+            // « Bord de carte de section » (maquettes 17, 24 à 26 et 29 du 2026-10-30) : le liseré
+            // des feuilles ; aucune ombre en sombre.
+            sectionCardOutline = Color(0xFF2E2E33),
+            sectionCardShadow = Color.Transparent,
         )
 
     /**

@@ -28,12 +28,17 @@ data class LabelBox(
     }
 
     fun inside(space: DialLabelSpace): Boolean =
-        left >= 0f && top >= 0f && right <= space.width && bottom <= space.height
+        left >= space.horizontalMargin &&
+            top >= 0f &&
+            right <= space.width - space.horizontalMargin &&
+            bottom <= space.height
 }
 
 /**
  * La zone où placer les étiquettes : ses dimensions, le centre de l'anneau, la distance au centre en
- * deçà de laquelle une étiquette toucherait l'anneau ([clearRadius] : rayon, demi-trait et écart).
+ * deçà de laquelle une étiquette toucherait l'anneau ([clearRadius] : rayon, demi-trait et écart), et
+ * la marge à garder avec ses bords gauche et droit ([horizontalMargin], bords de la carte), et
+ * l'écart supplémentaire d'une étiquette posée sur un côté de l'anneau ([sideGap]).
  */
 data class DialLabelSpace(
     val width: Float,
@@ -41,6 +46,8 @@ data class DialLabelSpace(
     val centerX: Float,
     val centerY: Float,
     val clearRadius: Float,
+    val horizontalMargin: Float = 0f,
+    val sideGap: Float = 0f,
 )
 
 /**
@@ -63,6 +70,22 @@ object DialLabelLayout {
     private const val CENTERED_SINE = 0.3f
     private const val HALF_TURN = 180f
     private const val FULL_TURN = 360f
+
+    /**
+     * Échelle de l'anneau dans une zone de [zoneWidth] (décision de Mehdi du 2026-10-30) : 1 au plus,
+     * réduite pour qu'une étiquette de [labelWidth] tienne entre l'anneau ([ringOuterRadius] à
+     * l'échelle 1, rayon et demi-trait), l'écart [gap] (sur un côté : écart à l'anneau et écart
+     * supplémentaire) et la marge [edgeMargin] au bord de la zone, [minScale] au moins.
+     */
+    @Suppress("LongParameterList") // Les mesures du calcul, toutes dans la même unité.
+    fun ringScale(
+        zoneWidth: Float,
+        labelWidth: Float,
+        ringOuterRadius: Float,
+        gap: Float,
+        edgeMargin: Float,
+        minScale: Float,
+    ): Float = ((zoneWidth / 2 - labelWidth - gap - edgeMargin) / ringOuterRadius).coerceIn(minScale, 1f)
 
     fun place(
         degrees: Float,
@@ -162,7 +185,7 @@ object DialLabelLayout {
         val dy = -cos(radians).toFloat()
 
         fun boxAtRadius(radius: Float) =
-            boxFor(space.centerX + radius * dx, space.centerY + radius * dy, dx, size.first, size.second)
+            boxFor(space.centerX + radius * dx, space.centerY + radius * dy, dx, size, space.sideGap)
         var low = space.clearRadius
         var high = space.clearRadius + MAX_EXTRA_RADIUS
         if (boxAtRadius(low).distanceFrom(space.centerX, space.centerY) >= space.clearRadius) return boxAtRadius(low)
@@ -183,14 +206,15 @@ object DialLabelLayout {
         anchorX: Float,
         anchorY: Float,
         horizontal: Float,
-        width: Float,
-        height: Float,
+        size: Pair<Float, Float>,
+        sideGap: Float,
     ): LabelBox {
+        val (width, height) = size
         val left =
             when {
                 abs(horizontal) < CENTERED_SINE -> anchorX - width / 2
-                horizontal < 0 -> anchorX - width
-                else -> anchorX
+                horizontal < 0 -> anchorX - width - sideGap
+                else -> anchorX + sideGap
             }
         val top = anchorY - height / 2
         return LabelBox(left, top, left + width, top + height)
@@ -202,7 +226,11 @@ object DialLabelLayout {
     ): LabelBox {
         val width = box.right - box.left
         val height = box.bottom - box.top
-        val left = box.left.coerceIn(0f, (space.width - width).coerceAtLeast(0f))
+        val left =
+            box.left.coerceIn(
+                space.horizontalMargin,
+                (space.width - space.horizontalMargin - width).coerceAtLeast(space.horizontalMargin),
+            )
         val top = box.top.coerceIn(0f, (space.height - height).coerceAtLeast(0f))
         return LabelBox(left, top, left + width, top + height)
     }

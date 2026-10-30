@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import com.niumi.designsystem.drawing.DialGeometry
 import com.niumi.designsystem.drawing.DialHandle
+import com.niumi.designsystem.drawing.DialLabelLayout
 import com.niumi.designsystem.format.NiumiTimeFormat
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
@@ -76,9 +77,12 @@ import kotlin.math.sin
  * réglage (« Coucher », « 22:30 ») que TalkBack fait avancer de 5 minutes, et dont le double toucher
  * ouvre le sélecteur ; en session, sans poignées, le cadran annonce ses deux heures.
  *
- * Zone de 366 × 340 qui déborde de 12 sur les marges de l'écran, réduite proportionnellement sur un
- * écran plus étroit (LISEZ-MOI : les écrans s'adaptent aux autres tailles). Les étiquettes ne touchent
- * jamais l'anneau ni l'autre étiquette : `DialLabelLayout`.
+ * Zone de la largeur de sa carte de section (maquettes du 2026-10-30 : plus de débordement sur les
+ * marges). L'anneau s'y réduit juste assez pour que l'étiquette la plus large tienne à côté d'une
+ * poignée posée sur un côté, à 6 du bord, sans descendre sous les trois quarts de sa taille
+ * (décision de Mehdi du 2026-10-30, après essai) ; la bande des étiquettes, au-dessus et au-dessous,
+ * garde sa hauteur. Les étiquettes ne touchent jamais l'anneau ni l'autre étiquette, et restent
+ * dans la zone : `DialLabelLayout`.
  */
 @Suppress("LongParameterList") // Convention Compose : les paramètres d'un composant sont son API.
 @Composable
@@ -89,22 +93,44 @@ fun NiumiDial(
     onTap: (DialHandle) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val overflow = NiumiDimens.dialOverflow
-    BoxWithConstraints(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .layout { measurable, constraints ->
-                    val extra = overflow.roundToPx()
-                    val width = constraints.maxWidth + 2 * extra
-                    val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra, 0) }
-                },
-    ) {
-        val scale = min(1f, maxWidth / NiumiDimens.dialWidth)
-        DialBody(state, texts, scale, onTimeChanged, onTap)
+    val measurer = rememberTextMeasurer()
+    val labelWidth = remember(texts, measurer) { widestLabel(measurer, texts) }
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val scale =
+            with(LocalDensity.current) {
+                min(
+                    maxWidth / NiumiDimens.dialFitWidth,
+                    DialLabelLayout.ringScale(
+                        zoneWidth = maxWidth.toPx(),
+                        labelWidth = labelWidth,
+                        ringOuterRadius = (NiumiDimens.dialRadius + NiumiDimens.dialStroke / 2).toPx(),
+                        gap = (NiumiDimens.dialLabelGap + NiumiDimens.dialLabelSideGap).toPx(),
+                        edgeMargin = NiumiDimens.dialLabelEdgeMargin.toPx(),
+                        minScale = NiumiDimens.DIAL_MIN_RING_SCALE,
+                    ),
+                )
+            }
+        DialBody(state, texts, scale, measurer, onTimeChanged, onTap)
     }
 }
+
+/**
+ * Largeur, en pixels, de l'étiquette la plus large possible : le plus long des deux libellés, ou
+ * l'heure la plus longue (chiffres de même largeur en IBM Plex Sans). Elle ne dépend pas de l'heure,
+ * pour que l'anneau ne change pas de taille pendant un glisser.
+ */
+private fun widestLabel(
+    measurer: TextMeasurer,
+    texts: DialTexts,
+): Float =
+    maxOf(
+        measurer.measure(texts.bedtime, NiumiType.caption13).size.width,
+        measurer.measure(texts.wake, NiumiType.caption13).size.width,
+        measurer.measure(WIDEST_CLOCK, NiumiType.dialHour17).size.width,
+    ).toFloat()
+
+/** Heure de cinq caractères, la plus longue que le cadran écrit. */
+private const val WIDEST_CLOCK = "00:00"
 
 /** Glisser en cours : la poignée et l'heure qu'elle montre. */
 private data class DialDrag(
@@ -118,12 +144,12 @@ private fun DialBody(
     state: DialState,
     texts: DialTexts,
     scale: Float,
+    measurer: TextMeasurer,
     onTimeChanged: (DialHandle, Int) -> Unit,
     onTap: (DialHandle) -> Unit,
 ) {
     val palette = LocalNiumiPalette.current
     val density = LocalDensity.current
-    val measurer = rememberTextMeasurer()
     val touchSlop = LocalViewConfiguration.current.touchSlop
     var drag by remember { mutableStateOf<DialDrag?>(null) }
     val current by rememberUpdatedState(state)
@@ -132,7 +158,7 @@ private fun DialBody(
 
     val bedtime = drag?.takeIf { it.handle == DialHandle.BEDTIME }?.minutes ?: state.bedtimeMinutes
     val wake = drag?.takeIf { it.handle == DialHandle.WAKE }?.minutes ?: state.wakeMinutes
-    val height = NiumiDimens.dialHeight * scale
+    val height = NiumiDimens.dialCenterYFor(scale) * 2
     val hasHandles = state !is DialState.InSession
 
     Box(modifier = Modifier.fillMaxWidth().height(height)) {
@@ -265,7 +291,7 @@ private fun DialCenter(
             modifier
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(constraints)
-                    val centerY = (NiumiDimens.dialCenterY * scale).roundToPx()
+                    val centerY = NiumiDimens.dialCenterYFor(scale).roundToPx()
                     layout(placeable.width, placeable.height) {
                         placeable.place(0, centerY - placeable.height / 2)
                     }
@@ -345,12 +371,14 @@ private fun BoxScope.HandleNode(
 @Composable
 private fun NiumiDialScheduledPreview() {
     NiumiPreviewFrame(dark = false) {
-        NiumiDial(
-            state = DialState.Scheduled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil dans", "9 h 26"),
-            texts = PREVIEW_TEXTS,
-            onTimeChanged = { _, _ -> },
-            onTap = {},
-        )
+        NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
+            NiumiDial(
+                state = DialState.Scheduled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil dans", "9 h 26"),
+                texts = PREVIEW_TEXTS,
+                onTimeChanged = { _, _ -> },
+                onTap = {},
+            )
+        }
     }
 }
 
@@ -358,12 +386,14 @@ private fun NiumiDialScheduledPreview() {
 @Composable
 private fun NiumiDialDisabledPreview() {
     NiumiPreviewFrame(dark = false) {
-        NiumiDial(
-            state = DialState.Disabled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil", "Désactivé"),
-            texts = PREVIEW_TEXTS,
-            onTimeChanged = { _, _ -> },
-            onTap = {},
-        )
+        NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
+            NiumiDial(
+                state = DialState.Disabled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil", "Désactivé"),
+                texts = PREVIEW_TEXTS,
+                onTimeChanged = { _, _ -> },
+                onTap = {},
+            )
+        }
     }
 }
 
@@ -371,12 +401,14 @@ private fun NiumiDialDisabledPreview() {
 @Composable
 private fun NiumiDialInSessionPreview() {
     NiumiPreviewFrame(dark = true) {
-        NiumiDial(
-            state = DialState.InSession(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_NIGHT, "Réveil dans", "7 h 50"),
-            texts = PREVIEW_TEXTS,
-            onTimeChanged = { _, _ -> },
-            onTap = {},
-        )
+        NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
+            NiumiDial(
+                state = DialState.InSession(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_NIGHT, "Réveil dans", "7 h 50"),
+                texts = PREVIEW_TEXTS,
+                onTimeChanged = { _, _ -> },
+                onTap = {},
+            )
+        }
     }
 }
 

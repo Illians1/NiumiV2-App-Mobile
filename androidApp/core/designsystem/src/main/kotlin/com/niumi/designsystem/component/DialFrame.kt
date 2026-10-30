@@ -33,8 +33,9 @@ import kotlin.math.sin
 // Repère et dessin du cadran de l’accueil (VALEURS-DE-DESIGN.md §5), séparés de son composant `NiumiDial`.
 
 /**
- * Repère du cadran dans une zone de [width] pixels : centre horizontal, centre vertical à 158 × [scale],
- * rayon et trait réduits avec la zone. [density] convertit les dp des valeurs de design.
+ * Repère du cadran dans une zone de [width] pixels : centre horizontal ; rayon, trait et poignées
+ * réduits à l'échelle [scale] de l'anneau ; centre vertical sous la bande des étiquettes, qui ne se
+ * réduit pas (`NiumiDimens.dialCenterYFor`). [density] convertit les dp des valeurs de design.
  */
 internal class DialFrame(
     width: Float,
@@ -42,7 +43,7 @@ internal class DialFrame(
     private val density: Float,
 ) {
     val centerX = width / 2
-    val centerY = px(NiumiDimens.dialCenterY)
+    val centerY = NiumiDimens.dialCenterYFor(scale).value * density
     val radius = px(NiumiDimens.dialRadius)
     val stroke = px(NiumiDimens.dialStroke)
 
@@ -102,7 +103,8 @@ internal fun DrawScope.drawDial(
         is DialState.InSession -> {
             val elapsed = min(DialGeometry.elapsedMinutes(bedtime, state.nowMinutes) * DEGREES_PER_MINUTE, sweep)
             drawAmberFill(frame, bedtime, elapsed, sweep, palette.amber)
-            drawCircle(palette.background, dotRadius, now)
+            // Sur l'ambre, la couleur de la carte du cadran (maquettes du 2026-10-30), comme un trou.
+            drawCircle(palette.surface, dotRadius, now)
             drawNowArrow(frame, state.nowMinutes, palette.ink)
         }
 
@@ -269,7 +271,9 @@ internal fun DrawScope.drawLabels(
             height = size.height,
             centerX = frame.centerX,
             centerY = frame.centerY,
-            clearRadius = frame.radius + frame.stroke / 2 + frame.px(NiumiDimens.dialLabelGap),
+            clearRadius = frame.radius + frame.stroke / 2 + NiumiDimens.dialLabelGap.toPx(),
+            horizontalMargin = NiumiDimens.dialLabelEdgeMargin.toPx(),
+            sideGap = NiumiDimens.dialLabelSideGap.toPx(),
         )
     val (bedtimeBox, wakeBox) =
         DialLabelLayout.placeBoth(

@@ -74,6 +74,8 @@ class NiumiPaletteTest {
             "texteSurBoutonPrincipal" to listOf(NiumiPalette::onInk),
             "voile" to listOf(NiumiPalette::veil),
             "lisereFeuille" to listOf(NiumiPalette::sheetOutline),
+            // Maquettes du 2026-10-30 : bord des cartes du cadran, des jours et des lignes de l'accueil.
+            "bordCarteDeSection" to listOf(NiumiPalette::sectionCardOutline),
         )
 
     /**
@@ -117,6 +119,11 @@ class NiumiPaletteTest {
         assertThat(NiumiPalettes.Light.menuBorder).isEqualTo(Color.Transparent)
         // En sombre, le texte secondaire posé sur l'encre claire (bouton ou carte blanc cassé).
         assertColorEquals("sombre.onInkSecondary", NiumiPalettes.Dark.onInkSecondary, "#5C5C60")
+        // Cartes de section (maquettes du 2026-10-30) : en clair, une ombre noire et pas de bord ;
+        // en sombre, pas d'ombre (le bord vient du JSON).
+        assertThat(NiumiPalettes.Light.sectionCardOutline).isEqualTo(Color.Transparent)
+        assertThat(NiumiPalettes.Light.sectionCardShadow).isEqualTo(Color.Black)
+        assertThat(NiumiPalettes.Dark.sectionCardShadow).isEqualTo(Color.Transparent)
     }
 
     @Test
@@ -127,7 +134,7 @@ class NiumiPaletteTest {
                 .filterNot { Modifier.isStatic(it.modifiers) }
                 .map { it.name }
                 .toSet()
-        val explicit = setOf("sheetOutline", "menuBorder")
+        val explicit = setOf("sheetOutline", "menuBorder", "sectionCardOutline", "sectionCardShadow")
         val lightCovered =
             lightRoles.values
                 .flatten()
@@ -137,9 +144,9 @@ class NiumiPaletteTest {
             darkRoles.values
                 .flatten()
                 .map { it.name }
-                .toSet() + "onInkSecondary"
+                .toSet() + "onInkSecondary" + "sectionCardShadow"
 
-        assertThat(roles).hasSize(22)
+        assertThat(roles).hasSize(24)
         assertWithMessage("rôles clairs sans origine").that(roles - lightCovered).isEmpty()
         assertWithMessage("rôles sombres sans origine").that(roles - darkCovered).isEmpty()
     }

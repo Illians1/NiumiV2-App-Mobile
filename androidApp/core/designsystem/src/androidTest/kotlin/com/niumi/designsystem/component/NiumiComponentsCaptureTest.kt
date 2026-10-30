@@ -57,6 +57,7 @@ class NiumiComponentsCaptureTest {
             "jours" to { dark -> DaysSample(dark) },
             "rangees" to { dark -> RowsSample(dark) },
             "cartes" to { _ -> CardsSample() },
+            "cartes-de-section" to { _ -> SectionCardsSample() },
             "haut" to { _ -> TopSample() },
         )
 
@@ -210,6 +211,17 @@ private fun RowsSample(dark: Boolean) {
     Column {
         NiumiListRow(title = "Applications bloquées", onClick = {}, state = other) { Text("6") }
         NiumiListRow(title = "Sonnerie", onClick = {}, state = other, bottomSeparator = true) { Text("Carillon") }
+    }
+}
+
+/** Cartes de section de l'accueil (maquettes du 2026-10-30) : ombre en clair, liseré en sombre. */
+@Composable
+private fun SectionCardsSample() {
+    NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDaysPadding) {
+        Text("Jours de réveil", style = NiumiType.body16)
+    }
+    NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDaysPadding) {
+        Text("Applications bloquées", style = NiumiType.body16)
     }
 }
 

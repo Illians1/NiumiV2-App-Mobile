@@ -58,4 +58,11 @@ data class NiumiPalette(
     val mismatchTint: Color,
     /** Bord d'un jour non coché grisé (accueil « Réveil désactivé ») ou verrouillé (session). */
     val disabledBorder: Color,
+    /**
+     * Bord d'un pixel d'une carte de section de l'accueil (cadran, jours, lignes ; maquettes du
+     * 2026-10-30) : aucun en clair, où seule l'ombre la détache ; liseré en sombre.
+     */
+    val sectionCardOutline: Color,
+    /** Couleur de l'ombre d'une carte de section : noire en clair, aucune en sombre. */
+    val sectionCardShadow: Color,
 )

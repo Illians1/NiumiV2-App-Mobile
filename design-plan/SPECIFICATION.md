@@ -222,7 +222,7 @@ Points à vérifier, détaillés dans `POINTS-OUVERTS.md` : limite de 50 applica
 
 ## 9. Écran 6 · Accueil
 
-Images : `15_ecran-6-reveil-desactive-arrivee-apres-l-ecran-4`, `16_ecran-6-reveil-prevu`, `17_ecran-6-session-en-cours-sombre`, `18_ecran-6-reveil-prevu-alarme-unique`, `19_ecran-6-selecteur-d-heure-onglet-coucher`, `20_ecran-6-selecteur-d-heure-onglet-reveil` (maquettes 15 à 17 mises à jour et 18 à 20 ajoutées le 25 octobre 2026). La maquette 17 régénérée ce jour-là écrit « Annuler la session » : c'est une régression, l'app garde « Annuler le réveil » (D23, `POINTS-OUVERTS.md` §5).
+Images : `15_ecran-6-reveil-desactive-arrivee-apres-l-ecran-4`, `16_ecran-6-reveil-prevu`, `17_ecran-6-session-en-cours-sombre`, `18_ecran-6-reveil-prevu-alarme-unique`, `19_ecran-6-selecteur-d-heure-onglet-coucher`, `20_ecran-6-selecteur-d-heure-onglet-reveil` (maquettes 15 à 17 mises à jour et 18 à 20 ajoutées le 25 octobre 2026). La maquette 17 régénérée ce jour-là écrit « Annuler la session » : c'est une régression, l'app garde « Annuler le réveil » (D23, `POINTS-OUVERTS.md` §5). Les maquettes 15 à 27, 29 et 61 à 65 ont été mises à jour le 30 octobre 2026 : l'accueil passe en cartes (ci-dessous).
 
 L'accueil récapitule le prochain réveil et permet de modifier tout ce qui peut l'être. Il a trois états.
 
@@ -239,6 +239,8 @@ L'accueil récapitule le prochain réveil et permet de modifier tout ce qui peut
 La barre d'onglets remplace l'icône des réglages, qui était en haut à droite (décision de Mehdi du 25 octobre 2026, nouvelle maquette 16). Les maquettes 15 à 18 et 24 ont été mises à jour le même jour : icône retirée, barre ajoutée, espaces et flèche de l'heure actuelle de l'app. La version sombre de la barre (maquettes 17 et 24) n'a pas été dessinée par Mehdi : elle reprend les couleurs du thème sombre (`VALEURS-DE-DESIGN.md` §4, à valider, `POINTS-OUVERTS.md` M17).
 
 Dans l'app, le cadran descend un peu sous le haut de l'écran et les espaces entre les éléments sont plus serrés que dans les maquettes ; l'écran défile sur les petits écrans (décision de Mehdi du 2026-10-25, après essai sur appareil : « réduire le vide » ; valeurs dans `VALEURS-DE-DESIGN.md` §4).
+
+**Accueil en cartes** (maquettes de Mehdi du 30 octobre 2026) : le cadran, le bloc « Jours de réveil » (titre, onglets et pastilles) et les deux lignes « Applications bloquées » et « Sonnerie » sont chacun dans une carte blanche aux coins arrondis, détachée du fond gris clair `#ECEDEE` par une ombre légère ; en session, ces cartes sont gris très foncé, avec un liseré fin, sans ombre. La carte d'état garde sa forme, entre la carte du cadran et celle des jours. Dans la carte des lignes, un seul trait, entre les deux lignes. Le cadran ne déborde plus sur les marges de l'écran : il tient dans sa carte, et son anneau y est un peu plus petit, pour que l'étiquette d'une poignée posée sur un côté tienne à côté d'elle (décision de Mehdi du 30 octobre 2026, après essai). Le fond `#ECEDEE` vaut pour tous les écrans clairs (décision de Mehdi du même jour), même ceux dont les maquettes montrent encore `#FAFAF8`. Valeurs dans `VALEURS-DE-DESIGN.md` §2 et §4 ; points à valider dans `POINTS-OUVERTS.md` M21.
 
 Le planning (interrupteur, jours, heures) commande le cadran, la carte, les onglets et les pastilles. La session en cours commande le verrouillage et le thème.
 
