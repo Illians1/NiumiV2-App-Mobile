@@ -75,6 +75,19 @@ class NiumiMarginsTest {
         assertThat(margins.calculateRightPadding(LayoutDirection.Ltr)).isEqualTo(24.dp)
     }
 
+    /** Contenu qui défile sous la bande du haut (accueil, 2026-10-30) : plus rien en haut, le reste inchangé. */
+    @Test
+    fun contentUnderTheTopBandHasNoTopMargin() {
+        val system = PaddingValues(start = 30.dp, top = 40.dp, bottom = 48.dp)
+
+        val margins = marginsAboveTabBar(system, LayoutDirection.Ltr, screen, keepTop = false)
+
+        assertThat(margins.calculateTopPadding()).isEqualTo(0.dp)
+        assertThat(margins.calculateBottomPadding()).isEqualTo(0.dp)
+        assertThat(margins.calculateLeftPadding(LayoutDirection.Ltr)).isEqualTo(30.dp)
+        assertThat(margins.calculateRightPadding(LayoutDirection.Ltr)).isEqualTo(24.dp)
+    }
+
     @Test
     fun theScreenMarginsAreThoseOfTheDesign() {
         assertThat(screen.calculateTopPadding()).isEqualTo(NiumiDimens.screenTop)

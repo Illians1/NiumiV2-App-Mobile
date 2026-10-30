@@ -3,6 +3,7 @@ package com.niumi.designsystem.component
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.max
 import com.niumi.designsystem.ui.theme.NiumiDimens
 
 /**
@@ -22,6 +24,37 @@ import com.niumi.designsystem.ui.theme.NiumiDimens
 @Composable
 fun niumiTabBarClearance(): Dp =
     NiumiDimens.tabBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+/**
+ * Hauteur de la bande du haut d'un écran dont le contenu défile sous elle : la marge du haut de la
+ * maquette ou la zone système, la plus grande des deux, comme `marginsOverSystemBars`. À ajouter au
+ * début du contenu qui défile, pour qu'il commence sous la bande.
+ */
+@Composable
+fun niumiTopClearance(): Dp = max(NiumiDimens.screenTop, WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding())
+
+/**
+ * Bande du haut, miroir de la barre d'onglets (demande de Mehdi du 2026-10-30, après essai) : fond
+ * [background] plein sur la barre d'état et la marge du haut, puis translucide sur ses
+ * [NiumiDimens.topFadeTranslucentHeight] du bas, du plein à [TOP_ALPHA], comme le haut de la barre
+ * d'onglets. Le contenu qui remonte passe dessous et s'y devine avant de disparaître, au lieu d'être
+ * coupé net. Sans ombre : la bande est de la couleur du fond. Elle ne prend aucun toucher.
+ */
+internal fun Modifier.niumiTopFade(background: Color): Modifier =
+    drawBehind {
+        val fade = NiumiDimens.topFadeTranslucentHeight.toPx().coerceAtMost(size.height)
+        drawRect(color = background, size = Size(size.width, size.height - fade))
+        drawRect(
+            brush =
+                Brush.verticalGradient(
+                    colors = listOf(background, background.copy(alpha = TOP_ALPHA)),
+                    startY = size.height - fade,
+                    endY = size.height,
+                ),
+            topLeft = Offset(0f, size.height - fade),
+            size = Size(size.width, fade),
+        )
+    }
 
 /**
  * Surface de la barre d'onglets, posée sur le contenu qui défile dessous (demande de Mehdi du

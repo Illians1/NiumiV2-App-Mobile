@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
@@ -32,12 +33,16 @@ import com.niumi.designsystem.ui.theme.NiumiType
  * contenu : elle prend le bas de l'écran à sa charge, barre système comprise (`marginsAboveTabBar`,
  * décision de Mehdi du 2026-10-25), et le contenu va jusqu'en bas, sous elle, pour se deviner à
  * travers son haut translucide. Le contenu qui défile finit alors par `niumiTabBarClearance()`.
+ * [contentUnderTop] fait de même en haut (accueil, demande de Mehdi du 2026-10-30) : le contenu
+ * monte jusqu'en haut de l'écran, sous une bande translucide en bas (`niumiTopFade`), et commence par
+ * `niumiTopClearance()`.
  */
 @Composable
 fun NiumiScreenScaffold(
     modifier: Modifier = Modifier,
     bottom: (@Composable ColumnScope.() -> Unit)? = null,
     navigationBar: (@Composable () -> Unit)? = null,
+    contentUnderTop: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val palette = LocalNiumiPalette.current
@@ -49,14 +54,28 @@ fun NiumiScreenScaffold(
                         .fillMaxSize()
                         .then(
                             if (navigationBar == null) {
-                                Modifier.marginsOver(WindowInsets.safeDrawing, NiumiDimens.screenMargins)
+                                Modifier.marginsOver(WindowInsets.safeDrawing, NiumiDimens.screenMargins, keepTop = !contentUnderTop)
                             } else {
-                                Modifier.marginsAboveTabBar(WindowInsets.safeDrawing, NiumiDimens.screenMargins)
+                                Modifier.marginsAboveTabBar(
+                                    WindowInsets.safeDrawing,
+                                    NiumiDimens.screenMargins,
+                                    keepTop = !contentUnderTop,
+                                )
                             },
                         ),
             ) {
                 Column(modifier = Modifier.weight(1f).fillMaxWidth(), content = content)
                 if (bottom != null) Column(modifier = Modifier.fillMaxWidth(), content = bottom)
+            }
+            if (contentUnderTop) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(niumiTopClearance())
+                            .niumiTopFade(palette.background),
+                )
             }
             if (navigationBar != null) Box(modifier = Modifier.align(Alignment.BottomCenter)) { navigationBar() }
         }

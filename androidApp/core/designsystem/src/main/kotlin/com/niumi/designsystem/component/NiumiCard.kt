@@ -23,7 +23,9 @@ import com.niumi.designsystem.ui.theme.NiumiType
  * Carte (VALEURS-DE-DESIGN.md §4 : coins de 14, bord d'un pixel). [filled] : fond encre et texte
  * sur encre, la carte « Réveil activé » (maquette 14) ; sinon fond `surface` et bord `border`, les
  * cartes « Réveil désactivé » et « Blocage en cours » (maquettes 13 et 15). Le contenu reçoit la
- * couleur de texte de la carte ; le texte secondaire posé sur l'encre est `onInkSecondary`.
+ * couleur de texte de la carte ; le texte secondaire posé sur l'encre est `onInkSecondary`. En
+ * clair, l'ombre des cartes de l'accueil ([niumiCardShadow]), depuis la dernière version des
+ * maquettes du 2026-10-30 ; aucune en sombre.
  */
 @Composable
 fun NiumiCard(
@@ -37,6 +39,7 @@ fun NiumiCard(
         modifier =
             modifier
                 .fillMaxWidth()
+                .niumiCardShadow(NiumiShapes.card, palette.sectionCardShadow)
                 .clip(NiumiShapes.card)
                 .background(if (filled) palette.ink else palette.surface)
                 .border(NiumiDimens.hairline, if (filled) palette.ink else palette.border, NiumiShapes.card)

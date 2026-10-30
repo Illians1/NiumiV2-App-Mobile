@@ -40,32 +40,50 @@ internal fun marginsOverSystemBars(
 /**
  * Marges d'un écran dont le bas est pris par la barre d'onglets (décision de Mehdi du 2026-10-25) :
  * côtés et haut comme [marginsOverSystemBars], rien en bas. La barre couvre la barre système de son
- * fond et le contenu s'arrête contre elle, comme dans la maquette 16.
+ * fond et le contenu s'arrête contre elle, comme dans la maquette 16. Sans [keepTop], rien en haut
+ * non plus : le contenu défile sous la bande du haut (`niumiTopFade`).
  */
 internal fun marginsAboveTabBar(
     system: PaddingValues,
     layoutDirection: LayoutDirection,
     margins: PaddingValues,
+    keepTop: Boolean = true,
 ): PaddingValues {
     val over = marginsOverSystemBars(system, layoutDirection, margins)
     return PaddingValues(
         start = over.calculateStartPadding(layoutDirection),
-        top = over.calculateTopPadding(),
+        top = if (keepTop) over.calculateTopPadding() else 0.dp,
         end = over.calculateEndPadding(layoutDirection),
         bottom = 0.dp,
     )
 }
 
-/** [marginsOverSystemBars] appliqué à un élément bord à bord, d'après les retraits [insets] de la fenêtre. */
+/**
+ * [marginsOverSystemBars] appliqué à un élément bord à bord, d'après les retraits [insets] de la
+ * fenêtre ; sans [keepTop], rien en haut (contenu qui défile sous la bande du haut).
+ */
 @Composable
 internal fun Modifier.marginsOver(
     insets: WindowInsets,
     margins: PaddingValues,
-): Modifier = padding(marginsOverSystemBars(insets.asPaddingValues(), LocalLayoutDirection.current, margins))
+    keepTop: Boolean = true,
+): Modifier {
+    val over = marginsOverSystemBars(insets.asPaddingValues(), LocalLayoutDirection.current, margins)
+    val direction = LocalLayoutDirection.current
+    return padding(
+        PaddingValues(
+            start = over.calculateStartPadding(direction),
+            top = if (keepTop) over.calculateTopPadding() else 0.dp,
+            end = over.calculateEndPadding(direction),
+            bottom = over.calculateBottomPadding(),
+        ),
+    )
+}
 
 /** [marginsAboveTabBar] appliqué à un élément bord à bord, d'après les retraits [insets] de la fenêtre. */
 @Composable
 internal fun Modifier.marginsAboveTabBar(
     insets: WindowInsets,
     margins: PaddingValues,
-): Modifier = padding(marginsAboveTabBar(insets.asPaddingValues(), LocalLayoutDirection.current, margins))
+    keepTop: Boolean = true,
+): Modifier = padding(marginsAboveTabBar(insets.asPaddingValues(), LocalLayoutDirection.current, margins, keepTop))

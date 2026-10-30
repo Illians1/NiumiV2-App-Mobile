@@ -58,6 +58,7 @@ import com.niumi.designsystem.component.TimePickerTexts
 import com.niumi.designsystem.component.appSlotCapacity
 import com.niumi.designsystem.component.appSlotLayout
 import com.niumi.designsystem.component.niumiTabBarClearance
+import com.niumi.designsystem.component.niumiTopClearance
 import com.niumi.designsystem.drawing.DialGeometry
 import com.niumi.designsystem.drawing.DialHandle
 import com.niumi.designsystem.format.NiumiTimeFormat
@@ -102,14 +103,18 @@ fun HomeScreen(
             },
     ) {
         NiumiScreenScaffold(
+            contentUnderTop = true,
             navigationBar = {
                 MainTabBar(selected = MainTab.WAKE, onWake = {}, onSettings = actions.onOpenSettings)
             },
         ) {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                // Le contenu monte sous la bande du haut, translucide en bas ; il commence sous elle.
+                Spacer(modifier = Modifier.height(niumiTopClearance()))
                 HomeContent(state, actions)
-                // Le contenu passe sous la barre ; sa fin doit pouvoir remonter au-dessus d'elle.
-                Spacer(modifier = Modifier.height(niumiTabBarClearance()))
+                // Le contenu passe sous la barre ; sa fin doit pouvoir remonter au-dessus d'elle, avec
+                // un espace pour que la dernière carte ne la touche pas.
+                Spacer(modifier = Modifier.height(niumiTabBarClearance() + NiumiDimens.homeScrollEndGap))
             }
         }
         state.message?.let { message ->

@@ -215,6 +215,25 @@ class NiumiShapesAndDimensTest {
         assertWithMessage("marges des lignes")
             .that(NiumiDimens.sectionCardRowsPadding.sides())
             .isEqualTo(margins("margesLignes"))
+        val shadow =
+            card.getValue("ombreClair").jsonArray.map { layer ->
+                val values = layer.jsonObject
+                fun value(field: String) = values.getValue(field).jsonPrimitive.content.toFloat()
+                listOf(value("decalageY"), value("flou"), value("opacite"))
+            }
+        assertWithMessage("ombre des cartes de l'accueil")
+            .that(NiumiDimens.cardShadow.map { listOf(it.offsetY.value, it.blur.value, it.alpha) })
+            .isEqualTo(shadow)
+    }
+
+    /**
+     * Accueil, écart aux maquettes demandé par Mehdi le 2026-10-30 après essai : cadran 14 sous la
+     * marge du haut ; 16 sous la dernière carte au bout du défilement.
+     */
+    @Test
+    fun homeSpacing() {
+        assertThat(NiumiDimens.homeDialTop.value).isEqualTo(14f)
+        assertThat(NiumiDimens.homeScrollEndGap.value).isEqualTo(16f)
     }
 
     /** Une forme ajoutée au design sans jeton ferait échouer ce test au lieu d'être oubliée. */

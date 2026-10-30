@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -128,6 +129,18 @@ private fun widestLabel(
         measurer.measure(texts.wake, NiumiType.caption13).size.width,
         measurer.measure(WIDEST_CLOCK, NiumiType.dialHour17).size.width,
     ).toFloat()
+
+/**
+ * Style de la valeur du centre (« 9 h 26 », « Désactivé ») pour un anneau réduit à [ringScale] :
+ * taille et interlettrage réduits dans la même proportion que l'anneau, pour garder l'écart de la
+ * maquette entre la valeur et la flèche de l'heure actuelle, posée à l'intérieur de l'anneau. À
+ * taille pleine, « 17 h 15 » touchait la flèche à 17 h sur un écran de 394 dp (anneau à 86 %,
+ * essai de Mehdi du 2026-10-30). Le libellé 14 au-dessus garde sa taille, qui reste lisible.
+ */
+internal fun dialValueStyle(
+    base: TextStyle,
+    ringScale: Float,
+): TextStyle = base.copy(fontSize = base.fontSize * ringScale, letterSpacing = base.letterSpacing * ringScale)
 
 /** Heure de cinq caractères, la plus longue que le cadran écrit. */
 private const val WIDEST_CLOCK = "00:00"
@@ -274,7 +287,10 @@ private fun DialState.dragged(
         DialGeometry.dragged(handle, wakeMinutes, bedtimeMinutes, delta)
     }
 
-/** Centre du cadran : libellé 14 au-dessus de la valeur 42 (ou 30 grisée pour « Désactivé »). */
+/**
+ * Centre du cadran : libellé 14 au-dessus de la valeur 42 (ou 30 grisée pour « Désactivé »), la
+ * valeur réduite avec l'anneau ([dialValueStyle]).
+ */
 @Composable
 private fun DialCenter(
     state: DialState,
@@ -303,7 +319,7 @@ private fun DialCenter(
             Spacer(modifier = Modifier.height(NiumiDimens.dialCenterLabelGap))
             Text(
                 text = state.centerValue,
-                style = if (disabled) NiumiType.dialDisabled30 else NiumiType.dial42,
+                style = dialValueStyle(if (disabled) NiumiType.dialDisabled30 else NiumiType.dial42, scale),
                 color = valueColor,
                 textAlign = TextAlign.Center,
             )

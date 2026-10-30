@@ -63,6 +63,6 @@ data class NiumiPalette(
      * 2026-10-30) : aucun en clair, où seule l'ombre la détache ; liseré en sombre.
      */
     val sectionCardOutline: Color,
-    /** Couleur de l'ombre d'une carte de section : noire en clair, aucune en sombre. */
+    /** Couleur de l'ombre des cartes de l'accueil (section et état) : noire en clair, aucune en sombre. */
     val sectionCardShadow: Color,
 )

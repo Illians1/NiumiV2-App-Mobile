@@ -32,6 +32,12 @@ object NiumiDimens {
     val screenMargins =
         PaddingValues(start = screenHorizontal, top = screenTop, end = screenHorizontal, bottom = screenBottom)
 
+    /**
+     * Espace sous la dernière carte de l'accueil, au bout du défilement : elle s'arrête 16 au-dessus
+     * de la barre d'onglets au lieu de la toucher (demande de Mehdi du 2026-10-30, après essai de 24).
+     */
+    val homeScrollEndGap = 16.dp
+
     /** Marges du contenu d'une feuille du bas : côtés et bas de l'écran, rien en haut (poignée). */
     val sheetMargins = PaddingValues(start = screenHorizontal, end = screenHorizontal, bottom = screenBottom)
 
@@ -523,11 +529,12 @@ object NiumiDimens {
     val dialCenterLabelGap = 2.dp
 
     /**
-     * Accueil en cartes (maquettes de Mehdi du 2026-10-30) : carte du cadran 20 sous la marge du haut
-     * (32 avant, sans carte), puis 12 entre chaque carte : cadran, carte d'état, jours, lignes. Dans
-     * la carte des jours, 6 entre la ligne du titre et les pastilles.
+     * Accueil en cartes (maquettes de Mehdi du 2026-10-30) : carte du cadran 14 sous la marge du haut
+     * (20 dans les maquettes ; demande de Mehdi du 2026-10-30 après essai de 20, 0 puis 8), puis 12
+     * entre chaque carte : cadran, carte d'état, jours, lignes. Dans la carte des jours, 6 entre la
+     * ligne du titre et les pastilles.
      */
-    val homeDialTop = 20.dp
+    val homeDialTop = 14.dp
     val homeCardTop = 12.dp
     val homeSectionGap = 12.dp
     val homeDaysHeaderGap = 6.dp
@@ -535,12 +542,23 @@ object NiumiDimens {
     /**
      * Carte de section de l'accueil (maquettes du 2026-10-30) : coins de la carte, marges intérieures
      * propres à chaque carte (cadran 4 en haut et en bas ; jours 12, 16, 14 ; lignes 16 sur les
-     * côtés). L'ombre « décalage 2, flou 10, noir à 6 % » est approchée par une élévation de 3.
+     * côtés).
      */
     val sectionCardDialPadding = PaddingValues(vertical = 4.dp)
     val sectionCardDaysPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 14.dp)
     val sectionCardRowsPadding = PaddingValues(horizontal = 16.dp)
-    val sectionCardElevation = 3.dp
+
+    /**
+     * Ombre des cartes de l'accueil en clair (cartes de section et carte d'état, dernière version des
+     * maquettes du 2026-10-30) : deux couches, comme le `box-shadow` des maquettes, une ombre nette et
+     * proche sous une ombre large et diffuse. Dessinée telle quelle (`Modifier.dropShadow`), sans
+     * l'approximation par une élévation des versions précédentes.
+     */
+    val cardShadow =
+        listOf(
+            NiumiShadowLayer(offsetY = 1.dp, blur = 2.dp, alpha = 0.10f),
+            NiumiShadowLayer(offsetY = 10.dp, blur = 30.dp, alpha = 0.18f),
+        )
 
     /** Ligne « Applications bloquées » et ligne « Sonnerie » : 86 et 78 dans les maquettes, resserrées de même. */
     val homeAppsRowHeight = 76.dp
@@ -595,6 +613,9 @@ object NiumiDimens {
     val tabBarShadowHeight = 12.dp
     val tabBarTranslucentHeight = 10.dp
 
+    /** Bas translucide de la bande du haut de l'accueil, miroir du haut de la barre d'onglets. */
+    val topFadeTranslucentHeight = 10.dp
+
     /** Tremblement d'un onglet « Bientôt » touché : 3 au plus de chaque côté (décision du 2026-10-25). */
     val tabBarShake = 3.dp
 
@@ -620,3 +641,14 @@ object NiumiDimens {
     val toastPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
     val toastElevation = 10.dp
 }
+
+/**
+ * Une couche d'ombre d'une maquette (`box-shadow: 0 <offsetY> <blur> rgba(0, 0, 0, <alpha>)`) :
+ * décalage vers le bas, rayon de flou et opacité de la couleur d'ombre. Ni décalage horizontal ni
+ * étalement dans les maquettes.
+ */
+data class NiumiShadowLayer(
+    val offsetY: Dp,
+    val blur: Dp,
+    val alpha: Float,
+)
