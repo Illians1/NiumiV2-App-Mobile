@@ -41,7 +41,7 @@ internal fun marginsOverSystemBars(
  * Marges d'un écran dont le bas est pris par la barre d'onglets (décision de Mehdi du 2026-10-25) :
  * côtés et haut comme [marginsOverSystemBars], rien en bas. La barre couvre la barre système de son
  * fond et le contenu s'arrête contre elle, comme dans la maquette 16. Sans [keepTop], rien en haut
- * non plus : le contenu défile sous la bande du haut (`niumiTopFade`).
+ * non plus : le contenu défile sous la bande du haut (`niumiHeaderSurface`, accueil).
  */
 internal fun marginsAboveTabBar(
     system: PaddingValues,
@@ -58,27 +58,12 @@ internal fun marginsAboveTabBar(
     )
 }
 
-/**
- * [marginsOverSystemBars] appliqué à un élément bord à bord, d'après les retraits [insets] de la
- * fenêtre ; sans [keepTop], rien en haut (contenu qui défile sous la bande du haut).
- */
+/** [marginsOverSystemBars] appliqué à un élément bord à bord, d'après les retraits [insets] de la fenêtre. */
 @Composable
 internal fun Modifier.marginsOver(
     insets: WindowInsets,
     margins: PaddingValues,
-    keepTop: Boolean = true,
-): Modifier {
-    val over = marginsOverSystemBars(insets.asPaddingValues(), LocalLayoutDirection.current, margins)
-    val direction = LocalLayoutDirection.current
-    return padding(
-        PaddingValues(
-            start = over.calculateStartPadding(direction),
-            top = if (keepTop) over.calculateTopPadding() else 0.dp,
-            end = over.calculateEndPadding(direction),
-            bottom = over.calculateBottomPadding(),
-        ),
-    )
-}
+): Modifier = padding(marginsOverSystemBars(insets.asPaddingValues(), LocalLayoutDirection.current, margins))
 
 /** [marginsAboveTabBar] appliqué à un élément bord à bord, d'après les retraits [insets] de la fenêtre. */
 @Composable

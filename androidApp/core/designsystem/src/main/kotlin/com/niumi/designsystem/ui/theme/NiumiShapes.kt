@@ -11,7 +11,10 @@ object NiumiShapes {
     /** Carte : coins de 14. */
     val card = RoundedCornerShape(14.dp)
 
-    /** Tuile d'autorisation, case de pièce : coins de 16. */
+    /**
+     * Case de pièce (écran 3) : coins de 16. Les tuiles d'autorisation, aussi à 16 jusqu'au 2026-10-30,
+     * sont depuis des cartes de section (coins de 14).
+     */
     val tile = RoundedCornerShape(16.dp)
 
     /** Bouton « Autoriser » d'une tuile : coins de 12. */
@@ -31,9 +34,6 @@ object NiumiShapes {
 
     // Écran 4 (étape 37) : valeurs propres à l'écran, relevées dans les sources des maquettes 10 à 12
     // (VALEURS §3 : « les valeurs exactes de chaque écran sont dans les sources »).
-
-    /** Carte de sélection des applications : coins de 20, plus ronds que la carte d'état. */
-    val selectionCard = RoundedCornerShape(20.dp)
 
     /** Case d'icône de la carte de sélection : coins de 10. */
     val appSlot = RoundedCornerShape(10.dp)

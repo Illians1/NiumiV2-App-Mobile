@@ -1,7 +1,6 @@
 package com.niumi.feature.setup.apps
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,7 +21,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -47,6 +45,7 @@ import com.niumi.designsystem.component.NiumiLoadingIndicator
 import com.niumi.designsystem.component.NiumiMoreAppsSlot
 import com.niumi.designsystem.component.NiumiPrimaryButton
 import com.niumi.designsystem.component.NiumiScreenScaffold
+import com.niumi.designsystem.component.NiumiSectionCard
 import com.niumi.designsystem.component.NiumiTopBar
 import com.niumi.designsystem.component.appSlotCapacity
 import com.niumi.designsystem.component.appSlotLayout
@@ -153,13 +152,10 @@ private fun SelectionCard(
     onOpenPage: () -> Unit,
 ) {
     val palette = LocalNiumiPalette.current
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(NiumiShapes.selectionCard)
-                .border(NiumiDimens.hairline, palette.disabled, NiumiShapes.selectionCard)
-                .padding(NiumiDimens.selectionCardPadding),
+    // Carte de section, blanche à double ombre, coins de 14 (maquettes de Mehdi du 2026-10-30 ;
+    // carte au trait `disabled`, coins de 20, avant).
+    NiumiSectionCard(
+        contentPadding = NiumiDimens.selectionCardPadding,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(NiumiDimens.selectionCardGap),
     ) {

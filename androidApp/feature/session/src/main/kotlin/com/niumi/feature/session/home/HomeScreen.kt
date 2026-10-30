@@ -23,10 +23,15 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -77,9 +82,10 @@ import java.time.LocalTime
  * carte d'état, onglets « Ponctuel / Quotidien », pastilles des jours, lignes « Applications
  * bloquées » et « Sonnerie », puis la barre d'onglets du bas, « Réveil » choisi (décision de Mehdi
  * du 2026-10-25, qui retire l'icône des réglages du haut). Depuis les maquettes du 2026-10-30, le
- * cadran, le bloc des jours et les deux lignes sont chacun dans une carte de section. Sur un écran
- * trop court, le contenu défile sous la barre, qui le laisse deviner par son haut translucide. La bulle du bas (M10) se
- * pose au-dessus de la barre et disparaît au toucher suivant, où qu'il soit.
+ * bloc des jours et les deux lignes sont chacun dans une carte de section ; le cadran, d'abord dans
+ * une carte, est posé sur le fond depuis l'essai de Mehdi du même jour. Tout défile sur un fond fixe,
+ * sous la bande du haut et sous la barre, qui laissent deviner le contenu par leur bord translucide.
+ * La bulle du bas (M10) se pose au-dessus de la barre et disparaît au toucher suivant, où qu'il soit.
  */
 @Composable
 fun HomeScreen(
@@ -102,20 +108,16 @@ fun HomeScreen(
                 }
             },
     ) {
+        val backdrop = remember { HomeBackdrop() }
         NiumiScreenScaffold(
+            backgroundBrush = homeBackdropBrush(backdrop),
             contentUnderTop = true,
+            topBandColor = LocalNiumiPalette.current.surface,
             navigationBar = {
                 MainTabBar(selected = MainTab.WAKE, onWake = {}, onSettings = actions.onOpenSettings)
             },
         ) {
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                // Le contenu monte sous la bande du haut, translucide en bas ; il commence sous elle.
-                Spacer(modifier = Modifier.height(niumiTopClearance()))
-                HomeContent(state, actions)
-                // Le contenu passe sous la barre ; sa fin doit pouvoir remonter au-dessus d'elle, avec
-                // un espace pour que la dernière carte ne la touche pas.
-                Spacer(modifier = Modifier.height(niumiTabBarClearance() + NiumiDimens.homeScrollEndGap))
-            }
+            HomeContent(state, actions, backdrop)
         }
         state.message?.let { message ->
             NiumiToast(
@@ -162,10 +164,18 @@ private fun ImmediateBlockingDialog(
     }
 }
 
+/**
+ * Tout le contenu défile, cadran compris ; seul le fond reste en place (demande de Mehdi du
+ * 2026-10-30). Le cadran est posé sur le fond, sans carte, et son anneau porte l'ombre des cartes
+ * (essai du même jour ; dans une carte dans les maquettes 15 à 27) ; sa zone déborde de 12 sur les
+ * marges. Le contenu qui remonte passe sous la bande du haut, translucide en bas comme le haut de la
+ * barre d'onglets.
+ */
 @Composable
 private fun HomeContent(
     state: HomeUiState,
     actions: HomeActions,
+    backdrop: HomeBackdrop,
 ) {
     val fieldState =
         when (state.mode) {
@@ -173,23 +183,41 @@ private fun HomeContent(
             HomeMode.Disabled -> NiumiFieldState.Greyed
             HomeMode.NothingArmed, HomeMode.Scheduled -> NiumiFieldState.Normal
         }
-    Spacer(modifier = Modifier.height(NiumiDimens.homeDialTop))
-    NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .onGloballyPositioned { backdrop.scrollTop = it.positionInRoot().y },
+    ) {
+        // Le contenu monte sous la bande du haut ; il commence sous elle.
+        Spacer(modifier = Modifier.height(niumiTopClearance() + NiumiDimens.homeDialTop))
         NiumiDial(
             state = dialStateOf(state),
             texts = DialTexts(bedtime = HomeTexts.BEDTIME, wake = HomeTexts.WAKE, chooseTime = HomeTexts.CHOOSE_TIME),
             onTimeChanged = actions.onTimeChanged,
             onTap = actions.onDialTapped,
+            modifier = Modifier.overflowSideMargins(NiumiDimens.dialOverflow),
         )
-    }
-    Spacer(modifier = Modifier.height(NiumiDimens.homeCardTop))
-    StatusCard(state, actions)
-    Spacer(modifier = Modifier.height(NiumiDimens.homeSectionGap))
-    HomeDaysCard(state, fieldState, actions)
-    Spacer(modifier = Modifier.height(NiumiDimens.homeSectionGap))
-    NiumiSectionCard(contentPadding = NiumiDimens.sectionCardRowsPadding) {
-        AppsRow(state, fieldState, onOpen = if (state.isLocked) actions.onLockedTouch else actions.onOpenApps)
-        RingtoneRow(state.ringtone, greyed = state.mode == HomeMode.Disabled, onOpen = actions.onOpenRingtone)
+        Spacer(modifier = Modifier.height(NiumiDimens.homeCardTop))
+        StatusCard(
+            state,
+            actions,
+            modifier = Modifier.onGloballyPositioned { backdrop.statusTop = it.positionInParent().y },
+        )
+        Spacer(modifier = Modifier.height(NiumiDimens.homeSectionGap))
+        HomeDaysCard(state, fieldState, actions)
+        Spacer(modifier = Modifier.height(NiumiDimens.homeSectionGap))
+        NiumiSectionCard(
+            contentPadding = NiumiDimens.sectionCardRowsPadding,
+            modifier = Modifier.onGloballyPositioned { backdrop.rowsTop = it.positionInParent().y },
+        ) {
+            AppsRow(state, fieldState, onOpen = if (state.isLocked) actions.onLockedTouch else actions.onOpenApps)
+            RingtoneRow(state.ringtone, greyed = state.mode == HomeMode.Disabled, onOpen = actions.onOpenRingtone)
+        }
+        // Le contenu passe sous la barre ; sa fin doit pouvoir remonter au-dessus d'elle, avec un
+        // espace pour que la dernière carte ne la touche pas.
+        Spacer(modifier = Modifier.height(niumiTabBarClearance() + NiumiDimens.homeScrollEndGap))
     }
 }
 
@@ -234,11 +262,12 @@ private fun dialStateOf(state: HomeUiState): DialState =
 private fun StatusCard(
     state: HomeUiState,
     actions: HomeActions,
+    modifier: Modifier = Modifier,
 ) {
     val palette = LocalNiumiPalette.current
     val filled = state.mode == HomeMode.Scheduled || state.mode == HomeMode.NothingArmed
     val inSession = state.mode == HomeMode.InSession
-    NiumiCard(filled = filled, modifier = Modifier.fillMaxWidth()) {
+    NiumiCard(filled = filled, modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(
                 modifier = Modifier.weight(1f),

@@ -206,9 +206,6 @@ class NiumiShapesAndDimensTest {
                 .jsonPrimitive.content
                 .toFloat(),
         )
-        assertWithMessage("marges du cadran")
-            .that(NiumiDimens.sectionCardDialPadding.sides())
-            .isEqualTo(margins("margesCadran"))
         assertWithMessage("marges des jours")
             .that(NiumiDimens.sectionCardDaysPadding.sides())
             .isEqualTo(margins("margesJours"))
@@ -218,7 +215,12 @@ class NiumiShapesAndDimensTest {
         val shadow =
             card.getValue("ombreClair").jsonArray.map { layer ->
                 val values = layer.jsonObject
-                fun value(field: String) = values.getValue(field).jsonPrimitive.content.toFloat()
+
+                fun value(field: String) =
+                    values
+                        .getValue(field)
+                        .jsonPrimitive.content
+                        .toFloat()
                 listOf(value("decalageY"), value("flou"), value("opacite"))
             }
         assertWithMessage("ombre des cartes de l'accueil")

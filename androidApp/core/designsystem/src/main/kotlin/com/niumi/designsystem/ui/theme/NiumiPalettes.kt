@@ -64,6 +64,9 @@ object NiumiPalettes {
             // couches (`NiumiDimens.cardShadow`) ; les cartes de section n'ont pas de bord.
             sectionCardOutline = Color.Transparent,
             sectionCardShadow = Color.Black,
+            // ESSAI de Mehdi du 2026-10-30, à valider : sous le cadran, l'accueil devient gris #ECEDEE
+            // (le gris clair essayé le même jour pour tout l'écran), en dégradé depuis le blanc.
+            homeBackground = Color(0xFFECEDEE),
         )
 
     val Dark =
@@ -116,6 +119,8 @@ object NiumiPalettes {
             // des feuilles ; aucune ombre en sombre, ni sous les cartes de section ni sous la carte d'état.
             sectionCardOutline = Color(0xFF2E2E33),
             sectionCardShadow = Color.Transparent,
+            // Sous le cadran, le fond d'écran : le dégradé va de la surface au fond.
+            homeBackground = Color(0xFF0E0E10),
         )
 
     /**

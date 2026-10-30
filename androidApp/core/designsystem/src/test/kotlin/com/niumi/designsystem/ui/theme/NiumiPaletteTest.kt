@@ -25,6 +25,8 @@ class NiumiPaletteTest {
     private val lightRoles: Map<String, List<Role>> =
         mapOf(
             "fond" to listOf(NiumiPalette::background),
+            // Essai de Mehdi du 2026-10-30 : gris sous le cadran, au bout du dégradé depuis la surface.
+            "fondAccueil" to listOf(NiumiPalette::homeBackground),
             "surface" to listOf(NiumiPalette::surface),
             "encre" to listOf(NiumiPalette::ink),
             // D9 (tranché le 2026-10-19) : texte du bouton inactif = texte secondaire.
@@ -49,6 +51,8 @@ class NiumiPaletteTest {
     private val darkRoles: Map<String, List<Role>> =
         mapOf(
             "fond" to listOf(NiumiPalette::background),
+            // Sous le cadran, le fond d'écran : le dégradé va de la surface au fond.
+            "fondAccueil" to listOf(NiumiPalette::homeBackground),
             "surface" to listOf(NiumiPalette::surface),
             "texte" to listOf(NiumiPalette::ink),
             "texteSecondaire" to listOf(NiumiPalette::textSecondary),
@@ -146,7 +150,7 @@ class NiumiPaletteTest {
                 .map { it.name }
                 .toSet() + "onInkSecondary" + "sectionCardShadow"
 
-        assertThat(roles).hasSize(24)
+        assertThat(roles).hasSize(25)
         assertWithMessage("rôles clairs sans origine").that(roles - lightCovered).isEmpty()
         assertWithMessage("rôles sombres sans origine").that(roles - darkCovered).isEmpty()
     }

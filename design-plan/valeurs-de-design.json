@@ -4,6 +4,7 @@
     "regle": "L'app ne suit pas le réglage clair ou sombre du téléphone. Clair quand aucune session n'est en cours, sombre du coucher jusqu'au scan.",
     "clair": {
       "fond": "#FAFAF8",
+      "fondAccueil": "#ECEDEE",
       "surface": "#FFFFFF",
       "encre": "#0E0E10",
       "texteSecondaire": "#5C5C60",
@@ -36,6 +37,7 @@
     },
     "sombre": {
       "fond": "#0E0E10",
+      "fondAccueil": "#0E0E10",
       "surface": "#1B1B1F",
       "texte": "#FAFAF8",
       "texteSecondaire": "#A9A9AE",
@@ -246,7 +248,7 @@
       "rayon": 14
     },
     "carteDeSection": {
-      "_lire": "Cartes du cadran, des jours et des lignes de l'accueil (maquettes du 2026-10-30). En clair, sans bord, avec l'ombre ; en sombre, sans ombre, avec le bord bordCarteDeSection. La carte d'état de l'accueil (noire ou au trait) prend la même ombre en clair. ombreClair : les couches du box-shadow des maquettes, noir, sans décalage horizontal ni étalement (0 1px 2px rgba(0, 0, 0, 0.10), 0 10px 30px rgba(0, 0, 0, 0.18)).",
+      "_lire": "Cartes des jours et des lignes de l'accueil (maquettes du 2026-10-30 ; le cadran, d'abord dans une carte, est posé sur le fond en dégradé fondAccueil depuis l'essai de Mehdi du même jour). En clair, sans bord, avec l'ombre ; en sombre, sans ombre, avec le bord bordCarteDeSection. La carte d'état de l'accueil (noire ou au trait) prend la même ombre en clair. Les tuiles d'autorisation (écran 2) et la carte de sélection (écran 4) sont aussi des cartes de section. ombreClair : les couches du box-shadow des maquettes, noir, sans décalage horizontal ni étalement (0 1px 2px rgba(0, 0, 0, 0.10), 0 10px 30px rgba(0, 0, 0, 0.18)).",
       "rayon": 14,
       "ombreClair": [
         {
@@ -259,12 +261,6 @@
           "flou": 30,
           "opacite": 0.18
         }
-      ],
-      "margesCadran": [
-        4,
-        0,
-        4,
-        0
       ],
       "margesJours": [
         12,
@@ -280,6 +276,7 @@
       ]
     },
     "tuile": {
+      "_lire": "Case de pièce (écran 3). Les tuiles d'autorisation sont des cartes de section depuis le 2026-10-30.",
       "rayon": 16
     },
     "feuilleDuBas": {

@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
@@ -33,28 +35,34 @@ import com.niumi.designsystem.ui.theme.NiumiType
  * contenu : elle prend le bas de l'écran à sa charge, barre système comprise (`marginsAboveTabBar`,
  * décision de Mehdi du 2026-10-25), et le contenu va jusqu'en bas, sous elle, pour se deviner à
  * travers son haut translucide. Le contenu qui défile finit alors par `niumiTabBarClearance()`.
- * [contentUnderTop] fait de même en haut (accueil, demande de Mehdi du 2026-10-30) : le contenu
- * monte jusqu'en haut de l'écran, sous une bande translucide en bas (`niumiTopFade`), et commence par
- * `niumiTopClearance()`.
+ * [backgroundBrush] remplace le fond uni du thème (l'accueil, dont le fond blanc devient gris en
+ * dégradé sous le cadran, essai de Mehdi du 2026-10-30). Avec [contentUnderTop] (accueil, avec une
+ * barre d'onglets), le contenu monte jusqu'en haut de l'écran, sous une bande de couleur
+ * [topBandColor] translucide en bas (`niumiHeaderSurface`), et commence par `niumiTopClearance()`.
  */
+@Suppress("LongParameterList") // Convention Compose : les paramètres d'un composant sont son API.
 @Composable
 fun NiumiScreenScaffold(
     modifier: Modifier = Modifier,
     bottom: (@Composable ColumnScope.() -> Unit)? = null,
     navigationBar: (@Composable () -> Unit)? = null,
+    backgroundBrush: Brush? = null,
     contentUnderTop: Boolean = false,
+    topBandColor: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val palette = LocalNiumiPalette.current
+    val backdrop =
+        if (backgroundBrush != null) Modifier.background(backgroundBrush) else Modifier.background(palette.background)
     CompositionLocalProvider(LocalContentColor provides palette.ink) {
-        Box(modifier = modifier.fillMaxSize().background(palette.background)) {
+        Box(modifier = modifier.fillMaxSize().then(backdrop)) {
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .then(
                             if (navigationBar == null) {
-                                Modifier.marginsOver(WindowInsets.safeDrawing, NiumiDimens.screenMargins, keepTop = !contentUnderTop)
+                                Modifier.marginsOver(WindowInsets.safeDrawing, NiumiDimens.screenMargins)
                             } else {
                                 Modifier.marginsAboveTabBar(
                                     WindowInsets.safeDrawing,
@@ -74,7 +82,10 @@ fun NiumiScreenScaffold(
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
                             .height(niumiTopClearance())
-                            .niumiTopFade(palette.background),
+                            .niumiHeaderSurface(
+                                topBandColor ?: palette.background,
+                                NiumiDimens.tabBarTranslucentHeight,
+                            ),
                 )
             }
             if (navigationBar != null) Box(modifier = Modifier.align(Alignment.BottomCenter)) { navigationBar() }

@@ -22,9 +22,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -48,8 +53,10 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import com.niumi.designsystem.drawing.DialGeometry
 import com.niumi.designsystem.drawing.DialHandle
 import com.niumi.designsystem.drawing.DialLabelLayout
@@ -142,6 +149,30 @@ internal fun dialValueStyle(
     ringScale: Float,
 ): TextStyle = base.copy(fontSize = base.fontSize * ringScale, letterSpacing = base.letterSpacing * ringScale)
 
+/**
+ * Forme de l'anneau à l'échelle [scale], pour son ombre : la couronne entre les bords extérieur et
+ * intérieur du trait, aux mêmes centre et rayon que le dessin ([DialFrame]).
+ */
+private class DialRingShape(
+    private val scale: Float,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val frame = DialFrame(size.width, scale, density.density)
+        val center = Offset(frame.centerX, frame.centerY)
+        val path =
+            Path().apply {
+                fillType = PathFillType.EvenOdd
+                addOval(Rect(center, frame.radius + frame.stroke / 2))
+                addOval(Rect(center, frame.radius - frame.stroke / 2))
+            }
+        return Outline.Generic(path)
+    }
+}
+
 /** Heure de cinq caractères, la plus longue que le cadran écrit. */
 private const val WIDEST_CLOCK = "00:00"
 
@@ -175,11 +206,15 @@ private fun DialBody(
     val hasHandles = state !is DialState.InSession
 
     Box(modifier = Modifier.fillMaxWidth().height(height)) {
+        // Sans carte autour du cadran (essai de Mehdi du 2026-10-30), l'anneau porte lui-même l'ombre
+        // des cartes ; aucune en sombre (`sectionCardShadow` transparent).
+        val ringShape = remember(scale) { DialRingShape(scale) }
         Canvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .height(height)
+                    .niumiCardShadow(ringShape, palette.sectionCardShadow)
                     .clearAndSetSemantics {
                         if (!hasHandles) {
                             contentDescription =
@@ -387,14 +422,12 @@ private fun BoxScope.HandleNode(
 @Composable
 private fun NiumiDialScheduledPreview() {
     NiumiPreviewFrame(dark = false) {
-        NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
-            NiumiDial(
-                state = DialState.Scheduled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil dans", "9 h 26"),
-                texts = PREVIEW_TEXTS,
-                onTimeChanged = { _, _ -> },
-                onTap = {},
-            )
-        }
+        NiumiDial(
+            state = DialState.Scheduled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil dans", "9 h 26"),
+            texts = PREVIEW_TEXTS,
+            onTimeChanged = { _, _ -> },
+            onTap = {},
+        )
     }
 }
 
@@ -402,14 +435,12 @@ private fun NiumiDialScheduledPreview() {
 @Composable
 private fun NiumiDialDisabledPreview() {
     NiumiPreviewFrame(dark = false) {
-        NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
-            NiumiDial(
-                state = DialState.Disabled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil", "Désactivé"),
-                texts = PREVIEW_TEXTS,
-                onTimeChanged = { _, _ -> },
-                onTap = {},
-            )
-        }
+        NiumiDial(
+            state = DialState.Disabled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil", "Désactivé"),
+            texts = PREVIEW_TEXTS,
+            onTimeChanged = { _, _ -> },
+            onTap = {},
+        )
     }
 }
 
@@ -417,14 +448,12 @@ private fun NiumiDialDisabledPreview() {
 @Composable
 private fun NiumiDialInSessionPreview() {
     NiumiPreviewFrame(dark = true) {
-        NiumiSectionCard(contentPadding = NiumiDimens.sectionCardDialPadding) {
-            NiumiDial(
-                state = DialState.InSession(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_NIGHT, "Réveil dans", "7 h 50"),
-                texts = PREVIEW_TEXTS,
-                onTimeChanged = { _, _ -> },
-                onTap = {},
-            )
-        }
+        NiumiDial(
+            state = DialState.InSession(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_NIGHT, "Réveil dans", "7 h 50"),
+            texts = PREVIEW_TEXTS,
+            onTimeChanged = { _, _ -> },
+            onTap = {},
+        )
     }
 }
 

@@ -59,10 +59,16 @@ data class NiumiPalette(
     /** Bord d'un jour non coché grisé (accueil « Réveil désactivé ») ou verrouillé (session). */
     val disabledBorder: Color,
     /**
-     * Bord d'un pixel d'une carte de section de l'accueil (cadran, jours, lignes ; maquettes du
-     * 2026-10-30) : aucun en clair, où seule l'ombre la détache ; liseré en sombre.
+     * Bord d'un pixel d'une carte de section de l'accueil (jours, lignes ; maquettes du 2026-10-30) :
+     * aucun en clair, où seule l'ombre la détache ; liseré en sombre.
      */
     val sectionCardOutline: Color,
+    /**
+     * Fond de l'accueil sous le cadran (essai de Mehdi du 2026-10-30) : le fond part de `surface` en
+     * haut de l'écran et devient ce gris, en dégradé, sur la hauteur du cadran ; les cartes se posent
+     * dessus. En sombre, le fond d'écran.
+     */
+    val homeBackground: Color,
     /** Couleur de l'ombre des cartes de l'accueil (section et état) : noire en clair, aucune en sombre. */
     val sectionCardShadow: Color,
 )

@@ -454,9 +454,10 @@ object NiumiDimens {
 
     /**
      * Zone du cadran des maquettes : 366 de large, qui débordait de 12 sur les marges de l'écran.
-     * Depuis les maquettes du 2026-10-30, le cadran est dans sa carte, sans débordement : il n'y
-     * dépasse jamais l'échelle de [dialFitWidth] (342 sur un écran de 390) ; la place des étiquettes
-     * le réduit davantage ([DIAL_MIN_RING_SCALE]).
+     * Dans les maquettes du 2026-10-30, le cadran est dans sa carte, sans débordement ; depuis l'essai
+     * de Mehdi du même jour, sans carte, sa zone déborde de nouveau de [dialOverflow] (accueil).
+     * L'anneau ne dépasse jamais l'échelle de la maquette ; la place des étiquettes le réduit
+     * ([DIAL_MIN_RING_SCALE]).
      */
     val dialWidth = 366.dp
     val dialOverflow = 12.dp
@@ -529,22 +530,27 @@ object NiumiDimens {
     val dialCenterLabelGap = 2.dp
 
     /**
-     * Accueil en cartes (maquettes de Mehdi du 2026-10-30) : carte du cadran 14 sous la marge du haut
+     * Accueil en cartes (maquettes de Mehdi du 2026-10-30) : zone du cadran 14 sous la marge du haut
      * (20 dans les maquettes ; demande de Mehdi du 2026-10-30 après essai de 20, 0 puis 8), puis 12
-     * entre chaque carte : cadran, carte d'état, jours, lignes. Dans la carte des jours, 6 entre la
+     * entre chaque bloc : cadran, carte d'état, jours, lignes. Dans la carte des jours, 6 entre la
      * ligne du titre et les pastilles.
      */
     val homeDialTop = 14.dp
     val homeCardTop = 12.dp
+
+    /**
+     * Hauteur estimée du dégradé du fond de l'accueil, du haut de la carte d'état à celui de la carte
+     * des lignes (carte d'état 90, carte des jours 112 et deux espaces de 12), le temps de le mesurer.
+     */
+    val homeBackdropGradientEstimate = 226.dp
     val homeSectionGap = 12.dp
     val homeDaysHeaderGap = 6.dp
 
     /**
-     * Carte de section de l'accueil (maquettes du 2026-10-30) : coins de la carte, marges intérieures
-     * propres à chaque carte (cadran 4 en haut et en bas ; jours 12, 16, 14 ; lignes 16 sur les
-     * côtés).
+     * Carte de section de l'accueil (maquettes du 2026-10-30) : marges intérieures propres à chaque
+     * carte (jours 12, 16, 14 ; lignes 16 sur les côtés). Le cadran, dans une carte à marges de 4 dans
+     * les maquettes, est posé sur le fond depuis l'essai de Mehdi du 2026-10-30 (dégradé, HomeScreen).
      */
-    val sectionCardDialPadding = PaddingValues(vertical = 4.dp)
     val sectionCardDaysPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 14.dp)
     val sectionCardRowsPadding = PaddingValues(horizontal = 16.dp)
 
@@ -612,9 +618,6 @@ object NiumiDimens {
     val tabBarBadgeOutline = 1.5.dp
     val tabBarShadowHeight = 12.dp
     val tabBarTranslucentHeight = 10.dp
-
-    /** Bas translucide de la bande du haut de l'accueil, miroir du haut de la barre d'onglets. */
-    val topFadeTranslucentHeight = 10.dp
 
     /** Tremblement d'un onglet « Bientôt » touché : 3 au plus de chaque côté (décision du 2026-10-25). */
     val tabBarShake = 3.dp

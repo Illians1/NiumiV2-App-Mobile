@@ -26,37 +26,6 @@ fun niumiTabBarClearance(): Dp =
     NiumiDimens.tabBarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
 /**
- * Hauteur de la bande du haut d'un écran dont le contenu défile sous elle : la marge du haut de la
- * maquette ou la zone système, la plus grande des deux, comme `marginsOverSystemBars`. À ajouter au
- * début du contenu qui défile, pour qu'il commence sous la bande.
- */
-@Composable
-fun niumiTopClearance(): Dp = max(NiumiDimens.screenTop, WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding())
-
-/**
- * Bande du haut, miroir de la barre d'onglets (demande de Mehdi du 2026-10-30, après essai) : fond
- * [background] plein sur la barre d'état et la marge du haut, puis translucide sur ses
- * [NiumiDimens.topFadeTranslucentHeight] du bas, du plein à [TOP_ALPHA], comme le haut de la barre
- * d'onglets. Le contenu qui remonte passe dessous et s'y devine avant de disparaître, au lieu d'être
- * coupé net. Sans ombre : la bande est de la couleur du fond. Elle ne prend aucun toucher.
- */
-internal fun Modifier.niumiTopFade(background: Color): Modifier =
-    drawBehind {
-        val fade = NiumiDimens.topFadeTranslucentHeight.toPx().coerceAtMost(size.height)
-        drawRect(color = background, size = Size(size.width, size.height - fade))
-        drawRect(
-            brush =
-                Brush.verticalGradient(
-                    colors = listOf(background, background.copy(alpha = TOP_ALPHA)),
-                    startY = size.height - fade,
-                    endY = size.height,
-                ),
-            topLeft = Offset(0f, size.height - fade),
-            size = Size(size.width, fade),
-        )
-    }
-
-/**
  * Surface de la barre d'onglets, posée sur le contenu qui défile dessous (demande de Mehdi du
  * 2026-10-25) :
  * - fond [surface] translucide en haut, de [TOP_ALPHA] au plein sur
@@ -86,6 +55,46 @@ internal fun Modifier.niumiTabBarSurface(surface: Color): Modifier =
                     startY = 0f,
                     endY = NiumiDimens.tabBarTranslucentHeight.toPx(),
                 ),
+        )
+    }.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                awaitPointerEvent(PointerEventPass.Final).changes.forEach { it.consume() }
+            }
+        }
+    }
+
+/**
+ * Hauteur de la bande du haut d'un écran dont le contenu défile sous elle : la marge du haut de la
+ * maquette ou la zone système, la plus grande des deux, comme `marginsOverSystemBars`. À ajouter au
+ * début du contenu qui défile, pour qu'il commence sous la bande.
+ */
+@Composable
+fun niumiTopClearance(): Dp =
+    max(NiumiDimens.screenTop, WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding())
+
+/**
+ * Bande posée sur un contenu qui défile dessous et remonte derrière elle (haut de l'accueil, demande
+ * de Mehdi du 2026-10-30) : fond [surface] plein, translucide sur ses [fadeHeight] du bas, du plein à
+ * [TOP_ALPHA], miroir du haut de la barre d'onglets ; sans ombre. Comme elle, la bande garde tout
+ * toucher qu'aucun de ses enfants n'a pris.
+ */
+internal fun Modifier.niumiHeaderSurface(
+    surface: Color,
+    fadeHeight: Dp,
+): Modifier =
+    drawBehind {
+        val fade = fadeHeight.toPx().coerceAtMost(size.height)
+        drawRect(color = surface, size = Size(size.width, size.height - fade))
+        drawRect(
+            brush =
+                Brush.verticalGradient(
+                    colors = listOf(surface, surface.copy(alpha = TOP_ALPHA)),
+                    startY = size.height - fade,
+                    endY = size.height,
+                ),
+            topLeft = Offset(0f, size.height - fade),
+            size = Size(size.width, fade),
         )
     }.pointerInput(Unit) {
         awaitPointerEventScope {
