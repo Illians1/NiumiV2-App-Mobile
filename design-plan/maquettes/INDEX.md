@@ -1,4 +1,4 @@
-# Niumi · Index des 64 maquettes validées
+# Niumi · Index des 66 maquettes validées
 
 Une ligne par maquette, dans l'ordre du parcours. Chaque maquette existe en image (`images/`, 780 × 1688 pixels, soit un écran de 390 × 844 au double) et en fichier source (`sources/`, même nom, extension `.html`).
 
@@ -29,10 +29,10 @@ La colonne « Section » renvoie à `SPECIFICATION.md`.
 | 21 | `21_sonnerie-la-feuille` | Sonnerie · La feuille | Clair | Les deux | 10 · Sonnerie |
 | 22 | `22_sonnerie-quand-on-touche-le-volume` | Sonnerie · Quand on touche le volume | Clair | Les deux | 10 · Sonnerie |
 | 23 | `23_sonnerie-progressive-desactivee` | Sonnerie · Progressive désactivée | Clair | Les deux | 10 · Sonnerie |
-| 24 | `24_annuler-1-le-lien-sur-l-accueil` | Annuler · 1. Le lien sur l'accueil | Sombre | Les deux | 11 · Annuler la session |
-| 25 | `25_annuler-2-scanner-ou-sortie-de-secours` | Annuler · 2. Scanner ou sortie de secours | Sombre | Les deux | 11 · Annuler la session |
-| 26 | `26_annuler-3-la-feuille-de-scan` | Annuler · 3. La feuille de scan | Sombre | Les deux | 11 · Annuler la session |
-| 27 | `27_annuler-4-session-annulee-retour-au-clair` | Annuler · 4. Session annulée : retour au clair | Clair | Les deux | 11 · Annuler la session |
+| 24 | `24_annuler-1-le-lien-sur-l-accueil` | Annuler · 1. Le lien sur l'accueil | Sombre | Les deux | 11 · Annuler le réveil |
+| 25 | `25_annuler-2-scanner-ou-sortie-de-secours` | Annuler · 2. Scanner ou sortie de secours | Sombre | Les deux | 11 · Annuler le réveil |
+| 26 | `26_annuler-3-la-feuille-de-scan` | Annuler · 3. La feuille de scan | Sombre | Les deux | 11 · Annuler le réveil |
+| 27 | `27_annuler-4-session-annulee-retour-au-clair` | Annuler · 4. Session annulée : retour au clair | Clair | Les deux | 11 · Annuler le réveil |
 | 28 | `28_ecran-7-ecran-de-blocage` | Écran 7 · Écran de blocage | Sombre | Les deux | 12 · Écran 7 |
 | 29 | `29_ecran-8-confirmation-le-soir` | Écran 8 · Confirmation, le soir | Sombre | Les deux | 13 · Sortie de secours |
 | 30 | `30_ecran-8-confirmation-le-matin` | Écran 8 · Confirmation, le matin | Sombre | Les deux | 13 · Sortie de secours |
@@ -70,6 +70,8 @@ La colonne « Section » renvoie à `SPECIFICATION.md`.
 | 62 | `62_bandeau-aucun-niumi-spot-au-cas-ou` | Bandeau · Aucun Niumi Spot (au cas où) | Clair | Les deux | 17 · Hors écrans |
 | 63 | `63_alerte-une-autorisation-retiree` | Alerte · Une autorisation retirée | Clair | Les deux | 17 · Hors écrans |
 | 64 | `64_alerte-plusieurs-autorisations-retirees` | Alerte · Plusieurs autorisations retirées | Clair | Les deux | 17 · Hors écrans |
+| 65 | `65_ecran-6-confirmation-avant-un-blocage-immediat` | Écran 6 · Confirmation avant un blocage immédiat | Clair | Les deux | 9 · Accueil |
+| 66 | `66_ecran-0-demarrage` | Écran 0 · Démarrage | Sombre | Les deux | 3 · Le parcours |
 
 Remarques :
 
@@ -78,4 +80,4 @@ Remarques :
 - « Clavier du téléphone » est un emplacement : c'est le clavier du système, pas un élément à dessiner.
 - Les carrés gris à la place des icônes d'applications sont des emplacements vides.
 - La feuille « Prêt à scanner » et l'écran de blocage sont dessinés par le système sur iPhone. Les maquettes en donnent une approximation.
-- Dans la maquette 20 (sonnerie progressive désactivée), l'accueil visible derrière la feuille affiche encore « Progressive · 2 min » : c'est un reste de la maquette d'origine, pas une décision. Ce que montre la ligne « Sonnerie » dans ce cas est le point ouvert D5.
+- Dans la maquette 23 (sonnerie progressive désactivée), l'accueil visible derrière la feuille affiche encore « Progressive · 2 min » : c'est un reste de la maquette d'origine, pas une décision. Ce que montre la ligne « Sonnerie » dans ce cas est le point ouvert D5.
