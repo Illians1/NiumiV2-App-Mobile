@@ -473,12 +473,14 @@ object NiumiDimens {
 
     /**
      * Flèche vers le point de l'heure actuelle, à l'intérieur de l'anneau (décision de Mehdi du
-     * 2026-10-25 après essai, absente des maquettes) : triangle de 8 de long et 8 de base, pointe à
-     * 4 du bord intérieur de l'anneau.
+     * 2026-10-25 après essai) : triangle de 8 de long et 8 de base, pointe à 4 du bord intérieur de
+     * l'anneau. Coins arrondis de 1,5 (maquettes de Mehdi du 2026-10-30 : cœur de 5 × 5 et contour
+     * de 3 à jointures rondes).
      */
     val dialNowArrowLength = 8.dp
     val dialNowArrowWidth = 8.dp
     val dialNowArrowGap = 4.dp
+    val dialNowArrowCornerRadius = 1.5.dp
 
     /**
      * Repères de 0 h, 6 h, 12 h et 18 h (décision de Mehdi du 2026-10-26, absents des maquettes) :

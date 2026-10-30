@@ -26,6 +26,31 @@ data class AmberSpans(
     }
 }
 
+/**
+ * Triangle plein de la flèche de l'heure actuelle, avant son contour à jointures rondes : la pointe
+ * reculée de [tipInset] depuis celle de l'encombrement, [length] de long et [halfWidth] de demi-base.
+ * Le contour, d'une épaisseur de deux fois [tipInset], lui rend l'encombrement voulu aux coins arrondis
+ * (maquettes de Mehdi du 2026-10-30).
+ */
+data class NowArrowCore(
+    val tipInset: Float,
+    val length: Float,
+    val halfWidth: Float,
+) {
+    companion object {
+        fun of(
+            length: Float,
+            width: Float,
+            cornerRadius: Float,
+        ): NowArrowCore =
+            NowArrowCore(
+                tipInset = cornerRadius,
+                length = length - 2 * cornerRadius,
+                halfWidth = width / 2 - cornerRadius,
+            )
+    }
+}
+
 /** Les deux poignées du cadran de l'accueil. */
 enum class DialHandle { BEDTIME, WAKE }
 

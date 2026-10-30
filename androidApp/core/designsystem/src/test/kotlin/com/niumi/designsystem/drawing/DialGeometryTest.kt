@@ -169,6 +169,19 @@ class DialGeometryTest {
         assertThat(DialMarks.isHidden(markMinutes = hm(6, 0), nowMinutes = 0)).isFalse()
     }
 
+    /**
+     * Maquettes du 2026-10-30 : la flèche de 8 × 8 a des coins arrondis de 1,5, soit un cœur de 5 × 5
+     * entouré d'un contour de 3 ; son encombrement reste de 8 × 8, pointe à la même place.
+     */
+    @Test
+    fun theCurrentTimeArrowKeepsItsEightByEightOutlineWithRoundedCorners() {
+        val core = NowArrowCore.of(length = 8f, width = 8f, cornerRadius = 1.5f)
+
+        assertThat(core).isEqualTo(NowArrowCore(tipInset = 1.5f, length = 5f, halfWidth = 2.5f))
+        assertThat(core.length + 2 * core.tipInset).isEqualTo(8f)
+        assertThat((core.halfWidth + core.tipInset) * 2).isEqualTo(8f)
+    }
+
     /** Décision du 2026-10-25 : fondu court (12°) et franc dès le point, au lieu du demi-cosinus sur 34°. */
     @Test
     fun theAmberFadesOutStraightOverTwelveDegreesFromTheDot() {

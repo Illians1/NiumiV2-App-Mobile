@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -18,6 +19,7 @@ import com.niumi.designsystem.drawing.DialHandle
 import com.niumi.designsystem.drawing.DialLabelLayout
 import com.niumi.designsystem.drawing.DialLabelSpace
 import com.niumi.designsystem.drawing.DialMarks
+import com.niumi.designsystem.drawing.NowArrowCore
 import com.niumi.designsystem.format.NiumiTimeFormat
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiPalette
@@ -144,28 +146,37 @@ private fun DrawScope.drawQuarterMarks(
         }
 }
 
-/** Petit triangle plein à l'intérieur de l'anneau, pointé vers le point de l'heure actuelle. */
+/**
+ * Petit triangle plein aux coins arrondis à l'intérieur de l'anneau, pointé vers le point de l'heure
+ * actuelle : un cœur plein et son contour à jointures rondes, comme dans les maquettes (`NowArrowCore`).
+ */
 private fun DrawScope.drawNowArrow(
     frame: DialFrame,
     nowMinutes: Int,
     color: Color,
 ) {
+    val core =
+        NowArrowCore.of(
+            length = frame.px(NiumiDimens.dialNowArrowLength),
+            width = frame.px(NiumiDimens.dialNowArrowWidth),
+            cornerRadius = frame.px(NiumiDimens.dialNowArrowCornerRadius),
+        )
     val radians = Math.toRadians(DialGeometry.degreesOf(nowMinutes).toDouble())
     val outward = Offset(sin(radians).toFloat(), -cos(radians).toFloat())
     val side = Offset(-outward.y, outward.x)
     val center = Offset(frame.centerX, frame.centerY)
-    val tipRadius = frame.radius - frame.stroke / 2 - frame.px(NiumiDimens.dialNowArrowGap)
+    val tipRadius = frame.radius - frame.stroke / 2 - frame.px(NiumiDimens.dialNowArrowGap) - core.tipInset
     val tip = center + outward * tipRadius
-    val base = center + outward * (tipRadius - frame.px(NiumiDimens.dialNowArrowLength))
-    val halfWidth = frame.px(NiumiDimens.dialNowArrowWidth) / 2
+    val base = center + outward * (tipRadius - core.length)
     val path =
         Path().apply {
             moveTo(tip.x, tip.y)
-            lineTo(base.x + side.x * halfWidth, base.y + side.y * halfWidth)
-            lineTo(base.x - side.x * halfWidth, base.y - side.y * halfWidth)
+            lineTo(base.x + side.x * core.halfWidth, base.y + side.y * core.halfWidth)
+            lineTo(base.x - side.x * core.halfWidth, base.y - side.y * core.halfWidth)
             close()
         }
     drawPath(path, color)
+    drawPath(path, color, style = Stroke(width = core.tipInset * 2, join = StrokeJoin.Round))
 }
 
 /**
