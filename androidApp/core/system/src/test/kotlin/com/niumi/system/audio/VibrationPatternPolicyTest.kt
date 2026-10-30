@@ -19,7 +19,7 @@ class VibrationPatternPolicyTest {
     fun repeatingPatternLoopsOnTheFullRhythmPulse() {
         val pattern = VibrationPatternPolicy.repeating()
 
-        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 500, 500))
+        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 800, 2_200))
         assertThat(pattern.repeatFromIndex).isEqualTo(1)
     }
 
@@ -38,12 +38,12 @@ class VibrationPatternPolicyTest {
     }
 
     @Test
-    fun theRampStartsWithOnePulseEveryFourSeconds() {
+    fun theRampStartsWithOnePulseEverySixteenSeconds() {
         val timings = VibrationPatternPolicy.repeating(elapsedMs = 0, durationMs = twoMinutes).timings
 
         assertThat(timings[0]).isEqualTo(0)
-        assertThat(timings[1]).isEqualTo(500)
-        assertThat(timings[2]).isEqualTo(3_500)
+        assertThat(timings[1]).isEqualTo(800)
+        assertThat(timings[2]).isEqualTo(15_500)
     }
 
     @Test
@@ -53,9 +53,9 @@ class VibrationPatternPolicyTest {
         val pulses = rampTimings.filterIndexed { index, _ -> index % 2 == 0 }
         val pauses = rampTimings.filterIndexed { index, _ -> index % 2 == 1 }
 
-        assertThat(pulses.toSet()).containsExactly(500L)
+        assertThat(pulses.toSet()).containsExactly(800L)
         assertThat(pauses).isInStrictOrder(Comparator.reverseOrder<Long>())
-        assertThat(pauses.last()).isAtLeast(500L)
+        assertThat(pauses.last()).isAtLeast(2_200L)
     }
 
     @Test
@@ -63,7 +63,7 @@ class VibrationPatternPolicyTest {
         val pattern = VibrationPatternPolicy.repeating(elapsedMs = 0, durationMs = twoMinutes)
         val loop = pattern.timings.copyOfRange(pattern.repeatFromIndex, pattern.timings.size)
 
-        assertThat(loop).isEqualTo(longArrayOf(500, 500))
+        assertThat(loop).isEqualTo(longArrayOf(800, 2_200))
     }
 
     @Test
@@ -77,20 +77,20 @@ class VibrationPatternPolicyTest {
     @Test
     fun theRampPauseHalfwayIsTheGeometricMean() {
         assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = 60_000, durationMs = twoMinutes))
-            .isIn(Range.closed(1_322L, 1_324L))
+            .isIn(Range.closed(5_839L, 5_841L))
     }
 
     @Test
     fun pauseIsBoundedOutsideTheRamp() {
-        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = -1_000, durationMs = twoMinutes)).isEqualTo(3_500)
-        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = twoMinutes * 2, durationMs = twoMinutes)).isEqualTo(500)
+        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = -1_000, durationMs = twoMinutes)).isEqualTo(15_500)
+        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = twoMinutes * 2, durationMs = twoMinutes)).isEqualTo(2_200)
     }
 
     @Test
     fun aResumedRampStartsAtTheRhythmAlreadyReached() {
         val timings = VibrationPatternPolicy.repeating(elapsedMs = 60_000, durationMs = twoMinutes).timings
 
-        assertThat(timings[1]).isEqualTo(500)
+        assertThat(timings[1]).isEqualTo(800)
         assertThat(timings[2]).isEqualTo(VibrationPatternPolicy.pauseAt(60_000, twoMinutes))
     }
 
@@ -121,7 +121,7 @@ class VibrationPatternPolicyTest {
     fun errorPatternDuringOngoingRepetitionResumesTheAlarmPattern() {
         val pattern = VibrationPatternPolicy.error(resume = VibrationPatternPolicy.repeating())
 
-        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 200, 300, 500, 500))
+        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 200, 300, 800, 2_200))
         assertThat(pattern.repeatFromIndex).isEqualTo(3)
     }
 
@@ -131,7 +131,7 @@ class VibrationPatternPolicyTest {
         val pattern = VibrationPatternPolicy.error(resume = resume)
 
         assertThat(pattern.timings.copyOfRange(0, 5))
-            .isEqualTo(longArrayOf(0, 200, 300, 500, resume.timings[2]))
+            .isEqualTo(longArrayOf(0, 200, 300, 800, resume.timings[2]))
         assertThat(pattern.timings.copyOfRange(3, pattern.timings.size))
             .isEqualTo(resume.timings.copyOfRange(1, resume.timings.size))
         assertThat(pattern.repeatFromIndex).isEqualTo(resume.repeatFromIndex + 2)

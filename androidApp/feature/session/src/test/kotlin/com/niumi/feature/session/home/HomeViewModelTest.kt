@@ -19,6 +19,7 @@ import com.niumi.feature.session.home.fakes.RecordingWakePlanScheduler
 import com.niumi.feature.session.home.fakes.armedSnapshot
 import com.niumi.feature.session.home.fakes.paris
 import com.niumi.system.apps.InstalledApp
+import com.niumi.system.audio.AlarmSoundPreferences
 import com.niumi.system.audio.AlarmSoundSettings
 import com.niumi.system.plan.ActivationFailure
 import com.niumi.system.plan.PlanApplyResult
@@ -26,6 +27,7 @@ import com.niumi.system.plan.PlanArmingStatus
 import com.niumi.system.plan.PlanChangeReason
 import com.niumi.system.plan.WakePlan
 import com.niumi.system.session.SessionSnapshotPublisher
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -433,6 +435,53 @@ class HomeViewModelTest {
 
         assertThat(ringtone?.name).isEqualTo("Piano")
         assertThat(ringtone?.detail).isEqualTo("Progressive · 2 min")
+    }
+
+    /**
+     * La feuille « Sonnerie » écrit en arrière-plan : la relecture lancée à sa fermeture peut lire
+     * l'ancienne valeur et finir après celle lancée à la fin de l'écriture (constat du 2026-10-26).
+     * La dernière relecture demandée doit gagner.
+     */
+    @Test
+    fun aLaterRefreshIsNotOverwrittenByAnEarlierSlowerOne() {
+        val gated = GatedAlarmSoundPreferences(AlarmSoundSettings("niumi_oiseaux", null))
+        val viewModel =
+            HomeViewModel(
+                HomeSources(
+                    plan = HomePlanSources(store, scheduler, armingStatus, NiumiCoreFacade(), readiness),
+                    rows = HomeRowSources(selection, installed, gated, gateway),
+                    snapshotPublisher = publisher,
+                    time = HomeTime(clock, FakeTimeZoneProvider(PARIS), ticker),
+                ),
+            )
+        val slowRead = CompletableDeferred<Unit>()
+        gated.gate = slowRead
+        viewModel.refresh()
+
+        gated.gate = null
+        gated.settings = AlarmSoundSettings("niumi_piano", 600)
+        viewModel.refresh()
+        slowRead.complete(Unit)
+
+        assertThat(viewModel.state.ringtone?.name).isEqualTo("Piano")
+        assertThat(viewModel.state.ringtone?.detail).isEqualTo("Progressive · 10 min")
+    }
+
+    /** Lecture qui attend [gate] quand il est posé, et rend la valeur lue à l'appel. */
+    private class GatedAlarmSoundPreferences(
+        var settings: AlarmSoundSettings,
+    ) : AlarmSoundPreferences {
+        var gate: CompletableDeferred<Unit>? = null
+
+        override suspend fun read(): AlarmSoundSettings {
+            val atCall = settings
+            gate?.await()
+            return atCall
+        }
+
+        override suspend fun write(settings: AlarmSoundSettings) {
+            this.settings = settings
+        }
     }
 
     @Test

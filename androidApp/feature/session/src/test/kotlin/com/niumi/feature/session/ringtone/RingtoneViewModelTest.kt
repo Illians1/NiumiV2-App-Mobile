@@ -357,4 +357,50 @@ class RingtoneViewModelTest {
 
         assertThat(viewModel.state.settings.ringtoneKey).isEqualTo(NiumiRingtones.DEFAULT_KEY)
     }
+
+    // Signal « enregistré » (constat du 2026-10-26) : l'écriture finit parfois après la fermeture
+    // de la feuille, et l'accueil se relit à ce signal.
+
+    @Test
+    fun choosingADurationSignalsSavedOnceThePreferenceIsWritten() =
+        runTest(UnconfinedTestDispatcher()) {
+            gateway.result = LoadResult.Absent
+            val viewModel = viewModel()
+            val writtenAtSignal = mutableListOf<AlarmSoundSettings?>()
+            backgroundScope.launch { viewModel.saved.collect { writtenAtSignal += preferences.written } }
+
+            viewModel.onVolumeRampSelected(300)
+
+            assertThat(writtenAtSignal).hasSize(1)
+            assertThat(writtenAtSignal.single()?.volumeRampSeconds).isEqualTo(300)
+        }
+
+    @Test
+    fun withAnArmedSessionSavedIsSignalledAfterTheSessionUpdate() =
+        runTest(UnconfinedTestDispatcher()) {
+            gateway.result = presentSession(armedSnapshot(), emptyList()).copy(extras = sessionExtras())
+            val viewModel = viewModel()
+            val sessionRampAtSignal = mutableListOf<Int?>()
+            backgroundScope.launch {
+                viewModel.saved.collect { sessionRampAtSignal += coordinator.lastVolumeRampSeconds }
+            }
+
+            viewModel.onVolumeRampSelected(900)
+
+            assertThat(sessionRampAtSignal).containsExactly(900)
+        }
+
+    @Test
+    fun aFailedPreferenceWriteSignalsNothing() =
+        runTest(UnconfinedTestDispatcher()) {
+            gateway.result = LoadResult.Absent
+            preferences.writeFails = true
+            val viewModel = viewModel()
+            var signals = 0
+            backgroundScope.launch { viewModel.saved.collect { signals++ } }
+
+            viewModel.onVolumeRampSelected(300)
+
+            assertThat(signals).isEqualTo(0)
+        }
 }

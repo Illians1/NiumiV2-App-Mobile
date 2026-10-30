@@ -17,6 +17,10 @@ import com.niumi.system.session.LoadResult
 import com.niumi.system.session.SessionCoordinator
 import com.niumi.system.session.SessionPersistenceGateway
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -41,6 +45,17 @@ class RingtoneViewModel
     ) : ViewModel() {
         var state by mutableStateOf(RingtoneUiState())
             private set
+
+        private val savedEvents =
+            MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+        /**
+         * Émis à la fin de chaque enregistrement : préférence écrite, puis session mise à jour si elle
+         * était armée, quel qu'en soit le résultat. L'écriture se poursuit après la fermeture de la
+         * feuille ; sans ce signal, l'accueil relisait l'ancienne valeur (constaté le 2026-10-26).
+         * Rien n'est émis si la préférence n'a pas pu être écrite.
+         */
+        val saved: SharedFlow<Unit> = savedEvents.asSharedFlow()
 
         init {
             viewModelScope.launch { load() }
@@ -116,6 +131,7 @@ class RingtoneViewModel
                     return@launch
                 }
                 if (wasArmed) applyToSession(sanitized)
+                savedEvents.tryEmit(Unit)
             }
         }
 

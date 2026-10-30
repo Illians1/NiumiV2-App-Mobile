@@ -25,20 +25,25 @@ data class VibrationPattern(
 /**
  * Décide du motif de vibration selon l'état en cours (SPEC_ANDROID §10.2, §11.2).
  *
- * **Vibration progressive (décision du 2026-10-26).** Avec une montée du volume, l'impulsion garde
- * 500 ms et la pause se resserre de 3 500 ms à 500 ms sur la même durée, en décroissance
- * log-linéaire comme le volume en dB. Tout le motif tient dans une seule waveform qui finit sur la
- * boucle 500/500 : `vibrate()` remplaçant l'effet en cours, aucun rappel au fil du temps ne
- * pourrait garantir la continuité. [repeatFromIndex] désigne toujours l'impulsion de cette boucle.
+ * **Rythme plein (révisé le 2026-10-30).** Impulsion de 800 ms toutes les 3 s : 500/500 était jugé
+ * trop fréquent, donc trop violent, sans montée comme en fin de montée.
+ *
+ * **Vibration progressive (décision du 2026-10-26, départ espacé le 2026-10-30).** Avec une montée
+ * du volume, l'impulsion garde 800 ms et la pause se resserre de 15 500 ms (une impulsion toutes
+ * les 16 s environ) à 2 200 ms sur la même durée, en décroissance log-linéaire comme le volume en
+ * dB. Tout le motif tient dans une seule waveform qui finit sur la boucle du rythme plein :
+ * `vibrate()` remplaçant l'effet en cours, aucun rappel au fil du temps ne pourrait garantir la
+ * continuité.
+ * [repeatFromIndex] désigne toujours l'impulsion de cette boucle.
  *
  * Une erreur de scan doit rester sensible sans jamais interrompre définitivement la vibration
  * d'alarme : [error] encode le pulse d'erreur *puis* la reprise du motif en cours dans une seule
  * waveform atomique, plutôt que de rappeler `startRepeating()` après coup.
  */
 object VibrationPatternPolicy {
-    private const val ALARM_PULSE_MS = 500L
-    private const val START_PAUSE_MS = 3_500L
-    private const val END_PAUSE_MS = ALARM_PULSE_MS
+    private const val ALARM_PULSE_MS = 800L
+    private const val START_PAUSE_MS = 15_500L
+    private const val END_PAUSE_MS = 2_200L
     private const val ERROR_PULSE_MS = 200L
     private const val ERROR_PAUSE_MS = 300L
     private const val NO_REPEAT = -1
@@ -70,7 +75,7 @@ object VibrationPatternPolicy {
         return VibrationPattern(timings.toLongArray(), repeatFromIndex)
     }
 
-    /** Pause après une impulsion émise à [elapsedMs] : `3500 × (500/3500)^p`, `p` borné à [0, 1]. */
+    /** Pause après une impulsion émise à [elapsedMs] : `15500 × (2200/15500)^p`, `p` borné à [0, 1]. */
     fun pauseAt(
         elapsedMs: Long,
         durationMs: Long,

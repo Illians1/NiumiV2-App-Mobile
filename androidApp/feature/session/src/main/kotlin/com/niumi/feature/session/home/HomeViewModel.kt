@@ -120,6 +120,7 @@ class HomeViewModel
         private var picker: DialHandle? = null
         private var pendingChange: Pair<WakePlan, PlanChangeReason>? = null
         private var messageJob: Job? = null
+        private var refreshJob: Job? = null
         private val applying = Mutex()
 
         init {
@@ -140,13 +141,19 @@ class HomeViewModel
             refresh()
         }
 
-        /** Rejoué à chaque `ON_RESUME` et au retour de l'écran 4 ou de la feuille « Sonnerie ». */
+        /**
+         * Rejoué à chaque `ON_RESUME`, au retour de l'écran 4 ou de la feuille « Sonnerie », et à la fin
+         * de chaque enregistrement de cette feuille. La relecture précédente est annulée : lancée plus
+         * tôt, elle peut avoir lu une valeur périmée et finir après la nouvelle (constat du 2026-10-26).
+         */
         fun refresh() {
-            viewModelScope.launch {
-                apps = loadApps()
-                ringtone = loadRingtone()
-                recompute()
-            }
+            refreshJob?.cancel()
+            refreshJob =
+                viewModelScope.launch {
+                    apps = loadApps()
+                    ringtone = loadRingtone()
+                    recompute()
+                }
         }
 
         fun onSwitchChanged(enabled: Boolean) = change(PlanChangeReason.SWITCH) { it.copy(enabled = enabled) }
