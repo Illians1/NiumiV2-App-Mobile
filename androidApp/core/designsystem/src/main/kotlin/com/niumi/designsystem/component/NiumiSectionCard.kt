@@ -1,7 +1,6 @@
 package com.niumi.designsystem.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -21,9 +20,9 @@ import com.niumi.designsystem.ui.theme.NiumiType
 /**
  * Carte de section (maquettes de Mehdi du 2026-10-30) : à l'accueil, elle regroupe le cadran, le
  * bloc « Jours de réveil » ou les lignes de réglage ; elle fait aussi les tuiles d'autorisation de
- * l'écran 2 et la carte de sélection de l'écran 4 (même jour). Fond `surface`, coins de 14 ; en clair, sans
- * bord, une ombre en deux couches la détache du fond ([niumiCardShadow]) ; en sombre, sans ombre, un
- * liseré d'un pixel (`sectionCardOutline`). Le contenu n'est pas découpé : rien ne déborde de la
+ * l'écran 2 et la carte de sélection de l'écran 4 (même jour). Fond `surface`, coins de 14, sans
+ * bord ; une ombre en deux couches la détache du fond ([niumiCardShadow]), plus marquée en sombre
+ * (maquettes 17, 24 à 26 et 29). Le contenu n'est pas découpé : rien ne déborde de la
  * carte dans les maquettes. Ne remplace pas [NiumiCard], la carte d'état, noire ou au trait.
  */
 @Composable
@@ -39,9 +38,8 @@ fun NiumiSectionCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .niumiCardShadow(NiumiShapes.card, palette.sectionCardShadow)
+                .niumiCardShadow(NiumiShapes.card, palette)
                 .background(palette.surface, NiumiShapes.card)
-                .border(NiumiDimens.hairline, palette.sectionCardOutline, NiumiShapes.card)
                 .padding(contentPadding),
         horizontalAlignment = horizontalAlignment,
         verticalArrangement = verticalArrangement,

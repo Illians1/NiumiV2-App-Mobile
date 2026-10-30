@@ -555,15 +555,15 @@ object NiumiDimens {
     val sectionCardRowsPadding = PaddingValues(horizontal = 16.dp)
 
     /**
-     * Ombre des cartes de l'accueil en clair (cartes de section et carte d'état, dernière version des
-     * maquettes du 2026-10-30) : deux couches, comme le `box-shadow` des maquettes, une ombre nette et
-     * proche sous une ombre large et diffuse. Dessinée telle quelle (`Modifier.dropShadow`), sans
-     * l'approximation par une élévation des versions précédentes.
+     * Ombre des cartes (cartes de section, carte d'état, anneau du cadran ; maquettes du 2026-10-30) :
+     * deux couches, comme le `box-shadow` des maquettes, un trait de contact fin et proche sous un halo
+     * large et diffus. Dessinée telle quelle (`Modifier.dropShadow`) ; les opacités, propres à chaque
+     * thème, sont dans la palette (`cardShadowContact`, `cardShadowHalo`).
      */
     val cardShadow =
         listOf(
-            NiumiShadowLayer(offsetY = 1.dp, blur = 2.dp, alpha = 0.10f),
-            NiumiShadowLayer(offsetY = 10.dp, blur = 30.dp, alpha = 0.18f),
+            NiumiShadowLayer(offsetY = 1.dp, blur = 2.dp),
+            NiumiShadowLayer(offsetY = 10.dp, blur = 30.dp),
         )
 
     /** Ligne « Applications bloquées » et ligne « Sonnerie » : 86 et 78 dans les maquettes, resserrées de même. */
@@ -646,12 +646,11 @@ object NiumiDimens {
 }
 
 /**
- * Une couche d'ombre d'une maquette (`box-shadow: 0 <offsetY> <blur> rgba(0, 0, 0, <alpha>)`) :
- * décalage vers le bas, rayon de flou et opacité de la couleur d'ombre. Ni décalage horizontal ni
- * étalement dans les maquettes.
+ * Une couche d'ombre d'une maquette (`box-shadow: 0 <offsetY> <blur> rgba(0, 0, 0, …)`) : décalage
+ * vers le bas et rayon de flou ; la couleur et son opacité viennent de la palette. Ni décalage
+ * horizontal ni étalement dans les maquettes.
  */
 data class NiumiShadowLayer(
     val offsetY: Dp,
     val blur: Dp,
-    val alpha: Float,
 )

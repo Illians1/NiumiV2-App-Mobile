@@ -112,7 +112,7 @@ fun HomeScreen(
         NiumiScreenScaffold(
             backgroundBrush = homeBackdropBrush(backdrop),
             contentUnderTop = true,
-            topBandColor = LocalNiumiPalette.current.surface,
+            topBandColor = LocalNiumiPalette.current.topSurface,
             navigationBar = {
                 MainTabBar(selected = MainTab.WAKE, onWake = {}, onSettings = actions.onOpenSettings)
             },

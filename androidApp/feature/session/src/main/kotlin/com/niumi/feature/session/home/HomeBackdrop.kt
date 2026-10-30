@@ -27,11 +27,11 @@ internal class HomeBackdrop {
 }
 
 /**
- * Blanc (`surface`) derrière le cadran, puis un dégradé lent vers le gris (`homeBackground`) : il part
- * du haut de la carte d'état, traverse la carte des jours et n'est gris plein qu'au haut de la carte
- * des lignes (précisions de Mehdi du 2026-10-30 : le gris commence au niveau de la carte d'état et
- * monte progressivement). Fixe, comme le cadran : seules les cartes défilent. Avant la première
- * mesure, des bornes estimées sous un cadran de la hauteur de maquette.
+ * La surface des barres (`topSurface`) derrière le cadran, puis un dégradé lent vers le fond de
+ * l'accueil (`homeBackground`) : il part du haut de la carte d'état, traverse la carte des jours et
+ * n'est plein qu'au haut de la carte des lignes (maquettes du 2026-10-30, troisième version). Fixe :
+ * tout le contenu défile par-dessus. Avant la première mesure, des bornes estimées sous un cadran de
+ * la hauteur de maquette.
  */
 @Composable
 internal fun homeBackdropBrush(backdrop: HomeBackdrop): Brush {
@@ -52,7 +52,7 @@ internal fun homeBackdropBrush(backdrop: HomeBackdrop): Brush {
             top + with(density) { NiumiDimens.homeBackdropGradientEstimate.toPx() }
         }
     return Brush.verticalGradient(
-        colors = listOf(palette.surface, palette.homeBackground),
+        colors = listOf(palette.topSurface, palette.homeBackground),
         startY = top,
         endY = bottom,
     )

@@ -116,7 +116,7 @@ fun NiumiTabBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .niumiTabBarSurface(palette.surface)
+                .niumiTabBarSurface(palette.topSurface)
                 .navigationBarsPadding(),
     ) {
         Row(
@@ -302,7 +302,7 @@ private fun Badge(
         modifier =
             modifier
                 .wrapContentSize(align = Alignment.Center, unbounded = true)
-                .border(NiumiDimens.tabBarBadgeOutline, palette.surface, NiumiShapes.pill)
+                .border(NiumiDimens.tabBarBadgeOutline, palette.topSurface, NiumiShapes.pill)
                 .padding(NiumiDimens.tabBarBadgeOutline)
                 .heightIn(min = NiumiDimens.tabBarBadgeHeight)
                 .clip(NiumiShapes.pill)

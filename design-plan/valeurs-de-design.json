@@ -6,6 +6,7 @@
       "fond": "#FAFAF8",
       "fondAccueil": "#ECEDEE",
       "surface": "#FFFFFF",
+      "surfaceDesBarres": "#FFFFFF",
       "encre": "#0E0E10",
       "texteSecondaire": "#5C5C60",
       "bordure": "#85858A",
@@ -36,25 +37,25 @@
       "texteSurCarteNoire": "#FAFAF8"
     },
     "sombre": {
-      "fond": "#0E0E10",
-      "fondAccueil": "#0E0E10",
-      "surface": "#1B1B1F",
+      "fond": "#1B1B1F",
+      "fondAccueil": "#1B1B1F",
+      "surface": "#303036",
+      "surfaceDesBarres": "#26262B",
       "texte": "#FAFAF8",
       "texteSecondaire": "#A9A9AE",
       "bordure": "#74747B",
       "texteDesactive": "#74747B",
-      "separateur": "#2E2E33",
-      "piste": "#2A2A2F",
+      "separateur": "#44444B",
+      "piste": "#3C3C43",
       "fondDesactive": "#4A4A50",
       "bordMenu": "#3A3A40",
-      "boutonGris": "#34343A",
+      "boutonGris": "#4A4A50",
       "ambre": "#E9A23B",
       "teinteMotSignale": "#3D2C0E",
       "texteSurBoutonPrincipal": "#0E0E10",
       "voile": "rgba(0, 0, 0, 0.6)",
       "lisereFeuille": "#2E2E33",
-      "bordCarte": "#74747B",
-      "bordCarteDeSection": "#2E2E33"
+      "bordCarte": "#74747B"
     }
   },
   "logo": {
@@ -248,7 +249,7 @@
       "rayon": 14
     },
     "carteDeSection": {
-      "_lire": "Cartes des jours et des lignes de l'accueil (maquettes du 2026-10-30 ; le cadran, d'abord dans une carte, est posé sur le fond en dégradé fondAccueil depuis l'essai de Mehdi du même jour). En clair, sans bord, avec l'ombre ; en sombre, sans ombre, avec le bord bordCarteDeSection. La carte d'état de l'accueil (noire ou au trait) prend la même ombre en clair. Les tuiles d'autorisation (écran 2) et la carte de sélection (écran 4) sont aussi des cartes de section. ombreClair : les couches du box-shadow des maquettes, noir, sans décalage horizontal ni étalement (0 1px 2px rgba(0, 0, 0, 0.10), 0 10px 30px rgba(0, 0, 0, 0.18)).",
+      "_lire": "Cartes des jours et des lignes de l'accueil (maquettes du 2026-10-30 ; le cadran, dans une carte dans les deux premières versions, est posé sur le fond en dégradé fondAccueil depuis la troisième, et son anneau porte l'ombre). Sans bord, avec l'ombre, en clair (ombreClair) comme en sombre (ombreSombre, mêmes couches, plus opaques). La carte d'état de l'accueil (noire ou au trait) prend la même ombre. Les tuiles d'autorisation (écran 2) et la carte de sélection (écran 4) sont aussi des cartes de section. Couches du box-shadow des maquettes, noir, sans décalage horizontal ni étalement.",
       "rayon": 14,
       "ombreClair": [
         {
@@ -260,6 +261,18 @@
           "decalageY": 10,
           "flou": 30,
           "opacite": 0.18
+        }
+      ],
+      "ombreSombre": [
+        {
+          "decalageY": 1,
+          "flou": 2,
+          "opacite": 0.45
+        },
+        {
+          "decalageY": 10,
+          "flou": 30,
+          "opacite": 0.80
         }
       ],
       "margesJours": [

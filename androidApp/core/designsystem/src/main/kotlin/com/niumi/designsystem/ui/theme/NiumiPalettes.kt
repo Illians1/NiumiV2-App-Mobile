@@ -60,37 +60,38 @@ object NiumiPalettes {
             mismatchTint = Color(0xFFFCF1DF),
             // « Désactivé » : bord des jours non cochés de l'accueil « Réveil désactivé » (maquette 13).
             disabledBorder = Color(0xFFC6C6C2),
-            // Cartes de l'accueil (maquettes 15 à 29 et 61 à 65 du 2026-10-30) : ombre noire en deux
-            // couches (`NiumiDimens.cardShadow`) ; les cartes de section n'ont pas de bord.
-            sectionCardOutline = Color.Transparent,
-            sectionCardShadow = Color.Black,
-            // ESSAI de Mehdi du 2026-10-30, à valider : sous le cadran, l'accueil devient gris #ECEDEE
-            // (le gris clair essayé le même jour pour tout l'écran), en dégradé depuis le blanc.
+            // « Fond de l'accueil » : sous le cadran, le fond devient ce gris en dégradé depuis la
+            // surface des barres (maquettes 15 à 27 et 61 à 65, troisième version du 2026-10-30).
             homeBackground = Color(0xFFECEDEE),
+            // « Surface des barres » : en clair, le blanc de la surface.
+            topSurface = Color(0xFFFFFFFF),
+            // « Ombre des cartes » : noir à 10 % (contact) et 18 % (halo), VALEURS §4.
+            cardShadowContact = Color.Black.copy(alpha = 0.10f),
+            cardShadowHalo = Color.Black.copy(alpha = 0.18f),
         )
 
     val Dark =
         NiumiPalette(
-            // « Fond d'écran »
-            background = Color(0xFF0E0E10),
-            // « Surface »
-            surface = Color(0xFF1B1B1F),
+            // « Fond d'écran » : #1B1B1F depuis les maquettes sombres du 2026-10-30 (#0E0E10 avant).
+            background = Color(0xFF1B1B1F),
+            // « Surface » : #303036 depuis les maquettes sombres du 2026-10-30 (#1B1B1F avant).
+            surface = Color(0xFF303036),
             // « Texte principal »
             ink = Color(0xFFFAFAF8),
             // « Texte secondaire »
             textSecondary = Color(0xFFA9A9AE),
             // « Bordure, texte désactivé »
             border = Color(0xFF74747B),
-            // « Liseré de feuille, séparateur »
-            separator = Color(0xFF2E2E33),
+            // « Séparateur » (maquettes sombres du 2026-10-30 ; #2E2E33 avant, comme le liseré).
+            separator = Color(0xFF44444B),
             // « Piste »
-            track = Color(0xFF2A2A2F),
+            track = Color(0xFF3C3C43),
             // « Fond désactivé » : jours grisés pendant la session.
             disabled = Color(0xFF4A4A50),
             // « Piste » : rond de l'icône de scan.
-            tileGrey = Color(0xFF2A2A2F),
+            tileGrey = Color(0xFF3C3C43),
             // Aucune case grisée dessinée en sombre : la piste.
-            cellGrey = Color(0xFF2A2A2F),
+            cellGrey = Color(0xFF3C3C43),
             // « Ambre »
             amber = Color(0xFFE9A23B),
             // Aucune teinte ambre dessinée en sombre : la teinte du mot signalé.
@@ -101,26 +102,27 @@ object NiumiPalettes {
             onInkSecondary = Color(0xFF5C5C60),
             // « Voile » : noir à 60 %.
             veil = Color.Black.copy(alpha = 0.6f),
-            // « Liseré de feuille, séparateur »
+            // « Liseré de feuille » : inchangé par les maquettes sombres du 2026-10-30.
             sheetOutline = Color(0xFF2E2E33),
             // « Bord de menu »
             menuBorder = Color(0xFF3A3A40),
-            // « Bouton gris »
-            cancelButton = Color(0xFF34343A),
-            // VALEURS §4, bouton inactif sombre : fond #2A2A2F.
-            disabledFill = Color(0xFF2A2A2F),
+            // « Bouton gris » : le fond désactivé depuis les maquettes sombres du 2026-10-30 (#34343A avant).
+            cancelButton = Color(0xFF4A4A50),
+            // VALEURS §4, bouton inactif sombre : fond « Piste ».
+            disabledFill = Color(0xFF3C3C43),
             // VALEURS §4, bouton inactif sombre : texte #74747B.
             disabledText = Color(0xFF74747B),
             // « Teinte du mot signalé »
             mismatchTint = Color(0xFF3D2C0E),
             // « Bord de menu » : aussi le bord des jours non cochés verrouillés en session (maquette 15).
             disabledBorder = Color(0xFF3A3A40),
-            // « Bord de carte de section » (maquettes 17, 24 à 26 et 29 du 2026-10-30) : le liseré
-            // des feuilles ; aucune ombre en sombre, ni sous les cartes de section ni sous la carte d'état.
-            sectionCardOutline = Color(0xFF2E2E33),
-            sectionCardShadow = Color.Transparent,
-            // Sous le cadran, le fond d'écran : le dégradé va de la surface au fond.
-            homeBackground = Color(0xFF0E0E10),
+            // « Fond de l'accueil » : le fond d'écran ; le dégradé va de la surface des barres au fond.
+            homeBackground = Color(0xFF1B1B1F),
+            // « Surface des barres » (maquettes 17, 24 à 26 et 29 du 2026-10-30).
+            topSurface = Color(0xFF26262B),
+            // « Ombre des cartes » en sombre : noir à 45 % (contact) et 80 % (halo), mêmes maquettes.
+            cardShadowContact = Color.Black.copy(alpha = 0.45f),
+            cardShadowHalo = Color.Black.copy(alpha = 0.80f),
         )
 
     /**

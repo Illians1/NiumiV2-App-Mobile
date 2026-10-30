@@ -212,20 +212,23 @@ class NiumiShapesAndDimensTest {
         assertWithMessage("marges des lignes")
             .that(NiumiDimens.sectionCardRowsPadding.sides())
             .isEqualTo(margins("margesLignes"))
-        val shadow =
-            card.getValue("ombreClair").jsonArray.map { layer ->
-                val values = layer.jsonObject
+        // Les deux thèmes partagent les couches (décalage, flou) ; les opacités sont dans la palette.
+        listOf("ombreClair", "ombreSombre").forEach { key ->
+            val shadow =
+                card.getValue(key).jsonArray.map { layer ->
+                    val values = layer.jsonObject
 
-                fun value(field: String) =
-                    values
-                        .getValue(field)
-                        .jsonPrimitive.content
-                        .toFloat()
-                listOf(value("decalageY"), value("flou"), value("opacite"))
-            }
-        assertWithMessage("ombre des cartes de l'accueil")
-            .that(NiumiDimens.cardShadow.map { listOf(it.offsetY.value, it.blur.value, it.alpha) })
-            .isEqualTo(shadow)
+                    fun value(field: String) =
+                        values
+                            .getValue(field)
+                            .jsonPrimitive.content
+                            .toFloat()
+                    listOf(value("decalageY"), value("flou"))
+                }
+            assertWithMessage("ombre des cartes ($key)")
+                .that(NiumiDimens.cardShadow.map { listOf(it.offsetY.value, it.blur.value) })
+                .isEqualTo(shadow)
+        }
     }
 
     /**

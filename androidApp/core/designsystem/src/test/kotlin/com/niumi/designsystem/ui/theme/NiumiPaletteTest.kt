@@ -28,6 +28,8 @@ class NiumiPaletteTest {
             // Essai de Mehdi du 2026-10-30 : gris sous le cadran, au bout du dégradé depuis la surface.
             "fondAccueil" to listOf(NiumiPalette::homeBackground),
             "surface" to listOf(NiumiPalette::surface),
+            // Bande du haut, barre d'onglets et haut du fond de l'accueil (maquettes du 2026-10-30).
+            "surfaceDesBarres" to listOf(NiumiPalette::topSurface),
             "encre" to listOf(NiumiPalette::ink),
             // D9 (tranché le 2026-10-19) : texte du bouton inactif = texte secondaire.
             "texteSecondaire" to listOf(NiumiPalette::textSecondary, NiumiPalette::disabledText),
@@ -54,6 +56,7 @@ class NiumiPaletteTest {
             // Sous le cadran, le fond d'écran : le dégradé va de la surface au fond.
             "fondAccueil" to listOf(NiumiPalette::homeBackground),
             "surface" to listOf(NiumiPalette::surface),
+            "surfaceDesBarres" to listOf(NiumiPalette::topSurface),
             "texte" to listOf(NiumiPalette::ink),
             "texteSecondaire" to listOf(NiumiPalette::textSecondary),
             "bordure" to listOf(NiumiPalette::border),
@@ -78,8 +81,6 @@ class NiumiPaletteTest {
             "texteSurBoutonPrincipal" to listOf(NiumiPalette::onInk),
             "voile" to listOf(NiumiPalette::veil),
             "lisereFeuille" to listOf(NiumiPalette::sheetOutline),
-            // Maquettes du 2026-10-30 : bord des cartes du cadran, des jours et des lignes de l'accueil.
-            "bordCarteDeSection" to listOf(NiumiPalette::sectionCardOutline),
         )
 
     /**
@@ -123,11 +124,28 @@ class NiumiPaletteTest {
         assertThat(NiumiPalettes.Light.menuBorder).isEqualTo(Color.Transparent)
         // En sombre, le texte secondaire posé sur l'encre claire (bouton ou carte blanc cassé).
         assertColorEquals("sombre.onInkSecondary", NiumiPalettes.Dark.onInkSecondary, "#5C5C60")
-        // Cartes de section (maquettes du 2026-10-30) : en clair, une ombre noire et pas de bord ;
-        // en sombre, pas d'ombre (le bord vient du JSON).
-        assertThat(NiumiPalettes.Light.sectionCardOutline).isEqualTo(Color.Transparent)
-        assertThat(NiumiPalettes.Light.sectionCardShadow).isEqualTo(Color.Black)
-        assertThat(NiumiPalettes.Dark.sectionCardShadow).isEqualTo(Color.Transparent)
+        // Ombre des cartes (maquettes du 2026-10-30) : noire, aux opacités des couches du JSON
+        // (`formes.carteDeSection.ombreClair` et `ombreSombre`).
+        val card = DesignValues.obj("formes", "carteDeSection")
+
+        fun opacities(key: String) =
+            card.getValue(key).jsonArray.map {
+                it.jsonObject
+                    .getValue("opacite")
+                    .jsonPrimitive.content
+                    .toFloat()
+            }
+        val shadows =
+            mapOf(
+                "ombreClair" to listOf(NiumiPalettes.Light.cardShadowContact, NiumiPalettes.Light.cardShadowHalo),
+                "ombreSombre" to listOf(NiumiPalettes.Dark.cardShadowContact, NiumiPalettes.Dark.cardShadowHalo),
+            )
+        shadows.forEach { (key, colors) ->
+            colors.zip(opacities(key)).forEach { (color, opacity) ->
+                assertWithMessage("$key : couleur").that(color.copy(alpha = 1f)).isEqualTo(Color.Black)
+                assertWithMessage("$key : opacité").that(color.alpha).isWithin(ALPHA_TOLERANCE).of(opacity)
+            }
+        }
     }
 
     @Test
@@ -138,7 +156,7 @@ class NiumiPaletteTest {
                 .filterNot { Modifier.isStatic(it.modifiers) }
                 .map { it.name }
                 .toSet()
-        val explicit = setOf("sheetOutline", "menuBorder", "sectionCardOutline", "sectionCardShadow")
+        val explicit = setOf("sheetOutline", "menuBorder", "cardShadowContact", "cardShadowHalo")
         val lightCovered =
             lightRoles.values
                 .flatten()
@@ -148,9 +166,9 @@ class NiumiPaletteTest {
             darkRoles.values
                 .flatten()
                 .map { it.name }
-                .toSet() + "onInkSecondary" + "sectionCardShadow"
+                .toSet() + "onInkSecondary" + "cardShadowContact" + "cardShadowHalo"
 
-        assertThat(roles).hasSize(25)
+        assertThat(roles).hasSize(26)
         assertWithMessage("rôles clairs sans origine").that(roles - lightCovered).isEmpty()
         assertWithMessage("rôles sombres sans origine").that(roles - darkCovered).isEmpty()
     }
@@ -197,3 +215,6 @@ class NiumiPaletteTest {
         assertThat(xmlColor("niumi_background_dark")).isEqualTo(NiumiPalettes.Dark.background.toArgb())
     }
 }
+
+/** Une couleur sRVB range son opacité sur 8 bits : 0,10 devient 26/255. */
+private const val ALPHA_TOLERANCE = 0.005f

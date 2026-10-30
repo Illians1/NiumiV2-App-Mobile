@@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -150,12 +151,17 @@ internal fun dialValueStyle(
 ): TextStyle = base.copy(fontSize = base.fontSize * ringScale, letterSpacing = base.letterSpacing * ringScale)
 
 /**
- * Forme de l'anneau à l'échelle [scale], pour son ombre : la couronne entre les bords extérieur et
- * intérieur du trait, aux mêmes centre et rayon que le dessin ([DialFrame]).
+ * Formes de l'anneau à l'échelle [scale], aux mêmes centre et rayon que le dessin ([DialFrame]) :
+ * [Part.RING], la couronne entre les bords extérieur et intérieur du trait, qui porte l'ombre ;
+ * [Part.OUTSIDE_HOLE], toute la zone sauf le disque intérieur de l'anneau, qui découpe cette ombre
+ * pour qu'elle ne tombe pas au centre du cadran.
  */
 private class DialRingShape(
     private val scale: Float,
+    private val part: Part,
 ) : Shape {
+    enum class Part { RING, OUTSIDE_HOLE }
+
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
@@ -163,11 +169,15 @@ private class DialRingShape(
     ): Outline {
         val frame = DialFrame(size.width, scale, density.density)
         val center = Offset(frame.centerX, frame.centerY)
+        val inner = frame.radius - frame.stroke / 2
         val path =
             Path().apply {
                 fillType = PathFillType.EvenOdd
-                addOval(Rect(center, frame.radius + frame.stroke / 2))
-                addOval(Rect(center, frame.radius - frame.stroke / 2))
+                when (part) {
+                    Part.RING -> addOval(Rect(center, frame.radius + frame.stroke / 2))
+                    Part.OUTSIDE_HOLE -> addRect(Rect(Offset.Zero, size))
+                }
+                addOval(Rect(center, inner))
             }
         return Outline.Generic(path)
     }
@@ -206,15 +216,18 @@ private fun DialBody(
     val hasHandles = state !is DialState.InSession
 
     Box(modifier = Modifier.fillMaxWidth().height(height)) {
-        // Sans carte autour du cadran (essai de Mehdi du 2026-10-30), l'anneau porte lui-même l'ombre
-        // des cartes ; aucune en sombre (`sectionCardShadow` transparent).
-        val ringShape = remember(scale) { DialRingShape(scale) }
+        // Sans carte autour du cadran (maquettes du 2026-10-30, troisième version), l'anneau porte
+        // lui-même l'ombre des cartes, en clair comme en sombre, mais seulement à l'extérieur : à
+        // l'intérieur, elle est masquée (demande de Mehdi du 2026-10-30, après essai : le centre en
+        // était assombri). Un élément vide porte l'ombre, derrière le dessin.
+        val ringShape = remember(scale) { DialRingShape(scale, DialRingShape.Part.RING) }
+        val outsideHole = remember(scale) { DialRingShape(scale, DialRingShape.Part.OUTSIDE_HOLE) }
+        Box(modifier = Modifier.matchParentSize().clip(outsideHole).niumiCardShadow(ringShape, palette))
         Canvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .height(height)
-                    .niumiCardShadow(ringShape, palette.sectionCardShadow)
                     .clearAndSetSemantics {
                         if (!hasHandles) {
                             contentDescription =
