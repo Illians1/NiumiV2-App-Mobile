@@ -449,6 +449,8 @@ Libellés d'accessibilité présents dans le fichier source :
 
 Fichier : `19_ecran-6-selecteur-d-heure-onglet-coucher` (ajoutée le 25 octobre 2026)
 
+Source du 30 octobre 2026 : fenêtre à 28 des bords, traits limités aux roues, phrase sur deux lignes.
+
 Par-dessus l'accueil (mêmes textes que la maquette 16, jours du lundi au vendredi cochés), la fenêtre :
 
 - Coucher
@@ -479,6 +481,8 @@ Textes de l'app absents des maquettes (décisions du 25 octobre 2026, à valider
 ## 20 · Écran 6 · Sélecteur d'heure, onglet Réveil
 
 Fichier : `20_ecran-6-selecteur-d-heure-onglet-reveil` (ajoutée le 25 octobre 2026)
+
+Source du 30 octobre 2026 : fenêtre à 28 des bords, traits limités aux roues, phrase sur deux lignes.
 
 Par-dessus l'accueil (mêmes textes que la maquette 16), la fenêtre :
 
@@ -636,6 +640,8 @@ Fichier : `25_annuler-2-scanner-ou-sortie-de-secours`
 
 Source du 25 octobre 2026 : « Annuler la session » et « Annuler la session ? » (régression, D23).
 
+Source du 30 octobre 2026 : la question devient une fenêtre centrée au format de la fenêtre d'alerte (croix « Fermer », icône du scan), à la place de la feuille du bas.
+
 - Coucher
 - 22:30
 - Réveil
@@ -674,6 +680,7 @@ Libellés d'accessibilité présents dans le fichier source :
 - Dimanche
 - Icônes des 6 applications bloquées
 - Annuler le réveil ?
+- Fermer
 
 ## 26 · Annuler · 3. La feuille de scan
 

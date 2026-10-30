@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
  * En-tête, deux formes relevées dans les maquettes :
  * - avec [closeLabel] (« Fermer », « Fermer sans enregistrer ») : titre et croix sur une ligne de
  *   48, 8 sous la poignée (feuille « Sonnerie ») ;
- * - sans croix : titre à 22 sous la poignée (« Annuler le réveil ? »), centré si [titleCentered].
+ * - sans croix : titre à 22 sous la poignée (« Prêt à scanner »), centré si [titleCentered].
  *
  * Titre 22/600 dans les deux cas : la maquette met 24 sans croix, jugé trop imposant (décision de
  * Mehdi du 2026-10-26).

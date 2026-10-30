@@ -169,6 +169,16 @@ class HomeScreenTest {
         assertThat(calls).containsExactly("keep", "block-now").inOrder()
     }
 
+    /** Croix « Fermer » ajoutée le 2026-10-30 (demande de Mehdi) : elle ne change rien, comme « Annuler ». */
+    @Test
+    fun theImmediateBlockingCloseCrossKeepsThePlan() {
+        show(scheduled.copy(immediateBlockingBedtimeMinutes = 21 * 60))
+
+        composeRule.onNodeWithContentDescription(HomeTexts.CLOSE).performClick()
+
+        assertThat(calls).containsExactly("keep")
+    }
+
     /** Session en cours : pas d'interrupteur, cadenas, champs verrouillés qui renvoient vers la bulle M10. */
     @Test
     fun inSessionTheFieldsAreLockedAndTheCancelLinkIsShown() {

@@ -291,7 +291,7 @@ Une fenêtre centrée par-dessus l'accueil assombri.
 | Croix | En haut à droite, « Fermer » |
 | Onglets | « Coucher » et « Réveil », l'onglet ouvert souligné. Passer d'un onglet à l'autre garde le choix en cours |
 | Roues | Une roue des heures, de 0 à 23 sans zéro devant, et une roue des minutes, de « 00 » à « 59 », séparées par « : ». La valeur du milieu, en gros entre deux traits, est la réponse ; les roues tournent sans fin |
-| Phrase | Suit le choix en direct. Onglet Coucher : « 8 h 30 de sommeil avant le réveil de 7:00 ». Onglet Réveil : « 8 h 30 de sommeil après le coucher de 22:30 ». Pour deux heures identiques : « 24 h de blocage jusqu'au réveil de 7:00 » ou « 24 h de blocage depuis le coucher de 22:30 » (textes non dessinés, à valider par Mehdi) |
+| Phrase | Suit le choix en direct. Onglet Coucher : « 8 h 30 de sommeil avant le réveil de 7:00 ». Onglet Réveil : « 8 h 30 de sommeil après le coucher de 22:30 ». Pour deux heures identiques : « 24 h de blocage jusqu'au réveil de 7:00 » ou « 24 h de blocage depuis le coucher de 22:30 » (textes non dessinés, à valider par Mehdi). Toujours sur deux lignes : la durée (« 8 h 30 de sommeil »), puis le reste d'un seul tenant (« avant le réveil de 7:00 », « après le coucher de 22:30 »), qui ne se coupe jamais ; l'heure ne reste donc pas seule sur une ligne (décision de Mehdi du 30 octobre 2026, après le rétrécissement de la fenêtre) |
 | Bouton | Valider : enregistre les deux heures |
 
 - Toucher la poignée du coucher ouvre l'onglet Coucher ; toucher ailleurs sur le cadran, poignée du réveil comprise, ouvre l'onglet Réveil.
@@ -312,7 +312,7 @@ Une fenêtre centrée par-dessus l'accueil assombri.
 Décision de Mehdi du 25 octobre 2026 (section 2). Non dessinée. Textes revus par Mehdi le même jour, après un premier essai : le titre dit ce qui arrive aux applications, le texte en donne la raison.
 
 - **Quand** : un changement fait depuis l'accueil, interrupteur allumé, lancerait le blocage tout de suite, parce que l'heure actuelle est déjà dans la période coucher → réveil du planning modifié. Gestes concernés : allumer l'interrupteur, cocher ou décocher une pastille, toucher « Ponctuel » ou « Quotidien », relâcher une poignée, « Valider » du sélecteur d'heure. Éteindre l'interrupteur ou un changement qui laisse la période à venir n'ouvre rien. « Valider » de l'écran 4 n'est pas concerné.
-- **Forme** : fenêtre centrée sur l'accueil assombri, comme le sélecteur d'heure, sans croix. Icône du cadenas dans un rond gris.
+- **Forme** : fenêtre centrée sur l'accueil assombri, comme le sélecteur d'heure, avec une croix ronde en haut à droite (décision de Mehdi du 30 octobre 2026 ; sans croix jusque-là). Icône du cadenas dans un rond gris.
 
 | Élément | Contenu |
 | --- | --- |
@@ -322,7 +322,7 @@ Décision de Mehdi du 25 octobre 2026 (section 2). Non dessinée. Textes revus p
 | Lien | Annuler |
 
 - « Bloquer maintenant » applique le changement : l'accueil passe en « Blocage en cours ».
-- « Annuler », un toucher sur le voile et le retour du téléphone ne changent rien : l'interrupteur reste éteint, la pastille garde son état, la poignée revient à son heure.
+- « Annuler », la croix, un toucher sur le voile et le retour du téléphone ne changent rien : l'interrupteur reste éteint, la pastille garde son état, la poignée revient à son heure.
 
 ## 10. Choix de la sonnerie
 
@@ -360,7 +360,7 @@ Images : `24_annuler-1-le-lien-sur-l-accueil`, `25_annuler-2-scanner-ou-sortie-d
 Pendant une session, l'utilisateur peut l'annuler en scannant un Niumi Spot.
 
 1. Sur l'accueil en session, il touche le lien « Annuler le réveil ».
-2. Une feuille monte du bas. Dans l'app, son titre et son texte sont centrés et le titre est un peu plus petit que dans la maquette (décision de Mehdi du 26 octobre 2026, `POINTS-OUVERTS.md` M19) :
+2. Une fenêtre s'ouvre au centre de l'écran, au format de la fenêtre d'alerte (`VALEURS-DE-DESIGN.md` §4) : croix ronde en haut à droite, icône du scan dans un rond, titre centré, texte, bouton (décision de Mehdi du 30 octobre 2026 ; jusque-là une feuille montait du bas, titre et texte centrés, M19). La croix, le voile ou le retour la ferment sans rien changer :
 
 | Élément | Contenu |
 | --- | --- |

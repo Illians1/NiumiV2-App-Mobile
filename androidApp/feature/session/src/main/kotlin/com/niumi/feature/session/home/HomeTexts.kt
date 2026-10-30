@@ -101,7 +101,11 @@ object HomeTexts {
 
     fun moreApps(hidden: Int): String = "+$hidden"
 
-    /** Phrase du sélecteur, onglet « Coucher » (maquette 19). */
+    /**
+     * Phrase du sélecteur, onglet « Coucher » (maquette 19), sur deux lignes : la durée, puis
+     * « avant le réveil de 7:00 » d'un seul tenant, tenu par des espaces insécables (décision de Mehdi
+     * du 2026-10-30 : la fenêtre rétrécie coupait la phrase et laissait l'heure seule).
+     */
     fun sleepBeforeWake(
         minutes: Int,
         wake: String,
@@ -109,12 +113,15 @@ object HomeTexts {
         if (minutes >=
             DialGeometry.MINUTES_PER_DAY
         ) {
-            "$FULL_DAY jusqu’au réveil de $wake"
+            "$FULL_DAY\n${unbreakable("jusqu’au réveil de $wake")}"
         } else {
-            "${sleep(minutes)} avant le réveil de $wake"
+            "${sleep(minutes)}\n${unbreakable("avant le réveil de $wake")}"
         }
 
-    /** Phrase du sélecteur, onglet « Réveil » (maquette 20). */
+    /**
+     * Phrase du sélecteur, onglet « Réveil » (maquette 20) : la durée, puis « après le coucher de
+     * 22:30 » insécable.
+     */
     fun sleepAfterBedtime(
         minutes: Int,
         bedtime: String,
@@ -122,11 +129,15 @@ object HomeTexts {
         if (minutes >=
             DialGeometry.MINUTES_PER_DAY
         ) {
-            "$FULL_DAY depuis le coucher de $bedtime"
+            "$FULL_DAY\n${unbreakable("depuis le coucher de $bedtime")}"
         } else {
-            "${sleep(minutes)} après le coucher de $bedtime"
+            "${sleep(minutes)}\n${unbreakable("après le coucher de $bedtime")}"
         }
 
     private const val FULL_DAY = "24 h de blocage"
+
+    /** Remplace chaque espace par une insécable (U+00A0) : le texte ne se coupe pas. */
+    private fun unbreakable(text: String): String = text.replace(' ', '\u00A0')
+
     private const val MINUTES_PER_HOUR = 60
 }

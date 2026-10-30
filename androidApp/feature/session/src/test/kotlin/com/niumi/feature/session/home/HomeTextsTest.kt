@@ -75,14 +75,17 @@ class HomeTextsTest {
         assertThat(HomeTexts.moreApps(4)).isEqualTo("+4")
     }
 
+    /** Depuis le 2026-10-30, deux lignes : la durée, puis « avant le réveil de 7:00 » en espaces insécables. */
     @Test
     fun theTimePickerTextsAreQuotedWordForWord() {
         assertThat(HomeTexts.BEDTIME_TITLE).isEqualTo("Heure de coucher")
         assertThat(HomeTexts.WAKE_TITLE).isEqualTo("Heure de réveil")
         assertThat(HomeTexts.CONFIRM).isEqualTo("Valider")
         assertThat(HomeTexts.CLOSE).isEqualTo("Fermer")
-        assertThat(HomeTexts.sleepBeforeWake(510, "7:00")).isEqualTo("8 h 30 de sommeil avant le réveil de 7:00")
-        assertThat(HomeTexts.sleepAfterBedtime(510, "22:30")).isEqualTo("8 h 30 de sommeil après le coucher de 22:30")
+        assertThat(HomeTexts.sleepBeforeWake(510, "7:00"))
+            .isEqualTo("8 h 30 de sommeil\navant${NBSP}le${NBSP}réveil${NBSP}de${NBSP}7:00")
+        assertThat(HomeTexts.sleepAfterBedtime(510, "22:30"))
+            .isEqualTo("8 h 30 de sommeil\naprès${NBSP}le${NBSP}coucher${NBSP}de${NBSP}22:30")
     }
 
     /** Textes d'accessibilité et de la période de 24 h, non écrits dans les maquettes. */
@@ -91,8 +94,10 @@ class HomeTextsTest {
         assertThat(HomeTexts.CHOOSE_TIME).isEqualTo("Choisir l’heure")
         assertThat(HomeTexts.HOURS).isEqualTo("Heures")
         assertThat(HomeTexts.MINUTES).isEqualTo("Minutes")
-        assertThat(HomeTexts.sleepBeforeWake(1440, "7:00")).isEqualTo("24 h de blocage jusqu’au réveil de 7:00")
-        assertThat(HomeTexts.sleepAfterBedtime(1440, "22:30")).isEqualTo("24 h de blocage depuis le coucher de 22:30")
+        assertThat(HomeTexts.sleepBeforeWake(1440, "7:00"))
+            .isEqualTo("24 h de blocage\njusqu’au${NBSP}réveil${NBSP}de${NBSP}7:00")
+        assertThat(HomeTexts.sleepAfterBedtime(1440, "22:30"))
+            .isEqualTo("24 h de blocage\ndepuis${NBSP}le${NBSP}coucher${NBSP}de${NBSP}22:30")
     }
 
     @Test
@@ -157,3 +162,6 @@ class HomeTextsTest {
         assertThat(HomeTexts.CANCEL).isEqualTo("Annuler")
     }
 }
+
+/** Espace insécable (U+00A0), celle de `HomeTexts`. */
+private const val NBSP = "\u00A0"

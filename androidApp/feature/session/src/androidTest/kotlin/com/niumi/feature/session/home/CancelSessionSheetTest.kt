@@ -24,9 +24,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Feuille « Annuler le réveil ? » (étape 46, maquettes 25 et 26) : la question et son bouton, la
- * feuille de scan avec la phrase de l'annulation, les échecs de l'écran 10, aucun lien de secours
- * avant l'étape 49. Thème sombre : la feuille ne s'ouvre qu'en session.
+ * Fenêtre « Annuler le réveil ? » (étape 46, maquettes 25 et 26 ; fenêtre centrée depuis le
+ * 2026-10-30) : la question, sa croix et son bouton, la feuille de scan avec la phrase de
+ * l'annulation, les échecs de l'écran 10, aucun lien de secours avant l'étape 49. Thème sombre : la
+ * fenêtre ne s'ouvre qu'en session.
  */
 @RunWith(AndroidJUnit4::class)
 class CancelSessionSheetTest {
@@ -64,6 +65,16 @@ class CancelSessionSheetTest {
         composeRule.onNodeWithText(CancelSessionTexts.BODY).assertIsDisplayed()
         composeRule.onNodeWithText(CancelSessionTexts.SCAN_BUTTON).assertIsDisplayed()
         composeRule.onNodeWithText("Je n’ai pas accès à mon Niumi Spot").assertDoesNotExist()
+    }
+
+    /** Fenêtre centrée au format de l'alerte (demande de Mehdi du 2026-10-30) : la croix ferme sans rien changer. */
+    @Test
+    fun theCloseCrossDismissesTheQuestion() {
+        show()
+
+        composeRule.onNodeWithContentDescription(HomeTexts.CLOSE).performClick()
+
+        assertThat(calls).containsExactly("dismiss")
     }
 
     @Test

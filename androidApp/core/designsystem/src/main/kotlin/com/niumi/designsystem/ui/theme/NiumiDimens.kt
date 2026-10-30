@@ -141,10 +141,6 @@ object NiumiDimens {
     /** Titre d'une feuille sans croix, sous la poignée (maquettes 19, 23, 48). */
     val sheetTitleTop = 22.dp
 
-    /** Feuille « Annuler le réveil ? » (maquette 25) : texte 12 sous le titre, bouton 24 sous le texte. */
-    val questionSheetBodyTop = 12.dp
-    val questionSheetButtonTop = 24.dp
-
     /** Ligne titre et croix d'une feuille : 8 sous la poignée, 48 de haut (maquettes 11, 16). */
     val sheetHeaderTop = 8.dp
     val sheetHeaderHeight = 48.dp
@@ -622,14 +618,19 @@ object NiumiDimens {
     /** Tremblement d'un onglet « Bientôt » touché : 3 au plus de chaque côté (décision du 2026-10-25). */
     val tabBarShake = 3.dp
 
-    /** Sélecteur d'heure (maquettes 19, 20) : fenêtre à 20 des bords, marges 20 / 24 / 24. */
-    val timePickerHorizontalMargin = 20.dp
+    /**
+     * Sélecteur d'heure (maquettes 19, 20) : marges intérieures 20 / 24 / 24. La fenêtre est à 28 des
+     * bords comme la fenêtre d'alerte ([alertHorizontalMargin], demande de Mehdi du 2026-10-30 ; 20 avant).
+     */
     val timePickerPadding = PaddingValues(start = 24.dp, top = 20.dp, end = 24.dp, bottom = 24.dp)
     val timePickerWheelsTop = 16.dp
     val timePickerSentenceTop = 14.dp
     val timePickerButtonTop = 16.dp
 
-    /** Roue : cinq rangées visibles, rangée choisie de 56 entre deux traits de 1,5, colonnes de 90 à 8 d'écart. */
+    /**
+     * Roue : cinq rangées visibles, rangée choisie de 56 entre deux traits de 1,5 larges comme les
+     * roues, colonnes de 90 à 8 d'écart.
+     */
     val wheelRowHeight = 42.dp
     val wheelSelectedHeight = 56.dp
     val wheelLine = 1.5.dp

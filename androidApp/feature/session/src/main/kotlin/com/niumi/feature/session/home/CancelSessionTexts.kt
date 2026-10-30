@@ -1,7 +1,7 @@
 package com.niumi.feature.session.home
 
 /**
- * Feuille « Annuler le réveil ? » (étape 46), recopiée de `design-plan/SPECIFICATION.md` §11 et de
+ * Fenêtre « Annuler le réveil ? » (étape 46), recopiée de `design-plan/SPECIFICATION.md` §11 et de
  * `TEXTES-DES-MAQUETTES.md` §25 et §26 (D23 : « réveil », jamais « session » ; les sources
  * régénérées le 2026-10-25 reviennent à « session » par régression, E14). Les textes d'échec du
  * scan sont ceux de l'écran 10 (`ScanFailureTexts`). Le lien « Je n'ai pas accès à mon Niumi

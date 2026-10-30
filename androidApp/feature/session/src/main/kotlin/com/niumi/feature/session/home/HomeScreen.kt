@@ -139,8 +139,9 @@ fun HomeScreen(
 
 /**
  * Avant un changement qui lancerait le blocage tout de suite (`SPECIFICATION.md` §2 et §9, décision
- * de Mehdi du 2026-10-25) : fenêtre centrée comme le sélecteur d'heure. « Annuler », le voile et le
- * retour ne changent rien.
+ * de Mehdi du 2026-10-25) : fenêtre centrée comme le sélecteur d'heure, avec la croix « Fermer »
+ * depuis le 2026-10-30 (demande de Mehdi). « Annuler », la croix, le voile et le retour ne changent
+ * rien.
  */
 @Composable
 private fun ImmediateBlockingDialog(
@@ -151,6 +152,7 @@ private fun ImmediateBlockingDialog(
         onDismiss = actions.onImmediateBlockingDismissed,
         title = HomeTexts.IMMEDIATE_BLOCKING_TITLE,
         icon = R.drawable.ic_lock,
+        closeLabel = HomeTexts.CLOSE,
         primary = HomeTexts.BLOCK_NOW,
         onPrimary = actions.onImmediateBlockingConfirmed,
         secondaryLink = HomeTexts.CANCEL,

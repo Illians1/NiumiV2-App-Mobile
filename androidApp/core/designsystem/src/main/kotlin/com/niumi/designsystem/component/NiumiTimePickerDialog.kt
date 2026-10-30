@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.niumi.designsystem.drawing.DialHandle
@@ -41,9 +42,10 @@ import com.niumi.designsystem.ui.theme.NiumiType
 
 /**
  * Sélecteur d'heure de l'accueil (maquettes 19 et 20 ; décisions de Mehdi du 2026-10-25) : fenêtre
- * centrée, onglets « Coucher » et « Réveil », une roue des heures et une des minutes à la minute
- * près, une phrase qui suit le choix ([sentence], « 8 h 30 de sommeil avant le réveil de 7:00 ») et
- * « Valider ». Ouvert sur l'onglet [initialHandle].
+ * centrée, de la largeur de la fenêtre d'alerte (28 des bords, demande de Mehdi du 2026-10-30 ; 20
+ * avant), onglets « Coucher » et « Réveil », une roue des heures et une des minutes à la minute
+ * près, une phrase qui suit le choix ([sentence], « 8 h 30 de sommeil avant le réveil de 7:00 »,
+ * sur deux lignes équilibrées) et « Valider ». Ouvert sur l'onglet [initialHandle].
  *
  * Toutes les heures sont acceptées : une minute d'écart au moins, deux heures identiques font 24 h.
  * Passer d'un onglet à l'autre garde le choix en cours ; [onConfirm] reçoit les deux heures, en
@@ -71,7 +73,7 @@ fun NiumiTimePickerDialog(
         Box(
             modifier =
                 Modifier
-                    .padding(horizontal = NiumiDimens.timePickerHorizontalMargin)
+                    .padding(horizontal = NiumiDimens.alertHorizontalMargin)
                     .fillMaxWidth()
                     .shadow(NiumiDimens.alertElevation, NiumiShapes.alert)
                     .clip(NiumiShapes.alert)
@@ -133,11 +135,15 @@ private fun PickerBody(
         Spacer(modifier = Modifier.height(NiumiDimens.timePickerWheelsTop))
         key(handle) { TimeWheels(edited, texts, onEdit) }
         Spacer(modifier = Modifier.height(NiumiDimens.timePickerSentenceTop))
+        // Deux lignes (décision de Mehdi du 2026-10-30) : la phrase porte son retour à la ligne entre
+        // la durée et le reste ; `minLines` fixe la hauteur si une phrase n'en a pas, et la coupure
+        // équilibrée ne joue que si une police agrandie fait déborder une ligne.
         Text(
             text = sentence,
-            style = NiumiType.secondary14,
+            style = NiumiType.secondary14.copy(lineBreak = BALANCED_PARAGRAPH),
             color = palette.textSecondary,
             textAlign = TextAlign.Center,
+            minLines = 2,
             modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
         )
         Spacer(modifier = Modifier.height(NiumiDimens.timePickerButtonTop))
@@ -149,7 +155,11 @@ private fun PickerBody(
     }
 }
 
-/** Les deux roues séparées par « : », entre les deux traits de la valeur choisie. */
+/**
+ * Les deux roues séparées par « : », entre les deux traits de la valeur choisie. Les traits ne
+ * couvrent que les roues, de la première colonne à la seconde (demande de Mehdi du 2026-10-30 ; toute
+ * la largeur de la fenêtre avant).
+ */
 @Composable
 private fun TimeWheels(
     minutes: Int,
@@ -159,7 +169,7 @@ private fun TimeWheels(
     val palette = LocalNiumiPalette.current
     Box(
         modifier =
-            Modifier.fillMaxWidth().drawBehind {
+            Modifier.drawBehind {
                 val line = NiumiDimens.wheelLine.toPx()
                 val half = NiumiDimens.wheelSelectedHeight.toPx() / 2
                 val middle = size.height / 2
@@ -196,6 +206,9 @@ private fun TimeWheels(
 }
 
 private const val MINUTES_PER_HOUR = 60
+
+/** Coupure en lignes de longueur proche, pour la phrase du sélecteur. */
+private val BALANCED_PARAGRAPH = LineBreak.Paragraph.copy(strategy = LineBreak.Strategy.Balanced)
 private const val HOURS_PER_DAY = 24
 
 /** Heures sans zéro devant (« 7 »), minutes sur deux chiffres (« 00 »), comme les maquettes 19 et 20. */
@@ -221,7 +234,7 @@ private fun NiumiTimePickerDialogPreview() {
                     "Valider",
                     "Fermer",
                 ),
-            sentence = { _, _, _ -> "8 h 30 de sommeil avant le réveil de 7:00" },
+            sentence = { _, _, _ -> "8 h 30 de sommeil\navant le réveil de 7:00" },
             onConfirm = { _, _ -> },
             onDismiss = {},
         )
