@@ -27,7 +27,7 @@ Libellés d'accessibilité présents dans le fichier source :
 
 Fichier : `02_ecran-1-panneau-2`
 
-- Le matin, Niumi t'aide à te lever.
+- Le matin, Niumi t'aide à te lever
 
 Le titre s'écrit sans point final dans l'app (D12, tranché le 20 octobre 2026, `SPECIFICATION.md` §4) ; la transcription ci-dessus reste celle de l'image.
 - Ton alarme sonne jusqu'à ce que tu scannes le Niumi Spot situé dans la pièce de ton choix.
@@ -926,7 +926,7 @@ Fichier : `36_ecran-10-echec-pas-un-niumi-spot`
 - Scanne ton Niumi Spot
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
-- Ce n'est pas un Niumi Spot.
+- Ce n'est pas un Niumi Spot
 - Scanne un Niumi Spot que tu as enregistré.
 - Réessayer
 - Je n'ai pas accès à mon Niumi Spot
@@ -945,7 +945,7 @@ Fichier : `37_ecran-10-echec-niumi-spot-non-enregistre`
 - Scanne ton Niumi Spot
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
-- Ce Niumi Spot n'est pas enregistré.
+- Ce Niumi Spot n'est pas enregistré
 - Scanne un Niumi Spot que tu as enregistré.
 - Réessayer
 - Je n'ai pas accès à mon Niumi Spot
@@ -964,7 +964,7 @@ Fichier : `38_ecran-10-echec-lecture-ratee`
 - Scanne ton Niumi Spot
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
-- Ton Niumi Spot n'a pas pu être lu.
+- Ton Niumi Spot n'a pas pu être lu
 - Rapproche ton téléphone et réessaie.
 - Réessayer
 - Je n'ai pas accès à mon Niumi Spot
@@ -983,7 +983,7 @@ Fichier : `39_ecran-10-echec-nfc-coupe-android`
 - Scanne ton Niumi Spot
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
-- Le NFC est coupé.
+- Le NFC est coupé
 - Active-le pour scanner ton Niumi Spot.
 - Ouvrir les réglages
 - Je n'ai pas accès à mon Niumi Spot
@@ -999,7 +999,7 @@ Fichier : `40_ecran-10-iphone-seulement-l-alarme-va-reprendre`
 
 - Vendredi 2 octobre
 - 7:00
-- Ton alarme va reprendre.
+- Ton alarme va reprendre
 - Scanne ton Niumi Spot pour l'arrêter.
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
@@ -1017,7 +1017,7 @@ Fichier : `41_ecran-10-iphone-seulement-temps-de-scan-ecoule`
 - Scanne ton Niumi Spot
 - Scanner le Niumi Spot
 - Je n'ai pas accès à mon Niumi Spot
-- Le temps de scan est écoulé.
+- Le temps de scan est écoulé
 - Relance le scan une fois devant ton Niumi Spot.
 - Réessayer
 - Je n'ai pas accès à mon Niumi Spot
@@ -1031,7 +1031,7 @@ Libellés d'accessibilité présents dans le fichier source :
 
 Fichier : `42_ecran-11-reussite-retour-au-clair`
 
-- Debout à 7:04.
+- Debout à 7:04
 - 4 minutes après la sonnerie.
 - Bravo ! C'est 11 minutes de moins qu'avant Niumi.
 - Tes applications sont de nouveau accessibles.

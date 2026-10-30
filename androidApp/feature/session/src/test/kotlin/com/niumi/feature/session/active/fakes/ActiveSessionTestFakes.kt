@@ -14,6 +14,7 @@ import com.niumi.database.logging.TechnicalEventEntry
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.audio.VibrationController
+import com.niumi.system.audio.VolumeRamp
 import com.niumi.system.common.OperationResult
 import com.niumi.system.nfc.NfcAvailability
 import com.niumi.system.nfc.NfcReader
@@ -130,7 +131,7 @@ class RecordingVibrationController : VibrationController {
     var errorVibrations: Int = 0
         private set
 
-    override fun startRepeating() = error("ALARM_VIBRATION_FROM_SCAN_SCREEN")
+    override fun startRepeating(ramp: VolumeRamp?) = error("ALARM_VIBRATION_FROM_SCAN_SCREEN")
 
     override fun vibrateError() {
         errorVibrations++

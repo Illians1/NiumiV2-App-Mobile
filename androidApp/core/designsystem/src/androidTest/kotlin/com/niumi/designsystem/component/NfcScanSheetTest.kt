@@ -209,7 +209,7 @@ class NfcScanSheetTest {
         const val EMERGENCY_LINK = "Je n’ai pas accès à mon Niumi Spot"
         val FAILURE =
             NfcScanSheetContent.Failure(
-                title = "Ce n’est pas un Niumi Spot.",
+                title = "Ce n’est pas un Niumi Spot",
                 help = "Scanne un Niumi Spot que tu as enregistré.",
                 actionLabel = "Réessayer",
             )

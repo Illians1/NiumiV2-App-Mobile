@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.niumi.database.logging.TechnicalEventLog
 import com.niumi.database.logging.TechnicalEventType
 import com.niumi.system.audio.VibrationController
+import com.niumi.system.audio.VolumeRamp
 import com.niumi.system.nfc.NfcScanHandler
 import com.niumi.system.nfc.ScanOutcome
 import kotlinx.coroutines.async
@@ -21,7 +22,7 @@ class AlarmNfcScanCoordinatorTest {
     private class FakeVibrationController : VibrationController {
         var errorCallCount = 0
 
-        override fun startRepeating() = Unit
+        override fun startRepeating(ramp: VolumeRamp?) = Unit
 
         override fun vibrateError() {
             errorCallCount++

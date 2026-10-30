@@ -25,7 +25,7 @@ class AlarmTextsTest {
         assertThat(AlarmTexts.failure(ScanFailureReason.NOT_A_NIUMI_SPOT))
             .isEqualTo(
                 NfcScanSheetContent.Failure(
-                    title = "Ce n’est pas un Niumi Spot.",
+                    title = "Ce n’est pas un Niumi Spot",
                     help = "Scanne un Niumi Spot que tu as enregistré.",
                     actionLabel = "Réessayer",
                 ),
@@ -33,7 +33,7 @@ class AlarmTextsTest {
         assertThat(AlarmTexts.failure(ScanFailureReason.NOT_REGISTERED))
             .isEqualTo(
                 NfcScanSheetContent.Failure(
-                    title = "Ce Niumi Spot n’est pas enregistré.",
+                    title = "Ce Niumi Spot n’est pas enregistré",
                     help = "Scanne un Niumi Spot que tu as enregistré.",
                     actionLabel = "Réessayer",
                 ),
@@ -41,7 +41,7 @@ class AlarmTextsTest {
         assertThat(AlarmTexts.failure(ScanFailureReason.UNREADABLE))
             .isEqualTo(
                 NfcScanSheetContent.Failure(
-                    title = "Ton Niumi Spot n’a pas pu être lu.",
+                    title = "Ton Niumi Spot n’a pas pu être lu",
                     help = "Rapproche ton téléphone et réessaie.",
                     actionLabel = "Réessayer",
                 ),
@@ -49,7 +49,7 @@ class AlarmTextsTest {
         assertThat(AlarmTexts.failure(ScanFailureReason.NFC_DISABLED))
             .isEqualTo(
                 NfcScanSheetContent.Failure(
-                    title = "Le NFC est coupé.",
+                    title = "Le NFC est coupé",
                     help = "Active-le pour scanner ton Niumi Spot.",
                     actionLabel = "Ouvrir les réglages",
                 ),

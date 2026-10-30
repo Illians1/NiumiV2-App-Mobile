@@ -87,7 +87,7 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | --- | --- | --- |
 | 112 | 500 | Heure de l'écran de réveil. Interligne 1, interlettrage −4 |
 | 42 | 500 | Chiffres au centre du cadran (« 9 h 26 »). Interlettrage −1 |
-| 40 | 600 | Titre de l'écran 11 (« Debout à 7:04. »), valeur du milieu de la roue de l'écran 3 bis (« 15 min »). Interlettrage −1 |
+| 40 | 600 | Titre de l'écran 11 (« Debout à 7:04 »), valeur du milieu de la roue de l'écran 3 bis (« 15 min »). Interlettrage −1 |
 | 34 | 600 | Valeur choisie des roues du sélecteur d'heure (« 22 », « 30 »), interlettrage −1 ; le « : » qui sépare les roues, sans interlettrage (maquettes 19 et 20, 25 octobre 2026) |
 | 30 | 600 | Consigne de l'écran de réveil (« Scanne ton Niumi Spot », « Ton alarme va reprendre. ») |
 | 30 | 500 | « Désactivé » au centre du cadran. Interlettrage −0,5 |

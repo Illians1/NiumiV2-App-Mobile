@@ -187,6 +187,7 @@ portaient sur le lecteur `MediaPlayer`, ce que la colonne précise.
 | Ne pas déranger « alarmes seules », montée progressive | montée audible ; non-régression de la ligne DND | **OK** (07/10) — `zen_mode` alarmes seules, `STREAM_ALARM` non muté, montée conforme à 2 % près, audible | T+79 ms | `ETAPE-28.md` |
 | casque Bluetooth connecté, montée progressive | flux dupliqué, montée sur les deux sorties | **OK** (07/10) — `speaker(2), bt_a2dp(80)`, montée mesurée, confirmée à l'oreille | T+108 ms | `ETAPE-28.md` |
 | pré-écoute avec volume d'alarme à zéro | message affiché, aucun son, aucun lecteur créé | **OK** (02/10) — volume borné à 1 sur cet appareil : obtenu par le silence total ; message affiché, boutons inactifs, aucun `requestAudioFocus`. Annexe (15/10) : média à 0, alarme à 4/15 → pré-écoute **audible**, lecteur `STREAM_ALARM` | — | `ETAPE-27.md`, `ETAPE-28.md` |
+| vibration progressive, montée 2 min (2026-10-26) | une impulsion toutes les 4 s au départ, environ toutes les 1,8 s à mi-parcours, rythme plein 500/500 à 2 min ; reprise au rythme atteint après une vibration d'erreur et après `am crash` | **non testé** — implémenté le 26/10, appareil pas encore branché | — | SPEC_ANDROID §10.2 |
 
 TalkBack sur l'écran 14 (contrôle du plan, hors §20) : **non testé**, passé par choix de
 l'utilisateur le 2026-10-15.

@@ -36,7 +36,7 @@ class SuccessScreenWindowTest {
         composeRule.runOnUiThread { composeRule.activity.applyNiumiWindowTheme(dark = true) }
         composeRule.setContent {
             NiumiTheme(dark = true) {
-                if (shown) SuccessScreen(state = SuccessUiState.Shown("Debout à 7:04.", null, null), onBackHome = {})
+                if (shown) SuccessScreen(state = SuccessUiState.Shown("Debout à 7:04", null, null), onBackHome = {})
             }
         }
         composeRule.waitForIdle()

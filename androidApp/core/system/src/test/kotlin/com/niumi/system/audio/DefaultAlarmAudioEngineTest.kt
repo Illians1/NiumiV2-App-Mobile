@@ -71,10 +71,12 @@ class DefaultAlarmAudioEngineTest {
     private val fakeVibrationController =
         object : VibrationController {
             var started = false
+            var startedWith: VolumeRamp? = null
             var stopped = false
 
-            override fun startRepeating() {
+            override fun startRepeating(ramp: VolumeRamp?) {
                 started = true
+                startedWith = ramp
             }
 
             override fun vibrateError() {
@@ -116,6 +118,23 @@ class DefaultAlarmAudioEngineTest {
         engine.start(constant(vibrationEnabled = true))
 
         assertThat(fakeVibrationController.started).isTrue()
+    }
+
+    @Test
+    fun vibrationFollowsTheVolumeRampOfTheSound() {
+        val sound = AlarmSound(KEY, vibrationEnabled = true, VolumeRamp(MINUTE, T0 - 10_000))
+
+        engine.start(sound)
+
+        assertThat(fakeVibrationController.startedWith).isEqualTo(sound.volumeRamp)
+    }
+
+    @Test
+    fun vibrationIsFullRhythmWithoutVolumeRamp() {
+        engine.start(constant(vibrationEnabled = true))
+
+        assertThat(fakeVibrationController.started).isTrue()
+        assertThat(fakeVibrationController.startedWith).isNull()
     }
 
     @Test

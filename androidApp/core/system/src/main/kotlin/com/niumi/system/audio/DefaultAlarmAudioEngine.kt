@@ -20,6 +20,10 @@ import kotlinx.coroutines.launch
  * `VolumeRampPolicy.TICK_MS` d'après [clock], jusqu'à la durée. Tout l'état est gardé par [lock] :
  * `start` vient du service, `stop` de l'exécuteur de libération, les pas de la rampe de [rampScope],
  * et un pas ne doit jamais toucher un lecteur déjà libéré.
+ *
+ * **Vibration progressive (2026-10-26).** La vibration reçoit la même [VolumeRamp] : son rythme se
+ * resserre sur la même durée, encodé d'un bloc dans une waveform par [VibrationController]. Elle
+ * n'a donc pas de job propre ici.
  */
 class DefaultAlarmAudioEngine(
     private val playerFactory: AlarmPlayerFactory,
@@ -68,7 +72,7 @@ class DefaultAlarmAudioEngine(
                 focusController.request(configuration)
                 val created = playerFactory.create(sound.ringtoneKey, configuration)
                 player = created
-                if (sound.vibrationEnabled) vibrationController.startRepeating()
+                if (sound.vibrationEnabled) vibrationController.startRepeating(ramp)
                 if (ramp != null && elapsedMs != null && !VolumeRampPolicy.isComplete(elapsedMs, ramp.durationMs)) {
                     rampJob = launchRamp(created, ramp)
                 }

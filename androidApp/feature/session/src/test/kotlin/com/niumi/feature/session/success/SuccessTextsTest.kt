@@ -12,8 +12,8 @@ import java.time.LocalTime
 class SuccessTextsTest {
     @Test
     fun theTitleGivesTheTimeOfTheScanWithoutLeadingZero() {
-        assertThat(SuccessTexts.standingAt(LocalTime.of(7, 4))).isEqualTo("Debout à 7:04.")
-        assertThat(SuccessTexts.standingAt(LocalTime.of(10, 30))).isEqualTo("Debout à 10:30.")
+        assertThat(SuccessTexts.standingAt(LocalTime.of(7, 4))).isEqualTo("Debout à 7:04")
+        assertThat(SuccessTexts.standingAt(LocalTime.of(10, 30))).isEqualTo("Debout à 10:30")
     }
 
     @Test

@@ -93,7 +93,7 @@ class SuccessViewModelTest {
 
         val shown = shown()
 
-        assertThat(shown.title).isEqualTo("Debout à 7:04.")
+        assertThat(shown.title).isEqualTo("Debout à 7:04")
         assertThat(shown.afterAlarm).isEqualTo("4 minutes après la sonnerie.")
         assertThat(shown.savedComparison).isEqualTo("C’est 11 minutes de moins qu’avant Niumi.")
     }
@@ -128,7 +128,7 @@ class SuccessViewModelTest {
 
         val shown = shown()
 
-        assertThat(shown.title).isEqualTo("Debout à 9:00.")
+        assertThat(shown.title).isEqualTo("Debout à 9:00")
         assertThat(shown.afterAlarm).isNull()
         assertThat(shown.savedComparison).isNull()
     }
@@ -149,7 +149,7 @@ class SuccessViewModelTest {
 
         val shown = shown()
 
-        assertThat(shown.title).isEqualTo("Debout à 7:04.")
+        assertThat(shown.title).isEqualTo("Debout à 7:04")
         assertThat(shown.savedComparison).isNull()
     }
 

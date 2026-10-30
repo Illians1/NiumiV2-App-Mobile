@@ -194,7 +194,7 @@ private fun FailureContent(
 
 private val PreviewFailure =
     NfcScanSheetContent.Failure(
-        title = "Ce n’est pas un Niumi Spot.",
+        title = "Ce n’est pas un Niumi Spot",
         help = "Scanne un Niumi Spot que tu as enregistré.",
         actionLabel = "Réessayer",
     )

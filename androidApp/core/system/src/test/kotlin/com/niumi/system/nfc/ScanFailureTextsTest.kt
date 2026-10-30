@@ -13,7 +13,7 @@ class ScanFailureTextsTest {
         assertThat(ScanFailureTexts.of(ScanFailureReason.NOT_A_NIUMI_SPOT))
             .isEqualTo(
                 ScanFailureCopy(
-                    "Ce n’est pas un Niumi Spot.",
+                    "Ce n’est pas un Niumi Spot",
                     "Scanne un Niumi Spot que tu as enregistré.",
                     "Réessayer",
                 ),
@@ -21,7 +21,7 @@ class ScanFailureTextsTest {
         assertThat(ScanFailureTexts.of(ScanFailureReason.NOT_REGISTERED))
             .isEqualTo(
                 ScanFailureCopy(
-                    "Ce Niumi Spot n’est pas enregistré.",
+                    "Ce Niumi Spot n’est pas enregistré",
                     "Scanne un Niumi Spot que tu as enregistré.",
                     "Réessayer",
                 ),
@@ -29,14 +29,14 @@ class ScanFailureTextsTest {
         assertThat(ScanFailureTexts.of(ScanFailureReason.UNREADABLE))
             .isEqualTo(
                 ScanFailureCopy(
-                    "Ton Niumi Spot n’a pas pu être lu.",
+                    "Ton Niumi Spot n’a pas pu être lu",
                     "Rapproche ton téléphone et réessaie.",
                     "Réessayer",
                 ),
             )
         assertThat(ScanFailureTexts.of(ScanFailureReason.NFC_DISABLED))
             .isEqualTo(
-                ScanFailureCopy("Le NFC est coupé.", "Active-le pour scanner ton Niumi Spot.", "Ouvrir les réglages"),
+                ScanFailureCopy("Le NFC est coupé", "Active-le pour scanner ton Niumi Spot.", "Ouvrir les réglages"),
             )
     }
 

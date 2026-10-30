@@ -417,8 +417,9 @@ Ce qui reste ouvert pour le Lot 7 :
 - une session sur **APK de publication** (A2) : `RingtoneResources` référence les quatre ressources
   `raw`, que la réduction de ressources doit donc garder — à prouver ;
 - la couverture Pixel et Samsung (B1, B2) ;
-- vibration progressive (impulsions qui se resserrent) proposée par l'utilisateur, hors périmètre
-  du Lot 7, à spécifier séparément.
+- **vibration progressive** (impulsions qui se resserrent pendant la montée), spécifiée et
+  implémentée le 2026-10-26 (SPEC_ANDROID §10.2) : validation sur appareil restante (ligne
+  « vibration progressive » de `QA_MATRIX.md`).
 
 Les **boîtiers multiples** (Lot 8) sont planifiés aux étapes 29 à 31 du même plan (conception
 `docs/superpowers/specs/2026-10-13-boitiers-multiples-design.md`). Ce n'est pas une tâche de

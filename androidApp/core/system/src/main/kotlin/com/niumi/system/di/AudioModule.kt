@@ -50,7 +50,8 @@ object AudioModule {
     @Singleton
     fun provideVibrationController(
         @ApplicationContext context: Context,
-    ): VibrationController = AndroidVibrationController(context)
+        clock: Clock,
+    ): VibrationController = AndroidVibrationController(context, clock)
 
     @Provides
     @Singleton

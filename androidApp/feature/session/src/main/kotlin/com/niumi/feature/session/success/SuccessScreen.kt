@@ -146,7 +146,7 @@ private fun SuccessScreenPreview() {
     SuccessScreen(
         state =
             SuccessUiState.Shown(
-                "Debout à 7:04.",
+                "Debout à 7:04",
                 "4 minutes après la sonnerie.",
                 "C’est 11 minutes de moins qu’avant Niumi.",
             ),

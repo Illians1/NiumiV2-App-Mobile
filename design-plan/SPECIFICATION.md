@@ -28,6 +28,7 @@ Une **session** va de l'heure du coucher jusqu'au scan du matin. Ce mot nomme le
 Autres règles :
 
 - **Tutoiement.** Tous les textes tutoient l'utilisateur.
+- **Titres sans point final.** Aucun titre ne se termine par un point : titres d'écran, de feuille, de fenêtre et d'échec (« Debout à 7:04 », « Le NFC est coupé »). Les phrases sous un titre gardent le leur. Un titre en forme de question garde son point d'interrogation (« Annuler le réveil ? »). Décision de Mehdi du 26 octobre 2026.
 - **Même fonctionnement sur iPhone et Android, autant que possible.** Exemple : la feuille de scan de l'iPhone ne peut pas contenir de lien, donc le lien « Je n'ai pas accès à mon Niumi Spot » est placé avant le scan sur les deux. Les différences voulues sont signalées dans chaque écran.
 - **Fonctionnement par période.** Niumi raisonne par période, du coucher au réveil. L'interrupteur s'active toujours et aucune heure n'est refusée. Si l'on se trouve déjà dans la période au moment où l'on active l'interrupteur, coche un jour, touche « Ponctuel » ou « Quotidien », ou change une heure (poignée du cadran ou sélecteur), une fenêtre demande d'abord confirmation (§9, « Confirmation avant un blocage immédiat ») ; si l'on confirme, le blocage commence tout de suite et l'accueil passe en « Blocage en cours » jusqu'au scan du matin. Exemple : il est 23:00 et la période va de 22:30 à 7:00 ; activer l'interrupteur ouvre la fenêtre, et « Bloquer maintenant » lance le blocage. Une période de 24 h est toujours en cours en ponctuel : l'activer demande aussi confirmation. Décision de Mehdi du 2026-10-25, après un blocage parti sans prévenir en ajoutant un jour et en changeant l'heure : elle remplace « le blocage commence tout de suite, sans confirmation » (décision du 7 octobre 2026). En Quotidien, elle bloque en permanence, puisque la période suivante commence au scan du matin : conséquence assumée par Mehdi (décision du 2026-10-25).
 - **Clair ou sombre.** L'app est claire quand aucune session n'est en cours, sombre pendant une session. Elle ne suit pas le réglage du téléphone. Détail dans `VALEURS-DE-DESIGN.md`.
@@ -337,6 +338,7 @@ Une feuille monte du bas par-dessus l'accueil quand on touche la ligne « Sonner
 
 - Les noms des sons dans les maquettes (Aube, Carillon, Oiseaux, Classique, Insistante) sont des exemples. Les vrais sons restent à choisir **(ouvert, sauf sur Android : D7)**.
 - La sonnerie progressive monte jusqu'au volume maximal en 1, 2, 5 ou 10 minutes (2, 5, 10 ou 15 sur Android), ou ne monte pas quand l'interrupteur est éteint.
+- Sur Android, la vibration suit la sonnerie progressive : des impulsions espacées au départ, qui se resserrent jusqu'au rythme plein à la durée choisie. Sans sonnerie progressive, elle vibre au rythme plein dès le départ (décision de Mehdi du 26 octobre 2026).
 - Allumer l'interrupteur choisit 10 min, et 10 min est aussi le réglage d'une installation neuve (décision du 23 octobre 2026, qui remplace les 2 min du 30 septembre).
 - Niumi affiche le volume du téléphone mais ne permet pas de le modifier, sur iPhone comme sur Android.
 - Sur Android, le pourcentage suit les changements faits pendant que la feuille est ouverte (touches ou panneau de volume ; décision du 24 octobre 2026). Sur iPhone, voir T2.
@@ -475,10 +477,10 @@ Une feuille du bas affiche un titre, une phrase d'aide, un bouton et le lien « 
 
 | Cas | Titre | Phrase d'aide | Bouton |
 | --- | --- | --- | --- |
-| Pas un Niumi Spot | Ce n'est pas un Niumi Spot. | Scanne un Niumi Spot que tu as enregistré. | Réessayer |
-| Niumi Spot non enregistré | Ce Niumi Spot n'est pas enregistré. | Scanne un Niumi Spot que tu as enregistré. | Réessayer |
-| Lecture ratée | Ton Niumi Spot n'a pas pu être lu. | Rapproche ton téléphone et réessaie. | Réessayer |
-| NFC coupé (Android) | Le NFC est coupé. | Active-le pour scanner ton Niumi Spot. | Ouvrir les réglages |
+| Pas un Niumi Spot | Ce n'est pas un Niumi Spot | Scanne un Niumi Spot que tu as enregistré. | Réessayer |
+| Niumi Spot non enregistré | Ce Niumi Spot n'est pas enregistré | Scanne un Niumi Spot que tu as enregistré. | Réessayer |
+| Lecture ratée | Ton Niumi Spot n'a pas pu être lu | Rapproche ton téléphone et réessaie. | Réessayer |
+| NFC coupé (Android) | Le NFC est coupé | Active-le pour scanner ton Niumi Spot. | Ouvrir les réglages |
 
 Aucun de ces cas n'arrête l'alarme ni ne débloque les applications.
 
@@ -490,7 +492,7 @@ Sur iPhone, une lecture NFC dure 60 secondes au plus, et l'app doit rester au pr
 
 | Titre | Phrase d'aide | Bouton | Lien |
 | --- | --- | --- | --- |
-| Le temps de scan est écoulé. | Relance le scan une fois devant ton Niumi Spot. | Réessayer | Je n'ai pas accès à mon Niumi Spot |
+| Le temps de scan est écoulé | Relance le scan une fois devant ton Niumi Spot. | Réessayer | Je n'ai pas accès à mon Niumi Spot |
 
 Ce message sert pour tous les scans de l'iPhone qui dépassent 60 secondes : le matin, à l'annulation d'une session, à l'association et à l'ajout d'un Niumi Spot. À l'association et à l'ajout, le lien de secours est remplacé par un lien « Annuler », qui referme la feuille sans relancer le scan. Seule la version du matin est dessinée **(ouvert)**.
 
@@ -506,7 +508,7 @@ Quand l'alarme a été arrêtée de cette façon, l'écran de réveil remplace s
 
 | Titre | Texte |
 | --- | --- |
-| Ton alarme va reprendre. | Scanne ton Niumi Spot pour l'arrêter. |
+| Ton alarme va reprendre | Scanne ton Niumi Spot pour l'arrêter. |
 
 Le bouton et le lien ne changent pas.
 
@@ -536,7 +538,7 @@ Il confirme que le scan a marché et que les applications sont revenues. Il rest
 | Élément | Contenu |
 | --- | --- |
 | Dessin | Un soleil qui se lève au-dessus d'une ligne d'horizon. Le soleil est en dégradé : ambre en haut, ambre très clair à l'horizon. Ce dégradé est gardé « pour l'instant » **(ouvert)** |
-| Titre | Debout à 7:04. |
+| Titre | Debout à 7:04 |
 | Délai | 4 minutes après la sonnerie. |
 | Comparaison | Bravo ! C'est 11 minutes de moins qu'avant Niumi. |
 | Confirmation | Tes applications sont de nouveau accessibles. |
@@ -544,7 +546,7 @@ Il confirme que le scan a marché et que les applications sont revenues. Il rest
 
 - Dans l'exemple : l'alarme a sonné à 7:00 et le scan a eu lieu à 7:04. Le délai compte depuis la sonnerie réelle, même partie en retard.
 - Le délai s'accorde : « Moins d'une minute après la sonnerie. », « 1 minute après la sonnerie. », « 4 minutes après la sonnerie. », puis, à partir d'une heure, comme les autres durées de l'app : « 1 h 15 après la sonnerie. » (section 2). La comparaison suit la même règle (« C'est 1 minute de moins… »). Décision de Mehdi du 25 octobre 2026 ; textes non dessinés, à valider (`POINTS-OUVERTS.md` §2).
-- Si l'alarme n'a pas sonné (téléphone éteint à l'heure du réveil), l'écran dit seulement « Debout à 9:00. », sans délai ni comparaison (décision de Mehdi du 25 octobre 2026, `POINTS-OUVERTS.md` M18).
+- Si l'alarme n'a pas sonné (téléphone éteint à l'heure du réveil), l'écran dit seulement « Debout à 9:00 », sans délai ni comparaison (décision de Mehdi du 25 octobre 2026, `POINTS-OUVERTS.md` M18).
 - La comparaison s'affiche seulement si l'utilisateur s'est levé plus vite que la durée déclarée à l'écran 3 bis. Dans l'exemple : 15 minutes déclarées, levé en 4 minutes, donc 11 minutes de moins. Sinon, rien ne s'affiche à la place.
 - « Retour à l'accueil » ramène à l'accueil, dans l'état « Réveil prévu ». Après un réveil ponctuel, l'interrupteur s'est éteint : l'accueil est en « Réveil désactivé » (section 2, décision de Mehdi du 25 octobre 2026).
 - Il n'y a pas de lien depuis cet écran vers la rubrique « Temps gagné ».

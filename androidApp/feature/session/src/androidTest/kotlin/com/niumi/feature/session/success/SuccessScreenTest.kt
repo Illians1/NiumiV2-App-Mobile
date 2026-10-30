@@ -34,13 +34,13 @@ class SuccessScreenTest {
     fun theExampleOfTheMockupShowsEveryLine() {
         show(
             SuccessUiState.Shown(
-                "Debout à 7:04.",
+                "Debout à 7:04",
                 "4 minutes après la sonnerie.",
                 "C’est 11 minutes de moins qu’avant Niumi.",
             ),
         )
 
-        composeRule.onNodeWithText("Debout à 7:04.").assertIsDisplayed()
+        composeRule.onNodeWithText("Debout à 7:04").assertIsDisplayed()
         composeRule.onNodeWithText("4 minutes après la sonnerie.").assertIsDisplayed()
         composeRule.onNodeWithText("Bravo ! C’est 11 minutes de moins qu’avant Niumi.").assertIsDisplayed()
         composeRule.onNodeWithText(SuccessTexts.APPS_BACK).assertIsDisplayed()
@@ -48,9 +48,9 @@ class SuccessScreenTest {
 
     @Test
     fun withoutDelayNorComparisonNothingTakesTheirPlace() {
-        show(SuccessUiState.Shown("Debout à 9:00.", null, null))
+        show(SuccessUiState.Shown("Debout à 9:00", null, null))
 
-        composeRule.onNodeWithText("Debout à 9:00.").assertIsDisplayed()
+        composeRule.onNodeWithText("Debout à 9:00").assertIsDisplayed()
         composeRule.onNodeWithText("Bravo", substring = true).assertDoesNotExist()
         composeRule.onNodeWithText("après la sonnerie", substring = true).assertDoesNotExist()
         composeRule.onNodeWithText(SuccessTexts.APPS_BACK).assertIsDisplayed()
@@ -58,7 +58,7 @@ class SuccessScreenTest {
 
     @Test
     fun theButtonGoesBackHome() {
-        show(SuccessUiState.Shown("Debout à 7:04.", "4 minutes après la sonnerie.", null))
+        show(SuccessUiState.Shown("Debout à 7:04", "4 minutes après la sonnerie.", null))
 
         composeRule.onNodeWithText(SuccessTexts.BACK_HOME).performClick()
 
