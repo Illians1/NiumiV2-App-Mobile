@@ -401,11 +401,14 @@ class HomeViewModel
                     )
                 }
 
+                // Le centre compte jusqu'au coucher tant qu'il n'est pas atteint, puis jusqu'au réveil,
+                // même si le blocage n'est pas encore en vigueur (décision de Mehdi du 2026-10-31).
                 HomeMode.Scheduled -> {
                     val (trigger, blockingStart) = scheduledInstants(pending, plan, zone, now)
+                    val beforeBedtime = blockingStart != null && blockingStart > now
                     base.copy(
-                        centerLabel = HomeTexts.WAKE_IN,
-                        centerValue = countdown(now, trigger),
+                        centerLabel = if (beforeBedtime) HomeTexts.BEDTIME_IN else HomeTexts.WAKE_IN,
+                        centerValue = countdown(now, if (beforeBedtime) blockingStart else trigger),
                         cardTitle = HomeTexts.WAKE_ENABLED,
                         cardLines =
                             listOfNotNull(

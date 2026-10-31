@@ -44,7 +44,7 @@ import com.niumi.designsystem.ui.theme.NiumiType
  * Sélecteur d'heure de l'accueil (maquettes 19 et 20 ; décisions de Mehdi du 2026-10-25) : fenêtre
  * centrée, de la largeur de la fenêtre d'alerte (28 des bords, demande de Mehdi du 2026-10-30 ; 20
  * avant), onglets « Coucher » et « Réveil », une roue des heures et une des minutes à la minute
- * près, une phrase qui suit le choix ([sentence], « 8 h 30 de sommeil avant le réveil de 7:00 »,
+ * près, une phrase qui suit le choix ([sentence], « 8 h 30 de déconnexion avant le réveil de 7:00 »,
  * sur deux lignes équilibrées) et « Valider ». Ouvert sur l'onglet [initialHandle].
  *
  * Toutes les heures sont acceptées : une minute d'écart au moins, deux heures identiques font 24 h.
@@ -234,7 +234,7 @@ private fun NiumiTimePickerDialogPreview() {
                     "Valider",
                     "Fermer",
                 ),
-            sentence = { _, _, _ -> "8 h 30 de sommeil\navant le réveil de 7:00" },
+            sentence = { _, _, _ -> "8 h 30 de déconnexion\navant le réveil de 7:00" },
             onConfirm = { _, _ -> },
             onDismiss = {},
         )

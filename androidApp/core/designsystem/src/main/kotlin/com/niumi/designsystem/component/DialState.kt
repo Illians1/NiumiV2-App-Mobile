@@ -3,8 +3,8 @@ package com.niumi.designsystem.component
 /**
  * Ce que montre le cadran de l'accueil (VALEURS-DE-DESIGN.md §5, maquettes 15 à 17). Heures en
  * minutes depuis minuit ; [centerLabel] et [centerValue] sont les deux lignes du centre
- * (« Réveil dans » / « 9 h 26 », « Réveil » / « Désactivé »), [centerValue] vide pour n'en montrer
- * qu'une.
+ * (« Coucher dans » / « 56 min », « Réveil dans » / « 7 h 50 », « Réveil » / « Désactivé »),
+ * [centerValue] vide pour n'en montrer qu'une.
  */
 sealed interface DialState {
     val bedtimeMinutes: Int

@@ -19,6 +19,9 @@ object HomeTexts {
     const val BEDTIME = "Coucher"
     const val WAKE = "Réveil"
     const val WAKE_IN = "Réveil dans"
+
+    /** Centre du cadran avant le coucher (décision de Mehdi du 2026-10-31, remplace « Réveil dans »). */
+    const val BEDTIME_IN = "Coucher dans"
     const val DISABLED = "Désactivé"
     const val WAKE_ENABLED = "Réveil activé"
     const val WAKE_DISABLED = "Réveil désactivé"
@@ -71,7 +74,7 @@ object HomeTexts {
 
     fun blockingIn(minutes: Int): String = "Blocage des apps dans ${countdown(minutes)}"
 
-    /** « 8 h 30 de sommeil » ; une période de 24 h n'est pas une nuit : « 24 h de blocage ». */
+    /** « 8 h 30 de déconnexion » ; une période de 24 h n'est pas une nuit : « 24 h de blocage ». */
     fun sleep(minutes: Int): String =
         if (minutes >=
             DialGeometry.MINUTES_PER_DAY

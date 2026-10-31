@@ -233,7 +233,7 @@ private fun CardsSample() {
             Column(modifier = Modifier.weight(1f)) {
                 Text("Réveil activé", style = NiumiType.label16)
                 Text("Blocage des apps dans 56 min", style = NiumiType.secondary14, color = palette.onInkSecondary)
-                Text("8 h 30 de sommeil", style = NiumiType.secondary14, color = palette.onInkSecondary)
+                Text("8 h 30 de déconnexion", style = NiumiType.secondary14, color = palette.onInkSecondary)
             }
             NiumiSwitch(checked = true, onCheckedChange = {})
         }

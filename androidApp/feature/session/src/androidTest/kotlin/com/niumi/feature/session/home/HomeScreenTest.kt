@@ -85,8 +85,8 @@ class HomeScreenTest {
             nowMinutes = EVENING,
             enabledIsoDays = setOf(1, 2, 3, 4, 5),
             dayMode = DayMode.CUSTOM,
-            centerLabel = HomeTexts.WAKE_IN,
-            centerValue = "9 h 26",
+            centerLabel = HomeTexts.BEDTIME_IN,
+            centerValue = "56 min",
             cardTitle = HomeTexts.WAKE_ENABLED,
             cardLines = listOf(HomeTexts.blockingIn(56), HomeTexts.sleep(510)),
             switchChecked = true,
@@ -118,7 +118,8 @@ class HomeScreenTest {
     fun wakeScheduledShowsTheCountdownTheCardAndTheSwitchOn() {
         show(scheduled)
 
-        composeRule.onNodeWithText("9 h 26").assertIsDisplayed()
+        composeRule.onNodeWithText("Coucher dans").assertIsDisplayed()
+        composeRule.onNodeWithText("56 min").assertIsDisplayed()
         composeRule.onNodeWithText("Blocage des apps dans 56 min").assertIsDisplayed()
         composeRule.onNode(hasText(HomeTexts.WAKE_DAYS) and isHeading()).assertIsDisplayed()
         composeRule

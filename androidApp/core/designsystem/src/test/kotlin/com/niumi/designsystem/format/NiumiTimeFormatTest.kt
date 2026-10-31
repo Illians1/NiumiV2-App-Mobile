@@ -8,7 +8,7 @@ import java.time.LocalTime
 
 /**
  * Écriture des heures et des durées (`design-plan/SPECIFICATION.md` §2) : « 22:30 », « 7:00 »
- * sans zéro devant, « 9 h 26 », « 56 min », « 8 h 30 de sommeil ». Cas limite 4 du plan de
+ * sans zéro devant, « 9 h 26 », « 56 min », « 8 h 30 de déconnexion ». Cas limite 4 du plan de
  * refonte : une durée de moins d'une heure s'écrit en minutes, jamais « 0 h 56 ».
  */
 class NiumiTimeFormatTest {
@@ -46,8 +46,8 @@ class NiumiTimeFormatTest {
 
     @Test
     fun sleepAppendsTheWordsOfTheDesign() {
-        assertThat(NiumiTimeFormat.sleep(510)).isEqualTo("8 h 30 de sommeil")
-        assertThat(NiumiTimeFormat.sleep(45)).isEqualTo("45 min de sommeil")
+        assertThat(NiumiTimeFormat.sleep(510)).isEqualTo("8 h 30 de déconnexion")
+        assertThat(NiumiTimeFormat.sleep(45)).isEqualTo("45 min de déconnexion")
     }
 
     @Test

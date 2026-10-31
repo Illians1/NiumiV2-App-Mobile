@@ -53,14 +53,14 @@ class NiumiDialTest {
         composeRule.onRoot().tryPerformAccessibilityChecks()
     }
 
-    private val scheduled = DialState.Scheduled(BEDTIME, WAKE, NOW, "Réveil dans", "9 h 26")
+    private val scheduled = DialState.Scheduled(BEDTIME, WAKE, NOW, "Coucher dans", "56 min")
 
     @Test
     fun eachHandleIsAnnouncedWithItsTime() {
         show(scheduled)
 
         // Le centre se lit aussi, hors session comme en session (relecture sur appareil).
-        composeRule.onNodeWithText("9 h 26").assertIsDisplayed()
+        composeRule.onNodeWithText("56 min").assertIsDisplayed()
 
         composeRule
             .onNodeWithContentDescription("Coucher")

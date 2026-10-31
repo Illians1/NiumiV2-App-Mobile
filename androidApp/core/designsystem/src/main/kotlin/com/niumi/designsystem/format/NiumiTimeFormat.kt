@@ -5,7 +5,7 @@ import java.time.LocalTime
 
 /**
  * Écriture des heures et des durées dans l'app (`design-plan/SPECIFICATION.md` §2) : « 22:30 »,
- * « 7:00 » sans zéro devant l'heure, « 9 h 26 », « 56 min », « 8 h 30 de sommeil ». Une durée de
+ * « 7:00 » sans zéro devant l'heure, « 9 h 26 », « 56 min », « 8 h 30 de déconnexion ». Une durée de
  * moins d'une heure s'écrit en minutes, jamais « 0 h 56 ». Date de l'écran de réveil :
  * « Vendredi 2 octobre » (maquette 28). Vérifié par `NiumiTimeFormatTest`.
  *
@@ -26,8 +26,8 @@ object NiumiTimeFormat {
         return "${minutes / MINUTES_PER_HOUR} h ${twoDigits(minutes % MINUTES_PER_HOUR)}"
     }
 
-    /** Durée de sommeil : « 8 h 30 de sommeil ». */
-    fun sleep(minutes: Int): String = "${duration(minutes)} de sommeil"
+    /** Durée du coucher au réveil : « 8 h 30 de déconnexion » (décision de Mehdi du 2026-10-31). */
+    fun sleep(minutes: Int): String = "${duration(minutes)} de déconnexion"
 
     /** Date sans année : « Vendredi 2 octobre », « Vendredi 1er janvier ». */
     fun dayAndDate(date: LocalDate): String {

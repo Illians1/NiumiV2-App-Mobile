@@ -100,6 +100,7 @@ class HomeViewModelTest {
         assertThat(state.dayMode).isEqualTo(DayMode.CUSTOM)
     }
 
+    /** Avant le coucher, le centre compte jusqu'au coucher (décision de Mehdi du 2026-10-31). */
     @Test
     fun aPendingSessionShowsTheCountdownsOfWakeScheduled() {
         runBlockingWrite(enabledPlan)
@@ -108,10 +109,10 @@ class HomeViewModelTest {
         val state = viewModel().state
 
         assertThat(state.mode).isEqualTo(HomeMode.Scheduled)
-        assertThat(state.centerLabel).isEqualTo("Réveil dans")
-        assertThat(state.centerValue).isEqualTo("9 h 26")
+        assertThat(state.centerLabel).isEqualTo("Coucher dans")
+        assertThat(state.centerValue).isEqualTo("56 min")
         assertThat(state.cardTitle).isEqualTo("Réveil activé")
-        assertThat(state.cardLines).containsExactly("Blocage des apps dans 56 min", "8 h 30 de sommeil").inOrder()
+        assertThat(state.cardLines).containsExactly("Blocage des apps dans 56 min", "8 h 30 de déconnexion").inOrder()
         assertThat(state.switchChecked).isTrue()
     }
 
@@ -122,8 +123,9 @@ class HomeViewModelTest {
         val state = viewModel().state
 
         assertThat(state.mode).isEqualTo(HomeMode.Scheduled)
-        assertThat(state.centerValue).isEqualTo("9 h 26")
-        assertThat(state.cardLines).containsExactly("Blocage des apps dans 56 min", "8 h 30 de sommeil").inOrder()
+        assertThat(state.centerLabel).isEqualTo("Coucher dans")
+        assertThat(state.centerValue).isEqualTo("56 min")
+        assertThat(state.cardLines).containsExactly("Blocage des apps dans 56 min", "8 h 30 de déconnexion").inOrder()
     }
 
     @Test
@@ -136,6 +138,7 @@ class HomeViewModelTest {
 
         assertThat(state.mode).isEqualTo(HomeMode.InSession)
         assertThat(state.isLocked).isTrue()
+        assertThat(state.centerLabel).isEqualTo("Réveil dans")
         assertThat(state.centerValue).isEqualTo("7 h 50")
         assertThat(state.cardTitle).isEqualTo("Blocage en cours")
         assertThat(state.cardLines).containsExactly("Applications bloquées jusqu’au scan de ton Niumi Spot")
@@ -299,13 +302,35 @@ class HomeViewModelTest {
         assertThat(viewModel.state.wakeMinutes).isEqualTo(7 * 60)
     }
 
-    /** Ponctuel de 24 h juste après l'heure : « 1 j », jamais « 24 h 00 ». */
+    /**
+     * Ponctuel de 24 h juste après l'heure : « 1 j », jamais « 24 h 00 ». Le coucher est atteint, le
+     * centre compte donc jusqu'au réveil (décision de Mehdi du 2026-10-31).
+     */
     @Test
     fun aFullDayCountdownReadsOneDay() {
         runBlockingWrite(enabledPlan.copy(enabledIsoDays = emptySet(), bedtimeIso = "07:00"))
         clock.now = paris("2026-10-22T07:00") + 30_000
 
-        assertThat(viewModel().state.centerValue).isEqualTo("1 j")
+        val state = viewModel().state
+
+        assertThat(state.mode).isEqualTo(HomeMode.Scheduled)
+        assertThat(state.centerLabel).isEqualTo("Réveil dans")
+        assertThat(state.centerValue).isEqualTo("1 j")
+    }
+
+    /** Coucher atteint, blocage pas encore appliqué : le centre compte déjà jusqu'au réveil. */
+    @Test
+    fun onceBedtimeIsReachedTheCenterCountsDownToTheWakeEvenBeforeTheBlockingApplies() {
+        runBlockingWrite(enabledPlan)
+        publisher.publish(armedSnapshot())
+        clock.now = paris("2026-10-22T22:30") + 30_000
+
+        val state = viewModel().state
+
+        assertThat(state.mode).isEqualTo(HomeMode.Scheduled)
+        assertThat(state.centerLabel).isEqualTo("Réveil dans")
+        assertThat(state.centerValue).isEqualTo("8 h 30")
+        assertThat(state.cardLines).containsExactly("8 h 30 de déconnexion")
     }
 
     @Test
@@ -390,7 +415,7 @@ class HomeViewModelTest {
         clock.now = paris("2026-10-22T21:35")
         ticker.flow.tryEmit(Unit)
 
-        assertThat(viewModel.state.centerValue).isEqualTo("9 h 25")
+        assertThat(viewModel.state.centerValue).isEqualTo("55 min")
         assertThat(viewModel.state.nowMinutes).isEqualTo(21 * 60 + 35)
     }
 

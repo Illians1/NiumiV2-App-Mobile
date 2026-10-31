@@ -13,6 +13,7 @@ class HomeTextsTest {
         assertThat(HomeTexts.BEDTIME).isEqualTo("Coucher")
         assertThat(HomeTexts.WAKE).isEqualTo("Réveil")
         assertThat(HomeTexts.WAKE_IN).isEqualTo("Réveil dans")
+        assertThat(HomeTexts.BEDTIME_IN).isEqualTo("Coucher dans")
         assertThat(HomeTexts.DISABLED).isEqualTo("Désactivé")
         assertThat(HomeTexts.WAKE_ENABLED).isEqualTo("Réveil activé")
         assertThat(HomeTexts.WAKE_DISABLED).isEqualTo("Réveil désactivé")
@@ -27,7 +28,7 @@ class HomeTextsTest {
     fun theCountdownsUseTheSharedTimeFormat() {
         assertThat(HomeTexts.blockingIn(56)).isEqualTo("Blocage des apps dans 56 min")
         assertThat(HomeTexts.blockingIn(86)).isEqualTo("Blocage des apps dans 1 h 26")
-        assertThat(HomeTexts.sleep(510)).isEqualTo("8 h 30 de sommeil")
+        assertThat(HomeTexts.sleep(510)).isEqualTo("8 h 30 de déconnexion")
     }
 
     /** Période de 24 h (décision du 2026-10-25) : texte non dessiné, à valider par Mehdi. */
@@ -83,9 +84,9 @@ class HomeTextsTest {
         assertThat(HomeTexts.CONFIRM).isEqualTo("Valider")
         assertThat(HomeTexts.CLOSE).isEqualTo("Fermer")
         assertThat(HomeTexts.sleepBeforeWake(510, "7:00"))
-            .isEqualTo("8 h 30 de sommeil\navant${NBSP}le${NBSP}réveil${NBSP}de${NBSP}7:00")
+            .isEqualTo("8 h 30 de déconnexion\navant${NBSP}le${NBSP}réveil${NBSP}de${NBSP}7:00")
         assertThat(HomeTexts.sleepAfterBedtime(510, "22:30"))
-            .isEqualTo("8 h 30 de sommeil\naprès${NBSP}le${NBSP}coucher${NBSP}de${NBSP}22:30")
+            .isEqualTo("8 h 30 de déconnexion\naprès${NBSP}le${NBSP}coucher${NBSP}de${NBSP}22:30")
     }
 
     /** Textes d'accessibilité et de la période de 24 h, non écrits dans les maquettes. */
@@ -118,6 +119,7 @@ class HomeTextsTest {
                 HomeTexts.BEDTIME,
                 HomeTexts.WAKE,
                 HomeTexts.WAKE_IN,
+                HomeTexts.BEDTIME_IN,
                 HomeTexts.DISABLED,
                 HomeTexts.WAKE_ENABLED,
                 HomeTexts.WAKE_DISABLED,

@@ -313,11 +313,11 @@ Fichier : `16_ecran-6-reveil-prevu`
 - 22:30
 - Réveil
 - 7:00
-- Réveil dans
-- 9 h 26
+- Coucher dans
+- 56 min
 - Réveil activé
 - Blocage des apps dans 56 min
-- 8 h 30 de sommeil
+- 8 h 30 de déconnexion
 - Ponctuel
 - Quotidien
 - L
@@ -407,11 +407,11 @@ Fichier : `18_ecran-6-reveil-prevu-alarme-unique` (ajoutée le 25 octobre 2026 :
 - 22:30
 - Réveil
 - 7:00
-- Réveil dans
-- 9 h 26
+- Coucher dans
+- 56 min
 - Réveil activé
 - Blocage des apps dans 56 min
-- 8 h 30 de sommeil
+- 8 h 30 de déconnexion
 - Ponctuel
 - Quotidien
 - L
@@ -466,7 +466,7 @@ Par-dessus l'accueil (mêmes textes que la maquette 16, jours du lundi au vendre
 - 30
 - 31
 - 32
-- 8 h 30 de sommeil avant le réveil de 7:00
+- 8 h 30 de déconnexion avant le réveil de 7:00
 - Valider
 
 Les nombres des roues sont des valeurs : heures de 0 à 23 sans zéro devant, minutes de « 00 » à « 59 ».
@@ -499,7 +499,7 @@ Par-dessus l'accueil (mêmes textes que la maquette 16), la fenêtre :
 - 00
 - 01
 - 02
-- 8 h 30 de sommeil après le coucher de 22:30
+- 8 h 30 de déconnexion après le coucher de 22:30
 - Valider
 
 Libellés d'accessibilité présents dans le fichier source :
@@ -507,7 +507,7 @@ Libellés d'accessibilité présents dans le fichier source :
 - Heure de réveil
 - Fermer
 
-Textes de l'app absents des maquettes (même statut) : « 24 h de blocage depuis le coucher de 22:30 » quand les deux heures sont identiques ; sur l'accueil, « 24 h de blocage » à la place de « 8 h 30 de sommeil » sur la carte, « Choisir l’heure » (action du cadran pour le lecteur d'écran) et « Icône de l’application bloquée » (ligne « Applications bloquées » avec une seule application).
+Textes de l'app absents des maquettes (même statut) : « 24 h de blocage depuis le coucher de 22:30 » quand les deux heures sont identiques ; sur l'accueil, « 24 h de blocage » à la place de « 8 h 30 de déconnexion » sur la carte, « Choisir l’heure » (action du cadran pour le lecteur d'écran) et « Icône de l’application bloquée » (ligne « Applications bloquées » avec une seule application).
 
 ## 21 · Sonnerie · La feuille
 
@@ -517,11 +517,11 @@ Fichier : `21_sonnerie-la-feuille` (maquettes de la sonnerie redessinées et ren
 - 22:30
 - Réveil
 - 7:00
-- Réveil dans
-- 9 h 26
+- Coucher dans
+- 56 min
 - Réveil activé
 - Blocage des apps dans 56 min
-- 8 h 30 de sommeil
+- 8 h 30 de déconnexion
 - Ponctuel
 - Quotidien
 - L
@@ -1352,11 +1352,11 @@ Fichier : `61_bandeau-nfc-coupe-android`
 - 22:30
 - Réveil
 - 7:00
-- Réveil dans
-- 9 h 26
+- Coucher dans
+- 56 min
 - Réveil activé
 - Blocage des apps dans 56 min
-- 8 h 30 de sommeil
+- 8 h 30 de déconnexion
 - Ponctuel
 - Quotidien
 - L
@@ -1392,11 +1392,11 @@ Fichier : `62_bandeau-aucun-niumi-spot-au-cas-ou`
 - 22:30
 - Réveil
 - 7:00
-- Réveil dans
-- 9 h 26
+- Coucher dans
+- 56 min
 - Réveil activé
 - Blocage des apps dans 56 min
-- 8 h 30 de sommeil
+- 8 h 30 de déconnexion
 - Ponctuel
 - Quotidien
 - L
@@ -1430,11 +1430,11 @@ Fichier : `63_alerte-une-autorisation-retiree`
 - 22:30
 - Réveil
 - 7:00
-- Réveil dans
-- 9 h 26
+- Coucher dans
+- 56 min
 - Réveil activé
 - Blocage des apps dans 56 min
-- 8 h 30 de sommeil
+- 8 h 30 de déconnexion
 - Ponctuel
 - Quotidien
 - L
@@ -1473,11 +1473,11 @@ Fichier : `64_alerte-plusieurs-autorisations-retirees`
 - 22:30
 - Réveil
 - 7:00
-- Réveil dans
-- 9 h 26
+- Coucher dans
+- 56 min
 - Réveil activé
 - Blocage des apps dans 56 min
-- 8 h 30 de sommeil
+- 8 h 30 de déconnexion
 - Ponctuel
 - Quotidien
 - L

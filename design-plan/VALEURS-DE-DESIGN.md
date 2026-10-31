@@ -91,7 +91,7 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | Taille | Graisse | Où |
 | --- | --- | --- |
 | 112 | 500 | Heure de l'écran de réveil. Interligne 1, interlettrage −4 |
-| 42 | 500 | Chiffres au centre du cadran (« 9 h 26 »). Interlettrage −1 |
+| 42 | 500 | Chiffres au centre du cadran (« 56 min »). Interlettrage −1 |
 | 40 | 600 | Titre de l'écran 11 (« Debout à 7:04 »), valeur du milieu de la roue de l'écran 3 bis (« 15 min »). Interlettrage −1 |
 | 34 | 600 | Valeur choisie des roues du sélecteur d'heure (« 22 », « 30 »), interlettrage −1 ; le « : » qui sépare les roues, sans interlettrage (maquettes 19 et 20, 25 octobre 2026) |
 | 30 | 600 | Consigne de l'écran de réveil (« Scanne ton Niumi Spot », « Ton alarme va reprendre. ») |
@@ -119,7 +119,7 @@ Relevé fait par programme dans les 58 fichiers sources. Les exemples disent où
 | 15 | 400 | Segments de durée, lien « Annuler le réveil », texte d'introduction de l'écran 2, onglet non choisi du sélecteur d'heure |
 | 14 | 600 | Liens du bandeau de problème |
 | 14 | 500 | Onglet choisi de l'accueil (« Ponctuel » ou « Quotidien », maquette 18) |
-| 14 | 400 | Phrases des tuiles, deuxième ligne des cartes, liens discrets, onglets non choisis de l'accueil, phrase du sélecteur d'heure (« 8 h 30 de sommeil avant le réveil de 7:00 ») |
+| 14 | 400 | Phrases des tuiles, deuxième ligne des cartes, liens discrets, onglets non choisis de l'accueil, phrase du sélecteur d'heure (« 8 h 30 de déconnexion avant le réveil de 7:00 ») |
 | 13 | 500 | Message d'erreur de la recopie |
 | 13 | 400 | Légendes (« Coucher », « Progressive · 2 min »), intitulés de section, mentions de bas d'écran |
 | 12 | 400 | Noms sous les icônes d'applications. En 600 quand l'application est cochée |

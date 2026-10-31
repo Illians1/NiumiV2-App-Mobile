@@ -522,7 +522,7 @@ object NiumiDimens {
     /** Distance au centre du cadran à laquelle un toucher saisit une poignée, plus large qu'elle. */
     val dialHandleGrabRadius = 24.dp
 
-    /** Centre : libellé (« Réveil dans ») au-dessus de la valeur (« 9 h 26 »). */
+    /** Centre : libellé (« Coucher dans ») au-dessus de la valeur (« 56 min »). */
     val dialCenterLabelGap = 2.dp
 
     /**

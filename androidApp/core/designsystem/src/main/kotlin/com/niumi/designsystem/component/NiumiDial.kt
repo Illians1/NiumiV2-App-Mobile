@@ -82,7 +82,7 @@ import kotlin.math.sin
  * [onTap] reçoit [DialHandle.BEDTIME] sur la poignée du coucher, [DialHandle.WAKE] partout ailleurs.
  * En session, pas de poignées : tout toucher appelle [onTap] avec [DialHandle.WAKE].
  *
- * Accessibilité : le centre se lit d'un bloc (« Réveil dans, 9 h 26 ») ; chaque poignée est un
+ * Accessibilité : le centre se lit d'un bloc (« Coucher dans, 56 min ») ; chaque poignée est un
  * réglage (« Coucher », « 22:30 ») que TalkBack fait avancer de 5 minutes, et dont le double toucher
  * ouvre le sélecteur ; en session, sans poignées, le cadran annonce ses deux heures.
  *
@@ -436,7 +436,7 @@ private fun BoxScope.HandleNode(
 private fun NiumiDialScheduledPreview() {
     NiumiPreviewFrame(dark = false) {
         NiumiDial(
-            state = DialState.Scheduled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Réveil dans", "9 h 26"),
+            state = DialState.Scheduled(PREVIEW_BEDTIME, PREVIEW_WAKE, PREVIEW_EVENING, "Coucher dans", "56 min"),
             texts = PREVIEW_TEXTS,
             onTimeChanged = { _, _ -> },
             onTap = {},
