@@ -31,6 +31,7 @@ class RingingNotificationFactory(
                 // Obligatoire : sans petite icône, `startForeground()` échoue avec
                 // `CannotPostForegroundServiceNotificationException` et l'alarme ne sonne pas.
                 .setSmallIcon(iconResolver.smallIconResId())
+                .setColor(iconResolver.accentColor())
                 .setCategory(spec.category)
                 .setContentTitle(spec.title)
                 .setContentText(spec.text)

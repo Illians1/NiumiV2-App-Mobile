@@ -28,6 +28,7 @@ class ScanRequestNotificationFactory(
                 // Obligatoire : sans petite icône, la publication échoue silencieusement sur
                 // certaines versions (même raison que `RingingNotificationFactory`).
                 .setSmallIcon(iconResolver.smallIconResId())
+                .setColor(iconResolver.accentColor())
                 .setCategory(spec.category)
                 .setContentTitle(spec.title)
                 .setContentText(spec.text)

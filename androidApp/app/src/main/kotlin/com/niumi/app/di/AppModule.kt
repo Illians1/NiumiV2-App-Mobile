@@ -22,9 +22,17 @@ object AppModule {
     ): NiumiComponentResolver = AppComponentResolver(context)
 
     // L'asset vit dans :core:designsystem, dont seuls `:app` et les modules `feature` peuvent
-    // dépendre (SPEC_ANDROID §6) : `:app` résout, `:core:system` consomme l'identifiant.
+    // dépendre (SPEC_ANDROID §6) : `:app` résout, `:core:system` consomme l'identifiant. Le rond
+    // de l'icône dans le volet prend l'encre du fond de l'icône du lanceur, pour montrer la même
+    // image (décision de Mehdi du 2026-10-31 ; sans couleur, le système en tirait une du fond d'écran).
     @Provides
     @Singleton
-    fun provideNotificationIconResolver(): NotificationIconResolver =
-        NotificationIconResolver { R.drawable.ic_niumi_notification }
+    fun provideNotificationIconResolver(
+        @ApplicationContext context: Context,
+    ): NotificationIconResolver =
+        object : NotificationIconResolver {
+            override fun smallIconResId(): Int = R.drawable.ic_niumi_notification
+
+            override fun accentColor(): Int = context.getColor(com.niumi.app.R.color.ic_launcher_background)
+        }
 }

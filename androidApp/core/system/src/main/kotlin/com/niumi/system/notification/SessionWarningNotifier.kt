@@ -40,6 +40,7 @@ class AndroidSessionWarningNotifier(
             Notification
                 .Builder(context, spec.channelId)
                 .setSmallIcon(iconResolver.smallIconResId())
+                .setColor(iconResolver.accentColor())
                 .setCategory(spec.category)
                 .setContentTitle(spec.title)
                 .setContentText(spec.text)

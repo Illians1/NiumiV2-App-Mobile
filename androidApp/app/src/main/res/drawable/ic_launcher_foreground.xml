@@ -1,14 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Repère provisoire : le design-plan (design-plan/) ne dessine pas encore d'icône de lanceur.
-    À remplacer dès qu'elle existe ; voir CLAUDE.md « Conformité graphique ».
+    Icône de l'app validée le 2026-10-31 (design-plan/icone/) : anneau ouvert et point ambre,
+    réduits à 62 %, en retrait de la zone sûre de 66 dp (trop grands à 71,6 % sur l'appareil).
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#8AB4FF"
-        android:pathData="M54,21a33,33 0,1 0,0.1 0z M54,33a21,21 0,1 1,-0.1 0z" />
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="0.6200"
+        android:scaleY="0.6200">
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M811.59,496.30 A300,300 0,1 1,496.30 212.41"
+            android:strokeWidth="90"
+            android:strokeColor="#FAFAF8"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#E9A23B"
+            android:pathData="M736.83,262.30 m-101,0 a101,101 0,1 0,202 0 a101,101 0,1 0,-202 0" />
+    </group>
 </vector>

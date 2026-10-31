@@ -27,6 +27,7 @@ class BlockingGuardNotificationFactory(
                 // Obligatoire : sans petite icône, `startForeground()` échoue
                 // (`CannotPostForegroundServiceNotificationException`).
                 .setSmallIcon(iconResolver.smallIconResId())
+                .setColor(iconResolver.accentColor())
                 .setCategory(spec.category)
                 .setContentTitle(spec.title)
                 .setContentText(spec.text)

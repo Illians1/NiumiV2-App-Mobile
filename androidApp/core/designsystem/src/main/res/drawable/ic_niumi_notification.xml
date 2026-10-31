@@ -6,15 +6,28 @@
     démarrerait jamais (constaté sur appareil réel, voir ETAPE-03.md).
 
     Format imposé par Android : silhouette blanche opaque sur fond transparent, 24dp, sans
-    couleur ni dégradé (le système la teinte lui-même). Même anneau que `ic_launcher_monochrome`,
-    redessiné à l'échelle 24dp.
+    couleur ni dégradé (le système la teinte lui-même). Dessin de l'icône de l'app
+    (design-plan/icone/), anneau ouvert et point d'une seule couleur comme
+    `ic_launcher_monochrome`, agrandi à 1,22 pour remplir la zone utile de 20dp.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12,4a8,8 0,1 0,0.1 0z M12,7a5,5 0,1 1,-0.1 0z" />
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="1.2200"
+        android:scaleY="1.2200">
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M811.59,496.30 A300,300 0,1 1,496.30 212.41"
+            android:strokeWidth="90"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M736.83,262.30 m-101,0 a101,101 0,1 0,202 0 a101,101 0,1 0,-202 0" />
+    </group>
 </vector>

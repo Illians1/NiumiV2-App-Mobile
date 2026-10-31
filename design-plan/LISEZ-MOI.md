@@ -18,6 +18,7 @@ Il a été préparé par Claude à partir de deux sources : le document « Niumi
 | `maquettes/images/` | Une image par maquette |
 | `maquettes/sources/` | Le fichier source de chaque maquette, pour lire les valeurs exactes |
 | `logo/` | Le logo, sur fond clair et sur fond sombre : deux images des maquettes (684 × 168 pixels, celle pour fond sombre a un fond opaque `#0E0E10`) et deux fichiers vectoriels `niumi-logo-fond-clair.svg` et `niumi-logo-fond-sombre.svg` (fond transparent), ajoutés par Mehdi le 19 octobre 2026. L'app utilise les fichiers vectoriels |
+| `icone/` | L'icône de l'app, validée par Mehdi le 31 octobre 2026 : le dessin maître, les fichiers Android et les tailles iOS, décrits dans `icone/LISEZ-MOI.md`. L'app Android l'utilise ; côté iPhone, elle attend la création du projet Xcode |
 | `police/` | La source de la police et ce que demande sa licence |
 | `A-AJOUTER-DANS-CLAUDE.md` | Les lignes à copier dans le fichier `CLAUDE.md` du dépôt |
 | `annexes/journal-des-decisions.md` | L'historique de la conception. À ne pas implémenter tel quel |
