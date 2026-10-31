@@ -42,9 +42,9 @@ import com.niumi.designsystem.ui.theme.NiumiType
 
 /**
  * Sélecteur d'heure de l'accueil (maquettes 19 et 20 ; décisions de Mehdi du 2026-10-25) : fenêtre
- * centrée, de la largeur de la fenêtre d'alerte (28 des bords, demande de Mehdi du 2026-10-30 ; 20
- * avant), onglets « Coucher » et « Réveil », une roue des heures et une des minutes à la minute
- * près, une phrase qui suit le choix ([sentence], « 8 h 30 de déconnexion avant le réveil de 7:00 »,
+ * centrée à 40 des bords (demande de Mehdi du 2026-10-31 ; 28 avant, comme la fenêtre d'alerte),
+ * onglets « Coucher » et « Réveil », une roue des heures et une des minutes à la minute près, une
+ * phrase qui suit le choix ([sentence], « 8 h 30 de déconnexion avant le réveil de 7:00 »,
  * sur deux lignes équilibrées) et « Valider ». Ouvert sur l'onglet [initialHandle].
  *
  * Toutes les heures sont acceptées : une minute d'écart au moins, deux heures identiques font 24 h.
@@ -73,7 +73,7 @@ fun NiumiTimePickerDialog(
         Box(
             modifier =
                 Modifier
-                    .padding(horizontal = NiumiDimens.alertHorizontalMargin)
+                    .padding(horizontal = NiumiDimens.timePickerHorizontalMargin)
                     .fillMaxWidth()
                     .shadow(NiumiDimens.alertElevation, NiumiShapes.alert)
                     .clip(NiumiShapes.alert)
@@ -211,8 +211,11 @@ private const val MINUTES_PER_HOUR = 60
 private val BALANCED_PARAGRAPH = LineBreak.Paragraph.copy(strategy = LineBreak.Strategy.Balanced)
 private const val HOURS_PER_DAY = 24
 
-/** Heures sans zéro devant (« 7 »), minutes sur deux chiffres (« 00 »), comme les maquettes 19 et 20. */
-private val HOURS = (0 until HOURS_PER_DAY).map { it.toString() }
+/**
+ * Heures et minutes sur deux chiffres (« 07 », « 00 »). Les heures avaient « 7 » sans zéro jusqu'à la
+ * demande de Mehdi du 2026-10-31 : exception de la roue, le reste de l'app écrit « 7:00 ».
+ */
+private val HOURS = (0 until HOURS_PER_DAY).map { it.toString().padStart(2, '0') }
 private val MINUTES = (0 until MINUTES_PER_HOUR).map { it.toString().padStart(2, '0') }
 
 @Preview(name = "Coucher", widthDp = 390, heightDp = 844)

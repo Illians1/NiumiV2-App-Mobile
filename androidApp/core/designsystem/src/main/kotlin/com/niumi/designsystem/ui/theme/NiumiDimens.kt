@@ -619,17 +619,19 @@ object NiumiDimens {
     val tabBarShake = 3.dp
 
     /**
-     * Sélecteur d'heure (maquettes 19, 20) : marges intérieures 20 / 24 / 24. La fenêtre est à 28 des
-     * bords comme la fenêtre d'alerte ([alertHorizontalMargin], demande de Mehdi du 2026-10-30 ; 20 avant).
+     * Sélecteur d'heure (maquettes 19, 20) : marges intérieures 20 / 24 / 24. La fenêtre est à 40 des
+     * bords (demande de Mehdi du 2026-10-31, fenêtre trop imposante) : 28 avant, comme la fenêtre
+     * d'alerte ([alertHorizontalMargin], 2026-10-30), et 20 encore avant.
      */
+    val timePickerHorizontalMargin = 40.dp
     val timePickerPadding = PaddingValues(start = 24.dp, top = 20.dp, end = 24.dp, bottom = 24.dp)
     val timePickerWheelsTop = 16.dp
     val timePickerSentenceTop = 14.dp
     val timePickerButtonTop = 16.dp
 
     /**
-     * Roue : cinq rangées visibles, rangée choisie de 56 entre deux traits de 1,5 larges comme les
-     * roues, colonnes de 90 à 8 d'écart.
+     * Roue : trois rangées visibles de 42, valeur choisie entre deux traits de 1,5 espacés de 56 et
+     * larges comme les roues, colonnes de 90 à 8 d'écart.
      */
     val wheelRowHeight = 42.dp
     val wheelSelectedHeight = 56.dp

@@ -449,27 +449,23 @@ Libellés d'accessibilité présents dans le fichier source :
 
 Fichier : `19_ecran-6-selecteur-d-heure-onglet-coucher` (ajoutée le 25 octobre 2026)
 
-Source du 30 octobre 2026 : fenêtre à 28 des bords, traits limités aux roues, phrase sur deux lignes.
+Source du 31 octobre 2026 : fenêtre à 40 des bords, trois rangées par roue, traits limités aux roues, phrase sur deux lignes.
 
 Par-dessus l'accueil (mêmes textes que la maquette 16, jours du lundi au vendredi cochés), la fenêtre :
 
 - Coucher
 - Réveil
-- 20
 - 21
 - 22
 - 23
-- 0
 - :
-- 28
 - 29
 - 30
 - 31
-- 32
 - 8 h 30 de déconnexion avant le réveil de 7:00
 - Valider
 
-Les nombres des roues sont des valeurs : heures de 0 à 23 sans zéro devant, minutes de « 00 » à « 59 ».
+Les nombres des roues sont des valeurs : heures de « 00 » à « 23 » (avec le zéro devant depuis le 31 octobre 2026), minutes de « 00 » à « 59 ».
 
 Libellés d'accessibilité présents dans le fichier source :
 
@@ -482,23 +478,19 @@ Textes de l'app absents des maquettes (décisions du 25 octobre 2026, à valider
 
 Fichier : `20_ecran-6-selecteur-d-heure-onglet-reveil` (ajoutée le 25 octobre 2026)
 
-Source du 30 octobre 2026 : fenêtre à 28 des bords, traits limités aux roues, phrase sur deux lignes.
+Source du 31 octobre 2026 : fenêtre à 40 des bords, trois rangées par roue, traits limités aux roues, phrase sur deux lignes.
 
 Par-dessus l'accueil (mêmes textes que la maquette 16), la fenêtre :
 
 - Coucher
 - Réveil
-- 5
-- 6
-- 7
-- 8
-- 9
+- 06
+- 07
+- 08
 - :
-- 58
 - 59
 - 00
 - 01
-- 02
 - 8 h 30 de déconnexion après le coucher de 22:30
 - Valider
 

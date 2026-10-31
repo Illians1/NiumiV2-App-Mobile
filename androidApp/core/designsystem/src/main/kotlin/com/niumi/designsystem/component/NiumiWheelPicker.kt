@@ -20,13 +20,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.util.lerp
 import com.niumi.designsystem.ui.theme.LocalNiumiPalette
 import com.niumi.designsystem.ui.theme.NiumiDimens
 import com.niumi.designsystem.ui.theme.NiumiType
@@ -35,15 +39,18 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /**
- * Roue de valeurs (sélecteur d'heure, maquettes 19 et 20 ; étape 45) : cinq rangées visibles, la
- * valeur du milieu en 34/600 à l'encre, ses voisines en 22 grisées, les plus éloignées en 18 plus
- * claires. La roue tourne sans fin (après 23 vient 0) et s'arrête toujours sur une valeur.
+ * Roue de valeurs (sélecteur d'heure, maquettes 19 et 20 ; étape 45) : trois rangées visibles (demande
+ * de Mehdi du 2026-10-31 ; cinq avant), la valeur du milieu en 34/600 à l'encre, ses voisines en 22
+ * grisées ; les plus éloignées, en 18 plus claires, n'apparaissent qu'en défilant. Pendant le
+ * défilement, une valeur passe d'un aspect à l'autre en continu selon sa distance au milieu
+ * ([wheelRowLook], même demande ; d'un coup avant). La roue tourne sans fin (après 23 vient 0) et
+ * s'arrête toujours sur une valeur.
  *
  * [onSelectedIndexChange] est appelé à chaque changement de la valeur centrée. Pour TalkBack, la roue est un réglage
  * nommé [contentDescription] (« Heures ») qui avance d'une valeur par geste.
  *
- * Écart aux maquettes : rangées de hauteur égale (42), là où les maquettes mettent 36, 40, 56, 40 et
- * 36 ; les deux traits de la valeur choisie sont dessinés par l'écran qui assemble les roues.
+ * Les rangées ont toutes 42 de haut ; les deux traits de la valeur choisie sont dessinés par l'écran
+ * qui assemble les roues.
  */
 @Composable
 fun NiumiWheelPicker(
@@ -96,26 +103,77 @@ fun NiumiWheelPicker(
                 },
     ) {
         items(count = count * REPEAT) { item ->
-            WheelRow(text = values[item.mod(count)], distance = abs(item - centered))
+            WheelRow(text = values[item.mod(count)], distance = { listState.distanceFromMiddle(item) })
         }
     }
 }
 
+/** Une rangée : les trois aspects superposés, dosés et mis à l'échelle au dessin, sans recomposer. */
 @Composable
 private fun WheelRow(
     text: String,
-    distance: Int,
+    distance: () -> Float,
 ) {
     val palette = LocalNiumiPalette.current
-    val (style, color) =
-        when (distance) {
-            0 -> NiumiType.wheelSelected34 to palette.ink
-            1 -> NiumiType.wheelNear22 to palette.border
-            else -> NiumiType.wheelFar18 to palette.disabled
-        }
     Box(modifier = Modifier.fillMaxWidth().height(NiumiDimens.wheelRowHeight), contentAlignment = Alignment.Center) {
-        Text(text = text, style = style, color = color, modifier = Modifier.wrapContentHeight(unbounded = true))
+        WheelText(text, NiumiType.wheelSelected34, palette.ink, distance) { it.selectedAlpha }
+        WheelText(text, NiumiType.wheelNear22, palette.border, distance) { it.nearAlpha }
+        WheelText(text, NiumiType.wheelFar18, palette.disabled, distance) { it.farAlpha }
     }
+}
+
+@Composable
+private fun WheelText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    distance: () -> Float,
+    alpha: (WheelRowLook) -> Float,
+) {
+    Text(
+        text = text,
+        style = style,
+        color = color,
+        modifier =
+            Modifier.wrapContentHeight(unbounded = true).graphicsLayer {
+                val look = wheelRowLook(distance())
+                this.alpha = alpha(look)
+                scaleX = look.fontSize / style.fontSize.value
+                scaleY = scaleX
+            },
+    )
+}
+
+/**
+ * Aspect d'une rangée à [distance] rangées du milieu (0 au milieu, fractionnaire pendant le
+ * défilement) : taille du texte, de 34 au milieu à 22 à une rangée et 18 à deux, et part de chaque
+ * aspect (choisi, voisin, éloigné), qui passent de l'un à l'autre en fondu.
+ */
+internal data class WheelRowLook(
+    val fontSize: Float,
+    val selectedAlpha: Float,
+    val nearAlpha: Float,
+    val farAlpha: Float,
+)
+
+internal fun wheelRowLook(distance: Float): WheelRowLook {
+    val selected = NiumiType.wheelSelected34.fontSize.value
+    val near = NiumiType.wheelNear22.fontSize.value
+    val far = NiumiType.wheelFar18.fontSize.value
+    val d = distance.coerceIn(0f, 2f)
+    return if (d <= 1f) {
+        WheelRowLook(lerp(selected, near, d), selectedAlpha = 1f - d, nearAlpha = d, farAlpha = 0f)
+    } else {
+        WheelRowLook(lerp(near, far, d - 1f), selectedAlpha = 0f, nearAlpha = 2f - d, farAlpha = d - 1f)
+    }
+}
+
+/** Distance, en rangées, entre le milieu de l'élément [index] et celui de la roue. */
+private fun LazyListState.distanceFromMiddle(index: Int): Float {
+    val layout = layoutInfo
+    val item = layout.visibleItemsInfo.firstOrNull { it.index == index } ?: return OUT_OF_VIEW
+    val middle = (layout.viewportStartOffset + layout.viewportEndOffset) / 2f
+    return abs(item.offset + item.size / 2f - middle) / item.size
 }
 
 /** L'élément dont le milieu est le plus près du milieu de la roue. */
@@ -126,8 +184,9 @@ private fun centeredItem(state: LazyListState): Int {
         ?: (state.firstVisibleItemIndex + VISIBLE_ABOVE)
 }
 
-private const val VISIBLE_ROWS = 5
-private const val VISIBLE_ABOVE = 2
+private const val VISIBLE_ROWS = 3
+private const val VISIBLE_ABOVE = 1
+private const val OUT_OF_VIEW = 2f
 
 /** Nombre de tours virtuels : assez pour qu'on n'en voie jamais le bout. */
 private const val REPEAT = 1000
