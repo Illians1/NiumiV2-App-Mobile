@@ -39,12 +39,11 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /**
- * Roue de valeurs (sélecteur d'heure, maquettes 19 et 20 ; étape 45) : trois rangées visibles (demande
- * de Mehdi du 2026-10-31 ; cinq avant), la valeur du milieu en 34/600 à l'encre, ses voisines en 22
- * grisées ; les plus éloignées, en 18 plus claires, n'apparaissent qu'en défilant. Pendant le
- * défilement, une valeur passe d'un aspect à l'autre en continu selon sa distance au milieu
- * ([wheelRowLook], même demande ; d'un coup avant). La roue tourne sans fin (après 23 vient 0) et
- * s'arrête toujours sur une valeur.
+ * Roue de valeurs (sélecteur d'heure, maquettes 19 et 20 ; étape 45) : cinq rangées visibles, la
+ * valeur du milieu en 34/600 à l'encre, ses voisines en 22 grisées, les plus éloignées en 18 plus
+ * claires. Pendant le défilement, une valeur passe d'un aspect à l'autre en continu selon sa distance
+ * au milieu ([wheelRowLook], demande de Mehdi du 2026-10-31 ; d'un coup avant). La roue tourne sans
+ * fin (après 23 vient 0) et s'arrête toujours sur une valeur.
  *
  * [onSelectedIndexChange] est appelé à chaque changement de la valeur centrée. Pour TalkBack, la roue est un réglage
  * nommé [contentDescription] (« Heures ») qui avance d'une valeur par geste.
@@ -184,8 +183,8 @@ private fun centeredItem(state: LazyListState): Int {
         ?: (state.firstVisibleItemIndex + VISIBLE_ABOVE)
 }
 
-private const val VISIBLE_ROWS = 3
-private const val VISIBLE_ABOVE = 1
+private const val VISIBLE_ROWS = 5
+private const val VISIBLE_ABOVE = 2
 private const val OUT_OF_VIEW = 2f
 
 /** Nombre de tours virtuels : assez pour qu'on n'en voie jamais le bout. */
