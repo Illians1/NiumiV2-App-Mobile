@@ -1417,7 +1417,7 @@ Permissions et fonctionnalité attendues:
 <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 ```
 
-Ces dix permissions forment la liste figée, vérifiée par `ReleaseHygieneTest`. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` y entre le 2026-10-21 avec la tuile « Batterie » de l'écran 2 (13, « Exemption d'énergie »), usage à justifier à Google Play. `FOREGROUND_SERVICE_SPECIAL_USE` y entre le 2026-10-19 avec le service de garde de session (12.5). `USE_FULL_SCREEN_INTENT` en est retirée au Lot 9 (décision du 2026-10-18, 4.1) : aucune notification de Niumi ne porte plus de plein écran.
+Ces dix permissions forment la liste figée, vérifiée par `ReleaseHygieneTest`. `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` y entre le 2026-10-21 avec la tuile « Batterie » de l'écran 2 (13, « Exemption d'énergie »), usage à justifier à Google Play. `FOREGROUND_SERVICE_SPECIAL_USE` y entre le 2026-10-19 avec le service de garde de session (12.5). `USE_FULL_SCREEN_INTENT` en est retirée au Lot 9 (décision du 2026-10-18, 4.1) : aucune notification de Niumi ne porte plus de plein écran. `VIBRATE` est aussi déclarée dans le manifeste de `:core:system`, avec `AndroidVibrationController` qui l'utilise, pour que le lint de ce module seul ne la signale pas manquante ; le manifeste fusionné n'en porte qu'une (2026-10-31).
 
 Ne pas déclarer `SCHEDULE_EXACT_ALARM` dans le MVP. Toute évolution de cette stratégie exige une modification explicite de la spec, du diagnostic et du parcours utilisateur.
 

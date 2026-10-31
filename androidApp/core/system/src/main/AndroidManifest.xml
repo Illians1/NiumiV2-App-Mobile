@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
+        Vibration de la sonnerie (`AndroidVibrationController`, SPEC_ANDROID §10.2, §14). Déjà
+        déclarée par `:app` ; répétée ici, avec le seul code qui l'utilise, pour que le lint du
+        module seul la voie (`MissingPermission`). Le manifeste fusionné n'en porte qu'une.
+    -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!--
         Visibilité des packages (SPEC_ANDROID §12.1, §14). Depuis Android 11, une application ne
         voit que ce qu'elle déclare : sans ce bloc, `PackageManagerPackageQuery` ne recevrait
         aucune application et le sélecteur serait vide. Déclaré ici, avec le seul code qui appelle
