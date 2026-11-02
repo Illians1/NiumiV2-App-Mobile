@@ -19,7 +19,7 @@ class VibrationPatternPolicyTest {
     fun repeatingPatternLoopsOnTheFullRhythmPulse() {
         val pattern = VibrationPatternPolicy.repeating()
 
-        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 800, 2_200))
+        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 800, 4_400))
         assertThat(pattern.repeatFromIndex).isEqualTo(1)
     }
 
@@ -38,12 +38,12 @@ class VibrationPatternPolicyTest {
     }
 
     @Test
-    fun theRampStartsWithOnePulseEverySixteenSeconds() {
+    fun theRampStartsWithOnePulseEveryThirtyTwoSeconds() {
         val timings = VibrationPatternPolicy.repeating(elapsedMs = 0, durationMs = twoMinutes).timings
 
         assertThat(timings[0]).isEqualTo(0)
         assertThat(timings[1]).isEqualTo(800)
-        assertThat(timings[2]).isEqualTo(15_500)
+        assertThat(timings[2]).isEqualTo(31_000)
     }
 
     @Test
@@ -55,7 +55,7 @@ class VibrationPatternPolicyTest {
 
         assertThat(pulses.toSet()).containsExactly(800L)
         assertThat(pauses).isInStrictOrder(Comparator.reverseOrder<Long>())
-        assertThat(pauses.last()).isAtLeast(2_200L)
+        assertThat(pauses.last()).isAtLeast(4_400L)
     }
 
     @Test
@@ -63,7 +63,7 @@ class VibrationPatternPolicyTest {
         val pattern = VibrationPatternPolicy.repeating(elapsedMs = 0, durationMs = twoMinutes)
         val loop = pattern.timings.copyOfRange(pattern.repeatFromIndex, pattern.timings.size)
 
-        assertThat(loop).isEqualTo(longArrayOf(800, 2_200))
+        assertThat(loop).isEqualTo(longArrayOf(800, 4_400))
     }
 
     @Test
@@ -77,13 +77,13 @@ class VibrationPatternPolicyTest {
     @Test
     fun theRampPauseHalfwayIsTheGeometricMean() {
         assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = 60_000, durationMs = twoMinutes))
-            .isIn(Range.closed(5_839L, 5_841L))
+            .isIn(Range.closed(11_678L, 11_680L))
     }
 
     @Test
     fun pauseIsBoundedOutsideTheRamp() {
-        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = -1_000, durationMs = twoMinutes)).isEqualTo(15_500)
-        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = twoMinutes * 2, durationMs = twoMinutes)).isEqualTo(2_200)
+        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = -1_000, durationMs = twoMinutes)).isEqualTo(31_000)
+        assertThat(VibrationPatternPolicy.pauseAt(elapsedMs = twoMinutes * 2, durationMs = twoMinutes)).isEqualTo(4_400)
     }
 
     @Test
@@ -121,7 +121,7 @@ class VibrationPatternPolicyTest {
     fun errorPatternDuringOngoingRepetitionResumesTheAlarmPattern() {
         val pattern = VibrationPatternPolicy.error(resume = VibrationPatternPolicy.repeating())
 
-        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 200, 300, 800, 2_200))
+        assertThat(pattern.timings).isEqualTo(longArrayOf(0, 200, 300, 800, 4_400))
         assertThat(pattern.repeatFromIndex).isEqualTo(3)
     }
 
